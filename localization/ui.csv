@@ -1,0 +1,127 @@
+key,en,ko
+SETTINGS_BUTTON,SETTINGS,설정
+SETTINGS_TITLE,GAME SETTINGS,게임 설정
+SETTINGS_SUBTITLE,ACCESSIBILITY / DISPLAY,접근성 / 표시
+SETTINGS_LANGUAGE,LANGUAGE,언어
+SETTINGS_LANGUAGE_HINT,Changes are applied immediately and saved automatically.,선택한 언어는 즉시 적용되고 자동으로 저장됩니다.
+SETTINGS_CLOSE,CLOSE  [ESC],닫기  [ESC]
+SETTINGS_ENGLISH,English,English
+SETTINGS_KOREAN,한국어,한국어
+HUD_DATA,OBSERVATION DATA   %04d,관측 데이터   %04d
+HUD_STATUS,OBSERVED  %d    •    ARRAY  %d/%d,관측  %d    •    관측망  %d/%d
+HUD_TIME,RUN  %02d:%02d,진행  %02d:%02d
+HUD_TUTORIAL_START,Hold LMB and follow the meteor,마우스 왼쪽 버튼을 누른 채 유성을 따라가세요
+HUD_TUTORIAL_DONE,Observation logged. Open the Upgrade Tree [U] to expand the array.,관측이 기록되었습니다. 업그레이드 트리 [U]에서 관측망을 확장하세요.
+HUD_UPGRADE_BUTTON,UPGRADE TREE  [U]    %d/%d,업그레이드 트리  [U]    %d/%d
+HUD_UPGRADE_AVAILABLE,◆  UPGRADE AVAILABLE,◆  업그레이드 가능
+HUD_NEXT_DISCOVERY,NEXT DISCOVERY AWAITS,다음 발견을 기다리는 중
+HUD_TRACKING,%s   %d%%,%s   %d%%
+HUD_END_SUCCESS,PROTOTYPE COMPLETE,프로토타입 완료
+HUD_END_FAILURE,MAJOR FIREBALL LOST,대형 화구 관측 실패
+HUD_RESTART,START A NEW RUN,새 관측 시작
+HUD_DEBUG_TITLE,DEBUG ARRAY  [F9 hide],디버그 관측망  [F9 숨기기]
+HUD_DEBUG_DATA,Ctrl+Shift+D   +100 data,Ctrl+Shift+D   데이터 +100
+HUD_DEBUG_NEXT,Ctrl+Shift+N   Purchase next available node,Ctrl+Shift+N   다음 노드 구매
+HUD_DEBUG_ALL,Ctrl+Shift+A   Purchase all nodes,Ctrl+Shift+A   모든 노드 구매
+HUD_DEBUG_METEOR,Ctrl+Shift+M   Spawn meteor,Ctrl+Shift+M   유성 생성
+HUD_DEBUG_RARE,Ctrl+Shift+R   Spawn rare fireball,Ctrl+Shift+R   희귀 화구 생성
+HUD_DEBUG_SHOWER,Ctrl+Shift+S   Trigger shower,Ctrl+Shift+S   유성우 시작
+HUD_DEBUG_FINAL,Ctrl+Shift+F   Trigger final event,Ctrl+Shift+F   최종 이벤트 시작
+HUD_DEBUG_RESET,Ctrl+Shift+Backspace   Reset run,Ctrl+Shift+Backspace   관측 초기화
+TREE_TITLE,OBSERVATION ARRAY,관측망
+TREE_SUBTITLE,UPGRADE CONSTELLATION  /  NIGHTWATCH SYSTEMS,업그레이드 별자리  /  나이트워치 시스템
+TREE_DATA,DATA  %04d,데이터  %04d
+TREE_SYSTEMS,%02d / %02d  ONLINE,%02d / %02d  가동
+TREE_CENTER,CENTER,중앙 정렬
+TREE_CLOSE,CLOSE  [U],닫기  [U]
+TREE_LEGEND,CYAN  OPTICS    VIOLET  DETECTION    MINT  NETWORK,청록  광학    보라  탐지    민트  관측망
+TREE_CONTROLS,MIDDLE-DRAG  /  WHEEL ZOOM,휠 드래그 이동  /  휠 확대
+TREE_STATUS_READY,%d UPGRADE READY,%d개 업그레이드 가능
+TREE_STATUS_PATHS,%d OPEN PATHS  /  GATHER OBSERVATION DATA,%d개 경로 개방  /  관측 데이터 수집 필요
+TREE_STATUS_STABLE,OBSERVATION NETWORK STABLE,관측망 안정
+TREE_STATUS_ONLINE,SYSTEM ONLINE  /  %s,시스템 가동  /  %s
+TREE_COST,%d DATA,데이터 %d
+TREE_ONLINE,✓  ONLINE,✓  가동
+TREE_LOCKED,LOCKED,잠김
+TREE_SIGNAL,SIGNAL ?,신호 ?
+TREE_UNKNOWN_SIGNAL,UNKNOWN SIGNAL,미확인 신호
+TREE_UNRESOLVED_SIGNAL,UNRESOLVED SIGNAL,미분석 신호
+TREE_TEASER_DESCRIPTION,Install the adjacent system to resolve this signature. Its function is still hidden.,인접 시스템을 설치하면 이 신호를 분석할 수 있습니다. 기능은 아직 숨겨져 있습니다.
+TREE_SIGNAL_OBSCURED,SIGNAL OBSCURED,신호 판독 불가
+TREE_SYSTEM_ONLINE,✓  SYSTEM ONLINE,✓  시스템 가동
+TREE_INSTALL,◆  CLICK NODE TO INSTALL    %d DATA,◆  노드를 클릭해 설치    데이터 %d
+TREE_NEED_MORE,◇  %d DATA    /    NEED %d MORE,◇  데이터 %d    /    %d 더 필요
+TREE_REQUIRES,LOCKED    /    REQUIRES %s,잠김    /    필요: %s
+UPGRADE_ERROR_UNKNOWN,UNKNOWN UPGRADE,알 수 없는 업그레이드
+UPGRADE_ERROR_STATE,NODE IS %s,노드 상태: %s
+UPGRADE_ERROR_NEED_DATA,NEED %d MORE DATA,데이터 %d 더 필요
+STATE_HIDDEN,HIDDEN,숨김
+STATE_LOCKED,LOCKED,잠김
+STATE_PURCHASED,PURCHASED,구매 완료
+BRANCH_OPTICS,OPTICS / MANUAL,광학 / 수동 관측
+BRANCH_DETECTION,DETECTION / DISCOVERY,탐지 / 발견
+BRANCH_NETWORK,OBSERVATION NETWORK,관측 네트워크
+EFFECT_PASSIVE,PASSIVE,지속 효과
+EFFECT_TRANSFORMATION,TRANSFORMATION,성능 변환
+EFFECT_DISCOVERY,DISCOVERY,발견
+EFFECT_UNLOCK,UNLOCK,기능 해금
+EFFECT_AUTOMATION,AUTOMATION,자동화
+UPGRADE_BETTER_LENS_NAME,Better Lens,개량 렌즈
+UPGRADE_BETTER_LENS_DESC,A wider focus ring makes manual tracking more forgiving.,초점 범위가 넓어져 수동 추적이 쉬워집니다.
+UPGRADE_LONG_EXPOSURE_NAME,Long Exposure,장노출
+UPGRADE_LONG_EXPOSURE_DESC,Meteors stay visible 35% longer and leave denser trails.,유성이 35% 더 오래 보이며 더 짙은 궤적을 남깁니다.
+UPGRADE_OBSERVATION_STREAK_NAME,Observation Streak,연속 관측
+UPGRADE_OBSERVATION_STREAK_DESC,Consecutive manual observations build a modest reward chain; automation breaks it.,수동 관측을 연속 성공하면 보상 연쇄가 쌓이며 자동 관측 시 끊깁니다.
+UPGRADE_PRECISION_MULTIPLIER_NAME,Precision Spectrometer,정밀 분광기
+UPGRADE_PRECISION_MULTIPLIER_DESC,Centered manual tracking builds a reward multiplier.,유성 중심을 정확히 추적할수록 보상 배율이 올라갑니다.
+UPGRADE_PERFECT_OBSERVATION_NAME,Perfect Observation,완벽한 관측
+UPGRADE_PERFECT_OBSERVATION_DESC,Grades manual tracking. Excellent and Perfect runs earn a decisive quality bonus.,수동 추적 품질을 평가하여 우수·완벽 등급에 큰 보너스를 부여합니다.
+UPGRADE_EDGE_DETECTION_NAME,Edge Detection,경계 탐지
+UPGRADE_EDGE_DETECTION_DESC,Classifies high-speed entry signatures and introduces fast meteors.,고속 진입 신호를 분류하여 빠른 유성을 발견합니다.
+UPGRADE_WIDE_FIELD_NAME,Wide Field Sensor,광시야 센서
+UPGRADE_WIDE_FIELD_DESC,Edge pings warn where new meteors will enter the sky.,새 유성이 진입할 하늘 가장자리를 미리 표시합니다.
+UPGRADE_TRAJECTORY_NAME,Trajectory Prediction,궤적 예측
+UPGRADE_TRAJECTORY_DESC,A dotted lead line reveals each meteor's likely path.,점선으로 각 유성의 예상 이동 경로를 표시합니다.
+UPGRADE_RARE_DETECTION_NAME,Rare Meteor Detection,희귀 유성 탐지
+UPGRADE_RARE_DETECTION_DESC,Reveals rare fireballs and turns secondary cameras into urgent rare-object alerts.,희귀 화구를 발견하고 보조 카메라가 긴급 경보를 보냅니다.
+UPGRADE_FRAGMENT_ANALYSIS_NAME,Fragment Analysis,파편 분석
+UPGRADE_FRAGMENT_ANALYSIS_DESC,Discovers splitting meteors; network analysis can assist with their fragments.,분열 유성을 발견하고 관측망이 파편 분석을 지원합니다.
+UPGRADE_SHOWER_DETECTOR_NAME,Meteor Shower Forecast,유성우 예보
+UPGRADE_SHOWER_DETECTOR_DESC,Unlocks warned meteor-shower events across the whole sky.,하늘 전역에서 사전 경보가 있는 유성우 이벤트를 해금합니다.
+UPGRADE_ARRAY_PLANNING_NAME,Array Planning,관측망 설계
+UPGRADE_ARRAY_PLANNING_DESC,Opens a second observation lane so the sky can support concurrent targets.,두 번째 관측 채널을 열어 여러 표적을 동시에 처리합니다.
+UPGRADE_SECONDARY_CAMERA_NAME,Secondary Camera,보조 카메라
+UPGRADE_SECONDARY_CAMERA_DESC,One unattended non-rare target receives a slow automatic scan.,방치된 일반 표적 하나를 느린 속도로 자동 분석합니다.
+UPGRADE_MULTI_TARGET_ANALYSIS_NAME,Multi-Target Analysis,다중 표적 분석
+UPGRADE_MULTI_TARGET_ANALYSIS_DESC,Adds a second camera lane and analyzes fragments when Fragment Analysis is online.,카메라 채널을 추가하고 파편 분석 시스템과 연동합니다.
+UPGRADE_AUTOMATED_TRACKING_NAME,Automated Common Tracking,일반 표적 자동 추적
+UPGRADE_AUTOMATED_TRACKING_DESC,Common targets are analyzed automatically; rare and high-value targets still need you.,일반 표적은 자동 분석하지만 희귀·고가치 표적은 직접 관측해야 합니다.
+UPGRADE_OBSERVATORY_NETWORK_NAME,Observatory Network,천문대 네트워크
+UPGRADE_OBSERVATORY_NETWORK_DESC,Links the whole array; previews shower entry sectors; and adds a third assistance lane.,전체 관측망을 연결하여 유성우 진입 구역을 예측하고 세 번째 지원 채널을 추가합니다.
+METEOR_COMMON,COMMON METEOR,일반 유성
+METEOR_FAST,FAST METEOR,고속 유성
+METEOR_FRAGMENT,FRAGMENTING METEOR,분열 유성
+METEOR_FRAGMENT_PIECE,FRAGMENT,유성 파편
+METEOR_FIREBALL,RARE FIREBALL,희귀 화구
+METEOR_MAJOR,MAJOR FIREBALL,대형 화구
+QUALITY_AUTOMATIC,AUTOMATIC,자동
+QUALITY_PERFECT,PERFECT,완벽
+QUALITY_EXCELLENT,EXCELLENT,우수
+QUALITY_GOOD,GOOD,양호
+BANNER_RESET,ARRAY RESET  •  CLEAR SKIES,관측망 초기화  •  맑은 하늘
+BANNER_DEBUG_DATA,DEBUG  +100 DATA,디버그  데이터 +100
+BANNER_QUALITY,%s OBSERVATION  •  x%.2f,%s 관측  •  x%.2f
+BANNER_SYSTEM_ONLINE,SYSTEM ONLINE  •  %s,시스템 가동  •  %s
+BANNER_SECONDARY_ALERT,SECONDARY CAMERA ALERT,보조 카메라 경보
+BANNER_UNUSUAL_SIGNATURE,UNUSUAL SIGNATURE,이상 신호
+EVENT_SHOWER_INCOMING,METEOR SHOWER INCOMING,유성우 접근 중
+EVENT_ATMOSPHERIC_BLOOM,ATMOSPHERIC BLOOM DETECTED,대기 발광 감지
+EVENT_SHOWER,METEOR SHOWER,유성우
+EVENT_SHOWER_PASSED,SHOWER PASSED  •  ARRAY STABLE,유성우 통과  •  관측망 안정
+EVENT_MAJOR_FIREBALL,MAJOR FIREBALL,대형 화구
+END_RUN_TIME,RUN TIME   %02d:%02d,진행 시간   %02d:%02d
+END_OBSERVATIONS,OBSERVATIONS   %d,관측 횟수   %d
+END_MANUAL_AUTO,MANUAL / AUTO   %d / %d,수동 / 자동   %d / %d
+END_TOTAL_DATA,TOTAL DATA EARNED   %d,총 획득 데이터   %d
+END_SYSTEMS,ARRAY SYSTEMS   %d / %d,관측망 시스템   %d / %d
+END_BEST_MULTIPLIER,BEST MANUAL MULTIPLIER   x%.2f,최고 수동 관측 배율   x%.2f

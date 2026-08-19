@@ -1,0 +1,55 @@
+[gd_scene load_steps=12 format=3]
+
+[ext_resource type="Script" path="res://scripts/game.gd" id="1_game"]
+[ext_resource type="Script" path="res://scripts/starfield.gd" id="2_starfield"]
+[ext_resource type="Script" path="res://scripts/meteor_spawner.gd" id="3_spawner"]
+[ext_resource type="Script" path="res://scripts/progression_controller.gd" id="4_progression"]
+[ext_resource type="Script" path="res://scripts/event_controller.gd" id="5_events"]
+[ext_resource type="Script" path="res://scripts/observation_controller.gd" id="6_observation"]
+[ext_resource type="Script" path="res://scripts/effects_layer.gd" id="7_effects"]
+[ext_resource type="Script" path="res://scripts/hud.gd" id="8_hud"]
+[ext_resource type="Script" path="res://scripts/star_twinkle.gd" id="9_twinkle"]
+[ext_resource type="Script" path="res://scripts/upgrade_tree.gd" id="10_upgrade_tree"]
+[ext_resource type="Script" path="res://scripts/game_settings.gd" id="11_settings"]
+
+[node name="Game" type="Node2D"]
+script = ExtResource("1_game")
+
+[node name="Starfield" type="Node2D" parent="."]
+z_index = -20
+script = ExtResource("2_starfield")
+
+[node name="TwinkleStars" type="Node2D" parent="."]
+z_index = -19
+script = ExtResource("9_twinkle")
+
+[node name="MeteorLayer" type="Node2D" parent="."]
+z_index = 10
+
+[node name="EffectsLayer" type="Node2D" parent="."]
+z_index = 40
+script = ExtResource("7_effects")
+
+[node name="ObservationController" type="Node2D" parent="."]
+z_index = 50
+script = ExtResource("6_observation")
+
+[node name="ProgressionController" type="Node" parent="."]
+script = ExtResource("4_progression")
+
+[node name="MeteorSpawner" type="Node" parent="."]
+script = ExtResource("3_spawner")
+
+[node name="EventController" type="Node" parent="."]
+script = ExtResource("5_events")
+
+[node name="GameSettings" type="Node" parent="."]
+script = ExtResource("11_settings")
+
+[node name="HUD" type="CanvasLayer" parent="."]
+layer = 80
+script = ExtResource("8_hud")
+
+[node name="UpgradeTree" type="CanvasLayer" parent="."]
+layer = 100
+script = ExtResource("10_upgrade_tree")

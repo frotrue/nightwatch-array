@@ -1,0 +1,7 @@
+.godot/
+.codegraph/
+.tmp_video_review/
+build/
+
+*.log
+*.tmp
