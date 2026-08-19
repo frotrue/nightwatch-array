@@ -2,6 +2,7 @@ extends Node2D
 
 const Balance = preload("res://scripts/game_balance.gd")
 const SoundSynth = preload("res://scripts/sound_synth.gd")
+const AUTOSAVE_INTERVAL_SECONDS := 60.0
 
 @onready var starfield: Node2D = $Starfield
 @onready var meteor_layer: Node2D = $MeteorLayer
@@ -20,6 +21,10 @@ var sound: Node
 var elapsed_time: float = 0.0
 var completed: bool = false
 var last_completion_success: bool = false
+var startup_slot_prompt_enabled: bool = true
+var tutorial_auto_start_after_slot: bool = false
+var active_save_slot: int = 0
+var autosave_elapsed: float = 0.0
 
 
 func _ready() -> void:
@@ -33,12 +38,16 @@ func _ready() -> void:
 	hud.bind_save_games(save_games)
 	upgrade_tree.bind_progression(progression)
 	upgrade_tree.bind_settings(settings)
+	tutorial_auto_start_after_slot = startup_slot_prompt_enabled and tutorial.auto_start_enabled
+	if startup_slot_prompt_enabled:
+		tutorial.auto_start_enabled = false
 	tutorial.setup(settings, progression)
 	settings.language_changed.connect(_on_language_changed)
 	hud.restart_requested.connect(reset_run)
 	hud.upgrade_tree_requested.connect(upgrade_tree.open_tree)
 	hud.save_slot_requested.connect(_on_save_slot_requested)
 	hud.load_slot_requested.connect(_on_load_slot_requested)
+	hud.startup_slot_selected.connect(_on_startup_slot_selected)
 	hud.tutorial_replay_requested.connect(_on_tutorial_replay_requested)
 	upgrade_tree.tree_opened.connect(tutorial.notify_upgrade_tree_opened)
 	observer.setup(meteor_layer, progression, hud)
@@ -52,11 +61,15 @@ func _ready() -> void:
 	events.sky_activity_changed.connect(_on_sky_activity_changed)
 	events.forecast_requested.connect(_on_shower_forecast_requested)
 
-	start_run()
+	if startup_slot_prompt_enabled:
+		hud.open_startup_slots()
+	else:
+		start_run()
 
 
 func start_run() -> void:
 	elapsed_time = 0.0
+	autosave_elapsed = 0.0
 	completed = false
 	last_completion_success = false
 	hud.hide_end()
@@ -78,6 +91,7 @@ func reset_run() -> void:
 	hud.hide_end()
 	hud.reset_tutorial()
 	start_run()
+	_autosave_active_slot()
 	hud.show_banner(tr("BANNER_RESET"), Color("9bcde5"), 2.0)
 
 
@@ -86,6 +100,11 @@ func _process(delta: float) -> void:
 		return
 	elapsed_time += delta
 	hud.set_runtime(elapsed_time)
+	if active_save_slot > 0:
+		autosave_elapsed += delta
+		if autosave_elapsed >= AUTOSAVE_INTERVAL_SECONDS:
+			autosave_elapsed = fmod(autosave_elapsed, AUTOSAVE_INTERVAL_SECONDS)
+			_autosave_active_slot()
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
@@ -196,6 +215,7 @@ func _complete_prototype(success: bool) -> void:
 	observer.release_target()
 	if success:
 		sound.play_complete()
+	_autosave_active_slot()
 	hud.show_end(success, _build_end_stats())
 
 
@@ -224,6 +244,9 @@ func _upgrade_name(definition: Dictionary) -> String:
 func _on_save_slot_requested(slot: int) -> void:
 	var error: Error = save_games.save_slot(slot, _build_save_data())
 	if error == OK:
+		active_save_slot = slot
+		autosave_elapsed = 0.0
+		hud.set_active_save_slot(slot)
 		hud.show_save_feedback(tr("SAVE_SUCCESS") % slot, Color("7ee9dc"))
 		sound.play_upgrade()
 	else:
@@ -235,10 +258,68 @@ func _on_load_slot_requested(slot: int) -> void:
 	if data.is_empty():
 		hud.show_save_feedback(tr("LOAD_FAILURE") % slot, Color("ff9a86"))
 		return
+	active_save_slot = slot
+	autosave_elapsed = 0.0
+	hud.set_active_save_slot(slot)
 	_apply_save_data(data)
 	hud.close_settings()
 	hud.show_banner(tr("BANNER_SLOT_LOADED") % slot, Color("80e6d2"), 2.2)
 	sound.play_upgrade()
+
+
+func _on_startup_slot_selected(slot: int) -> void:
+	var summary: Dictionary = save_games.get_slot_summary(slot)
+	var exists := bool(summary.get("exists", false))
+	var valid := bool(summary.get("valid", false))
+	if exists and not valid:
+		return
+	active_save_slot = slot
+	autosave_elapsed = 0.0
+	hud.set_active_save_slot(slot)
+	if exists:
+		var data: Dictionary = save_games.load_slot(slot)
+		if data.is_empty():
+			active_save_slot = 0
+			hud.set_active_save_slot(0)
+			return
+		_apply_save_data(data)
+	else:
+		_start_fresh_slot()
+		_autosave_active_slot()
+	hud.close_startup_slots()
+	if exists:
+		hud.show_banner(tr("BANNER_SLOT_LOADED") % slot, Color("80e6d2"), 2.2)
+	_start_tutorial_after_slot_if_needed()
+
+
+func _start_fresh_slot() -> void:
+	completed = false
+	upgrade_tree.close_tree()
+	observer.reset()
+	effects.reset()
+	events.reset()
+	spawner.reset()
+	progression.reset()
+	hud.hide_end()
+	hud.reset_tutorial()
+	start_run()
+
+
+func _start_tutorial_after_slot_if_needed() -> void:
+	if tutorial_auto_start_after_slot and progression.success_count == 0 and not settings.is_tutorial_completed():
+		tutorial.start_tutorial()
+	tutorial_auto_start_after_slot = false
+
+
+func _autosave_active_slot() -> bool:
+	if active_save_slot < 1 or active_save_slot > 3:
+		return false
+	var error: Error = save_games.save_slot(active_save_slot, _build_save_data())
+	if error == OK:
+		hud.show_autosaved(active_save_slot)
+		return true
+	hud.show_banner(tr("AUTOSAVE_FAILURE") % active_save_slot, Color("ff9a86"), 2.0)
+	return false
 
 
 func _on_tutorial_replay_requested() -> void:
@@ -262,6 +343,7 @@ func _apply_save_data(data: Dictionary) -> void:
 	completed = false
 	last_completion_success = false
 	elapsed_time = maxf(0.0, float(data.get("elapsed_time", 0.0)))
+	autosave_elapsed = 0.0
 	var progression_data = data.get("progression", {})
 	progression.load_save_data(progression_data if progression_data is Dictionary else {})
 	hud.hide_end()

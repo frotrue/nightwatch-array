@@ -30,9 +30,16 @@ TUTORIAL_COMPLETE_TITLE,THE ARRAY IS YOURS,이제 관측망은 당신의 것입�
 TUTORIAL_COMPLETE_BODY,Keep observing to unlock all three branches. The Settings menu also contains three manual save slots.,관측을 계속해 세 분기를 모두 해금하세요. 설정 메뉴에서 3개의 수동 저장 슬롯도 사용할 수 있습니다.
 TUTORIAL_COMPLETE_HINT,Press [U] to close the tree. You can replay this guide from Settings.,[U]로 트리를 닫을 수 있습니다. 이 안내는 설정에서 다시 볼 수 있습니다.
 TUTORIAL_FINISH,BEGIN NIGHTWATCH,나이트워치 시작
+STARTUP_SAVE_TITLE,SELECT SAVE SLOT,저장 슬롯 선택
+STARTUP_SAVE_SUBTITLE,NIGHTWATCH RECORDS,나이트워치 관측 기록
+STARTUP_SAVE_HINT,The active slot is saved automatically every 60 seconds.,선택한 슬롯에 60초마다 자동으로 저장됩니다.
+STARTUP_NEW_GAME,NEW NIGHTWATCH,새 관측 시작
+STARTUP_CONTINUE,CONTINUE,이어하기
+STARTUP_UNAVAILABLE,UNAVAILABLE,사용 불가
 SAVE_SECTION_TITLE,SAVE SLOTS,저장 슬롯
 SAVE_SECTION_HINT,Choose one of three save slots.,세 개의 슬롯 중 하나를 선택하세요.
 SAVE_SLOT_TITLE,SLOT %d,슬롯 %d
+SAVE_ACTIVE_MARKER,  •  ACTIVE,  •  사용 중
 SAVE_SLOT_EMPTY,EMPTY SLOT,빈 슬롯
 SAVE_SLOT_INVALID,SAVE DATA IS DAMAGED,저장 데이터가 손상되었습니다
 SAVE_SLOT_META,%s  •  %02d:%02d  •  DATA %d  •  %d/16,%s  •  %02d:%02d  •  데이터 %d  •  %d/16
@@ -47,6 +54,7 @@ SAVE_OVERWRITE_PROMPT,Slot %d already contains a save. Overwrite it?,슬롯 %d�
 SAVE_OVERWRITE_CONFIRM,OVERWRITE,덮어쓰기
 SAVE_CANCEL,CANCEL,취소
 BANNER_SLOT_LOADED,SLOT %d LOADED,슬롯 %d을 불러왔습니다
+AUTOSAVE_FAILURE,AUTOSAVE FAILED  •  SLOT %d,자동저장 실패  •  슬롯 %d
 HUD_DATA,OBSERVATION DATA   %04d,관측 데이터   %04d
 HUD_STATUS,OBSERVED  %d    •    ARRAY  %d/%d,관측  %d    •    관측망  %d/%d
 HUD_DATA_CAPTION,OBSERVATION DATA,관측 데이터
@@ -55,6 +63,8 @@ HUD_ARRAY_PROGRESS,%d / %d SYSTEMS,%d / %d 시스템
 HUD_OBSERVED_COUNT,%d OBJECTS LOGGED,관측 기록 %d건
 HUD_DATA_GAIN,+%d DATA,+%d 데이터
 HUD_TIME,RUN  %02d:%02d,진행  %02d:%02d
+HUD_ACTIVE_SLOT,SLOT %d  •  AUTOSAVE 60s,슬롯 %d  •  60초 자동저장
+HUD_AUTOSAVED_SLOT,SLOT %d  •  AUTOSAVED,슬롯 %d  •  자동저장 완료
 HUD_TUTORIAL_START,Hold LMB and follow the meteor,마우스 왼쪽 버튼을 누른 채 유성을 따라가세요
 HUD_TUTORIAL_DONE,Observation logged. Open the Upgrade Tree [U] to expand the array.,관측이 기록되었습니다. 업그레이드 트리 [U]에서 관측망을 확장하세요.
 HUD_UPGRADE_BUTTON,UPGRADE TREE  [U]    %d/%d,업그레이드 트리  [U]    %d/%d

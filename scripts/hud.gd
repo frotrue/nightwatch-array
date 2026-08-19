@@ -4,6 +4,7 @@ signal restart_requested
 signal upgrade_tree_requested
 signal save_slot_requested(slot: int)
 signal load_slot_requested(slot: int)
+signal startup_slot_selected(slot: int)
 signal tutorial_replay_requested
 
 const Balance = preload("res://scripts/game_balance.gd")
@@ -20,6 +21,7 @@ var array_progress_label: Label
 var array_progress_bar: ProgressBar
 var status_label: Label
 var time_label: Label
+var save_mode_label: Label
 var tutorial_label: Label
 var banner_label: Label
 var tree_panel: PanelContainer
@@ -47,6 +49,13 @@ var settings_hint: Label
 var language_selector: OptionButton
 var tutorial_replay_button: Button
 var settings_close_button: Button
+var startup_overlay: Control
+var startup_title: Label
+var startup_subtitle: Label
+var startup_hint: Label
+var startup_slot_titles: Array[Label] = []
+var startup_slot_details: Array[Label] = []
+var startup_slot_buttons: Array[Button] = []
 var save_section_label: Label
 var save_feedback: Label
 var save_slot_titles: Array[Label] = []
@@ -63,6 +72,9 @@ var last_observation_data: float = -1.0
 var data_gain_tween: Tween
 var last_end_success: bool = false
 var paused_by_settings: bool = false
+var paused_by_startup: bool = false
+var active_save_slot: int = 0
+var autosave_status_timer: float = 0.0
 
 
 func _ready() -> void:
@@ -100,6 +112,10 @@ func _process(delta: float) -> void:
 		banner_label.modulate.a = fade
 		if banner_timer <= 0.0:
 			banner_label.visible = false
+	if autosave_status_timer > 0.0:
+		autosave_status_timer -= delta
+		if autosave_status_timer <= 0.0:
+			_refresh_save_mode_label(false)
 
 
 func set_runtime(seconds: float) -> void:
@@ -211,6 +227,55 @@ func close_settings() -> void:
 
 func is_settings_open() -> bool:
 	return settings_overlay != null and settings_overlay.visible
+
+
+func open_startup_slots() -> void:
+	if startup_overlay == null or startup_overlay.visible:
+		return
+	startup_overlay.visible = true
+	startup_overlay.move_to_front()
+	paused_by_startup = not get_tree().paused
+	get_tree().paused = true
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	_refresh_startup_slots()
+
+
+func close_startup_slots() -> void:
+	if startup_overlay == null or not startup_overlay.visible:
+		return
+	startup_overlay.visible = false
+	if paused_by_startup:
+		get_tree().paused = false
+	paused_by_startup = false
+	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
+
+
+func is_startup_slots_open() -> bool:
+	return startup_overlay != null and startup_overlay.visible
+
+
+func set_active_save_slot(slot: int) -> void:
+	active_save_slot = slot
+	autosave_status_timer = 0.0
+	_refresh_save_mode_label(false)
+	_refresh_save_slots()
+
+
+func show_autosaved(slot: int) -> void:
+	active_save_slot = slot
+	autosave_status_timer = 2.2
+	_refresh_save_mode_label(true)
+	_refresh_save_slots()
+
+
+func _refresh_save_mode_label(just_saved: bool) -> void:
+	if save_mode_label == null:
+		return
+	save_mode_label.visible = active_save_slot > 0
+	if active_save_slot <= 0:
+		return
+	save_mode_label.text = tr("HUD_AUTOSAVED_SLOT") % active_save_slot if just_saved else tr("HUD_ACTIVE_SLOT") % active_save_slot
+	save_mode_label.add_theme_color_override("font_color", Color("8fffe5") if just_saved else Color("7897ad"))
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
@@ -345,6 +410,15 @@ func _on_load_slot_pressed(slot: int) -> void:
 		load_slot_requested.emit(slot)
 
 
+func _on_startup_slot_pressed(slot: int) -> void:
+	if save_game_controller == null:
+		return
+	var summary: Dictionary = save_game_controller.get_slot_summary(slot)
+	if bool(summary.get("exists", false)) and not bool(summary.get("valid", false)):
+		return
+	startup_slot_selected.emit(slot)
+
+
 func _on_overwrite_confirmed() -> void:
 	if pending_overwrite_slot < 1:
 		return
@@ -360,26 +434,53 @@ func _refresh_save_slots() -> void:
 		var index := slot - 1
 		var summary: Dictionary = save_game_controller.get_slot_summary(slot)
 		save_slot_titles[index].text = tr("SAVE_SLOT_TITLE") % slot
+		if slot == active_save_slot:
+			save_slot_titles[index].text += tr("SAVE_ACTIVE_MARKER")
 		var exists := bool(summary.get("exists", false))
 		var valid := bool(summary.get("valid", false))
 		load_slot_buttons[index].disabled = not exists or not valid
 		save_slot_buttons[index].text = tr("SAVE_OVERWRITE") if exists and valid else tr("SAVE_ACTION")
 		load_slot_buttons[index].text = tr("LOAD_ACTION")
-		if not exists:
-			save_slot_details[index].text = tr("SAVE_SLOT_EMPTY")
-		elif not valid:
-			save_slot_details[index].text = tr("SAVE_SLOT_INVALID")
+		save_slot_details[index].text = _format_slot_details(summary)
+	_refresh_startup_slots()
+
+
+func _refresh_startup_slots() -> void:
+	if save_game_controller == null or startup_slot_titles.size() != 3:
+		return
+	for slot in range(1, 4):
+		var index := slot - 1
+		var summary: Dictionary = save_game_controller.get_slot_summary(slot)
+		var exists := bool(summary.get("exists", false))
+		var valid := bool(summary.get("valid", false))
+		startup_slot_titles[index].text = tr("SAVE_SLOT_TITLE") % slot
+		startup_slot_details[index].text = _format_slot_details(summary)
+		startup_slot_buttons[index].disabled = exists and not valid
+		if exists and valid:
+			startup_slot_buttons[index].text = tr("STARTUP_CONTINUE")
+		elif exists:
+			startup_slot_buttons[index].text = tr("STARTUP_UNAVAILABLE")
 		else:
-			var saved_at := int(summary.get("saved_at", 0))
-			var timezone: Dictionary = Time.get_time_zone_from_system()
-			var local_saved_at := saved_at + int(timezone.get("bias", 0)) * 60
-			var date := Time.get_datetime_dict_from_unix_time(local_saved_at)
-			var stamp := "%04d-%02d-%02d %02d:%02d" % [date.year, date.month, date.day, date.hour, date.minute]
-			var seconds := int(summary.get("elapsed_time", 0.0))
-			save_slot_details[index].text = tr("SAVE_SLOT_META") % [
-				stamp, seconds / 60, seconds % 60,
-				int(summary.get("observation_data", 0.0)), int(summary.get("upgrade_level", 0))
-			]
+			startup_slot_buttons[index].text = tr("STARTUP_NEW_GAME")
+
+
+func _format_slot_details(summary: Dictionary) -> String:
+	var exists := bool(summary.get("exists", false))
+	var valid := bool(summary.get("valid", false))
+	if not exists:
+		return tr("SAVE_SLOT_EMPTY")
+	if not valid:
+		return tr("SAVE_SLOT_INVALID")
+	var saved_at := int(summary.get("saved_at", 0))
+	var timezone: Dictionary = Time.get_time_zone_from_system()
+	var local_saved_at := saved_at + int(timezone.get("bias", 0)) * 60
+	var date := Time.get_datetime_dict_from_unix_time(local_saved_at)
+	var stamp := "%04d-%02d-%02d %02d:%02d" % [date.year, date.month, date.day, date.hour, date.minute]
+	var seconds := int(summary.get("elapsed_time", 0.0))
+	return tr("SAVE_SLOT_META") % [
+		stamp, seconds / 60, seconds % 60,
+		int(summary.get("observation_data", 0.0)), int(summary.get("upgrade_level", 0))
+	]
 
 
 func _on_language_selected(index: int) -> void:
@@ -412,6 +513,9 @@ func _apply_locale() -> void:
 	settings_language_label.text = tr("SETTINGS_LANGUAGE")
 	settings_hint.text = tr("SETTINGS_LANGUAGE_HINT")
 	tutorial_replay_button.text = tr("TUTORIAL_REPLAY")
+	startup_title.text = tr("STARTUP_SAVE_TITLE")
+	startup_subtitle.text = tr("STARTUP_SAVE_SUBTITLE")
+	startup_hint.text = tr("STARTUP_SAVE_HINT")
 	save_section_label.text = tr("SAVE_SECTION_TITLE")
 	save_feedback.text = tr("SAVE_SECTION_HINT")
 	settings_close_button.text = tr("SETTINGS_CLOSE")
@@ -433,6 +537,7 @@ func _apply_locale() -> void:
 	])
 	last_runtime_second = -1
 	last_tracking_text = ""
+	_refresh_save_mode_label(autosave_status_timer > 0.0)
 	if progression != null:
 		_refresh_progression()
 	_refresh_save_slots()
@@ -522,11 +627,20 @@ func _build_interface() -> void:
 	var second_divider := VSeparator.new()
 	second_divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top_row.add_child(second_divider)
+	var run_column := VBoxContainer.new()
+	run_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	run_column.custom_minimum_size = Vector2(112, 0)
+	run_column.alignment = BoxContainer.ALIGNMENT_CENTER
+	run_column.add_theme_constant_override("separation", 2)
+	top_row.add_child(run_column)
 	time_label = _make_label(tr("HUD_TIME") % [0, 0], 14, Color("7893ac"))
-	time_label.custom_minimum_size = Vector2(88, 0)
 	time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	time_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	top_row.add_child(time_label)
+	save_mode_label = _make_label("", 9, Color("7897ad"))
+	save_mode_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	save_mode_label.visible = false
+	run_column.add_child(time_label)
+	run_column.add_child(save_mode_label)
 
 	banner_label = _make_label("", 24, Color.WHITE)
 	banner_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
@@ -654,6 +768,88 @@ func _build_interface() -> void:
 	settings_button.add_theme_stylebox_override("hover", _panel_style(Color(0.04, 0.10, 0.16, 0.96), Color("62b7d4"), 8))
 	settings_button.pressed.connect(open_settings)
 	root_control.add_child(settings_button)
+	_build_startup_slots_ui()
+
+
+func _build_startup_slots_ui() -> void:
+	startup_overlay = Control.new()
+	startup_overlay.name = "StartupSaveSlots"
+	startup_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	startup_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	startup_overlay.visible = false
+	root_control.add_child(startup_overlay)
+	var dim := ColorRect.new()
+	dim.color = Color(0.002, 0.007, 0.02, 0.94)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	startup_overlay.add_child(dim)
+	var panel := PanelContainer.new()
+	panel.set_anchors_preset(Control.PRESET_CENTER)
+	panel.offset_left = -335.0
+	panel.offset_top = -235.0
+	panel.offset_right = 335.0
+	panel.offset_bottom = 235.0
+	panel.add_theme_stylebox_override("panel", _panel_style(Color("071426"), Color("4c8aa8"), 14))
+	startup_overlay.add_child(panel)
+	var margin := MarginContainer.new()
+	for side in ["margin_left", "margin_top", "margin_right", "margin_bottom"]:
+		margin.add_theme_constant_override(side, 24)
+	panel.add_child(margin)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 10)
+	margin.add_child(column)
+	startup_title = _make_label(tr("STARTUP_SAVE_TITLE"), 28, Color("e8f6ff"))
+	startup_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	startup_subtitle = _make_label(tr("STARTUP_SAVE_SUBTITLE"), 11, Color("6f9ab2"))
+	startup_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(startup_title)
+	column.add_child(startup_subtitle)
+	var divider := HSeparator.new()
+	column.add_child(divider)
+	for slot in range(1, 4):
+		_build_startup_slot_row(column, slot)
+	startup_hint = _make_label(tr("STARTUP_SAVE_HINT"), 12, Color("8ba7b9"))
+	startup_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	startup_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(startup_hint)
+
+
+func _build_startup_slot_row(parent: VBoxContainer, slot: int) -> void:
+	var row_panel := PanelContainer.new()
+	row_panel.custom_minimum_size = Vector2(0, 84)
+	row_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.025, 0.065, 0.11, 0.9), Color(0.20, 0.43, 0.58, 0.66), 9))
+	parent.add_child(row_panel)
+	var row_margin := MarginContainer.new()
+	row_margin.add_theme_constant_override("margin_left", 16)
+	row_margin.add_theme_constant_override("margin_right", 12)
+	row_margin.add_theme_constant_override("margin_top", 10)
+	row_margin.add_theme_constant_override("margin_bottom", 10)
+	row_panel.add_child(row_margin)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	row_margin.add_child(row)
+	var info := VBoxContainer.new()
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.add_theme_constant_override("separation", 3)
+	row.add_child(info)
+	var title := _make_label(tr("SAVE_SLOT_TITLE") % slot, 17, Color("e8f6ff"))
+	var details := _make_label(tr("SAVE_SLOT_EMPTY"), 11, Color("829caf"))
+	details.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	info.add_child(title)
+	info.add_child(details)
+	var select_button := Button.new()
+	select_button.text = tr("STARTUP_NEW_GAME")
+	select_button.custom_minimum_size = Vector2(168, 52)
+	select_button.add_theme_font_size_override("font_size", 13)
+	select_button.add_theme_color_override("font_color", Color("d9f7ff"))
+	select_button.add_theme_stylebox_override("normal", _panel_style(Color("12405c"), Color("387794"), 7))
+	select_button.add_theme_stylebox_override("hover", _panel_style(Color("185b79"), Color("68b4d2"), 7))
+	select_button.add_theme_stylebox_override("pressed", _panel_style(Color("0d3047"), Color("78d9ef"), 7))
+	select_button.pressed.connect(_on_startup_slot_pressed.bind(slot))
+	row.add_child(select_button)
+	startup_slot_titles.append(title)
+	startup_slot_details.append(details)
+	startup_slot_buttons.append(select_button)
 
 
 func _build_debug_panel() -> void:

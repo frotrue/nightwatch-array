@@ -20,13 +20,37 @@ func _run() -> void:
 		quit(1)
 		return
 	var game = packed.instantiate()
+	game.startup_slot_prompt_enabled = false
 	game.get_node("Tutorial").auto_start_enabled = false
 	root.add_child(game)
 	await process_frame
 	await process_frame
+	var startup_save_directory := "user://nightwatch_startup_smoke_saves"
+	_cleanup_smoke_saves(startup_save_directory)
+	game.save_games.set_save_directory(startup_save_directory)
+	game.hud.open_startup_slots()
+	_check(game.hud.is_startup_slots_open() and paused, "startup save-slot picker pauses the game")
+	_check(game.hud.startup_slot_buttons.size() == 3, "startup picker exposes exactly three save slots")
+	game._on_startup_slot_selected(2)
+	_check(not game.hud.is_startup_slots_open() and not paused, "choosing a startup slot enters the game")
+	_check(game.active_save_slot == 2 and game.save_games.has_slot(2), "an empty startup slot creates and activates a new save")
+	game.progression.add_debug_data(23.0)
+	game.autosave_elapsed = game.AUTOSAVE_INTERVAL_SECONDS - 0.1
+	game._process(0.2)
+	var autosaved_data: Dictionary = game.save_games.load_slot(2)
+	var autosaved_progression: Dictionary = autosaved_data.get("progression", {})
+	_check(int(autosaved_progression.get("observation_data", 0.0)) == 23, "active slot autosaves current progress after 60 seconds")
+	_check(game.autosave_elapsed < 1.0, "autosave interval resets after writing")
+	game.progression.reset()
+	game._on_startup_slot_selected(2)
+	_check(int(game.progression.observation_data) == 23, "choosing an occupied startup slot resumes its autosave")
+	_cleanup_smoke_saves(startup_save_directory)
+	game.active_save_slot = 0
+	game.hud.set_active_save_slot(0)
 	var smoke_save_directory := "user://nightwatch_smoke_saves"
 	_cleanup_smoke_saves(smoke_save_directory)
 	game.save_games.set_save_directory(smoke_save_directory)
+	game.reset_run()
 	var engine_version: Dictionary = Engine.get_version_info()
 	var has_high_polling_fix := (
 		int(engine_version.major) > 4
