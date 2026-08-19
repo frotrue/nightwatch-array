@@ -49,12 +49,24 @@ SAVE_CANCEL,CANCEL,취소
 BANNER_SLOT_LOADED,SLOT %d LOADED,슬롯 %d을 불러왔습니다
 HUD_DATA,OBSERVATION DATA   %04d,관측 데이터   %04d
 HUD_STATUS,OBSERVED  %d    •    ARRAY  %d/%d,관측  %d    •    관측망  %d/%d
+HUD_DATA_CAPTION,OBSERVATION DATA,관측 데이터
+HUD_ARRAY_CAPTION,ARRAY BUILD,관측망 구축
+HUD_ARRAY_PROGRESS,%d / %d SYSTEMS,%d / %d 시스템
+HUD_OBSERVED_COUNT,%d OBJECTS LOGGED,관측 기록 %d건
+HUD_DATA_GAIN,+%d DATA,+%d 데이터
 HUD_TIME,RUN  %02d:%02d,진행  %02d:%02d
 HUD_TUTORIAL_START,Hold LMB and follow the meteor,마우스 왼쪽 버튼을 누른 채 유성을 따라가세요
 HUD_TUTORIAL_DONE,Observation logged. Open the Upgrade Tree [U] to expand the array.,관측이 기록되었습니다. 업그레이드 트리 [U]에서 관측망을 확장하세요.
 HUD_UPGRADE_BUTTON,UPGRADE TREE  [U]    %d/%d,업그레이드 트리  [U]    %d/%d
 HUD_UPGRADE_AVAILABLE,◆  UPGRADE AVAILABLE,◆  업그레이드 가능
 HUD_NEXT_DISCOVERY,NEXT DISCOVERY AWAITS,다음 발견을 기다리는 중
+HUD_NEXT_SYSTEM,NEXT SYSTEM,다음 시스템
+HUD_READY_COUNT,  •  %d READY,  •  %d개 가능
+HUD_READY_INSTALL,READY  •  %d DATA,설치 가능  •  데이터 %d
+HUD_DATA_PROGRESS,%d / %d DATA,데이터 %d / %d
+HUD_ARRAY_COMPLETE,ARRAY COMPLETE,관측망 완성
+HUD_NETWORK_STABLE,NIGHTWATCH ARRAY STABLE,나이트워치 관측망 안정
+HUD_ALL_SYSTEMS_ONLINE,ALL SYSTEMS ONLINE,모든 시스템 가동
 HUD_TRACKING,%s   %d%%,%s   %d%%
 HUD_END_SUCCESS,PROTOTYPE COMPLETE,프로토타입 완료
 HUD_END_FAILURE,MAJOR FIREBALL LOST,대형 화구 관측 실패

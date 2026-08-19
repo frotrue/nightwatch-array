@@ -82,11 +82,16 @@ func _run() -> void:
 	_check(initial.successes == 0, "run begins with no observations")
 	_check(not initial.final_started, "final event is initially inactive")
 	_check(game.progression.get_available_nodes().size() == 3, "only three opening choices are revealed")
+	_check(game.hud.array_progress_bar.max_value == 16.0, "HUD exposes the finite array completion goal")
+	_check(game.hud.next_system_name_label.text == TranslationServer.translate("UPGRADE_BETTER_LENS_NAME"), "HUD recommends the nearest affordable-path system")
+	_check(game.hud.next_system_bar.max_value == 12.0 and game.hud.next_system_bar.value == 0.0, "next-system card shows progress toward its Data cost")
 	_check(game.progression.get_node_state("long_exposure") == "hidden", "adjacent optics node begins hidden")
 	var data_before_rejected_purchase: float = game.progression.observation_data
 	_check(not game.progression.request_purchase("array_planning"), "purchase fails when Observation Data is insufficient")
 	_check(game.progression.observation_data == data_before_rejected_purchase, "failed purchase never deducts Data")
 	game.progression.add_debug_data(100.0)
+	_check(game.hud.data_gain_label.visible, "resource gains receive immediate HUD feedback")
+	_check(game.hud.next_system_bar.value == game.hud.next_system_bar.max_value, "next-system cost bar fills when an upgrade is affordable")
 	var data_before_prerequisite_bypass: float = game.progression.observation_data
 	_check(not game.progression.request_purchase("long_exposure"), "hidden prerequisite cannot be bypassed with enough Data")
 	_check(game.progression.observation_data == data_before_prerequisite_bypass, "prerequisite rejection never deducts Data")
@@ -117,6 +122,7 @@ func _run() -> void:
 	_check(game.progression.observation_data >= 14.0, "observation awards data")
 	_check(game.progression.request_purchase("better_lens"), "first observation can buy Better Lens through the tree controller")
 	_check(game.progression.get_tracking_radius() > 36.0, "Better Lens changes the hit radius")
+	_check(game.hud.array_progress_bar.value == 1.0, "array completion meter advances with purchases")
 	_check(game.progression.get_node_state("long_exposure") == "available", "purchasing a node reveals its adjacent child")
 	var data_after_better_lens: float = game.progression.observation_data
 	_check(not game.progression.request_purchase("better_lens"), "a purchased node cannot be bought twice")
@@ -142,6 +148,7 @@ func _run() -> void:
 
 	game.progression.debug_purchase_all()
 	_check(game.progression.upgrade_level == 16, "all tree nodes unlock through prerequisite-safe debug purchase")
+	_check(game.hud.next_system_name_label.text == TranslationServer.translate("HUD_NETWORK_STABLE"), "HUD resolves to a completed-array state")
 	for legacy_id in ["better_lens", "long_exposure", "wide_field", "trajectory", "precision_multiplier", "secondary_camera", "shower_detector", "automated_tracking"]:
 		_check(game.progression.has_upgrade(legacy_id), "legacy upgrade migrated: " + legacy_id)
 	_check(game.progression.has_upgrade("automated_tracking"), "final automation system is active")
