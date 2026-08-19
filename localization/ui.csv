@@ -7,6 +7,46 @@ SETTINGS_LANGUAGE_HINT,Changes are applied immediately and saved automatically.,
 SETTINGS_CLOSE,CLOSE  [ESC],닫기  [ESC]
 SETTINGS_ENGLISH,English,English
 SETTINGS_KOREAN,한국어,한국어
+TUTORIAL_REPLAY,REPLAY TUTORIAL,튜토리얼 다시 보기
+TUTORIAL_STEP,STEP %d / %d,단계 %d / %d
+TUTORIAL_STEP_WELCOME,QUICK START,빠른 시작
+TUTORIAL_STEP_COMPLETE,TUTORIAL COMPLETE,튜토리얼 완료
+TUTORIAL_WELCOME_TITLE,WELCOME TO NIGHTWATCH,나이트워치에 오신 것을 환영합니다
+TUTORIAL_WELCOME_BODY,Track meteors to collect Observation Data. Spend that Data in the Upgrade Tree to expand your observatory network.,유성을 추적해 관측 데이터를 모으고 업그레이드 트리에서 사용해 관측망을 확장하세요.
+TUTORIAL_WELCOME_HINT,This guide advances when you perform each action.,각 행동을 직접 수행하면 다음 단계로 넘어갑니다.
+TUTORIAL_START,START TUTORIAL,튜토리얼 시작
+TUTORIAL_SKIP,SKIP,건너뛰기
+TUTORIAL_CONTINUE,CONTINUE,계속
+TUTORIAL_OBSERVE_TITLE,TRACK A METEOR,유성을 추적하세요
+TUTORIAL_OBSERVE_BODY,Hold the left mouse button and keep the cursor close to a meteor until the observation ring fills.,마우스 왼쪽 버튼을 누른 채 커서를 유성 가까이에 유지해 관측 게이지를 채우세요.
+TUTORIAL_OBSERVE_HINT,Complete one observation to continue.,관측을 한 번 완료하면 계속됩니다.
+TUTORIAL_TREE_TITLE,OPEN THE UPGRADE TREE,업그레이드 트리를 여세요
+TUTORIAL_TREE_BODY,Your first observation awarded enough Data for an opening system. Press [U] or use the button at the lower right.,첫 관측으로 시작 시스템을 구매할 데이터가 모였습니다. [U] 또는 오른쪽 아래 버튼을 누르세요.
+TUTORIAL_TREE_HINT,Open the tree to continue.,트리를 열면 계속됩니다.
+TUTORIAL_INSTALL_TITLE,INSTALL YOUR FIRST SYSTEM,첫 시스템을 설치하세요
+TUTORIAL_INSTALL_BODY,Available nodes glow in their branch color. Select a bright node to spend Data and reveal the next paths.,구매 가능한 노드는 분기 색으로 빛납니다. 밝은 노드를 선택해 데이터를 사용하고 다음 경로를 밝히세요.
+TUTORIAL_INSTALL_HINT,Purchase one available node to continue.,구매 가능한 노드를 하나 설치하면 계속됩니다.
+TUTORIAL_COMPLETE_TITLE,THE ARRAY IS YOURS,이제 관측망은 당신의 것입니다
+TUTORIAL_COMPLETE_BODY,Keep observing to unlock all three branches. The Settings menu also contains three manual save slots.,관측을 계속해 세 분기를 모두 해금하세요. 설정 메뉴에서 3개의 수동 저장 슬롯도 사용할 수 있습니다.
+TUTORIAL_COMPLETE_HINT,Press [U] to close the tree. You can replay this guide from Settings.,[U]로 트리를 닫을 수 있습니다. 이 안내는 설정에서 다시 볼 수 있습니다.
+TUTORIAL_FINISH,BEGIN NIGHTWATCH,나이트워치 시작
+SAVE_SECTION_TITLE,SAVE SLOTS,저장 슬롯
+SAVE_SECTION_HINT,Choose one of three save slots.,세 개의 슬롯 중 하나를 선택하세요.
+SAVE_SLOT_TITLE,SLOT %d,슬롯 %d
+SAVE_SLOT_EMPTY,EMPTY SLOT,빈 슬롯
+SAVE_SLOT_INVALID,SAVE DATA IS DAMAGED,저장 데이터가 손상되었습니다
+SAVE_SLOT_META,%s  •  %02d:%02d  •  DATA %d  •  %d/16,%s  •  %02d:%02d  •  데이터 %d  •  %d/16
+SAVE_ACTION,SAVE,저장
+SAVE_OVERWRITE,OVERWRITE,덮어쓰기
+LOAD_ACTION,LOAD,불러오기
+SAVE_SUCCESS,SAVED TO SLOT %d,슬롯 %d에 저장했습니다
+SAVE_FAILURE,COULD NOT SAVE SLOT %d,슬롯 %d 저장에 실패했습니다
+LOAD_FAILURE,COULD NOT LOAD SLOT %d,슬롯 %d을 불러올 수 없습니다
+SAVE_OVERWRITE_TITLE,OVERWRITE SAVE?,저장 덮어쓰기
+SAVE_OVERWRITE_PROMPT,Slot %d already contains a save. Overwrite it?,슬롯 %d의 기존 저장을 덮어쓸까요?
+SAVE_OVERWRITE_CONFIRM,OVERWRITE,덮어쓰기
+SAVE_CANCEL,CANCEL,취소
+BANNER_SLOT_LOADED,SLOT %d LOADED,슬롯 %d을 불러왔습니다
 HUD_DATA,OBSERVATION DATA   %04d,관측 데이터   %04d
 HUD_STATUS,OBSERVED  %d    •    ARRAY  %d/%d,관측  %d    •    관측망  %d/%d
 HUD_TIME,RUN  %02d:%02d,진행  %02d:%02d

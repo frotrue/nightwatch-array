@@ -34,6 +34,49 @@ func reset() -> void:
 	state_changed.emit()
 
 
+func get_save_data() -> Dictionary:
+	return {
+		"observation_data": observation_data,
+		"success_count": success_count,
+		"purchased_nodes": purchased_nodes.keys(),
+		"purchase_order": purchase_order.duplicate(),
+		"manual_successes": manual_successes,
+		"automatic_successes": automatic_successes,
+		"total_data_earned": total_data_earned,
+		"best_multiplier": best_multiplier,
+		"manual_streak": manual_streak,
+	}
+
+
+func load_save_data(data: Dictionary) -> void:
+	observation_data = maxf(0.0, float(data.get("observation_data", 0.0)))
+	success_count = maxi(0, int(data.get("success_count", 0)))
+	manual_successes = maxi(0, int(data.get("manual_successes", 0)))
+	automatic_successes = maxi(0, int(data.get("automatic_successes", 0)))
+	total_data_earned = maxf(0.0, float(data.get("total_data_earned", observation_data)))
+	best_multiplier = maxf(1.0, float(data.get("best_multiplier", 1.0)))
+	manual_streak = maxi(0, int(data.get("manual_streak", 0)))
+	purchased_nodes.clear()
+	purchase_order.clear()
+	var saved_nodes = data.get("purchased_nodes", [])
+	if saved_nodes is Array:
+		for node_variant in saved_nodes:
+			var node_id := String(node_variant)
+			if not Balance.upgrade_definition(node_id).is_empty():
+				purchased_nodes[node_id] = true
+	var saved_order = data.get("purchase_order", [])
+	if saved_order is Array:
+		for node_variant in saved_order:
+			var node_id := String(node_variant)
+			if purchased_nodes.has(node_id) and node_id not in purchase_order:
+				purchase_order.append(node_id)
+	for node_variant in purchased_nodes.keys():
+		var node_id := String(node_variant)
+		if node_id not in purchase_order:
+			purchase_order.append(node_id)
+	state_changed.emit()
+
+
 func add_observation(amount: float, was_manual: bool, multiplier: float) -> float:
 	var final_amount := amount
 	if was_manual:

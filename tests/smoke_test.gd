@@ -20,9 +20,13 @@ func _run() -> void:
 		quit(1)
 		return
 	var game = packed.instantiate()
+	game.get_node("Tutorial").auto_start_enabled = false
 	root.add_child(game)
 	await process_frame
 	await process_frame
+	var smoke_save_directory := "user://nightwatch_smoke_saves"
+	_cleanup_smoke_saves(smoke_save_directory)
+	game.save_games.set_save_directory(smoke_save_directory)
 	var engine_version: Dictionary = Engine.get_version_info()
 	var has_high_polling_fix := (
 		int(engine_version.major) > 4
@@ -38,6 +42,23 @@ func _run() -> void:
 	_check(game.hud.tree_button.mouse_filter == Control.MOUSE_FILTER_STOP, "upgrade tree launcher remains interactive")
 	_check(game.hud.debug_panel.mouse_filter == Control.MOUSE_FILTER_IGNORE, "display-only debug panel does not intercept tracking input")
 	_check(not game.upgrade_tree.is_open(), "upgrade tree begins closed")
+	_check(not game.tutorial.is_active(), "tutorial auto-start can be disabled for deterministic tests")
+	game.tutorial.start_tutorial(false)
+	_check(game.tutorial.current_step == 0 and paused, "tutorial starts with a paused welcome step")
+	var welcome_locale: String = game.settings.locale
+	game.settings.set_language("en" if welcome_locale == "ko" else "ko", false)
+	_check(paused, "changing language does not release the tutorial pause")
+	game.settings.set_language(welcome_locale, false)
+	game.tutorial._on_primary_pressed()
+	_check(game.tutorial.current_step == 1 and not paused, "tutorial enters the live observation step")
+	game.tutorial.notify_observation_completed()
+	_check(game.tutorial.current_step == 2, "an observation advances the tutorial")
+	game.tutorial.notify_upgrade_tree_opened()
+	_check(game.tutorial.current_step == 3, "opening the tree advances the tutorial")
+	game.tutorial.notify_upgrade_purchased()
+	_check(game.tutorial.current_step == 4, "purchasing an upgrade completes the guided steps")
+	game.tutorial._on_primary_pressed()
+	_check(not game.tutorial.is_active(), "finishing hides the tutorial")
 	var starting_locale: String = game.settings.locale
 	game.settings.set_language("ko", false)
 	await process_frame
@@ -100,6 +121,24 @@ func _run() -> void:
 	var data_after_better_lens: float = game.progression.observation_data
 	_check(not game.progression.request_purchase("better_lens"), "a purchased node cannot be bought twice")
 	_check(game.progression.observation_data == data_after_better_lens, "duplicate purchase cannot deduct Data")
+	game.elapsed_time = 73.0
+	var saved_observation_data: float = game.progression.observation_data
+	var save_error: Error = game.save_games.save_slot(1, game._build_save_data())
+	_check(save_error == OK, "slot 1 save is written")
+	_check(game.save_games.has_slot(1), "slot 1 becomes loadable")
+	_check(not game.save_games.has_slot(2) and not game.save_games.has_slot(3), "the other two slots remain independent")
+	var slot_summary: Dictionary = game.save_games.get_slot_summary(1)
+	_check(int(slot_summary.elapsed_time) == 73, "slot summary stores run time")
+	_check(int(slot_summary.upgrade_level) == 1, "slot summary stores upgrade count")
+	_check(not game.hud.load_slot_buttons[0].disabled, "saved slot enables its load button")
+	game.progression.reset()
+	game.elapsed_time = 0.0
+	game._apply_save_data(game.save_games.load_slot(1))
+	await process_frame
+	_check(absf(game.elapsed_time - 73.0) < 0.1, "loading restores run time")
+	_check(is_equal_approx(game.progression.observation_data, saved_observation_data), "loading restores Observation Data")
+	_check(game.progression.has_upgrade("better_lens"), "loading restores purchased upgrades")
+	_check(game.progression.success_count == 1, "loading restores observation statistics")
 
 	game.progression.debug_purchase_all()
 	_check(game.progression.upgrade_level == 16, "all tree nodes unlock through prerequisite-safe debug purchase")
@@ -167,11 +206,12 @@ func _run() -> void:
 
 	# Let short procedural audio voices and delayed chord tones release cleanly.
 	await create_timer(0.85).timeout
+	_cleanup_smoke_saves(smoke_save_directory)
 	game.queue_free()
 	await process_frame
 	await process_frame
 	if failures.is_empty():
-		print("SMOKE_TEST_PASS: localization, settings, observation, progression, shower, final event, stale references, and reset")
+		print("SMOKE_TEST_PASS: tutorial, saves, localization, observation, progression, events, stale references, and reset")
 		quit(0)
 	else:
 		print("SMOKE_TEST_FAIL: %d failure(s)" % failures.size())
@@ -187,3 +227,13 @@ func _decorative_controls_ignore_mouse(node: Node) -> bool:
 		if not _decorative_controls_ignore_mouse(child):
 			return false
 	return true
+
+
+func _cleanup_smoke_saves(directory: String) -> void:
+	var absolute_directory := ProjectSettings.globalize_path(directory)
+	for slot in range(1, 4):
+		var slot_path := absolute_directory.path_join("slot_%d.cfg" % slot)
+		if FileAccess.file_exists(slot_path):
+			DirAccess.remove_absolute(slot_path)
+	if DirAccess.dir_exists_absolute(absolute_directory):
+		DirAccess.remove_absolute(absolute_directory)

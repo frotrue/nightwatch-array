@@ -2,11 +2,15 @@ extends CanvasLayer
 
 signal restart_requested
 signal upgrade_tree_requested
+signal save_slot_requested(slot: int)
+signal load_slot_requested(slot: int)
+signal tutorial_replay_requested
 
 const Balance = preload("res://scripts/game_balance.gd")
 
 var progression: Node
 var settings_controller: Node
+var save_game_controller: Node
 var root_control: Control
 var data_label: Label
 var status_label: Label
@@ -31,7 +35,16 @@ var settings_subtitle: Label
 var settings_language_label: Label
 var settings_hint: Label
 var language_selector: OptionButton
+var tutorial_replay_button: Button
 var settings_close_button: Button
+var save_section_label: Label
+var save_feedback: Label
+var save_slot_titles: Array[Label] = []
+var save_slot_details: Array[Label] = []
+var save_slot_buttons: Array[Button] = []
+var load_slot_buttons: Array[Button] = []
+var overwrite_dialog: ConfirmationDialog
+var pending_overwrite_slot: int = 0
 var banner_timer: float = 0.0
 var tutorial_complete: bool = false
 var last_runtime_second: int = -1
@@ -58,6 +71,13 @@ func bind_settings(controller: Node) -> void:
 		settings_controller.language_changed.connect(_on_language_changed)
 	_sync_language_selector()
 	_apply_locale()
+
+
+func bind_save_games(controller: Node) -> void:
+	save_game_controller = controller
+	if not save_game_controller.slots_changed.is_connected(_refresh_save_slots):
+		save_game_controller.slots_changed.connect(_refresh_save_slots)
+	_refresh_save_slots()
 
 
 func _process(delta: float) -> void:
@@ -125,6 +145,12 @@ func reset_tutorial() -> void:
 	tutorial_label.visible = true
 
 
+func restore_tutorial(already_observed: bool) -> void:
+	tutorial_complete = already_observed
+	tutorial_label.text = tr("HUD_TUTORIAL_DONE") if already_observed else tr("HUD_TUTORIAL_START")
+	tutorial_label.visible = not already_observed
+
+
 func toggle_debug() -> void:
 	debug_panel.visible = not debug_panel.visible
 
@@ -154,12 +180,16 @@ func open_settings() -> void:
 	get_tree().paused = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_sync_language_selector()
+	_refresh_save_slots()
+	save_feedback.visible = false
 
 
 func close_settings() -> void:
 	if not settings_overlay.visible:
 		return
 	settings_overlay.visible = false
+	if overwrite_dialog != null and overwrite_dialog.visible:
+		overwrite_dialog.hide()
 	if paused_by_settings:
 		get_tree().paused = false
 	paused_by_settings = false
@@ -172,6 +202,10 @@ func is_settings_open() -> bool:
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if is_settings_open() and event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
+		if overwrite_dialog != null and overwrite_dialog.visible:
+			overwrite_dialog.hide()
+			get_viewport().set_input_as_handled()
+			return
 		close_settings()
 		get_viewport().set_input_as_handled()
 
@@ -202,6 +236,65 @@ func _on_tree_button_pressed() -> void:
 	upgrade_tree_requested.emit()
 
 
+func show_save_feedback(text: String, color: Color) -> void:
+	save_feedback.text = text
+	save_feedback.add_theme_color_override("font_color", color)
+	save_feedback.visible = true
+
+
+func _on_save_slot_pressed(slot: int) -> void:
+	if save_game_controller == null:
+		return
+	if save_game_controller.has_slot(slot):
+		pending_overwrite_slot = slot
+		overwrite_dialog.dialog_text = tr("SAVE_OVERWRITE_PROMPT") % slot
+		overwrite_dialog.popup_centered(Vector2i(430, 180))
+		return
+	save_slot_requested.emit(slot)
+
+
+func _on_load_slot_pressed(slot: int) -> void:
+	if save_game_controller != null and save_game_controller.has_slot(slot):
+		load_slot_requested.emit(slot)
+
+
+func _on_overwrite_confirmed() -> void:
+	if pending_overwrite_slot < 1:
+		return
+	var slot := pending_overwrite_slot
+	pending_overwrite_slot = 0
+	save_slot_requested.emit(slot)
+
+
+func _refresh_save_slots() -> void:
+	if save_game_controller == null or save_slot_titles.size() != 3:
+		return
+	for slot in range(1, 4):
+		var index := slot - 1
+		var summary: Dictionary = save_game_controller.get_slot_summary(slot)
+		save_slot_titles[index].text = tr("SAVE_SLOT_TITLE") % slot
+		var exists := bool(summary.get("exists", false))
+		var valid := bool(summary.get("valid", false))
+		load_slot_buttons[index].disabled = not exists or not valid
+		save_slot_buttons[index].text = tr("SAVE_OVERWRITE") if exists and valid else tr("SAVE_ACTION")
+		load_slot_buttons[index].text = tr("LOAD_ACTION")
+		if not exists:
+			save_slot_details[index].text = tr("SAVE_SLOT_EMPTY")
+		elif not valid:
+			save_slot_details[index].text = tr("SAVE_SLOT_INVALID")
+		else:
+			var saved_at := int(summary.get("saved_at", 0))
+			var timezone: Dictionary = Time.get_time_zone_from_system()
+			var local_saved_at := saved_at + int(timezone.get("bias", 0)) * 60
+			var date := Time.get_datetime_dict_from_unix_time(local_saved_at)
+			var stamp := "%04d-%02d-%02d %02d:%02d" % [date.year, date.month, date.day, date.hour, date.minute]
+			var seconds := int(summary.get("elapsed_time", 0.0))
+			save_slot_details[index].text = tr("SAVE_SLOT_META") % [
+				stamp, seconds / 60, seconds % 60,
+				int(summary.get("observation_data", 0.0)), int(summary.get("upgrade_level", 0))
+			]
+
+
 func _on_language_selected(index: int) -> void:
 	if settings_controller == null or index < 0 or index >= language_selector.item_count:
 		return
@@ -229,7 +322,13 @@ func _apply_locale() -> void:
 	settings_subtitle.text = tr("SETTINGS_SUBTITLE")
 	settings_language_label.text = tr("SETTINGS_LANGUAGE")
 	settings_hint.text = tr("SETTINGS_LANGUAGE_HINT")
+	tutorial_replay_button.text = tr("TUTORIAL_REPLAY")
+	save_section_label.text = tr("SAVE_SECTION_TITLE")
+	save_feedback.text = tr("SAVE_SECTION_HINT")
 	settings_close_button.text = tr("SETTINGS_CLOSE")
+	overwrite_dialog.title = tr("SAVE_OVERWRITE_TITLE")
+	overwrite_dialog.ok_button_text = tr("SAVE_OVERWRITE_CONFIRM")
+	overwrite_dialog.cancel_button_text = tr("SAVE_CANCEL")
 	language_selector.set_item_text(0, tr("SETTINGS_ENGLISH"))
 	language_selector.set_item_text(1, tr("SETTINGS_KOREAN"))
 	tutorial_label.text = tr("HUD_TUTORIAL_DONE") if tutorial_complete else tr("HUD_TUTORIAL_START")
@@ -247,6 +346,7 @@ func _apply_locale() -> void:
 	last_tracking_text = ""
 	if progression != null:
 		_refresh_progression()
+	_refresh_save_slots()
 
 
 func _build_interface() -> void:
@@ -462,18 +562,18 @@ func _build_settings_ui() -> void:
 	settings_overlay.add_child(dim)
 	var panel := PanelContainer.new()
 	panel.set_anchors_preset(Control.PRESET_CENTER)
-	panel.offset_left = -245.0
-	panel.offset_top = -150.0
-	panel.offset_right = 245.0
-	panel.offset_bottom = 150.0
+	panel.offset_left = -340.0
+	panel.offset_top = -280.0
+	panel.offset_right = 340.0
+	panel.offset_bottom = 280.0
 	panel.add_theme_stylebox_override("panel", _panel_style(Color("081326"), Color("4f829e"), 12))
 	settings_overlay.add_child(panel)
 	var margin := MarginContainer.new()
 	for side in ["margin_left", "margin_top", "margin_right", "margin_bottom"]:
-		margin.add_theme_constant_override(side, 24)
+		margin.add_theme_constant_override(side, 22)
 	panel.add_child(margin)
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 12)
+	column.add_theme_constant_override("separation", 7)
 	margin.add_child(column)
 	settings_title = _make_label(tr("SETTINGS_TITLE"), 25, Color("e8f6ff"))
 	settings_subtitle = _make_label(tr("SETTINGS_SUBTITLE"), 11, Color("6f8ca5"))
@@ -484,7 +584,7 @@ func _build_settings_ui() -> void:
 	settings_language_label = _make_label(tr("SETTINGS_LANGUAGE"), 14, Color("bdeaff"))
 	column.add_child(settings_language_label)
 	language_selector = OptionButton.new()
-	language_selector.custom_minimum_size = Vector2(0, 44)
+	language_selector.custom_minimum_size = Vector2(0, 38)
 	language_selector.add_item(tr("SETTINGS_ENGLISH"))
 	language_selector.set_item_metadata(0, "en")
 	language_selector.add_item(tr("SETTINGS_KOREAN"))
@@ -493,13 +593,73 @@ func _build_settings_ui() -> void:
 	column.add_child(language_selector)
 	settings_hint = _make_label(tr("SETTINGS_LANGUAGE_HINT"), 12, Color("829caf"))
 	settings_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	settings_hint.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	column.add_child(settings_hint)
+	tutorial_replay_button = Button.new()
+	tutorial_replay_button.text = tr("TUTORIAL_REPLAY")
+	tutorial_replay_button.custom_minimum_size = Vector2(0, 36)
+	tutorial_replay_button.pressed.connect(func(): tutorial_replay_requested.emit())
+	column.add_child(tutorial_replay_button)
+	var save_divider := HSeparator.new()
+	column.add_child(save_divider)
+	save_section_label = _make_label(tr("SAVE_SECTION_TITLE"), 15, Color("bdeaff"))
+	column.add_child(save_section_label)
+	for slot in range(1, 4):
+		_build_save_slot_row(column, slot)
+	save_feedback = _make_label(tr("SAVE_SECTION_HINT"), 12, Color("829caf"))
+	save_feedback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	save_feedback.visible = false
+	column.add_child(save_feedback)
 	settings_close_button = Button.new()
 	settings_close_button.text = tr("SETTINGS_CLOSE")
-	settings_close_button.custom_minimum_size = Vector2(0, 42)
+	settings_close_button.custom_minimum_size = Vector2(0, 40)
 	settings_close_button.pressed.connect(close_settings)
 	column.add_child(settings_close_button)
+	overwrite_dialog = ConfirmationDialog.new()
+	overwrite_dialog.title = tr("SAVE_OVERWRITE_TITLE")
+	overwrite_dialog.ok_button_text = tr("SAVE_OVERWRITE_CONFIRM")
+	overwrite_dialog.cancel_button_text = tr("SAVE_CANCEL")
+	overwrite_dialog.confirmed.connect(_on_overwrite_confirmed)
+	settings_overlay.add_child(overwrite_dialog)
+
+
+func _build_save_slot_row(parent: VBoxContainer, slot: int) -> void:
+	var row_panel := PanelContainer.new()
+	row_panel.custom_minimum_size = Vector2(0, 67)
+	row_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.025, 0.055, 0.10, 0.82), Color(0.20, 0.39, 0.53, 0.55), 8))
+	parent.add_child(row_panel)
+	var row_margin := MarginContainer.new()
+	row_margin.add_theme_constant_override("margin_left", 12)
+	row_margin.add_theme_constant_override("margin_right", 10)
+	row_margin.add_theme_constant_override("margin_top", 7)
+	row_margin.add_theme_constant_override("margin_bottom", 7)
+	row_panel.add_child(row_margin)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	row_margin.add_child(row)
+	var info := VBoxContainer.new()
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.add_theme_constant_override("separation", 1)
+	row.add_child(info)
+	var title := _make_label(tr("SAVE_SLOT_TITLE") % slot, 14, Color("e8f6ff"))
+	var details := _make_label(tr("SAVE_SLOT_EMPTY"), 11, Color("829caf"))
+	details.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	info.add_child(title)
+	info.add_child(details)
+	var save_button := Button.new()
+	save_button.text = tr("SAVE_ACTION")
+	save_button.custom_minimum_size = Vector2(104, 42)
+	save_button.pressed.connect(_on_save_slot_pressed.bind(slot))
+	row.add_child(save_button)
+	var load_button := Button.new()
+	load_button.text = tr("LOAD_ACTION")
+	load_button.custom_minimum_size = Vector2(90, 42)
+	load_button.disabled = true
+	load_button.pressed.connect(_on_load_slot_pressed.bind(slot))
+	row.add_child(load_button)
+	save_slot_titles.append(title)
+	save_slot_details.append(details)
+	save_slot_buttons.append(save_button)
+	load_slot_buttons.append(load_button)
 
 
 func _make_label(text: String, font_size: int, color: Color) -> Label:

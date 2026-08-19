@@ -11,8 +11,10 @@ const SoundSynth = preload("res://scripts/sound_synth.gd")
 @onready var spawner: Node = $MeteorSpawner
 @onready var events: Node = $EventController
 @onready var settings: Node = $GameSettings
+@onready var save_games: Node = $SaveGameController
 @onready var hud: CanvasLayer = $HUD
 @onready var upgrade_tree: CanvasLayer = $UpgradeTree
+@onready var tutorial: CanvasLayer = $Tutorial
 
 var sound: Node
 var elapsed_time: float = 0.0
@@ -28,11 +30,17 @@ func _ready() -> void:
 
 	hud.bind_progression(progression)
 	hud.bind_settings(settings)
+	hud.bind_save_games(save_games)
 	upgrade_tree.bind_progression(progression)
 	upgrade_tree.bind_settings(settings)
+	tutorial.setup(settings, progression)
 	settings.language_changed.connect(_on_language_changed)
 	hud.restart_requested.connect(reset_run)
 	hud.upgrade_tree_requested.connect(upgrade_tree.open_tree)
+	hud.save_slot_requested.connect(_on_save_slot_requested)
+	hud.load_slot_requested.connect(_on_load_slot_requested)
+	hud.tutorial_replay_requested.connect(_on_tutorial_replay_requested)
+	upgrade_tree.tree_opened.connect(tutorial.notify_upgrade_tree_opened)
 	observer.setup(meteor_layer, progression, hud)
 	spawner.setup(meteor_layer, progression)
 	events.setup(spawner, progression)
@@ -136,6 +144,7 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 		hud.show_banner(tr("BANNER_QUALITY") % [tr("QUALITY_%s" % quality_grade), multiplier], meteor.get_visual_color(), 1.5)
 	if progression.success_count == 1:
 		hud.mark_first_success()
+	tutorial.notify_observation_completed()
 	if meteor.is_major():
 		_complete_prototype(true)
 
@@ -147,6 +156,7 @@ func _on_meteor_expired(meteor, was_major: bool) -> void:
 
 
 func _on_upgrade_purchased(definition: Dictionary) -> void:
+	tutorial.notify_upgrade_purchased()
 	spawner.refresh_active_features()
 	effects.spawn_upgrade_pulse()
 	sound.play_upgrade()
@@ -209,6 +219,59 @@ func _build_end_stats() -> String:
 
 func _upgrade_name(definition: Dictionary) -> String:
 	return tr("UPGRADE_%s_NAME" % String(definition.id).to_upper())
+
+
+func _on_save_slot_requested(slot: int) -> void:
+	var error: Error = save_games.save_slot(slot, _build_save_data())
+	if error == OK:
+		hud.show_save_feedback(tr("SAVE_SUCCESS") % slot, Color("7ee9dc"))
+		sound.play_upgrade()
+	else:
+		hud.show_save_feedback(tr("SAVE_FAILURE") % slot, Color("ff9a86"))
+
+
+func _on_load_slot_requested(slot: int) -> void:
+	var data: Dictionary = save_games.load_slot(slot)
+	if data.is_empty():
+		hud.show_save_feedback(tr("LOAD_FAILURE") % slot, Color("ff9a86"))
+		return
+	_apply_save_data(data)
+	hud.close_settings()
+	hud.show_banner(tr("BANNER_SLOT_LOADED") % slot, Color("80e6d2"), 2.2)
+	sound.play_upgrade()
+
+
+func _on_tutorial_replay_requested() -> void:
+	hud.close_settings()
+	tutorial.start_tutorial()
+
+
+func _build_save_data() -> Dictionary:
+	return {
+		"elapsed_time": elapsed_time,
+		"progression": progression.get_save_data(),
+	}
+
+
+func _apply_save_data(data: Dictionary) -> void:
+	upgrade_tree.close_tree()
+	observer.reset()
+	effects.reset()
+	events.reset()
+	spawner.reset()
+	completed = false
+	last_completion_success = false
+	elapsed_time = maxf(0.0, float(data.get("elapsed_time", 0.0)))
+	var progression_data = data.get("progression", {})
+	progression.load_save_data(progression_data if progression_data is Dictionary else {})
+	hud.hide_end()
+	hud.restore_tutorial(progression.success_count > 0)
+	hud.set_runtime(elapsed_time)
+	starfield.set_activity(progression.get_progression_ratio() * 0.16)
+	spawner.start_spawning()
+	events.start()
+	events.run_time = elapsed_time
+	spawner.refresh_active_features()
 
 
 func get_debug_snapshot() -> Dictionary:

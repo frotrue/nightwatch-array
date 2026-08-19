@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://scripts/game.gd" id="1_game"]
 [ext_resource type="Script" path="res://scripts/starfield.gd" id="2_starfield"]
@@ -11,6 +11,8 @@
 [ext_resource type="Script" path="res://scripts/star_twinkle.gd" id="9_twinkle"]
 [ext_resource type="Script" path="res://scripts/upgrade_tree.gd" id="10_upgrade_tree"]
 [ext_resource type="Script" path="res://scripts/game_settings.gd" id="11_settings"]
+[ext_resource type="Script" path="res://scripts/save_game_controller.gd" id="12_saves"]
+[ext_resource type="Script" path="res://scripts/tutorial_controller.gd" id="13_tutorial"]
 
 [node name="Game" type="Node2D"]
 script = ExtResource("1_game")
@@ -46,6 +48,9 @@ script = ExtResource("5_events")
 [node name="GameSettings" type="Node" parent="."]
 script = ExtResource("11_settings")
 
+[node name="SaveGameController" type="Node" parent="."]
+script = ExtResource("12_saves")
+
 [node name="HUD" type="CanvasLayer" parent="."]
 layer = 80
 script = ExtResource("8_hud")
@@ -53,3 +58,7 @@ script = ExtResource("8_hud")
 [node name="UpgradeTree" type="CanvasLayer" parent="."]
 layer = 100
 script = ExtResource("10_upgrade_tree")
+
+[node name="Tutorial" type="CanvasLayer" parent="."]
+layer = 120
+script = ExtResource("13_tutorial")
