@@ -68,6 +68,7 @@ HUD_ARRAY_COMPLETE,ARRAY COMPLETE,관측망 완성
 HUD_NETWORK_STABLE,NIGHTWATCH ARRAY STABLE,나이트워치 관측망 안정
 HUD_ALL_SYSTEMS_ONLINE,ALL SYSTEMS ONLINE,모든 시스템 가동
 HUD_TRACKING,%s   %d%%,%s   %d%%
+HUD_TRACKING_MULTI,%s   %d%%   •   SIMULTANEOUS ×%d,%s   %d%%   •   동시 관측 ×%d
 HUD_END_SUCCESS,PROTOTYPE COMPLETE,프로토타입 완료
 HUD_END_FAILURE,MAJOR FIREBALL LOST,대형 화구 관측 실패
 HUD_RESTART,START A NEW RUN,새 관측 시작
@@ -145,7 +146,7 @@ UPGRADE_ARRAY_PLANNING_DESC,Opens a second observation lane so the sky can suppo
 UPGRADE_SECONDARY_CAMERA_NAME,Secondary Camera,보조 카메라
 UPGRADE_SECONDARY_CAMERA_DESC,One unattended non-rare target receives a slow automatic scan.,방치된 일반 표적 하나를 느린 속도로 자동 분석합니다.
 UPGRADE_MULTI_TARGET_ANALYSIS_NAME,Multi-Target Analysis,다중 표적 분석
-UPGRADE_MULTI_TARGET_ANALYSIS_DESC,Adds a second camera lane and analyzes fragments when Fragment Analysis is online.,카메라 채널을 추가하고 파편 분석 시스템과 연동합니다.
+UPGRADE_MULTI_TARGET_ANALYSIS_DESC,All meteors inside the manual tracking field advance together; also adds a second camera lane and fragment assistance.,수동 관측 범위 안의 모든 유성을 동시에 분석하며 카메라 채널과 파편 보조 기능도 추가합니다.
 UPGRADE_AUTOMATED_TRACKING_NAME,Automated Common Tracking,일반 표적 자동 추적
 UPGRADE_AUTOMATED_TRACKING_DESC,Common targets are analyzed automatically; rare and high-value targets still need you.,일반 표적은 자동 분석하지만 희귀·고가치 표적은 직접 관측해야 합니다.
 UPGRADE_OBSERVATORY_NETWORK_NAME,Observatory Network,천문대 네트워크

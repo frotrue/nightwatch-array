@@ -7,6 +7,7 @@ var meteor_layer: Node2D
 var progression: Node
 var hud: CanvasLayer
 var selected_meteor = null
+var tracked_meteors: Array = []
 var cursor_position := Vector2.ZERO
 var previous_cursor_position := Vector2.ZERO
 var cursor_initialized: bool = false
@@ -35,6 +36,7 @@ func _exit_tree() -> void:
 
 func reset() -> void:
 	selected_meteor = null
+	tracked_meteors.clear()
 	tracking_grace_remaining = 0.0
 	was_holding = false
 	if hud != null:
@@ -55,34 +57,10 @@ func _process(delta: float) -> void:
 		cursor_position = sampled_cursor
 	var holding: bool = Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
 	if holding and not _cursor_is_on_interactive_ui():
-		# On button-down, keep the previous rendered position as the sweep origin.
-		# This covers fast press-and-drag motion without subscribing to raw events.
-		if not _selection_is_valid():
-			selected_meteor = _find_target_under_cursor()
-			if _selection_is_valid():
-				tracking_grace_remaining = TRACKING_GRACE_SECONDS
-		if _selection_is_valid():
-			var tracking_radius: float = selected_meteor.get_tracking_radius(progression.get_tracking_radius())
-			var current_distance: float = cursor_position.distance_to(selected_meteor.global_position)
-			var swept_distance := _distance_to_cursor_path(selected_meteor.global_position)
-			if current_distance <= tracking_radius:
-				selected_meteor.apply_manual_observation(delta, current_distance, tracking_radius)
-				tracking_grace_remaining = TRACKING_GRACE_SECONDS
-			elif swept_distance <= tracking_radius:
-				# Credit only the estimated fraction of the frame spent inside the
-				# tracking radius; a fast flick can acquire but cannot grant free progress.
-				var contact_scale := _estimate_sweep_contact_scale(tracking_radius, swept_distance)
-				selected_meteor.apply_manual_observation(delta * contact_scale, swept_distance, tracking_radius)
-				tracking_grace_remaining = TRACKING_GRACE_SECONDS
-			elif current_distance <= tracking_radius * TRACKING_BREAK_MULTIPLIER:
-				# The soft outer ring pauses progress but keeps the target latched.
-				tracking_grace_remaining = TRACKING_GRACE_SECONDS
-			else:
-				tracking_grace_remaining -= delta
-				if tracking_grace_remaining <= 0.0:
-					selected_meteor = null
+		_update_manual_tracking(delta)
 	else:
 		selected_meteor = null
+		tracked_meteors.clear()
 		tracking_grace_remaining = 0.0
 
 	if _selection_is_valid():
@@ -90,7 +68,8 @@ func _process(delta: float) -> void:
 		hud.set_tracking(
 			selected_meteor.get_progress(),
 			String(selected_meteor.type_id),
-			predicted_multiplier
+			predicted_multiplier,
+			maxi(1, _valid_tracked_count())
 		)
 	else:
 		hud.hide_tracking()
@@ -99,9 +78,97 @@ func _process(delta: float) -> void:
 	was_holding = holding
 
 
+func _update_manual_tracking(delta: float) -> void:
+	tracked_meteors.clear()
+	# On button-down, keep the previous rendered position as the sweep origin.
+	# This covers fast press-and-drag motion without subscribing to raw events.
+	if not _selection_is_valid():
+		selected_meteor = _find_target_under_cursor()
+		if _selection_is_valid():
+			tracking_grace_remaining = TRACKING_GRACE_SECONDS
+	if not _selection_is_valid():
+		return
+
+	var primary = selected_meteor
+	var tracking_radius: float = primary.get_tracking_radius(progression.get_tracking_radius())
+	var current_distance: float = cursor_position.distance_to(primary.global_position)
+	if _apply_manual_contact(primary, delta):
+		tracking_grace_remaining = TRACKING_GRACE_SECONDS
+		_append_tracked_if_valid(primary)
+	elif current_distance <= tracking_radius * TRACKING_BREAK_MULTIPLIER:
+		# The soft outer ring pauses progress but keeps the target latched.
+		tracking_grace_remaining = TRACKING_GRACE_SECONDS
+	else:
+		tracking_grace_remaining -= delta
+		if tracking_grace_remaining <= 0.0:
+			selected_meteor = null
+
+	if progression.has_upgrade("multi_target_analysis"):
+		_observe_additional_targets(delta, primary)
+		var closest_tracked = _closest_valid_tracked_target()
+		if closest_tracked != null:
+			selected_meteor = closest_tracked
+
+
+func _observe_additional_targets(delta: float, primary) -> void:
+	for child in meteor_layer.get_children():
+		if child == primary or not _target_is_valid(child):
+			continue
+		if _apply_manual_contact(child, delta):
+			_append_tracked_if_valid(child)
+
+
+func _apply_manual_contact(target, delta: float) -> bool:
+	if not _target_is_valid(target):
+		return false
+	var tracking_radius: float = target.get_tracking_radius(progression.get_tracking_radius())
+	var current_distance: float = cursor_position.distance_to(target.global_position)
+	if current_distance <= tracking_radius:
+		target.apply_manual_observation(delta, current_distance, tracking_radius)
+		return true
+	var swept_distance := _distance_to_cursor_path(target.global_position)
+	if swept_distance <= tracking_radius:
+		# Credit only the estimated fraction of the frame spent inside the
+		# tracking radius; a fast flick can acquire but cannot grant free progress.
+		var contact_scale := _estimate_sweep_contact_scale(tracking_radius, swept_distance)
+		target.apply_manual_observation(delta * contact_scale, swept_distance, tracking_radius)
+		return true
+	return false
+
+
+func _append_tracked_if_valid(target) -> void:
+	if _target_is_valid(target) and target not in tracked_meteors:
+		tracked_meteors.append(target)
+
+
+func _closest_valid_tracked_target():
+	var closest = null
+	var closest_distance := INF
+	for target in tracked_meteors:
+		if not _target_is_valid(target):
+			continue
+		var distance: float = cursor_position.distance_squared_to(target.global_position)
+		if distance < closest_distance:
+			closest = target
+			closest_distance = distance
+	return closest
+
+
+func _valid_tracked_count() -> int:
+	var count := 0
+	for target in tracked_meteors:
+		if _target_is_valid(target):
+			count += 1
+	return count
+
+
 func release_target(target = null) -> void:
+	if target != null:
+		tracked_meteors.erase(target)
 	if target == null or selected_meteor == target:
 		selected_meteor = null
+		if target == null:
+			tracked_meteors.clear()
 		tracking_grace_remaining = 0.0
 		hud.hide_tracking()
 		queue_redraw()
@@ -143,7 +210,11 @@ func _estimate_sweep_contact_scale(radius: float, distance_to_path: float) -> fl
 
 
 func _selection_is_valid() -> bool:
-	return is_instance_valid(selected_meteor) and not selected_meteor.is_queued_for_deletion() and selected_meteor.can_be_tracked()
+	return _target_is_valid(selected_meteor)
+
+
+func _target_is_valid(target) -> bool:
+	return is_instance_valid(target) and not target.is_queued_for_deletion() and target.has_method("can_be_tracked") and target.can_be_tracked()
 
 
 func _cursor_is_on_interactive_ui() -> bool:
@@ -160,18 +231,28 @@ func _draw() -> void:
 	draw_line(cursor_position + Vector2(0, -14), cursor_position + Vector2(0, -7), cursor_tint, 1.0)
 	draw_line(cursor_position + Vector2(0, 7), cursor_position + Vector2(0, 14), cursor_tint, 1.0)
 	if _selection_is_valid():
-		var tracking_radius: float = selected_meteor.get_tracking_radius(progression.get_tracking_radius())
-		var quality: float = selected_meteor.get_quality()
-		var ring_color := Color("82d7ff").lerp(Color("77ffd0"), quality)
-		draw_arc(selected_meteor.global_position, tracking_radius, 0.0, TAU, 48, Color(ring_color, 0.22), 1.5, true)
-		draw_arc(
-			selected_meteor.global_position,
-			tracking_radius - 4.0,
-			-PI * 0.5,
-			-PI * 0.5 + TAU * selected_meteor.get_progress(),
-			48,
-			Color(ring_color, 0.9),
-			2.4,
-			true
-		)
-		draw_line(cursor_position, selected_meteor.global_position, Color(ring_color, 0.12), 1.0, true)
+		_draw_tracking_ring(selected_meteor, true)
+	for target in tracked_meteors:
+		if target != selected_meteor and _target_is_valid(target):
+			_draw_tracking_ring(target, false)
+
+
+func _draw_tracking_ring(target, is_primary: bool) -> void:
+	var tracking_radius: float = target.get_tracking_radius(progression.get_tracking_radius())
+	var quality: float = target.get_quality()
+	var ring_color := Color("82d7ff").lerp(Color("77ffd0"), quality)
+	var outer_alpha := 0.22 if is_primary else 0.14
+	var progress_alpha := 0.9 if is_primary else 0.68
+	draw_arc(target.global_position, tracking_radius, 0.0, TAU, 48, Color(ring_color, outer_alpha), 1.5 if is_primary else 1.1, true)
+	draw_arc(
+		target.global_position,
+		tracking_radius - 4.0,
+		-PI * 0.5,
+		-PI * 0.5 + TAU * target.get_progress(),
+		48,
+		Color(ring_color, progress_alpha),
+		2.4 if is_primary else 1.8,
+		true
+	)
+	if is_primary:
+		draw_line(cursor_position, target.global_position, Color(ring_color, 0.12), 1.0, true)

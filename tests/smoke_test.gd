@@ -113,6 +113,38 @@ func _run() -> void:
 	sweep_target.queue_free()
 	await process_frame
 
+	# Manual tracking begins as a single-target action, then becomes an area
+	# observation after Multi-Target Analysis comes online.
+	var solo_target_a = game.spawner.spawn_meteor("common", Vector2(450, 220), Vector2.ZERO, 3.0)
+	var solo_target_b = game.spawner.spawn_meteor("common", Vector2(470, 220), Vector2.ZERO, 3.0)
+	game.observer.cursor_position = Vector2(460, 220)
+	game.observer.previous_cursor_position = game.observer.cursor_position
+	game.observer.selected_meteor = null
+	game.observer._update_manual_tracking(0.18)
+	var solo_progress_count := int(solo_target_a.get_progress() > 0.0) + int(solo_target_b.get_progress() > 0.0)
+	_check(solo_progress_count == 1, "manual tracking remains single-target before Multi-Target Analysis")
+	game.observer.reset()
+	solo_target_a.queue_free()
+	solo_target_b.queue_free()
+	await process_frame
+
+	game.progression.purchased_nodes["multi_target_analysis"] = true
+	var group_target_a = game.spawner.spawn_meteor("common", Vector2(450, 220), Vector2.ZERO, 3.0)
+	var group_target_b = game.spawner.spawn_meteor("common", Vector2(470, 220), Vector2.ZERO, 3.0)
+	game.observer.cursor_position = Vector2(460, 220)
+	game.observer.previous_cursor_position = game.observer.cursor_position
+	game.observer.selected_meteor = null
+	game.observer._update_manual_tracking(0.18)
+	_check(group_target_a.get_progress() > 0.0 and group_target_b.get_progress() > 0.0, "Multi-Target Analysis advances every meteor inside the tracking field")
+	_check(game.observer._valid_tracked_count() == 2, "group observation retains individual target rings")
+	game.hud.set_tracking(0.4, "common", 1.0, game.observer._valid_tracked_count())
+	_check("×2" in game.hud.tracking_name.text, "tracking HUD reports the simultaneous target count")
+	game.progression.purchased_nodes.erase("multi_target_analysis")
+	game.observer.reset()
+	group_target_a.queue_free()
+	group_target_b.queue_free()
+	await process_frame
+
 	# Exercise the real meteor observation path without relying on an OS cursor.
 	var meteor = game.spawner.spawn_meteor("common", Vector2(420, 220), Vector2(20, 5), 3.0)
 	meteor.apply_manual_observation(1.0, 0.0, game.progression.get_tracking_radius())

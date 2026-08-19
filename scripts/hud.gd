@@ -120,13 +120,13 @@ func show_banner(text: String, color: Color = Color.WHITE, duration: float = 2.5
 	banner_timer = duration
 
 
-func set_tracking(progress: float, target_type: String, multiplier: float) -> void:
+func set_tracking(progress: float, target_type: String, multiplier: float, target_count: int = 1) -> void:
 	if not tracking_panel.visible:
 		tracking_panel.visible = true
 	var progress_percent := int(progress * 100.0)
 	tracking_bar.value = float(progress_percent)
 	var target_name := tr("METEOR_%s" % target_type.to_upper())
-	var next_text := tr("HUD_TRACKING") % [target_name, progress_percent]
+	var next_text := tr("HUD_TRACKING_MULTI") % [target_name, progress_percent, target_count] if target_count > 1 else tr("HUD_TRACKING") % [target_name, progress_percent]
 	if multiplier > 1.01:
 		next_text += "   x%.2f" % multiplier
 	if next_text != last_tracking_text:

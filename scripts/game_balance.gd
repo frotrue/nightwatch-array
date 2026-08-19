@@ -109,9 +109,9 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "multi_target_analysis", "name": "Multi-Target Analysis", "icon": "⊕", "cost": 330,
-		"description": "Adds a second camera lane and analyzes fragments when Fragment Analysis is online.",
+		"description": "All meteors inside the manual tracking field advance together; also adds a second camera lane and fragment assistance.",
 		"branch": "network", "position": Vector2(610, 490), "prerequisites": ["secondary_camera", "fragment_analysis"],
-		"hidden_until": ["secondary_camera"], "effect_type": "automation", "effect_parameters": {"assist_slots": 2},
+		"hidden_until": ["secondary_camera"], "effect_type": "transformation", "effect_parameters": {"assist_slots": 2, "manual_group_tracking": true},
 		"major": true
 	},
 	{
