@@ -100,9 +100,9 @@ func bind_settings(controller: Node) -> void:
 
 func bind_save_games(controller: Node) -> void:
 	save_game_controller = controller
-	if not save_game_controller.slots_changed.is_connected(_refresh_save_slots):
-		save_game_controller.slots_changed.connect(_refresh_save_slots)
-	_refresh_save_slots()
+	if not save_game_controller.slots_changed.is_connected(_refresh_save_slot_views):
+		save_game_controller.slots_changed.connect(_refresh_save_slot_views)
+	_refresh_save_slot_views()
 
 
 func _process(delta: float) -> void:
@@ -258,24 +258,23 @@ func set_active_save_slot(slot: int) -> void:
 	active_save_slot = slot
 	autosave_status_timer = 0.0
 	_refresh_save_mode_label(false)
-	_refresh_save_slots()
+	_refresh_save_slot_views()
 
 
 func show_autosaved(slot: int) -> void:
 	active_save_slot = slot
 	autosave_status_timer = 2.2
 	_refresh_save_mode_label(true)
-	_refresh_save_slots()
 
 
 func _refresh_save_mode_label(just_saved: bool) -> void:
 	if save_mode_label == null:
 		return
-	save_mode_label.visible = active_save_slot > 0
-	if active_save_slot <= 0:
+	save_mode_label.visible = just_saved and active_save_slot > 0
+	if not save_mode_label.visible:
 		return
-	save_mode_label.text = tr("HUD_AUTOSAVED_SLOT") % active_save_slot if just_saved else tr("HUD_ACTIVE_SLOT") % active_save_slot
-	save_mode_label.add_theme_color_override("font_color", Color("8fffe5") if just_saved else Color("7897ad"))
+	save_mode_label.text = tr("HUD_AUTOSAVED")
+	save_mode_label.add_theme_color_override("font_color", Color("8fffe5"))
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
@@ -442,7 +441,12 @@ func _refresh_save_slots() -> void:
 		save_slot_buttons[index].text = tr("SAVE_OVERWRITE") if exists and valid else tr("SAVE_ACTION")
 		load_slot_buttons[index].text = tr("LOAD_ACTION")
 		save_slot_details[index].text = _format_slot_details(summary)
-	_refresh_startup_slots()
+
+
+func _refresh_save_slot_views() -> void:
+	_refresh_save_slots()
+	if is_startup_slots_open():
+		_refresh_startup_slots()
 
 
 func _refresh_startup_slots() -> void:
@@ -540,7 +544,7 @@ func _apply_locale() -> void:
 	_refresh_save_mode_label(autosave_status_timer > 0.0)
 	if progression != null:
 		_refresh_progression()
-	_refresh_save_slots()
+	_refresh_save_slot_views()
 
 
 func _build_interface() -> void:
