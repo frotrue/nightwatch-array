@@ -55,6 +55,12 @@ SAVE_OVERWRITE_TITLE,OVERWRITE SAVE?,기존 저장 덮어쓰기?
 SAVE_OVERWRITE_PROMPT,Slot %d already contains a save. Overwrite it?,슬롯 %d의 기존 저장을 덮어쓸까요?
 SAVE_OVERWRITE_CONFIRM,OVERWRITE,덮어쓰기
 SAVE_CANCEL,CANCEL,취소
+SAVE_RESET_ACTION,RESET,초기화
+SAVE_RESET_TITLE,RESET SAVE SLOT?,저장 슬롯 초기화
+SAVE_RESET_PROMPT,All progress in slot %d will be permanently erased. This cannot be undone.,슬롯 %d의 모든 진행 상황을 삭제합니다. 이 작업은 되돌릴 수 없습니다.
+SAVE_RESET_CONFIRM,RESET SLOT,슬롯 초기화
+SAVE_RESET_SUCCESS,SLOT %d RESET,슬롯 %d 초기화 완료
+SAVE_RESET_FAILURE,COULD NOT RESET SLOT %d,슬롯 %d 초기화에 실패했습니다
 BANNER_SLOT_LOADED,SLOT %d LOADED,슬롯 %d를 불러왔습니다
 AUTOSAVE_FAILURE,AUTOSAVE FAILED  •  SLOT %d,자동 저장 실패  •  슬롯 %d
 HUD_DATA,OBSERVATION DATA   %d,관측 데이터   %d

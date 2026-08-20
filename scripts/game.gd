@@ -58,6 +58,7 @@ func _ready() -> void:
 	hud.load_slot_requested.connect(_on_load_slot_requested)
 	hud.startup_slot_selected.connect(_on_startup_slot_selected)
 	hud.new_game_slot_requested.connect(_on_new_game_slot_requested)
+	hud.reset_slot_requested.connect(_on_reset_slot_requested)
 	hud.tutorial_replay_requested.connect(_on_tutorial_replay_requested)
 	upgrade_tree.tree_opened.connect(tutorial.notify_upgrade_tree_opened)
 	upgrade_tree.tree_closed.connect(_on_upgrade_tree_closed)
@@ -430,6 +431,29 @@ func _on_new_game_slot_requested(slot: int) -> void:
 		return
 	_on_startup_slot_selected(slot)
 	hud.close_settings()
+
+
+func _on_reset_slot_requested(slot: int) -> void:
+	var reset_from_startup: bool = hud.is_startup_slots_open()
+	var was_active: bool = slot == active_save_slot
+	var error: Error = save_games.reset_slot(slot)
+	if error != OK:
+		hud.show_slot_reset_feedback(tr("SAVE_RESET_FAILURE") % slot, Color("ff9a86"))
+		return
+	if reset_from_startup:
+		if was_active:
+			active_save_slot = 0
+			hud.set_active_save_slot(0)
+		hud.show_slot_reset_feedback(tr("SAVE_RESET_SUCCESS") % slot, Color("7ee9dc"))
+		return
+	if not was_active:
+		hud.show_slot_reset_feedback(tr("SAVE_RESET_SUCCESS") % slot, Color("7ee9dc"))
+		return
+	hud.close_settings()
+	get_tree().paused = false
+	_start_fresh_slot()
+	_autosave_active_slot()
+	_start_tutorial_after_slot_if_needed()
 
 
 func _start_fresh_slot() -> void:

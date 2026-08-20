@@ -49,6 +49,19 @@ func load_slot(slot: int) -> Dictionary:
 	return data.duplicate(true) if data is Dictionary else {}
 
 
+func reset_slot(slot: int) -> Error:
+	if not _is_valid_slot(slot):
+		return ERR_INVALID_PARAMETER
+	var absolute_path := ProjectSettings.globalize_path(_slot_path(slot))
+	var error := OK
+	if FileAccess.file_exists(absolute_path):
+		error = DirAccess.remove_absolute(absolute_path)
+	if error == OK:
+		slot_summaries[slot] = {"exists": false, "valid": true}
+		slots_changed.emit()
+	return error
+
+
 func get_slot_summary(slot: int) -> Dictionary:
 	if not _is_valid_slot(slot):
 		return {"exists": false, "valid": false}

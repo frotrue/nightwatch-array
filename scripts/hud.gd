@@ -6,6 +6,7 @@ signal save_slot_requested(slot: int)
 signal load_slot_requested(slot: int)
 signal startup_slot_selected(slot: int)
 signal new_game_slot_requested(slot: int)
+signal reset_slot_requested(slot: int)
 signal tutorial_replay_requested
 
 const Balance = preload("res://scripts/game_balance.gd")
@@ -61,14 +62,18 @@ var startup_hint: Label
 var startup_slot_titles: Array[Label] = []
 var startup_slot_details: Array[Label] = []
 var startup_slot_buttons: Array[Button] = []
+var startup_reset_buttons: Array[Button] = []
 var save_section_label: Label
 var save_feedback: Label
 var save_slot_titles: Array[Label] = []
 var save_slot_details: Array[Label] = []
 var save_slot_buttons: Array[Button] = []
 var load_slot_buttons: Array[Button] = []
+var reset_slot_buttons: Array[Button] = []
 var overwrite_dialog: ConfirmationDialog
+var reset_dialog: ConfirmationDialog
 var pending_overwrite_slot: int = 0
+var pending_reset_slot: int = 0
 var banner_timer: float = 0.0
 var tutorial_complete: bool = false
 var last_runtime_second: int = -1
@@ -341,6 +346,9 @@ func close_settings() -> void:
 	settings_overlay.visible = false
 	if overwrite_dialog != null and overwrite_dialog.visible:
 		overwrite_dialog.hide()
+	if reset_dialog != null and reset_dialog.visible:
+		reset_dialog.hide()
+		pending_reset_slot = 0
 	if paused_by_settings:
 		get_tree().paused = false
 	paused_by_settings = false
@@ -359,6 +367,8 @@ func open_startup_slots() -> void:
 	paused_by_startup = not get_tree().paused
 	get_tree().paused = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	startup_hint.text = tr("STARTUP_SAVE_HINT")
+	startup_hint.add_theme_color_override("font_color", Color("8ba7b9"))
 	_refresh_startup_slots()
 
 
@@ -366,6 +376,9 @@ func close_startup_slots() -> void:
 	if startup_overlay == null or not startup_overlay.visible:
 		return
 	startup_overlay.visible = false
+	if reset_dialog != null and reset_dialog.visible:
+		reset_dialog.hide()
+		pending_reset_slot = 0
 	if paused_by_startup:
 		get_tree().paused = false
 	paused_by_startup = false
@@ -400,6 +413,12 @@ func _refresh_save_mode_label(just_saved: bool) -> void:
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
+		if reset_dialog != null and reset_dialog.visible:
+			reset_dialog.hide()
+			pending_reset_slot = 0
+			get_viewport().set_input_as_handled()
+			return
 	if is_settings_open() and event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
 		if overwrite_dialog != null and overwrite_dialog.visible:
 			overwrite_dialog.hide()
@@ -454,6 +473,14 @@ func show_save_feedback(text: String, color: Color) -> void:
 	save_feedback.visible = true
 
 
+func show_slot_reset_feedback(text: String, color: Color) -> void:
+	if is_startup_slots_open():
+		startup_hint.text = text
+		startup_hint.add_theme_color_override("font_color", color)
+	else:
+		show_save_feedback(text, color)
+
+
 func _on_save_slot_pressed(slot: int) -> void:
 	if save_game_controller == null:
 		return
@@ -474,6 +501,17 @@ func _on_load_slot_pressed(slot: int) -> void:
 		load_slot_requested.emit(slot)
 
 
+func _on_reset_slot_pressed(slot: int) -> void:
+	if save_game_controller == null:
+		return
+	var summary: Dictionary = save_game_controller.get_slot_summary(slot)
+	if not bool(summary.get("exists", false)):
+		return
+	pending_reset_slot = slot
+	reset_dialog.dialog_text = tr("SAVE_RESET_PROMPT") % slot
+	reset_dialog.popup_centered(Vector2i(460, 190))
+
+
 func _on_startup_slot_pressed(slot: int) -> void:
 	if save_game_controller == null:
 		return
@@ -491,6 +529,18 @@ func _on_overwrite_confirmed() -> void:
 	save_slot_requested.emit(slot)
 
 
+func _on_reset_confirmed() -> void:
+	if pending_reset_slot < 1:
+		return
+	var slot := pending_reset_slot
+	pending_reset_slot = 0
+	reset_slot_requested.emit(slot)
+
+
+func _on_reset_canceled() -> void:
+	pending_reset_slot = 0
+
+
 func _refresh_save_slots() -> void:
 	if save_game_controller == null or save_slot_titles.size() != 3:
 		return
@@ -503,6 +553,8 @@ func _refresh_save_slots() -> void:
 		var exists := bool(summary.get("exists", false))
 		var valid := bool(summary.get("valid", false))
 		load_slot_buttons[index].disabled = not exists or not valid
+		reset_slot_buttons[index].visible = exists
+		reset_slot_buttons[index].text = tr("SAVE_RESET_ACTION")
 		if exists and valid:
 			save_slot_buttons[index].text = tr("SAVE_OVERWRITE")
 		elif exists:
@@ -530,6 +582,8 @@ func _refresh_startup_slots() -> void:
 		startup_slot_titles[index].text = tr("SAVE_SLOT_TITLE") % slot
 		startup_slot_details[index].text = _format_slot_details(summary)
 		startup_slot_buttons[index].disabled = exists and not valid
+		startup_reset_buttons[index].visible = exists
+		startup_reset_buttons[index].text = tr("SAVE_RESET_ACTION")
 		if exists and valid:
 			startup_slot_buttons[index].text = tr("STARTUP_CONTINUE")
 		elif exists:
@@ -613,6 +667,9 @@ func _apply_locale() -> void:
 	overwrite_dialog.title = tr("SAVE_OVERWRITE_TITLE")
 	overwrite_dialog.ok_button_text = tr("SAVE_OVERWRITE_CONFIRM")
 	overwrite_dialog.cancel_button_text = tr("SAVE_CANCEL")
+	reset_dialog.title = tr("SAVE_RESET_TITLE")
+	reset_dialog.ok_button_text = tr("SAVE_RESET_CONFIRM")
+	reset_dialog.cancel_button_text = tr("SAVE_CANCEL")
 	language_selector.set_item_text(0, tr("SETTINGS_ENGLISH"))
 	language_selector.set_item_text(1, tr("SETTINGS_KOREAN"))
 	tutorial_label.text = tr("HUD_TUTORIAL_DONE") if tutorial_complete else tr("HUD_TUTORIAL_START")
@@ -798,6 +855,7 @@ func _build_interface() -> void:
 	settings_button.pressed.connect(open_settings)
 	root_control.add_child(settings_button)
 	_build_startup_slots_ui()
+	_build_reset_dialog()
 
 
 func _build_startup_slots_ui() -> void:
@@ -876,9 +934,31 @@ func _build_startup_slot_row(parent: VBoxContainer, slot: int) -> void:
 	select_button.add_theme_stylebox_override("pressed", _panel_style(Color("0d3047"), Color("78d9ef"), 7))
 	select_button.pressed.connect(_on_startup_slot_pressed.bind(slot))
 	row.add_child(select_button)
+	var reset_button := Button.new()
+	reset_button.text = tr("SAVE_RESET_ACTION")
+	reset_button.custom_minimum_size = Vector2(82, 52)
+	reset_button.add_theme_font_size_override("font_size", 12)
+	reset_button.add_theme_color_override("font_color", Color("ffc0b8"))
+	reset_button.add_theme_stylebox_override("normal", _panel_style(Color("321b25"), Color("88404a"), 7))
+	reset_button.add_theme_stylebox_override("hover", _panel_style(Color("4a222b"), Color("d66d72"), 7))
+	reset_button.add_theme_stylebox_override("pressed", _panel_style(Color("25151d"), Color("ef8d8a"), 7))
+	reset_button.pressed.connect(_on_reset_slot_pressed.bind(slot))
+	reset_button.visible = false
+	row.add_child(reset_button)
 	startup_slot_titles.append(title)
 	startup_slot_details.append(details)
 	startup_slot_buttons.append(select_button)
+	startup_reset_buttons.append(reset_button)
+
+
+func _build_reset_dialog() -> void:
+	reset_dialog = ConfirmationDialog.new()
+	reset_dialog.title = tr("SAVE_RESET_TITLE")
+	reset_dialog.ok_button_text = tr("SAVE_RESET_CONFIRM")
+	reset_dialog.cancel_button_text = tr("SAVE_CANCEL")
+	reset_dialog.confirmed.connect(_on_reset_confirmed)
+	reset_dialog.canceled.connect(_on_reset_canceled)
+	root_control.add_child(reset_dialog)
 
 
 func _build_debug_panel() -> void:
@@ -1123,10 +1203,22 @@ func _build_save_slot_row(parent: VBoxContainer, slot: int) -> void:
 	load_button.disabled = true
 	load_button.pressed.connect(_on_load_slot_pressed.bind(slot))
 	row.add_child(load_button)
+	var reset_button := Button.new()
+	reset_button.text = tr("SAVE_RESET_ACTION")
+	reset_button.custom_minimum_size = Vector2(72, 42)
+	reset_button.add_theme_font_size_override("font_size", 11)
+	reset_button.add_theme_color_override("font_color", Color("ffc0b8"))
+	reset_button.add_theme_stylebox_override("normal", _panel_style(Color("321b25"), Color("88404a"), 7))
+	reset_button.add_theme_stylebox_override("hover", _panel_style(Color("4a222b"), Color("d66d72"), 7))
+	reset_button.add_theme_stylebox_override("pressed", _panel_style(Color("25151d"), Color("ef8d8a"), 7))
+	reset_button.pressed.connect(_on_reset_slot_pressed.bind(slot))
+	reset_button.visible = false
+	row.add_child(reset_button)
 	save_slot_titles.append(title)
 	save_slot_details.append(details)
 	save_slot_buttons.append(save_button)
 	load_slot_buttons.append(load_button)
+	reset_slot_buttons.append(reset_button)
 
 
 func _make_label(text: String, font_size: int, color: Color) -> Label:
