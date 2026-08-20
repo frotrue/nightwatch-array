@@ -1,5 +1,9 @@
 extends Node2D
 
+const MAX_PARTICLES := 180
+const MAX_POPUPS := 12
+const MAX_INCOMING_MARKERS := 24
+
 var particles: Array[Dictionary] = []
 var popups: Array[Dictionary] = []
 var incoming_markers: Array[Dictionary] = []
@@ -24,7 +28,8 @@ func reset() -> void:
 
 
 func spawn_success(world_position: Vector2, amount: float, color: Color, multiplier: float) -> void:
-	for index in range(18):
+	var available_particle_slots := maxi(0, MAX_PARTICLES - particles.size())
+	for index in range(mini(18, available_particle_slots)):
 		var angle := rng.randf_range(0.0, TAU)
 		var speed := rng.randf_range(38.0, 145.0)
 		particles.append({
@@ -36,6 +41,8 @@ func spawn_success(world_position: Vector2, amount: float, color: Color, multipl
 			"size": rng.randf_range(1.0, 3.0)
 		})
 	var suffix := "  x%.2f" % multiplier if multiplier > 1.01 else ""
+	if popups.size() >= MAX_POPUPS:
+		popups.remove_at(0)
 	popups.append({
 		"p": world_position + Vector2(0, -20),
 		"v": Vector2(0, -30),
@@ -62,6 +69,8 @@ func spawn_incoming(start_position: Vector2, velocity: Vector2, color: Color) ->
 		clampf(start_position.x, 34.0, size.x - 34.0),
 		clampf(start_position.y, 34.0, size.y - 76.0)
 	)
+	if incoming_markers.size() >= MAX_INCOMING_MARKERS:
+		incoming_markers.remove_at(0)
 	incoming_markers.append({
 		"p": marker_position,
 		"dir": velocity.normalized(),
@@ -76,6 +85,8 @@ func spawn_incoming(start_position: Vector2, velocity: Vector2, color: Color) ->
 func spawn_forecast(entry_points: Array) -> void:
 	var center := get_viewport_rect().size * 0.5
 	for point in entry_points:
+		if incoming_markers.size() >= MAX_INCOMING_MARKERS:
+			break
 		incoming_markers.append({
 			"p": point,
 			"dir": (center - point).normalized(),

@@ -4,6 +4,8 @@ signal observed(meteor, reward, multiplier, was_manual, quality_grade)
 signal expired(meteor, was_major)
 signal fragment_requested(origin, velocity, parent_type)
 
+static var SHARED_ADDITIVE_MATERIAL: CanvasItemMaterial
+
 var type_id: String = "common"
 var display_name: String = "COMMON METEOR"
 var velocity := Vector2.ZERO
@@ -39,6 +41,7 @@ var trail_draw_points := PackedVector2Array()
 var trail_glow_colors := PackedColorArray()
 var trail_core_colors := PackedColorArray()
 var prediction_draw_points := PackedVector2Array()
+var travel_direction := Vector2.ZERO
 var trail_sample_accumulator: float = 0.0
 var wobble_phase: float = 0.0
 var rng := RandomNumberGenerator.new()
@@ -49,6 +52,7 @@ func configure(spec: Dictionary, meteor_type: String, start_position: Vector2, m
 	display_name = String(spec.name)
 	position = start_position
 	velocity = move_velocity
+	travel_direction = velocity.normalized()
 	visible_lifetime = float(spec.lifetime) * lifetime_scale
 	base_value = float(spec.value)
 	required_track_time = float(spec.track_time)
@@ -65,13 +69,26 @@ func configure(spec: Dictionary, meteor_type: String, start_position: Vector2, m
 	rng.seed = int(start_position.x * 193.0 + start_position.y * 877.0 + velocity.length() * 31.0) & 0x7fffffff
 	wobble_phase = rng.randf_range(0.0, TAU)
 	trail_points.append(start_position)
+	_rebuild_prediction_draw_points()
 
 
 func _ready() -> void:
-	var additive := CanvasItemMaterial.new()
-	additive.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
-	material = additive
+	# Every meteor uses the same additive state. A material per spawn forced extra
+	# renderer state changes and made shower/fragment bursts compile and bind many
+	# identical resources on the main thread.
+	if SHARED_ADDITIVE_MATERIAL == null:
+		SHARED_ADDITIVE_MATERIAL = CanvasItemMaterial.new()
+		SHARED_ADDITIVE_MATERIAL.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	material = SHARED_ADDITIVE_MATERIAL
 	queue_redraw()
+
+
+func _rebuild_prediction_draw_points() -> void:
+	prediction_draw_points.clear()
+	for index in range(7):
+		var distance := body_radius + 28.0 + index * 24.0
+		prediction_draw_points.append(travel_direction * distance)
+		prediction_draw_points.append(travel_direction * (distance + 10.0))
 
 
 func _process(delta: float) -> void:
@@ -232,12 +249,6 @@ func _draw() -> void:
 		draw_polyline_colors(trail_draw_points, trail_core_colors, maxf(0.8, body_radius * 0.42), true)
 
 	if prediction_enabled and alive:
-		var heading := velocity.normalized()
-		prediction_draw_points.clear()
-		for index in range(7):
-			var distance := body_radius + 28.0 + index * 24.0
-			prediction_draw_points.append(heading * distance)
-			prediction_draw_points.append(heading * (distance + 10.0))
 		draw_multiline(prediction_draw_points, Color(glow_color, 0.22), 1.4, true)
 
 	var visibility := 1.0 if alive else clampf(linger_time * 2.2, 0.0, 1.0)
@@ -250,10 +261,10 @@ func _draw() -> void:
 	draw_circle(Vector2.ZERO, r * 1.95, Color(glow_color, 0.17 * visibility))
 	draw_arc(Vector2.ZERO, r + 8.0 + sin(age * 4.0) * 1.5, 0.0, TAU, 28, Color(glow_color, 0.16 * visibility), 1.2, true)
 	draw_circle(Vector2.ZERO, r, Color(primary_color, visibility))
-	draw_circle(-velocity.normalized() * r * 0.22, r * 0.45, Color(1.0, 1.0, 1.0, visibility))
+	draw_circle(-travel_direction * r * 0.22, r * 0.45, Color(1.0, 1.0, 1.0, visibility))
 
 	if type_id == "fireball" or type_id == "major":
-		var flame_dir := -velocity.normalized()
+		var flame_dir := -travel_direction
 		for index in range(3 if type_id == "fireball" else 6):
 			var side := Vector2(-flame_dir.y, flame_dir.x) * sin(age * 8.0 + index * 1.7) * r * 0.35
 			var center := flame_dir * r * (1.0 + index * 0.42) + side
