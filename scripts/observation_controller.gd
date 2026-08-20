@@ -14,6 +14,7 @@ var previous_cursor_position := Vector2.ZERO
 var cursor_initialized: bool = false
 var was_holding: bool = false
 var tracking_grace_remaining: float = 0.0
+var tracking_visual_active_last_frame: bool = false
 
 
 func setup(target_layer: Node2D, progression_controller: Node, hud_layer: CanvasLayer) -> void:
@@ -41,6 +42,7 @@ func reset() -> void:
 	tracked_meteors.clear()
 	tracking_grace_remaining = 0.0
 	was_holding = false
+	tracking_visual_active_last_frame = false
 	if hud != null:
 		hud.hide_tracking()
 	queue_redraw()
@@ -58,14 +60,15 @@ func _process(delta: float) -> void:
 		previous_cursor_position = cursor_position
 		cursor_position = sampled_cursor
 	var holding: bool = Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
-	if holding and not _cursor_is_on_interactive_ui():
+	var cursor_on_interactive_ui := _cursor_is_on_interactive_ui()
+	if holding and not cursor_on_interactive_ui:
 		hovered_meteor = null
 		_update_manual_tracking(delta)
 	else:
 		selected_meteor = null
 		tracked_meteors.clear()
 		tracking_grace_remaining = 0.0
-		hovered_meteor = null if _cursor_is_on_interactive_ui() else _find_target_under_cursor()
+		hovered_meteor = null if cursor_on_interactive_ui else _find_target_under_cursor()
 
 	if _selection_is_valid():
 		var predicted_multiplier: float = selected_meteor.get_predicted_multiplier()
@@ -77,8 +80,16 @@ func _process(delta: float) -> void:
 		)
 	else:
 		hud.hide_tracking()
-	# The restored software cursor follows the latest sampled position.
-	queue_redraw()
+	# Keep animated tracking feedback live, but leave an idle software cursor
+	# cached until either it moves or a tracking visual changes state.
+	var tracking_visual_active := (
+		_selection_is_valid()
+		or _target_is_valid(hovered_meteor)
+		or not tracked_meteors.is_empty()
+	)
+	if cursor_position != previous_cursor_position or tracking_visual_active or tracking_visual_active_last_frame:
+		queue_redraw()
+	tracking_visual_active_last_frame = tracking_visual_active
 	was_holding = holding
 
 
@@ -115,7 +126,9 @@ func _update_manual_tracking(delta: float) -> void:
 
 
 func _observe_additional_targets(delta: float, primary) -> void:
-	for child in meteor_layer.get_children():
+	var child_count := meteor_layer.get_child_count()
+	for child_index in range(child_count):
+		var child := meteor_layer.get_child(child_index)
 		if child == primary or not _target_is_valid(child):
 			continue
 		if _apply_manual_contact(child, delta):
@@ -183,7 +196,9 @@ func release_target(target = null) -> void:
 func _find_target_under_cursor():
 	var closest = null
 	var closest_distance := INF
-	for child in meteor_layer.get_children():
+	var child_count := meteor_layer.get_child_count()
+	for child_index in range(child_count):
+		var child := meteor_layer.get_child(child_index)
 		if not child.has_method("can_be_tracked") or not child.can_be_tracked():
 			continue
 		var tracking_radius: float = child.get_tracking_radius(progression.get_tracking_radius())

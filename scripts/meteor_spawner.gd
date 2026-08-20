@@ -5,6 +5,7 @@ signal rare_spawned(type_id)
 
 const Balance = preload("res://scripts/game_balance.gd")
 const MeteorScript = preload("res://scripts/meteor.gd")
+const MAX_TOTAL_METEORS := 32
 
 var meteor_layer: Node2D
 var progression: Node
@@ -64,6 +65,12 @@ func _process(delta: float) -> void:
 
 
 func spawn_meteor(type_id: String = "common", custom_start := Vector2.INF, custom_velocity := Vector2.INF, lifetime_override: float = -1.0):
+	# Shower and fragment paths intentionally bypass the regular progression cap.
+	# Keep one reserved slot for the final major target while bounding all burst
+	# paths so a missed frame cannot turn into an ever-growing render workload.
+	var instance_limit := MAX_TOTAL_METEORS if type_id == "major" else MAX_TOTAL_METEORS - 1
+	if meteor_layer == null or meteor_layer.get_child_count() >= instance_limit:
+		return null
 	var size := get_viewport().get_visible_rect().size
 	var spec := Balance.meteor_spec(type_id)
 	var start := custom_start
@@ -152,8 +159,12 @@ func _current_features(type_id: String) -> Dictionary:
 
 
 func _refresh_secondary_camera() -> void:
+	var slots: int = progression.get_secondary_slots()
+	if slots <= 0:
+		return
 	var candidates: Array = []
-	for child in meteor_layer.get_children():
+	for child_index in range(meteor_layer.get_child_count()):
+		var child = meteor_layer.get_child(child_index)
 		if child.has_method("set_secondary_assist"):
 			child.set_secondary_assist(0.0)
 		if not child.has_method("can_be_tracked") or not child.can_be_tracked():
@@ -161,9 +172,6 @@ func _refresh_secondary_camera() -> void:
 		if child.type_id in ["fireball", "major"]:
 			continue
 		candidates.append(child)
-	var slots: int = progression.get_secondary_slots()
-	if slots <= 0:
-		return
 	candidates.sort_custom(func(a, b): return float(a.observation_progress) > float(b.observation_progress))
 	for index in range(mini(slots, candidates.size())):
 		var candidate = candidates[index]
@@ -180,7 +188,8 @@ func _refresh_secondary_camera() -> void:
 func _on_fragment_requested(origin: Vector2, parent_velocity: Vector2, parent_type: String) -> void:
 	var piece_count := 4 if parent_type == "major" else 3
 	var spread := 0.34 if parent_type == "major" else 0.25
-	for index in range(piece_count):
+	var available_slots := maxi(0, (MAX_TOTAL_METEORS - 1) - meteor_layer.get_child_count())
+	for index in range(mini(piece_count, available_slots)):
 		var centered := float(index) - float(piece_count - 1) * 0.5
 		var direction := parent_velocity.normalized().rotated(centered * spread)
 		var speed := parent_velocity.length() * rng.randf_range(0.88, 1.18)
@@ -189,7 +198,8 @@ func _on_fragment_requested(origin: Vector2, parent_velocity: Vector2, parent_ty
 
 func _active_count() -> int:
 	var count := 0
-	for child in meteor_layer.get_children():
+	for child_index in range(meteor_layer.get_child_count()):
+		var child = meteor_layer.get_child(child_index)
 		if child.has_method("can_be_tracked") and child.can_be_tracked():
 			count += 1
 	return count

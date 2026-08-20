@@ -297,6 +297,78 @@ func _run() -> void:
 	_check(reset_state.shower_state == "idle", "reset clears shower state")
 	_check(not reset_state.final_started, "reset makes the final event available again")
 
+	# Render-heavy resources must stay bounded even when event and fragment paths
+	# bypass the normal progression-driven active-meteor limit.
+	game.spawner.pause_regular_spawns = true
+	var material_meteor_a = game.spawner.spawn_meteor("common", Vector2(360, 180), Vector2.ZERO, 30.0)
+	var material_meteor_b = game.spawner.spawn_meteor("common", Vector2(420, 180), Vector2.ZERO, 30.0)
+	await process_frame
+	var material_pair_ready := material_meteor_a != null and material_meteor_b != null
+	_check(material_pair_ready, "material-sharing regression setup spawns two meteors")
+	if material_pair_ready:
+		_check(
+			material_meteor_a.material != null and material_meteor_a.material == material_meteor_b.material,
+			"meteor instances reuse one shared additive material"
+		)
+	game.spawner.reset()
+	await process_frame
+	await process_frame
+
+	var spawner_constants: Dictionary = game.spawner.get_script().get_script_constant_map()
+	var has_total_meteor_cap := spawner_constants.has("MAX_TOTAL_METEORS")
+	_check(has_total_meteor_cap, "meteor spawner exposes a global MAX_TOTAL_METEORS cap")
+	if has_total_meteor_cap:
+		var total_meteor_cap := int(spawner_constants["MAX_TOTAL_METEORS"])
+		_check(total_meteor_cap > 1, "global meteor cap leaves room for ordinary and major targets")
+		if total_meteor_cap > 1:
+			for index in range(total_meteor_cap + 6):
+				game.spawner.spawn_for_shower(index)
+			game.spawner.spawn_major_fireball()
+			game.spawner._on_fragment_requested(Vector2(480, 220), Vector2(80, 0), "major")
+			_check(
+				game.meteor_layer.get_child_count() <= total_meteor_cap,
+				"shower, major, and fragment spawn paths respect the global meteor cap"
+			)
+	game.spawner.reset()
+	await process_frame
+	await process_frame
+
+	var effect_constants: Dictionary = game.effects.get_script().get_script_constant_map()
+	var has_effect_caps := (
+		effect_constants.has("MAX_PARTICLES")
+		and effect_constants.has("MAX_POPUPS")
+		and effect_constants.has("MAX_INCOMING_MARKERS")
+	)
+	_check(has_effect_caps, "effects layer exposes particle, popup, and incoming-marker caps")
+	if has_effect_caps:
+		var max_particles := int(effect_constants["MAX_PARTICLES"])
+		var max_popups := int(effect_constants["MAX_POPUPS"])
+		var max_incoming_markers := int(effect_constants["MAX_INCOMING_MARKERS"])
+		var positive_effect_caps := max_particles > 0 and max_popups > 0 and max_incoming_markers > 0
+		_check(positive_effect_caps, "effect caps are positive")
+		if positive_effect_caps:
+			var success_bursts := maxi(max_popups + 3, int(ceil(float(max_particles) / 18.0)) + 3)
+			for index in range(success_bursts):
+				game.effects.spawn_success(Vector2(500, 250), 10.0, Color.WHITE, 1.0)
+			_check(game.effects.particles.size() <= max_particles, "success particles stay within MAX_PARTICLES")
+			_check(game.effects.popups.size() <= max_popups, "success popups stay within MAX_POPUPS")
+			for index in range(max_incoming_markers + 4):
+				game.effects.spawn_incoming(Vector2(80 + index, 80), Vector2.RIGHT, Color.WHITE)
+			_check(
+				game.effects.incoming_markers.size() <= max_incoming_markers,
+				"individual incoming warnings stay within MAX_INCOMING_MARKERS"
+			)
+			game.effects.reset()
+			var forecast_points: Array[Vector2] = []
+			for index in range(max_incoming_markers + 4):
+				forecast_points.append(Vector2(100 + index, 100))
+			game.effects.spawn_forecast(forecast_points)
+			_check(
+				game.effects.incoming_markers.size() <= max_incoming_markers,
+				"forecast batches stay within MAX_INCOMING_MARKERS"
+			)
+	game.effects.reset()
+
 	# Let short procedural audio voices and delayed chord tones release cleanly.
 	await create_timer(0.85).timeout
 	_cleanup_smoke_saves(smoke_save_directory)
@@ -304,7 +376,7 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	if failures.is_empty():
-		print("SMOKE_TEST_PASS: tutorial, saves, localization, observation, progression, events, stale references, and reset")
+		print("SMOKE_TEST_PASS: tutorial, saves, localization, observation, progression, events, performance caps, stale references, and reset")
 		quit(0)
 	else:
 		print("SMOKE_TEST_FAIL: %d failure(s)" % failures.size())

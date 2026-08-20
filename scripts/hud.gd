@@ -74,6 +74,10 @@ var banner_timer: float = 0.0
 var tutorial_complete: bool = false
 var last_runtime_second: int = -1
 var last_tracking_text: String = ""
+var last_tracking_progress_percent: int = -1
+var last_tracking_target_type: String = ""
+var last_tracking_multiplier_hundredths: int = -1
+var last_tracking_target_count: int = -1
 var last_observation_data: float = -1.0
 var data_gain_tween: Tween
 var last_end_success: bool = false
@@ -150,11 +154,23 @@ func set_tracking(progress: float, target_type: String, multiplier: float, targe
 	if not tracking_panel.visible:
 		tracking_panel.visible = true
 	var progress_percent := int(progress * 100.0)
+	var multiplier_hundredths := int(round(multiplier * 100.0))
+	if (
+		progress_percent == last_tracking_progress_percent
+		and target_type == last_tracking_target_type
+		and multiplier_hundredths == last_tracking_multiplier_hundredths
+		and target_count == last_tracking_target_count
+	):
+		return
+	last_tracking_progress_percent = progress_percent
+	last_tracking_target_type = target_type
+	last_tracking_multiplier_hundredths = multiplier_hundredths
+	last_tracking_target_count = target_count
 	tracking_bar.value = float(progress_percent)
 	var target_name := tr("METEOR_%s" % target_type.to_upper())
 	var next_text := tr("HUD_TRACKING_MULTI") % [target_name, progress_percent, target_count] if target_count > 1 else tr("HUD_TRACKING") % [target_name, progress_percent]
-	if multiplier > 1.01:
-		next_text += "   x%.2f" % multiplier
+	if multiplier_hundredths > 101:
+		next_text += "   x%.2f" % (float(multiplier_hundredths) / 100.0)
 	if next_text != last_tracking_text:
 		last_tracking_text = next_text
 		tracking_name.text = next_text
@@ -163,7 +179,15 @@ func set_tracking(progress: float, target_type: String, multiplier: float, targe
 func hide_tracking() -> void:
 	if tracking_panel != null and tracking_panel.visible:
 		tracking_panel.visible = false
-		last_tracking_text = ""
+		_invalidate_tracking_cache()
+
+
+func _invalidate_tracking_cache() -> void:
+	last_tracking_text = ""
+	last_tracking_progress_percent = -1
+	last_tracking_target_type = ""
+	last_tracking_multiplier_hundredths = -1
+	last_tracking_target_count = -1
 
 
 func mark_first_success() -> void:
@@ -601,7 +625,7 @@ func _apply_locale() -> void:
 		])
 	])
 	last_runtime_second = -1
-	last_tracking_text = ""
+	_invalidate_tracking_cache()
 	_refresh_save_mode_label(autosave_status_timer > 0.0)
 	if progression != null:
 		_refresh_progression()

@@ -1,8 +1,10 @@
 extends SceneTree
 
 const PROBE_SECONDS := 24.0
+const PROBE_SECONDS_ENV := "NIGHTWATCH_PROBE_SECONDS"
 
 var game
+var probe_seconds: float = PROBE_SECONDS
 var frame_times: Array[float] = []
 var cursor_distances: Array[float] = []
 var second_start_usec: int = 0
@@ -19,25 +21,29 @@ func _initialize() -> void:
 func _run() -> void:
 	var packed: PackedScene = load("res://scenes/main.tscn")
 	game = packed.instantiate()
+	game.startup_slot_prompt_enabled = false
+	game.get_node("Tutorial").auto_start_enabled = false
 	root.add_child(game)
 	await process_frame
 	await process_frame
 	_prepare_render_stress()
+	probe_seconds = _probe_seconds_from_environment()
 	previous_cursor_position = root.get_mouse_position()
 	probe_start_usec = Time.get_ticks_usec()
 	second_start_usec = probe_start_usec
 	last_frame_usec = probe_start_usec
-	print("FRAME_PROBE_ENV engine=%s viewport=%s window=%s refresh_hz=%.2f mode=%d vsync=%d renderer=%s" % [
+	print("FRAME_PROBE_ENV engine=%s viewport=%s window=%s refresh_hz=%.2f mode=%d vsync=%d renderer=%s duration_seconds=%.2f" % [
 		Engine.get_version_info(),
 		root.get_visible_rect().size,
 		DisplayServer.window_get_size(),
 		DisplayServer.screen_get_refresh_rate(),
 		DisplayServer.window_get_mode(),
 		DisplayServer.window_get_vsync_mode(),
-		RenderingServer.get_current_rendering_method()
+		RenderingServer.get_current_rendering_method(),
+		probe_seconds
 	])
 	print("FRAME_PROBE_READY: keep still during seconds 1-7 and 19-24; move rapidly during seconds 8-18")
-	while float(Time.get_ticks_usec() - probe_start_usec) / 1000000.0 < PROBE_SECONDS:
+	while float(Time.get_ticks_usec() - probe_start_usec) / 1000000.0 < probe_seconds:
 		await process_frame
 		var now := Time.get_ticks_usec()
 		frame_times.append(float(now - last_frame_usec) / 1000.0)
@@ -52,6 +58,20 @@ func _run() -> void:
 	await process_frame
 	print("FRAME_PROBE_COMPLETE")
 	quit(0)
+
+
+func _probe_seconds_from_environment() -> float:
+	if not OS.has_environment(PROBE_SECONDS_ENV):
+		return PROBE_SECONDS
+	var configured := OS.get_environment(PROBE_SECONDS_ENV).strip_edges()
+	if not configured.is_valid_float():
+		push_warning("Ignoring invalid %s=%s" % [PROBE_SECONDS_ENV, configured])
+		return PROBE_SECONDS
+	var seconds := configured.to_float()
+	if seconds <= 0.0:
+		push_warning("Ignoring non-positive %s=%s" % [PROBE_SECONDS_ENV, configured])
+		return PROBE_SECONDS
+	return seconds
 
 
 func _prepare_render_stress() -> void:
