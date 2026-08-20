@@ -122,13 +122,13 @@ func _run() -> void:
 	_check(game.hud.next_system_bar.max_value == 12.0 and game.hud.next_system_bar.value == 0.0, "next-system card shows progress toward its Data cost")
 	_check(game.progression.get_node_state("long_exposure") == "hidden", "adjacent optics node begins hidden")
 	var closed_tree_style_id: int = game.upgrade_tree.node_buttons["better_lens"].get_theme_stylebox("normal").get_instance_id()
-	var closed_tree_layout_level: int = game.upgrade_tree.layout_upgrade_level
+	var closed_tree_optics_position: Vector2 = game.upgrade_tree.node_buttons["better_lens"].position
 	var data_before_rejected_purchase: float = game.progression.observation_data
 	_check(not game.progression.request_purchase("array_planning"), "purchase fails when Observation Data is insufficient")
 	_check(game.progression.observation_data == data_before_rejected_purchase, "failed purchase never deducts Data")
 	game.progression.add_debug_data(100.0)
 	_check(game.upgrade_tree.refresh_pending, "closed upgrade tree defers progression refreshes")
-	_check(game.upgrade_tree.layout_upgrade_level == closed_tree_layout_level, "observation data does not relayout a closed upgrade tree")
+	_check(game.upgrade_tree.node_buttons["better_lens"].position == closed_tree_optics_position, "observation data does not move the fixed upgrade tree")
 	_check(game.upgrade_tree.node_buttons["better_lens"].get_theme_stylebox("normal").get_instance_id() == closed_tree_style_id, "closed upgrade tree reuses node styles during observation rewards")
 	_check(game.hud.data_gain_label.visible, "resource gains receive immediate HUD feedback")
 	_check(game.hud.next_header.visible and game.hud.next_progress_row.visible, "affordable upgrades expand the contextual tree prompt")
@@ -147,13 +147,35 @@ func _run() -> void:
 	_check(game.upgrade_tree.is_open(), "upgrade tree opens")
 	_check(not game.upgrade_tree.refresh_pending, "opening the upgrade tree applies one deferred refresh")
 	_check(paused, "opening the upgrade tree pauses gameplay")
-	_check(game.upgrade_tree.opening_layout_active, "the untouched tree presents the three opening branches as a focused choice")
 	var opening_optics: Button = game.upgrade_tree.node_buttons["better_lens"]
 	var opening_detection: Button = game.upgrade_tree.node_buttons["edge_detection"]
 	var opening_network: Button = game.upgrade_tree.node_buttons["array_planning"]
-	_check(is_equal_approx(opening_optics.position.y, opening_detection.position.y) and is_equal_approx(opening_detection.position.y, opening_network.position.y), "opening branch cards share one readable horizontal row")
+	var initial_tree_positions := {
+		"better_lens": opening_optics.position,
+		"edge_detection": opening_detection.position,
+		"array_planning": opening_network.position
+	}
+	_check(is_equal_approx(opening_optics.position.x, opening_detection.position.x) and is_equal_approx(opening_detection.position.x, opening_network.position.x), "opening branch cards use the permanent branch-aligned layout")
+	_check(opening_optics.position.y < opening_detection.position.y and opening_detection.position.y < opening_network.position.y, "opening branches are stacked like the full research tree")
 	_check(not game.upgrade_tree.node_buttons["long_exposure"].visible, "follow-up systems stay hidden until the first opening choice is installed")
-	_check(game.upgrade_tree.detail_panel.anchor_top == 0.0 and game.upgrade_tree.detail_panel.size.x >= 390.0, "node detail follows the selected card instead of using a detached bottom corner")
+	_check(not game.upgrade_tree.detail_panel.visible, "node detail starts hidden until a card is hovered")
+	game.upgrade_tree._on_node_hovered("better_lens")
+	_check(game.upgrade_tree.detail_panel.visible and game.upgrade_tree.selected_node_id == "better_lens", "hovering a node reveals its detail")
+	game.upgrade_tree._on_node_unhovered("better_lens")
+	_check(not game.upgrade_tree.detail_panel.visible and game.upgrade_tree.selected_node_id.is_empty(), "leaving a node dismisses its detail")
+	var pan_before_right_drag: Vector2 = game.upgrade_tree.pan_position
+	var right_down := InputEventMouseButton.new()
+	right_down.button_index = MOUSE_BUTTON_RIGHT
+	right_down.pressed = true
+	game.upgrade_tree._input(right_down)
+	var right_drag := InputEventMouseMotion.new()
+	right_drag.relative = Vector2(23.0, -11.0)
+	game.upgrade_tree._input(right_drag)
+	var right_up := InputEventMouseButton.new()
+	right_up.button_index = MOUSE_BUTTON_RIGHT
+	right_up.pressed = false
+	game.upgrade_tree._input(right_up)
+	_check(game.upgrade_tree.pan_position == pan_before_right_drag + right_drag.relative and not game.upgrade_tree.panning, "right-drag pans the research tree and releases cleanly")
 	game.upgrade_tree.close_tree()
 	_check(not paused, "closing the upgrade tree resumes gameplay")
 
@@ -210,6 +232,10 @@ func _run() -> void:
 	_check(game.progression.get_tracking_radius() > 36.0, "Better Lens changes the hit radius")
 	_check(game.hud.array_progress_bar.value == 1.0, "array completion meter advances with purchases")
 	_check(game.progression.get_node_state("long_exposure") == "available", "purchasing a node reveals its adjacent child")
+	game.upgrade_tree.open_tree()
+	await process_frame
+	_check(game.upgrade_tree.node_buttons["better_lens"].position == initial_tree_positions["better_lens"] and game.upgrade_tree.node_buttons["edge_detection"].position == initial_tree_positions["edge_detection"] and game.upgrade_tree.node_buttons["array_planning"].position == initial_tree_positions["array_planning"], "purchasing a system never rearranges the research tree")
+	game.upgrade_tree.close_tree()
 	var data_after_better_lens: float = game.progression.observation_data
 	_check(not game.progression.request_purchase("better_lens"), "a purchased node cannot be bought twice")
 	_check(game.progression.observation_data == data_after_better_lens, "duplicate purchase cannot deduct Data")
