@@ -76,10 +76,10 @@ func _run() -> void:
 		_check(Input.mouse_mode == Input.MOUSE_MODE_HIDDEN, "native cursor is hidden while the software cursor is active")
 	var top_status: Control = game.hud.root_control.get_node("TopStatus")
 	_check(_decorative_controls_ignore_mouse(top_status), "top status HUD remains mouse-filter transparent")
-	_check(game.hud.tree_button.mouse_filter == Control.MOUSE_FILTER_STOP, "upgrade tree launcher remains interactive")
+	_check(not game.hud.root_control.has_node("UpgradeTreeLauncher"), "persistent upgrade recommendation card is removed from the playfield")
 	_check(game.hud.debug_panel.mouse_filter == Control.MOUSE_FILTER_IGNORE, "display-only debug panel does not intercept tracking input")
-	var tree_panel_center: Vector2 = game.hud.tree_panel.get_global_rect().get_center()
-	_check(game.hud.is_pointer_over_hud(tree_panel_center), "decorative upgrade HUD is recognized as a native-cursor region")
+	var settings_button_center: Vector2 = game.hud.settings_button.get_global_rect().get_center()
+	_check(game.hud.is_pointer_over_hud(settings_button_center), "interactive settings HUD is recognized as a native-cursor region")
 	_check(not game.hud.is_pointer_over_hud(get_root().get_visible_rect().get_center()), "open playfield keeps the software cursor")
 	game.observer._set_native_cursor_visible(true)
 	_check(game.observer.native_cursor_visible, "native cursor activates over HUD surfaces")
@@ -112,6 +112,7 @@ func _run() -> void:
 	_check(TranslationServer.translate("HUD_AUTOSAVED") == "자동 저장됨", "Korean autosave status stays concise")
 	_check(TranslationServer.translate("HUD_OBSERVATION_TIME") % [1, 0, 30] == "1차 관측  •  00:30", "Korean round countdown reads naturally")
 	_check(TranslationServer.translate("TREE_INTERMISSION_SUBTITLE") % [2, 40] == "업그레이드 시간  /  2차 관측은 40초", "Korean upgrade-break guidance explains the next round")
+	_check(TranslationServer.translate("PHASE_SUMMARY_TITLE") % 1 == "1차 관측 완료", "Korean phase summary title reads naturally")
 	_check(TranslationServer.translate("UPGRADE_OBSERVATION_SCHEDULING_NAME") == "관측 일정 최적화", "Korean duration-research name is localized")
 	_check(TranslationServer.translate("UPGRADE_ERROR_NEED_DATA") % 12 == "데이터가 12개 더 필요합니다", "Korean shortfall text is a complete sentence")
 	_check(TranslationServer.translate("TREE_NEED_MORE") % [8, 12] == "◇  보유 데이터 8    /    12개 더 필요", "Korean tree shortfall text includes its unit")
@@ -138,9 +139,7 @@ func _run() -> void:
 	_check(absf(float(initial.observation_phase_remaining) - 30.0) < 1.0, "first observation round starts at 30 seconds")
 	_check(game.progression.get_available_nodes().size() == 3, "only three opening choices are revealed")
 	_check(game.hud.array_progress_bar.max_value == 19.0, "HUD exposes the finite array completion goal")
-	_check(not game.hud.next_header.visible and not game.hud.next_progress_row.visible, "next-system details stay collapsed until an upgrade is affordable")
-	_check(game.hud.next_system_name_label.text == TranslationServer.translate("UPGRADE_BETTER_LENS_NAME"), "HUD recommends the nearest affordable-path system")
-	_check(game.hud.next_system_bar.max_value == 12.0 and game.hud.next_system_bar.value == 0.0, "next-system card shows progress toward its Data cost")
+	_check(game.hud.top_panel.size.x <= 510.0, "live HUD stays compact after removing secondary progression copy")
 	_check(game.progression.get_node_state("long_exposure") == "hidden", "adjacent optics node begins hidden")
 	_check(game.progression.get_node_state("observation_scheduling") == "hidden", "observation-duration research begins behind Array Planning")
 	var closed_tree_style_id: int = game.upgrade_tree.node_buttons["better_lens"].get_theme_stylebox("normal").get_instance_id()
@@ -153,17 +152,8 @@ func _run() -> void:
 	_check(game.upgrade_tree.node_buttons["better_lens"].position == closed_tree_optics_position, "observation data does not move the fixed upgrade tree")
 	_check(game.upgrade_tree.node_buttons["better_lens"].get_theme_stylebox("normal").get_instance_id() == closed_tree_style_id, "closed upgrade tree reuses node styles during observation rewards")
 	_check(game.hud.data_gain_label.visible, "resource gains receive immediate HUD feedback")
-	_check(not game.hud.next_header.visible and not game.hud.next_progress_row.visible, "affordable upgrades stay compact during observation")
-	game.hud.set_upgrade_phase(1)
-	_check(game.hud.next_header.visible and game.hud.next_progress_row.visible, "the contextual upgrade prompt expands during the upgrade break")
-	_check(game.hud.next_progress_row is VBoxContainer and game.hud.next_system_bar.custom_minimum_size.x == 0.0, "expanded upgrade copy reflows below the progress bar instead of clipping horizontally")
-	_check(game.hud.tree_panel.offset_right - game.hud.tree_panel.offset_left >= 340.0, "expanded upgrade prompt reserves enough width for localized labels")
-	_check(game.hud.next_system_bar.value == game.hud.next_system_bar.max_value, "next-system cost bar fills when an upgrade is affordable")
-	game.hud.set_observation_phase(game.observation_round, game.observation_phase_remaining)
-	_check(not game.hud.next_header.visible, "returning to observation collapses the upgrade prompt")
-	var ready_panel_style_id: int = game.hud.tree_panel.get_theme_stylebox("panel").get_instance_id()
 	game.progression.add_debug_data(1.0)
-	_check(game.hud.tree_panel.get_theme_stylebox("panel").get_instance_id() == ready_panel_style_id, "unchanged ready HUD state reuses its panel style")
+	_check(not game.hud.root_control.has_node("UpgradeTreeLauncher"), "upgrade affordability does not add persistent HUD clutter")
 	var data_before_prerequisite_bypass: float = game.progression.observation_data
 	_check(not game.progression.request_purchase("long_exposure"), "hidden prerequisite cannot be bypassed with enough Data")
 	_check(game.progression.observation_data == data_before_prerequisite_bypass, "prerequisite rejection never deducts Data")
@@ -292,7 +282,7 @@ func _run() -> void:
 
 	game.progression.debug_purchase_all()
 	_check(game.progression.upgrade_level == 19, "all tree nodes unlock through prerequisite-safe debug purchase")
-	_check(game.hud.next_system_name_label.text == TranslationServer.translate("HUD_NETWORK_STABLE"), "HUD resolves to a completed-array state")
+	_check(game.hud.array_progress_bar.value == 19.0, "compact HUD resolves to full array completion")
 	for legacy_id in ["better_lens", "long_exposure", "wide_field", "trajectory", "precision_multiplier", "secondary_camera", "shower_detector", "automated_tracking"]:
 		_check(game.progression.has_upgrade(legacy_id), "legacy upgrade migrated: " + legacy_id)
 	_check(game.progression.has_upgrade("automated_tracking"), "final automation system is active")
@@ -310,7 +300,7 @@ func _run() -> void:
 	_check(game.upgrade_tree.node_buttons["observation_scheduling"].position.y < game.upgrade_tree.node_buttons["secondary_camera"].position.y, "duration research uses a separate network-tree lane")
 	game.upgrade_tree.close_tree()
 	_check(not game.hud.root_control.has_node("UpgradePanel"), "legacy upgrade purchase panel is absent")
-	_check(game.hud.root_control.has_node("UpgradeTreeLauncher"), "tree launcher is the only HUD upgrade entry")
+	_check(not game.hud.root_control.has_node("UpgradeTreeLauncher"), "live playfield has no persistent upgrade entry")
 
 	var best_multiplier_before_quality_test: float = game.progression.best_multiplier
 	var quality_target = game.spawner.spawn_meteor("common", Vector2(520, 240), Vector2.ZERO, 3.0)
@@ -366,14 +356,23 @@ func _run() -> void:
 	_check(reset_state.observation_round == 1 and reset_state.observation_phase_active, "reset returns to the first observation round")
 	_check(absf(float(reset_state.observation_phase_remaining) - 30.0) < 1.0, "reset restores the 30-second opening round")
 	_check(game._observation_duration() == 30.0, "round number alone does not increase observation time")
+	game.progression.success_count = 4
+	game.progression.manual_successes = 3
+	game.progression.automatic_successes = 1
+	game.progression.total_data_earned = 55.0
 	game.observation_phase_remaining = 0.05
 	game.events.shower_state = "active"
 	game._process(0.1)
 	_check(game.observation_phase_active and not game.upgrade_tree.is_open(), "round expiry waits for an active meteor shower to finish")
 	game.events.shower_state = "idle"
 	game._process(0.0)
-	_check(not game.observation_phase_active and game.upgrade_tree.is_open() and paused, "round expiry pauses the sky and opens the upgrade break")
+	_check(not game.observation_phase_active and game.hud.is_phase_summary_open() and not game.upgrade_tree.is_open() and paused, "round expiry pauses the sky and opens a concise phase summary")
+	_check(game.hud.phase_summary_observations.text.ends_with("4"), "phase summary reports observations from the completed phase")
+	_check(game.hud.phase_summary_data.text.ends_with("+55"), "phase summary reports Data earned during the completed phase")
+	_check(game.hud.phase_summary_split.text == TranslationServer.translate("PHASE_SUMMARY_MANUAL_AUTO") % [3, 1], "phase summary separates manual and automatic observations")
 	_check(game.upgrade_tree.intermission_next_round == 2 and game.upgrade_tree.intermission_next_duration == 30, "upgrade break keeps the next round at 30 seconds without research")
+	game.hud._on_phase_summary_continue_pressed()
+	_check(not game.hud.is_phase_summary_open() and game.upgrade_tree.is_open() and paused, "one summary action opens the research phase")
 	_check(game.upgrade_tree.close_button.text == TranslationServer.translate("TREE_START_OBSERVATION"), "upgrade break close action is labeled as starting observation")
 	game.upgrade_tree.close_tree()
 	_check(not paused and game.observation_phase_active and game.observation_round == 2, "closing the upgrade tree starts round 2")
@@ -384,6 +383,7 @@ func _run() -> void:
 	_check(absf(game.observation_phase_remaining - 30.0) < 0.1, "duration research does not alter the observation already in progress")
 	game._end_observation_phase()
 	_check(game.upgrade_tree.intermission_next_duration == 40, "the next upgrade break previews the researched 40-second window")
+	game._on_phase_summary_continue_requested()
 	game.upgrade_tree.close_tree()
 	_check(game.observation_round == 3 and absf(game.observation_phase_remaining - 40.0) < 0.1, "the researched duration applies to the next observation")
 	_check(game.progression.debug_purchase_node("edge_detection"), "duration path can satisfy Edge Detection prerequisite")
@@ -395,6 +395,7 @@ func _run() -> void:
 	_check(game._observation_duration() == 60.0, "Extended Watch Protocol reaches the 60-second maximum")
 	game._end_observation_phase()
 	_check(game.upgrade_tree.intermission_next_duration == 60, "upgrade break previews the maximum researched duration")
+	game._on_phase_summary_continue_requested()
 	game.upgrade_tree.close_tree()
 	_check(game.observation_round == 4 and absf(game.observation_phase_remaining - 60.0) < 0.1, "the maximum duration applies to the following observation")
 	game.reset_run()
@@ -480,7 +481,7 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	if failures.is_empty():
-		print("SMOKE_TEST_PASS: tutorial, saves, localization, observation, progression, events, performance caps, stale references, and reset")
+		print("SMOKE_TEST_PASS: tutorial, saves, localization, phase summary, compact HUD, observation, progression, events, performance caps, stale references, and reset")
 		quit(0)
 	else:
 		print("SMOKE_TEST_FAIL: %d failure(s)" % failures.size())

@@ -28,6 +28,11 @@ var autosave_elapsed: float = 0.0
 var observation_round: int = 1
 var observation_phase_active: bool = false
 var observation_phase_remaining: float = Balance.BASE_OBSERVATION_DURATION
+var observation_phase_duration: float = Balance.BASE_OBSERVATION_DURATION
+var phase_start_successes: int = 0
+var phase_start_manual_successes: int = 0
+var phase_start_automatic_successes: int = 0
+var phase_start_total_data: float = 0.0
 var suppress_phase_transition: bool = false
 
 
@@ -48,7 +53,7 @@ func _ready() -> void:
 	tutorial.setup(settings, progression)
 	settings.language_changed.connect(_on_language_changed)
 	hud.restart_requested.connect(reset_run)
-	hud.upgrade_tree_requested.connect(upgrade_tree.open_tree)
+	hud.phase_summary_continue_requested.connect(_on_phase_summary_continue_requested)
 	hud.save_slot_requested.connect(_on_save_slot_requested)
 	hud.load_slot_requested.connect(_on_load_slot_requested)
 	hud.startup_slot_selected.connect(_on_startup_slot_selected)
@@ -109,6 +114,7 @@ func start_run() -> void:
 	last_completion_success = false
 	observation_round = 1
 	hud.hide_end()
+	hud.hide_phase_summary()
 	hud.reset_tutorial()
 	hud.set_runtime(0.0)
 	starfield.set_activity(0.0)
@@ -125,6 +131,7 @@ func reset_run() -> void:
 	spawner.reset()
 	progression.reset()
 	hud.hide_end()
+	hud.hide_phase_summary()
 	hud.reset_tutorial()
 	start_run()
 	_autosave_active_slot()
@@ -155,9 +162,15 @@ func _begin_observation_phase(advance_round: bool = false, remaining_override: f
 	if advance_round:
 		observation_round += 1
 	var duration := _observation_duration()
+	observation_phase_duration = duration
 	observation_phase_remaining = duration if remaining_override < 0.0 else clampf(remaining_override, 0.05, duration)
 	observation_phase_active = true
+	phase_start_successes = progression.success_count
+	phase_start_manual_successes = progression.manual_successes
+	phase_start_automatic_successes = progression.automatic_successes
+	phase_start_total_data = progression.total_data_earned
 	upgrade_tree.clear_intermission_context()
+	hud.hide_phase_summary()
 	hud.set_observation_phase(observation_round, observation_phase_remaining)
 	spawner.start_spawning()
 	events.start()
@@ -181,8 +194,27 @@ func _end_observation_phase() -> void:
 	var next_round := observation_round + 1
 	var next_duration := int(_observation_duration())
 	upgrade_tree.set_intermission_context(next_round, next_duration)
+	var observations := maxi(0, progression.success_count - phase_start_successes)
+	var manual_observations := maxi(0, progression.manual_successes - phase_start_manual_successes)
+	var automatic_observations := maxi(0, progression.automatic_successes - phase_start_automatic_successes)
+	var data_earned := maxi(0, int(round(progression.total_data_earned - phase_start_total_data)))
 	_autosave_active_slot()
 	get_tree().paused = true
+	hud.show_phase_summary(
+		observation_round,
+		int(round(observation_phase_duration)),
+		data_earned,
+		observations,
+		manual_observations,
+		automatic_observations,
+		next_duration
+	)
+
+
+func _on_phase_summary_continue_requested() -> void:
+	if completed or observation_phase_active or not hud.is_phase_summary_open():
+		return
+	hud.hide_phase_summary()
 	upgrade_tree.open_tree()
 
 
@@ -200,6 +232,11 @@ func _close_upgrade_tree_without_transition() -> void:
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if not (event is InputEventKey) or not event.pressed or event.echo:
+		return
+	if hud.is_phase_summary_open():
+		if event.keycode in [KEY_U, KEY_ENTER, KEY_SPACE]:
+			_on_phase_summary_continue_requested()
+			get_viewport().set_input_as_handled()
 		return
 	if event.keycode == KEY_F9:
 		hud.toggle_debug()
@@ -305,6 +342,7 @@ func _complete_prototype(success: bool) -> void:
 		return
 	completed = true
 	last_completion_success = success
+	hud.hide_phase_summary()
 	events.finish_final()
 	observer.release_target()
 	if success:
@@ -435,6 +473,11 @@ func _build_save_data() -> Dictionary:
 		"observation_round": observation_round,
 		"observation_phase_active": observation_phase_active,
 		"observation_phase_remaining": observation_phase_remaining,
+		"observation_phase_duration": observation_phase_duration,
+		"phase_start_successes": phase_start_successes,
+		"phase_start_manual_successes": phase_start_manual_successes,
+		"phase_start_automatic_successes": phase_start_automatic_successes,
+		"phase_start_total_data": phase_start_total_data,
 		"progression": progression.get_save_data(),
 	}
 
@@ -453,6 +496,7 @@ func _apply_save_data(data: Dictionary) -> void:
 	var progression_data = data.get("progression", {})
 	progression.load_save_data(progression_data if progression_data is Dictionary else {})
 	hud.hide_end()
+	hud.hide_phase_summary()
 	hud.restore_tutorial(progression.success_count > 0)
 	hud.set_runtime(elapsed_time)
 	starfield.set_activity(progression.get_progression_ratio() * 0.16)
@@ -463,6 +507,11 @@ func _apply_save_data(data: Dictionary) -> void:
 			_observation_duration()
 		))
 		_begin_observation_phase(false, saved_remaining)
+		observation_phase_duration = maxf(0.05, float(data.get("observation_phase_duration", _observation_duration())))
+		phase_start_successes = maxi(0, int(data.get("phase_start_successes", progression.success_count)))
+		phase_start_manual_successes = maxi(0, int(data.get("phase_start_manual_successes", progression.manual_successes)))
+		phase_start_automatic_successes = maxi(0, int(data.get("phase_start_automatic_successes", progression.automatic_successes)))
+		phase_start_total_data = maxf(0.0, float(data.get("phase_start_total_data", progression.total_data_earned)))
 	else:
 		observation_phase_active = false
 		observation_phase_remaining = 0.0
@@ -475,6 +524,7 @@ func _apply_save_data(data: Dictionary) -> void:
 func _resume_upgrade_intermission() -> void:
 	if completed or observation_phase_active:
 		return
+	hud.hide_phase_summary()
 	get_tree().paused = true
 	upgrade_tree.open_tree()
 

@@ -23,7 +23,7 @@ TUTORIAL_OBSERVE_TITLE,TRACK A METEOR,유성을 추적하세요
 TUTORIAL_OBSERVE_BODY,Hold the left mouse button and keep the cursor close to a meteor until the observation ring fills.,마우스 왼쪽 버튼을 누른 채 커서를 유성 가까이에 유지해 관측 게이지를 채우세요.
 TUTORIAL_OBSERVE_HINT,Complete one observation to continue.,관측을 한 번 완료하면 계속됩니다.
 TUTORIAL_TREE_TITLE,OPEN THE UPGRADE TREE,업그레이드 트리를 여세요
-TUTORIAL_TREE_BODY,Your first observation awarded enough Data for an opening system. Press [U] or use the button at the lower right.,첫 관측으로 첫 시스템을 설치할 만큼 데이터가 모였습니다. [U] 또는 오른쪽 아래 버튼을 누르세요.
+TUTORIAL_TREE_BODY,Your first observation awarded enough Data for an opening system. Press [U] to open the research tree.,첫 관측으로 첫 시스템을 설치할 만큼 데이터가 모였습니다. [U]를 눌러 연구 트리를 여세요.
 TUTORIAL_TREE_HINT,Open the tree to continue.,트리를 열면 계속됩니다.
 TUTORIAL_INSTALL_TITLE,INSTALL YOUR FIRST SYSTEM,첫 시스템을 설치하세요
 TUTORIAL_INSTALL_BODY,Available nodes glow in their branch color. Select a bright node to spend Data and reveal the next paths.,설치 가능한 노드는 각 계열의 색으로 빛납니다. 빛나는 노드를 선택해 데이터를 사용하고 다음 경로를 여세요.
@@ -67,6 +67,13 @@ HUD_DATA_GAIN,+%d DATA,+%d 데이터
 HUD_TIME,RUN  %02d:%02d,진행  %02d:%02d
 HUD_OBSERVATION_TIME,OBSERVATION %d  •  %02d:%02d,%d차 관측  •  %02d:%02d
 HUD_UPGRADE_PHASE,OBSERVATION %d COMPLETE  •  UPGRADE,%d차 관측 완료  •  업그레이드
+PHASE_SUMMARY_TITLE,OBSERVATION %d COMPLETE,%d차 관측 완료
+PHASE_SUMMARY_SUBTITLE,%d-SECOND OBSERVATION LOG,%d초 관측 기록
+PHASE_SUMMARY_OBSERVATIONS,OBJECTS OBSERVED,관측
+PHASE_SUMMARY_DATA,DATA EARNED,획득 데이터
+PHASE_SUMMARY_MANUAL_AUTO,MANUAL %d  •  AUTO %d,수동 %d  •  자동 %d
+PHASE_SUMMARY_NEXT,NEXT OBSERVATION  %d SEC,다음 관측  %d초
+PHASE_SUMMARY_CONTINUE,OPEN RESEARCH,연구 단계로
 HUD_AUTOSAVED,AUTOSAVED,자동 저장됨
 HUD_TUTORIAL_START,Hold LMB and follow the meteor,마우스 왼쪽 버튼을 누른 채 유성을 따라가세요
 HUD_TUTORIAL_DONE,Observation logged. Open the Upgrade Tree [U] to expand the array.,관측이 기록되었습니다. 업그레이드 트리 [U]에서 관측망을 확장하세요.
