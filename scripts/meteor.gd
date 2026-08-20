@@ -246,8 +246,9 @@ func _draw() -> void:
 		success_bloom = 1.0 + (1.0 - visibility) * 3.0
 	var pulse := 1.0 + sin(age * 13.0 + wobble_phase) * 0.06
 	var r := body_radius * pulse * success_bloom
-	draw_circle(Vector2.ZERO, r * 3.1, Color(glow_color, 0.045 * visibility))
-	draw_circle(Vector2.ZERO, r * 1.85, Color(glow_color, 0.12 * visibility))
+	draw_circle(Vector2.ZERO, r * 3.4, Color(glow_color, 0.065 * visibility))
+	draw_circle(Vector2.ZERO, r * 1.95, Color(glow_color, 0.17 * visibility))
+	draw_arc(Vector2.ZERO, r + 8.0 + sin(age * 4.0) * 1.5, 0.0, TAU, 28, Color(glow_color, 0.16 * visibility), 1.2, true)
 	draw_circle(Vector2.ZERO, r, Color(primary_color, visibility))
 	draw_circle(-velocity.normalized() * r * 0.22, r * 0.45, Color(1.0, 1.0, 1.0, visibility))
 

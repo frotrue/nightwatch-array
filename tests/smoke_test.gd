@@ -34,6 +34,7 @@ func _run() -> void:
 	game._on_startup_slot_selected(2)
 	_check(not game.hud.is_startup_slots_open() and not paused, "choosing a startup slot enters the game")
 	_check(game.active_save_slot == 2 and game.save_games.has_slot(2), "an empty startup slot creates and activates a new save")
+	_check(game._preferred_startup_slot() == 2, "quick start resumes the newest valid save without opening the slot picker")
 	_check(game.hud.save_mode_label.visible and game.hud.save_mode_label.text == TranslationServer.translate("HUD_AUTOSAVED"), "autosave status appears only after a completed save")
 	game.hud._process(2.3)
 	_check(not game.hud.save_mode_label.visible, "autosave status hides instead of becoming persistent HUD text")
@@ -99,6 +100,9 @@ func _run() -> void:
 	game.hud.open_settings()
 	_check(game.hud.is_settings_open(), "settings overlay opens")
 	_check(paused, "settings overlay pauses gameplay")
+	_check(not game.hud.save_management_container.visible, "save management stays collapsed in the default settings view")
+	game.hud._on_save_management_pressed()
+	_check(game.hud.save_management_container.visible, "save management expands on demand")
 	game.hud.close_settings()
 	_check(not paused, "closing settings resumes gameplay")
 	game.settings.set_language("en", false)
@@ -113,15 +117,27 @@ func _run() -> void:
 	_check(not initial.final_started, "final event is initially inactive")
 	_check(game.progression.get_available_nodes().size() == 3, "only three opening choices are revealed")
 	_check(game.hud.array_progress_bar.max_value == 16.0, "HUD exposes the finite array completion goal")
+	_check(not game.hud.next_header.visible and not game.hud.next_progress_row.visible, "next-system details stay collapsed until an upgrade is affordable")
 	_check(game.hud.next_system_name_label.text == TranslationServer.translate("UPGRADE_BETTER_LENS_NAME"), "HUD recommends the nearest affordable-path system")
 	_check(game.hud.next_system_bar.max_value == 12.0 and game.hud.next_system_bar.value == 0.0, "next-system card shows progress toward its Data cost")
 	_check(game.progression.get_node_state("long_exposure") == "hidden", "adjacent optics node begins hidden")
+	var closed_tree_style_id: int = game.upgrade_tree.node_buttons["better_lens"].get_theme_stylebox("normal").get_instance_id()
+	var closed_tree_layout_level: int = game.upgrade_tree.layout_upgrade_level
 	var data_before_rejected_purchase: float = game.progression.observation_data
 	_check(not game.progression.request_purchase("array_planning"), "purchase fails when Observation Data is insufficient")
 	_check(game.progression.observation_data == data_before_rejected_purchase, "failed purchase never deducts Data")
 	game.progression.add_debug_data(100.0)
+	_check(game.upgrade_tree.refresh_pending, "closed upgrade tree defers progression refreshes")
+	_check(game.upgrade_tree.layout_upgrade_level == closed_tree_layout_level, "observation data does not relayout a closed upgrade tree")
+	_check(game.upgrade_tree.node_buttons["better_lens"].get_theme_stylebox("normal").get_instance_id() == closed_tree_style_id, "closed upgrade tree reuses node styles during observation rewards")
 	_check(game.hud.data_gain_label.visible, "resource gains receive immediate HUD feedback")
+	_check(game.hud.next_header.visible and game.hud.next_progress_row.visible, "affordable upgrades expand the contextual tree prompt")
+	_check(game.hud.next_progress_row is VBoxContainer and game.hud.next_system_bar.custom_minimum_size.x == 0.0, "expanded upgrade copy reflows below the progress bar instead of clipping horizontally")
+	_check(game.hud.tree_panel.offset_right - game.hud.tree_panel.offset_left >= 340.0, "expanded upgrade prompt reserves enough width for localized labels")
 	_check(game.hud.next_system_bar.value == game.hud.next_system_bar.max_value, "next-system cost bar fills when an upgrade is affordable")
+	var ready_panel_style_id: int = game.hud.tree_panel.get_theme_stylebox("panel").get_instance_id()
+	game.progression.add_debug_data(1.0)
+	_check(game.hud.tree_panel.get_theme_stylebox("panel").get_instance_id() == ready_panel_style_id, "unchanged ready HUD state reuses its panel style")
 	var data_before_prerequisite_bypass: float = game.progression.observation_data
 	_check(not game.progression.request_purchase("long_exposure"), "hidden prerequisite cannot be bypassed with enough Data")
 	_check(game.progression.observation_data == data_before_prerequisite_bypass, "prerequisite rejection never deducts Data")
@@ -129,7 +145,15 @@ func _run() -> void:
 	game.upgrade_tree.open_tree()
 	await process_frame
 	_check(game.upgrade_tree.is_open(), "upgrade tree opens")
+	_check(not game.upgrade_tree.refresh_pending, "opening the upgrade tree applies one deferred refresh")
 	_check(paused, "opening the upgrade tree pauses gameplay")
+	_check(game.upgrade_tree.opening_layout_active, "the untouched tree presents the three opening branches as a focused choice")
+	var opening_optics: Button = game.upgrade_tree.node_buttons["better_lens"]
+	var opening_detection: Button = game.upgrade_tree.node_buttons["edge_detection"]
+	var opening_network: Button = game.upgrade_tree.node_buttons["array_planning"]
+	_check(is_equal_approx(opening_optics.position.y, opening_detection.position.y) and is_equal_approx(opening_detection.position.y, opening_network.position.y), "opening branch cards share one readable horizontal row")
+	_check(not game.upgrade_tree.node_buttons["long_exposure"].visible, "follow-up systems stay hidden until the first opening choice is installed")
+	_check(game.upgrade_tree.detail_panel.anchor_top == 0.0 and game.upgrade_tree.detail_panel.size.x >= 390.0, "node detail follows the selected card instead of using a detached bottom corner")
 	game.upgrade_tree.close_tree()
 	_check(not paused, "closing the upgrade tree resumes gameplay")
 

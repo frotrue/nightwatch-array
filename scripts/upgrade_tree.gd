@@ -5,9 +5,9 @@ signal tree_closed
 
 const Balance = preload("res://scripts/game_balance.gd")
 
-const TREE_SIZE := Vector2(1460, 650)
-const NODE_SIZE := Vector2(88, 72)
-const MAJOR_NODE_SIZE := Vector2(104, 84)
+const TREE_SIZE := Vector2(1460, 620)
+const NODE_SIZE := Vector2(124, 92)
+const MAJOR_NODE_SIZE := Vector2(142, 104)
 const MIN_ZOOM := 0.55
 const MAX_ZOOM := 1.28
 const BACKGROUND_STARS := [
@@ -51,6 +51,10 @@ var zoom: float = 0.78
 var pan_position := Vector2.ZERO
 var panning: bool = false
 var paused_by_tree: bool = false
+var opening_layout_active: bool = false
+var refresh_pending: bool = false
+var layout_upgrade_level: int = -1
+var node_visual_keys: Dictionary = {}
 
 
 func _ready() -> void:
@@ -61,7 +65,7 @@ func _ready() -> void:
 
 func bind_progression(controller: Node) -> void:
 	progression = controller
-	progression.state_changed.connect(_refresh)
+	progression.state_changed.connect(_on_progression_state_changed)
 	progression.purchase_rejected.connect(_on_purchase_rejected)
 	_refresh()
 
@@ -200,9 +204,21 @@ func _on_purchase_rejected(node_id: String, reason_key: String, value) -> void:
 	_show_node_detail(node_id)
 
 
+func _on_progression_state_changed() -> void:
+	if is_open():
+		_refresh()
+	else:
+		refresh_pending = true
+
+
 func _refresh() -> void:
 	if progression == null or data_readout == null:
 		return
+	refresh_pending = false
+	var current_upgrade_level := int(progression.upgrade_level)
+	if layout_upgrade_level != current_upgrade_level:
+		_apply_layout_mode()
+		layout_upgrade_level = current_upgrade_level
 	data_readout.text = tr("TREE_DATA") % int(floor(progression.observation_data))
 	systems_readout.text = tr("TREE_SYSTEMS") % [progression.upgrade_level, Balance.UPGRADE_NODES.size()]
 	var available_count := 0
@@ -214,6 +230,8 @@ func _refresh() -> void:
 		if state == "hidden" and _is_teaser_visible(definition):
 			visual_state = "teaser"
 		var visible := visual_state != "hidden"
+		if opening_layout_active and not definition.prerequisites.is_empty():
+			visible = false
 		var button: Button = node_buttons[node_id]
 		var shadow: PanelContainer = node_shadows[node_id]
 		var name_label: Label = node_names[node_id]
@@ -227,7 +245,11 @@ func _refresh() -> void:
 			available_count += 1
 			if progression.can_purchase(node_id):
 				affordable_count += 1
-		_apply_node_visual(definition, visual_state)
+		var affordable: bool = state == "available" and progression.can_purchase(node_id)
+		var visual_key: String = "%s:%s" % [visual_state, affordable]
+		if String(node_visual_keys.get(node_id, "")) != visual_key:
+			_apply_node_visual(definition, visual_state)
+			node_visual_keys[node_id] = visual_key
 	if affordable_count > 0:
 		tree_status.text = tr("TREE_STATUS_READY") % affordable_count
 	elif available_count > 0:
@@ -255,6 +277,44 @@ func _first_visible_node_id() -> String:
 		if node_buttons[node_id].visible and String(node_buttons[node_id].get_meta("visual_state")) != "teaser":
 			return node_id
 	return ""
+
+
+func _apply_layout_mode() -> void:
+	opening_layout_active = progression.upgrade_level == 0
+	var opening_positions := {
+		"better_lens": Vector2(290, 245),
+		"edge_detection": Vector2(620, 245),
+		"array_planning": Vector2(950, 245)
+	}
+	for definition in Balance.UPGRADE_NODES:
+		var node_id := String(definition.id)
+		var position := Vector2(definition.position)
+		if opening_layout_active and opening_positions.has(node_id):
+			position = opening_positions[node_id]
+		_set_node_position(node_id, position)
+	var normal_rows := {"optics": 34.0, "detection": 245.0, "network": 444.0}
+	var opening_x := {"optics": 212.0, "detection": 542.0, "network": 872.0}
+	for branch_id in branch_labels:
+		var label: Label = branch_labels[branch_id]
+		if opening_layout_active:
+			label.position = Vector2(float(opening_x[branch_id]), 195.0)
+			label.size = Vector2(280.0, 32.0)
+			label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		else:
+			label.position = Vector2(24.0, float(normal_rows[branch_id]))
+			label.size = Vector2(300.0, 28.0)
+			label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+
+
+func _set_node_position(node_id: String, position: Vector2) -> void:
+	if not node_buttons.has(node_id):
+		return
+	var button: Button = node_buttons[node_id]
+	var shadow: PanelContainer = node_shadows[node_id]
+	var name_label: Label = node_names[node_id]
+	button.position = position
+	shadow.position = position + Vector2(0, 8)
+	name_label.position = Vector2(position.x + button.size.x * 0.5 - 95.0, position.y + button.size.y + 7.0)
 
 
 func _apply_node_visual(definition: Dictionary, visual_state: String) -> void:
@@ -372,21 +432,21 @@ func _position_detail_panel(node_id: String) -> void:
 	if content_clip == null or detail_panel == null or not node_buttons.has(node_id):
 		return
 	var button: Button = node_buttons[node_id]
-	var node_screen_x := tree_canvas.position.x + (button.position.x + button.size.x * 0.5) * zoom
-	detail_panel.anchor_top = 1.0
-	detail_panel.anchor_bottom = 1.0
-	if node_screen_x < content_clip.size.x * 0.5:
-		detail_panel.anchor_left = 1.0
-		detail_panel.anchor_right = 1.0
-		detail_panel.offset_left = -478.0
-		detail_panel.offset_right = -18.0
-	else:
-		detail_panel.anchor_left = 0.0
-		detail_panel.anchor_right = 0.0
-		detail_panel.offset_left = 18.0
-		detail_panel.offset_right = 478.0
-	detail_panel.offset_top = -170.0
-	detail_panel.offset_bottom = -18.0
+	var node_top_left := tree_canvas.position + button.position * zoom
+	var node_size := button.size * zoom
+	var panel_size := Vector2(390.0, 154.0)
+	var desired := Vector2(node_top_left.x + node_size.x + 18.0, node_top_left.y + node_size.y * 0.5 - panel_size.y * 0.5)
+	if opening_layout_active:
+		desired = Vector2(node_top_left.x + node_size.x * 0.5 - panel_size.x * 0.5, node_top_left.y + node_size.y + 18.0)
+	elif desired.x + panel_size.x > content_clip.size.x - 14.0:
+		desired.x = node_top_left.x - panel_size.x - 18.0
+	if desired.y + panel_size.y > content_clip.size.y - 14.0:
+		desired.y = node_top_left.y - panel_size.y - 18.0
+	desired.x = clampf(desired.x, 14.0, maxf(14.0, content_clip.size.x - panel_size.x - 14.0))
+	desired.y = clampf(desired.y, 14.0, maxf(14.0, content_clip.size.y - panel_size.y - 14.0))
+	detail_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	detail_panel.position = desired
+	detail_panel.size = panel_size
 
 
 func _on_language_changed(_locale: String) -> void:
@@ -403,9 +463,9 @@ func _apply_locale() -> void:
 	legend_label.text = tr("TREE_LEGEND")
 	controls_label.text = "    " + tr("TREE_CONTROLS")
 	for branch_id in branch_labels:
-		var prefix: String = {"optics": "01", "detection": "02", "network": "03"}[branch_id]
-		branch_labels[branch_id].text = "%s  %s" % [prefix, _branch_name(branch_id)]
+		branch_labels[branch_id].text = _branch_name(branch_id)
 	if progression != null:
+		node_visual_keys.clear()
 		_refresh()
 
 
@@ -524,13 +584,12 @@ func _build_interface() -> void:
 
 
 func _build_branch_labels() -> void:
-	var rows := {"optics": 40.0, "detection": 258.0, "network": 462.0}
-	var numbers := {"optics": "01", "detection": "02", "network": "03"}
+	var rows := {"optics": 34.0, "detection": 245.0, "network": 444.0}
 	for branch_id in ["optics", "detection", "network"]:
 		var branch: Dictionary = Balance.BRANCHES[branch_id]
-		var label := _make_label("%s  %s" % [String(numbers[branch_id]), _branch_name(branch_id)], 13, branch.color)
+		var label := _make_label(_branch_name(branch_id), 15, branch.color)
 		label.position = Vector2(24.0, float(rows[branch_id]))
-		label.size = Vector2(280, 24)
+		label.size = Vector2(300, 28)
 		tree_canvas.add_child(label)
 		branch_labels[branch_id] = label
 
@@ -560,13 +619,13 @@ func _build_node_button(definition: Dictionary) -> void:
 	button.mouse_entered.connect(_on_node_hovered.bind(node_id))
 	tree_canvas.add_child(button)
 
-	var icon_label := _make_label(String(definition.icon), 32 if major else 27, Color.WHITE)
+	var icon_label := _make_label(String(definition.icon), 38 if major else 34, Color.WHITE)
 	icon_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	icon_label.offset_bottom = -16.0
 	icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	icon_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	button.add_child(icon_label)
-	var cost_label := _make_label(tr("TREE_COST") % int(definition.cost), 10, Color("93a8ba"))
+	var cost_label := _make_label(tr("TREE_COST") % int(definition.cost), 11, Color("93a8ba"))
 	cost_label.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	cost_label.offset_top = -22.0
 	cost_label.offset_bottom = -4.0
@@ -582,9 +641,9 @@ func _build_node_button(definition: Dictionary) -> void:
 	major_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	button.add_child(major_badge)
 
-	var name_label := _make_label(_upgrade_name(definition), 10 if major else 9, Color("c8d5e1"))
-	name_label.position = Vector2(position.x + node_size.x * 0.5 - 78.0, position.y + node_size.y + 5.0)
-	name_label.size = Vector2(156, 30)
+	var name_label := _make_label(_upgrade_name(definition), 12 if major else 11, Color("c8d5e1"))
+	name_label.position = Vector2(position.x + node_size.x * 0.5 - 95.0, position.y + node_size.y + 7.0)
+	name_label.size = Vector2(190, 38)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -603,6 +662,7 @@ func _build_detail_panel() -> void:
 	detail_panel.name = "NodeDetailCard"
 	detail_panel.z_index = 50
 	detail_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	detail_panel.custom_minimum_size = Vector2(390.0, 154.0)
 	detail_panel.visible = false
 	content_clip.add_child(detail_panel)
 	var margin := MarginContainer.new()
@@ -616,9 +676,9 @@ func _build_detail_panel() -> void:
 	margin.add_child(column)
 	detail_branch = _make_label(tr("BRANCH_OPTICS"), 10, Color("53d6ff"))
 	column.add_child(detail_branch)
-	detail_name = _make_label(tr("UPGRADE_BETTER_LENS_NAME"), 20, Color("f3f8ff"))
+	detail_name = _make_label(tr("UPGRADE_BETTER_LENS_NAME"), 19, Color("f3f8ff"))
 	column.add_child(detail_name)
-	detail_description = _make_label("", 13, Color("b4c2d2"))
+	detail_description = _make_label("", 12, Color("b4c2d2"))
 	detail_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	detail_description.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	column.add_child(detail_description)
@@ -633,16 +693,17 @@ func _draw_tree() -> void:
 		var radius := 1.7 if index % 5 == 0 else 1.0
 		var alpha := 0.28 if index % 5 == 0 else 0.16
 		tree_canvas.draw_circle(BACKGROUND_STARS[index], radius, Color(0.65, 0.82, 1.0, alpha))
-	var branch_lanes := {
-		"optics": [Vector2(55, 145), Vector2(1395, 115)],
-		"detection": [Vector2(55, 350), Vector2(1395, 305)],
-		"network": [Vector2(55, 555), Vector2(1395, 535)]
-	}
-	for branch_id in branch_lanes:
-		var branch_color: Color = Balance.BRANCHES[branch_id].color
-		var lane: Array = branch_lanes[branch_id]
-		tree_canvas.draw_line(lane[0], lane[1], Color(branch_color, 0.028), 32.0, true)
-		tree_canvas.draw_line(lane[0], lane[1], Color(branch_color, 0.12), 1.0, true)
+	if not opening_layout_active:
+		var branch_lanes := {
+			"optics": [Vector2(55, 145), Vector2(1395, 115)],
+			"detection": [Vector2(55, 350), Vector2(1395, 305)],
+			"network": [Vector2(55, 555), Vector2(1395, 535)]
+		}
+		for branch_id in branch_lanes:
+			var branch_color: Color = Balance.BRANCHES[branch_id].color
+			var lane: Array = branch_lanes[branch_id]
+			tree_canvas.draw_line(lane[0], lane[1], Color(branch_color, 0.035), 36.0, true)
+			tree_canvas.draw_line(lane[0], lane[1], Color(branch_color, 0.18), 1.4, true)
 	if progression == null:
 		return
 	for definition in Balance.UPGRADE_NODES:

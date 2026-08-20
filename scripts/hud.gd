@@ -25,6 +25,9 @@ var save_mode_label: Label
 var tutorial_label: Label
 var banner_label: Label
 var tree_panel: PanelContainer
+var tree_column: VBoxContainer
+var next_header: HBoxContainer
+var next_progress_row: VBoxContainer
 var tree_button: Button
 var upgrade_available_label: Label
 var next_system_name_label: Label
@@ -42,6 +45,7 @@ var end_stats: Label
 var restart_button: Button
 var settings_button: Button
 var settings_overlay: Control
+var settings_panel: PanelContainer
 var settings_title: Label
 var settings_subtitle: Label
 var settings_language_label: Label
@@ -49,6 +53,8 @@ var settings_hint: Label
 var language_selector: OptionButton
 var tutorial_replay_button: Button
 var settings_close_button: Button
+var save_management_button: Button
+var save_management_container: VBoxContainer
 var startup_overlay: Control
 var startup_title: Label
 var startup_subtitle: Label
@@ -75,6 +81,10 @@ var paused_by_settings: bool = false
 var paused_by_startup: bool = false
 var active_save_slot: int = 0
 var autosave_status_timer: float = 0.0
+var save_management_expanded: bool = false
+var tree_launcher_expanded: bool = false
+var tree_launcher_layout_initialized: bool = false
+var next_system_visual_key: String = ""
 
 
 func _ready() -> void:
@@ -211,6 +221,7 @@ func open_settings() -> void:
 	_sync_language_selector()
 	_refresh_save_slots()
 	save_feedback.visible = false
+	_set_save_management_expanded(false)
 
 
 func close_settings() -> void:
@@ -294,7 +305,7 @@ func _refresh_progression() -> void:
 	if last_observation_data >= 0.0 and current_data > last_observation_data:
 		_show_data_gain(current_data - last_observation_data)
 	last_observation_data = current_data
-	data_label.text = "%04d" % int(floor(current_data))
+	data_label.text = "%d" % int(floor(current_data))
 	status_label.text = tr("HUD_OBSERVED_COUNT") % progression.success_count
 	array_progress_bar.value = float(progression.upgrade_level)
 	array_progress_label.text = tr("HUD_ARRAY_PROGRESS") % [
@@ -312,6 +323,7 @@ func _refresh_progression() -> void:
 func _refresh_next_system(affordable: int) -> void:
 	var definition := _get_recommended_upgrade()
 	if definition.is_empty():
+		_set_tree_launcher_expanded(false)
 		upgrade_available_label.text = tr("HUD_ARRAY_COMPLETE")
 		upgrade_available_label.add_theme_color_override("font_color", Color("8fffe5"))
 		next_system_name_label.text = tr("HUD_NETWORK_STABLE")
@@ -322,8 +334,10 @@ func _refresh_next_system(affordable: int) -> void:
 		next_system_cost_label.add_theme_color_override("font_color", Color("7ee9dc"))
 		next_system_bar.max_value = float(Balance.UPGRADE_NODES.size())
 		next_system_bar.value = float(Balance.UPGRADE_NODES.size())
-		next_system_bar.add_theme_stylebox_override("fill", _panel_style(Color("52e0b1"), Color("8fffe5"), 3))
-		tree_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.025, 0.064, 0.105, 0.94), Color("52e0b1"), 10))
+		if next_system_visual_key != "complete":
+			next_system_visual_key = "complete"
+			next_system_bar.add_theme_stylebox_override("fill", _panel_style(Color("52e0b1"), Color("8fffe5"), 3))
+			tree_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.025, 0.064, 0.105, 0.94), Color("52e0b1"), 10))
 		return
 
 	var branch_id := String(definition.branch)
@@ -331,6 +345,7 @@ func _refresh_next_system(affordable: int) -> void:
 	var branch_color: Color = branch.get("color", Color("53d6ff"))
 	var cost := float(definition.cost)
 	var ready: bool = bool(progression.can_purchase(String(definition.id)))
+	_set_tree_launcher_expanded(ready)
 	upgrade_available_label.text = tr("HUD_NEXT_SYSTEM")
 	upgrade_available_label.add_theme_color_override("font_color", Color("7f9bb1"))
 	next_system_name_label.text = tr("UPGRADE_%s_NAME" % String(definition.id).to_upper())
@@ -339,20 +354,50 @@ func _refresh_next_system(affordable: int) -> void:
 	next_system_branch_label.add_theme_color_override("font_color", branch_color)
 	next_system_bar.max_value = maxf(1.0, cost)
 	next_system_bar.value = minf(float(progression.observation_data), cost)
-	next_system_bar.add_theme_stylebox_override("fill", _panel_style(branch_color.darkened(0.18), branch_color, 3))
+	var visual_key := "%s:%s" % [branch_id, ready]
+	var visual_changed := next_system_visual_key != visual_key
+	if visual_changed:
+		next_system_visual_key = visual_key
+		next_system_bar.add_theme_stylebox_override("fill", _panel_style(branch_color.darkened(0.18), branch_color, 3))
 	if ready:
 		next_system_cost_label.text = tr("HUD_READY_INSTALL") % int(cost)
 		next_system_cost_label.add_theme_color_override("font_color", Color("8fffe5"))
-		tree_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.025, 0.075, 0.105, 0.96), branch_color, 10))
+		if visual_changed:
+			tree_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.025, 0.075, 0.105, 0.96), branch_color, 10))
+			tree_button.add_theme_stylebox_override("normal", _panel_style(branch_color.darkened(0.62), branch_color.lightened(0.18), 7))
+			tree_button.add_theme_stylebox_override("hover", _panel_style(branch_color.darkened(0.48), branch_color.lightened(0.34), 7))
 	else:
 		next_system_cost_label.text = tr("HUD_DATA_PROGRESS") % [
 			int(floor(progression.observation_data)),
 			int(cost)
 		]
 		next_system_cost_label.add_theme_color_override("font_color", Color("8da7bb"))
-		tree_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.025, 0.064, 0.105, 0.94), branch_color.darkened(0.42), 10))
+		if visual_changed:
+			tree_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.025, 0.064, 0.105, 0.94), branch_color.darkened(0.42), 10))
+			tree_button.add_theme_stylebox_override("normal", _panel_style(Color(0.025, 0.064, 0.105, 0.90), Color(0.24, 0.48, 0.62, 0.56), 7))
+			tree_button.add_theme_stylebox_override("hover", _panel_style(Color(0.04, 0.10, 0.16, 0.96), Color("62b7d4"), 7))
 	if affordable > 1:
 		upgrade_available_label.text += tr("HUD_READY_COUNT") % affordable
+
+
+func _set_tree_launcher_expanded(expanded: bool) -> void:
+	if tree_panel == null:
+		return
+	if tree_launcher_layout_initialized and tree_launcher_expanded == expanded:
+		return
+	tree_launcher_layout_initialized = true
+	tree_launcher_expanded = expanded
+	next_header.visible = expanded
+	next_system_name_label.visible = expanded
+	next_progress_row.visible = expanded
+	if expanded:
+		tree_panel.offset_left = -360.0
+		tree_panel.offset_top = -144.0
+		tree_button.custom_minimum_size = Vector2(322, 38)
+	else:
+		tree_panel.offset_left = -248.0
+		tree_panel.offset_top = -72.0
+		tree_button.custom_minimum_size = Vector2(206, 38)
 
 
 func _get_recommended_upgrade() -> Dictionary:
@@ -498,6 +543,20 @@ func _on_language_changed(_locale: String) -> void:
 	_apply_locale()
 
 
+func _on_save_management_pressed() -> void:
+	_set_save_management_expanded(not save_management_expanded)
+
+
+func _set_save_management_expanded(expanded: bool) -> void:
+	save_management_expanded = expanded
+	if save_management_container == null or settings_panel == null:
+		return
+	save_management_container.visible = expanded
+	save_management_button.text = tr("SETTINGS_SAVE_HIDE") if expanded else tr("SETTINGS_SAVE_MANAGEMENT")
+	settings_panel.offset_top = -280.0 if expanded else -210.0
+	settings_panel.offset_bottom = 280.0 if expanded else 210.0
+
+
 func _sync_language_selector() -> void:
 	if settings_controller == null or language_selector == null:
 		return
@@ -523,6 +582,8 @@ func _apply_locale() -> void:
 	save_section_label.text = tr("SAVE_SECTION_TITLE")
 	save_feedback.text = tr("SAVE_SECTION_HINT")
 	settings_close_button.text = tr("SETTINGS_CLOSE")
+	if save_management_button != null:
+		save_management_button.text = tr("SETTINGS_SAVE_HIDE") if save_management_expanded else tr("SETTINGS_SAVE_MANAGEMENT")
 	overwrite_dialog.title = tr("SAVE_OVERWRITE_TITLE")
 	overwrite_dialog.ok_button_text = tr("SAVE_OVERWRITE_CONFIRM")
 	overwrite_dialog.cancel_button_text = tr("SAVE_CANCEL")
@@ -559,37 +620,37 @@ func _build_interface() -> void:
 
 	var top_panel := PanelContainer.new()
 	top_panel.name = "TopStatus"
-	top_panel.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	top_panel.anchor_left = 0.02
-	top_panel.anchor_right = 0.70
+	top_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	top_panel.offset_left = 18.0
 	top_panel.offset_top = 16.0
-	top_panel.offset_bottom = 94.0
+	top_panel.offset_right = 520.0
+	top_panel.offset_bottom = 80.0
 	top_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.025, 0.055, 0.10, 0.82), Color(0.26, 0.48, 0.68, 0.34), 8))
 	top_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root_control.add_child(top_panel)
 	var top_margin := MarginContainer.new()
 	top_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	top_margin.add_theme_constant_override("margin_left", 16)
-	top_margin.add_theme_constant_override("margin_right", 16)
-	top_margin.add_theme_constant_override("margin_top", 9)
-	top_margin.add_theme_constant_override("margin_bottom", 9)
+	top_margin.add_theme_constant_override("margin_left", 14)
+	top_margin.add_theme_constant_override("margin_right", 14)
+	top_margin.add_theme_constant_override("margin_top", 7)
+	top_margin.add_theme_constant_override("margin_bottom", 7)
 	top_panel.add_child(top_margin)
 	var top_row := HBoxContainer.new()
 	top_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	top_row.add_theme_constant_override("separation", 16)
+	top_row.add_theme_constant_override("separation", 11)
 	top_margin.add_child(top_row)
 
 	var data_column := VBoxContainer.new()
 	data_column.name = "DataReadout"
 	data_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	data_column.custom_minimum_size = Vector2(178, 0)
+	data_column.custom_minimum_size = Vector2(132, 0)
 	data_column.add_theme_constant_override("separation", -2)
 	top_row.add_child(data_column)
-	data_caption_label = _make_label(tr("HUD_DATA_CAPTION"), 10, Color("6f8da6"))
+	data_caption_label = _make_label(tr("HUD_DATA_CAPTION"), 9, Color("7f9db5"))
 	var data_row := HBoxContainer.new()
 	data_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	data_row.add_theme_constant_override("separation", 8)
-	data_label = _make_label("0000", 27, Color("d9f7ff"))
+	data_label = _make_label("0", 27, Color("e7fbff"))
 	data_gain_label = _make_label(tr("HUD_DATA_GAIN") % 0, 12, Color("8fffe5"))
 	data_gain_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	data_gain_label.visible = false
@@ -609,7 +670,7 @@ func _build_interface() -> void:
 	top_row.add_child(progress_column)
 	var progress_header := HBoxContainer.new()
 	progress_header.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	array_caption_label = _make_label(tr("HUD_ARRAY_CAPTION"), 10, Color("6f8da6"))
+	array_caption_label = _make_label(tr("HUD_ARRAY_CAPTION"), 9, Color("7f9db5"))
 	array_caption_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	array_progress_label = _make_label(tr("HUD_ARRAY_PROGRESS") % [0, Balance.UPGRADE_NODES.size()], 11, Color("9fc4d8"))
 	array_progress_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -619,11 +680,11 @@ func _build_interface() -> void:
 	array_progress_bar.name = "ArrayCompletionBar"
 	array_progress_bar.max_value = float(Balance.UPGRADE_NODES.size())
 	array_progress_bar.show_percentage = false
-	array_progress_bar.custom_minimum_size = Vector2(220, 8)
+	array_progress_bar.custom_minimum_size = Vector2(170, 7)
 	array_progress_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	array_progress_bar.add_theme_stylebox_override("background", _panel_style(Color("071722"), Color("173849"), 3))
 	array_progress_bar.add_theme_stylebox_override("fill", _panel_style(Color("368f9f"), Color("70e7d8"), 3))
-	status_label = _make_label(tr("HUD_OBSERVED_COUNT") % 0, 11, Color("7897ad"))
+	status_label = _make_label(tr("HUD_OBSERVED_COUNT") % 0, 10, Color("819db2"))
 	progress_column.add_child(progress_header)
 	progress_column.add_child(array_progress_bar)
 	progress_column.add_child(status_label)
@@ -633,11 +694,11 @@ func _build_interface() -> void:
 	top_row.add_child(second_divider)
 	var run_column := VBoxContainer.new()
 	run_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	run_column.custom_minimum_size = Vector2(112, 0)
+	run_column.custom_minimum_size = Vector2(86, 0)
 	run_column.alignment = BoxContainer.ALIGNMENT_CENTER
 	run_column.add_theme_constant_override("separation", 2)
 	top_row.add_child(run_column)
-	time_label = _make_label(tr("HUD_TIME") % [0, 0], 14, Color("7893ac"))
+	time_label = _make_label(tr("HUD_TIME") % [0, 0], 11, Color("7893ac"))
 	time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	time_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	save_mode_label = _make_label("", 9, Color("7897ad"))
@@ -650,8 +711,8 @@ func _build_interface() -> void:
 	banner_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
 	banner_label.anchor_left = 0.25
 	banner_label.anchor_right = 0.75
-	banner_label.offset_top = 84.0
-	banner_label.offset_bottom = 122.0
+	banner_label.offset_top = 60.0
+	banner_label.offset_bottom = 100.0
 	banner_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	banner_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	banner_label.visible = false
@@ -670,8 +731,8 @@ func _build_interface() -> void:
 	tree_panel = PanelContainer.new()
 	tree_panel.name = "UpgradeTreeLauncher"
 	tree_panel.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	tree_panel.offset_left = -340.0
-	tree_panel.offset_top = -162.0
+	tree_panel.offset_left = -248.0
+	tree_panel.offset_top = -72.0
 	tree_panel.offset_right = -18.0
 	tree_panel.offset_bottom = -18.0
 	tree_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -682,42 +743,44 @@ func _build_interface() -> void:
 	for side in ["margin_left", "margin_top", "margin_right", "margin_bottom"]:
 		tree_margin.add_theme_constant_override(side, 10)
 	tree_panel.add_child(tree_margin)
-	var tree_column := VBoxContainer.new()
+	tree_column = VBoxContainer.new()
 	tree_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	tree_column.add_theme_constant_override("separation", 6)
 	tree_margin.add_child(tree_column)
-	var next_header := HBoxContainer.new()
+	next_header = HBoxContainer.new()
 	next_header.name = "NextSystemHeader"
 	next_header.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	upgrade_available_label = _make_label(tr("HUD_NEXT_SYSTEM"), 10, Color("7f9bb1"))
 	upgrade_available_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	upgrade_available_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	next_system_branch_label = _make_label("", 9, Color("53d6ff"))
 	next_system_branch_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	next_system_branch_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	next_header.add_child(upgrade_available_label)
 	next_header.add_child(next_system_branch_label)
 	next_system_name_label = _make_label("", 16, Color("e9f8ff"))
 	next_system_name_label.name = "NextSystemName"
 	next_system_name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	var next_progress_row := HBoxContainer.new()
+	next_progress_row = VBoxContainer.new()
 	next_progress_row.name = "NextSystemProgress"
 	next_progress_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	next_progress_row.add_theme_constant_override("separation", 10)
+	next_progress_row.add_theme_constant_override("separation", 3)
 	next_system_bar = ProgressBar.new()
 	next_system_bar.show_percentage = false
-	next_system_bar.custom_minimum_size = Vector2(182, 8)
+	next_system_bar.custom_minimum_size = Vector2(0, 8)
 	next_system_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	next_system_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	next_system_bar.add_theme_stylebox_override("background", _panel_style(Color("071722"), Color("173849"), 3))
 	next_system_bar.add_theme_stylebox_override("fill", _panel_style(Color("368f9f"), Color("70e7d8"), 3))
 	next_system_cost_label = _make_label("0 / 0", 10, Color("8da7bb"))
-	next_system_cost_label.custom_minimum_size = Vector2(92, 0)
 	next_system_cost_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	next_system_cost_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	next_progress_row.add_child(next_system_bar)
 	next_progress_row.add_child(next_system_cost_label)
 	tree_button = Button.new()
 	tree_button.mouse_filter = Control.MOUSE_FILTER_STOP
 	tree_button.text = tr("HUD_UPGRADE_BUTTON") % [0, Balance.UPGRADE_NODES.size()]
-	tree_button.custom_minimum_size = Vector2(300, 36)
+	tree_button.custom_minimum_size = Vector2(206, 38)
 	tree_button.add_theme_font_size_override("font_size", 14)
 	tree_button.add_theme_color_override("font_color", Color("d9f7ff"))
 	tree_button.add_theme_stylebox_override("normal", _panel_style(Color("12405c"), Color("387794"), 6))
@@ -728,15 +791,16 @@ func _build_interface() -> void:
 	tree_column.add_child(next_system_name_label)
 	tree_column.add_child(next_progress_row)
 	tree_column.add_child(tree_button)
+	_set_tree_launcher_expanded(false)
 
 	tracking_panel = PanelContainer.new()
 	tracking_panel.name = "TrackingReadout"
 	tracking_panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	tracking_panel.offset_left = 18.0
 	tracking_panel.offset_top = -88.0
-	tracking_panel.offset_right = 256.0
+	tracking_panel.offset_right = 228.0
 	tracking_panel.offset_bottom = -36.0
-	tracking_panel.custom_minimum_size = Vector2(238, 48)
+	tracking_panel.custom_minimum_size = Vector2(210, 48)
 	tracking_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	tracking_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.02, 0.07, 0.11, 0.88), Color(0.32, 0.76, 0.86, 0.44), 6))
 	tracking_panel.visible = false
@@ -749,7 +813,7 @@ func _build_interface() -> void:
 	tracking_bar = ProgressBar.new()
 	tracking_bar.max_value = 100.0
 	tracking_bar.show_percentage = false
-	tracking_bar.custom_minimum_size = Vector2(220, 9)
+	tracking_bar.custom_minimum_size = Vector2(194, 8)
 	tracking_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	tracking_bar.add_theme_stylebox_override("background", _panel_style(Color("071722"), Color("173849"), 3))
 	tracking_bar.add_theme_stylebox_override("fill", _panel_style(Color("65dcbf"), Color("8fffe5"), 3))
@@ -762,10 +826,10 @@ func _build_interface() -> void:
 	settings_button = Button.new()
 	settings_button.name = "SettingsButton"
 	settings_button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	settings_button.offset_left = -146.0
+	settings_button.offset_left = -116.0
 	settings_button.offset_top = 16.0
 	settings_button.offset_right = -18.0
-	settings_button.offset_bottom = 55.0
+	settings_button.offset_bottom = 52.0
 	settings_button.text = "⚙  " + tr("SETTINGS_BUTTON")
 	settings_button.add_theme_font_size_override("font_size", 13)
 	settings_button.add_theme_stylebox_override("normal", _panel_style(Color(0.025, 0.055, 0.10, 0.88), Color(0.26, 0.48, 0.68, 0.5), 8))
@@ -929,18 +993,18 @@ func _build_settings_ui() -> void:
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	settings_overlay.add_child(dim)
-	var panel := PanelContainer.new()
-	panel.set_anchors_preset(Control.PRESET_CENTER)
-	panel.offset_left = -340.0
-	panel.offset_top = -280.0
-	panel.offset_right = 340.0
-	panel.offset_bottom = 280.0
-	panel.add_theme_stylebox_override("panel", _panel_style(Color("081326"), Color("4f829e"), 12))
-	settings_overlay.add_child(panel)
+	settings_panel = PanelContainer.new()
+	settings_panel.set_anchors_preset(Control.PRESET_CENTER)
+	settings_panel.offset_left = -290.0
+	settings_panel.offset_top = -210.0
+	settings_panel.offset_right = 290.0
+	settings_panel.offset_bottom = 210.0
+	settings_panel.add_theme_stylebox_override("panel", _panel_style(Color("081326"), Color("4f829e"), 12))
+	settings_overlay.add_child(settings_panel)
 	var margin := MarginContainer.new()
 	for side in ["margin_left", "margin_top", "margin_right", "margin_bottom"]:
 		margin.add_theme_constant_override(side, 22)
-	panel.add_child(margin)
+	settings_panel.add_child(margin)
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 7)
 	margin.add_child(column)
@@ -968,16 +1032,25 @@ func _build_settings_ui() -> void:
 	tutorial_replay_button.custom_minimum_size = Vector2(0, 36)
 	tutorial_replay_button.pressed.connect(func(): tutorial_replay_requested.emit())
 	column.add_child(tutorial_replay_button)
+	save_management_button = Button.new()
+	save_management_button.text = tr("SETTINGS_SAVE_MANAGEMENT")
+	save_management_button.custom_minimum_size = Vector2(0, 38)
+	save_management_button.pressed.connect(_on_save_management_pressed)
+	column.add_child(save_management_button)
+	save_management_container = VBoxContainer.new()
+	save_management_container.add_theme_constant_override("separation", 7)
+	save_management_container.visible = false
+	column.add_child(save_management_container)
 	var save_divider := HSeparator.new()
-	column.add_child(save_divider)
+	save_management_container.add_child(save_divider)
 	save_section_label = _make_label(tr("SAVE_SECTION_TITLE"), 15, Color("bdeaff"))
-	column.add_child(save_section_label)
+	save_management_container.add_child(save_section_label)
 	for slot in range(1, 4):
-		_build_save_slot_row(column, slot)
+		_build_save_slot_row(save_management_container, slot)
 	save_feedback = _make_label(tr("SAVE_SECTION_HINT"), 12, Color("829caf"))
 	save_feedback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	save_feedback.visible = false
-	column.add_child(save_feedback)
+	save_management_container.add_child(save_feedback)
 	settings_close_button = Button.new()
 	settings_close_button.text = tr("SETTINGS_CLOSE")
 	settings_close_button.custom_minimum_size = Vector2(0, 40)

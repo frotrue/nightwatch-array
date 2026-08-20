@@ -62,9 +62,38 @@ func _ready() -> void:
 	events.forecast_requested.connect(_on_shower_forecast_requested)
 
 	if startup_slot_prompt_enabled:
-		hud.open_startup_slots()
+		call_deferred("_enter_preferred_save")
 	else:
 		start_run()
+
+
+func _enter_preferred_save() -> void:
+	var slot := _preferred_startup_slot()
+	if slot == 0:
+		active_save_slot = 0
+		hud.set_active_save_slot(0)
+		start_run()
+		_start_tutorial_after_slot_if_needed()
+		return
+	_on_startup_slot_selected(slot)
+
+
+func _preferred_startup_slot() -> int:
+	var newest_slot := 0
+	var newest_timestamp := -1
+	var first_empty_slot := 0
+	for slot in range(1, 4):
+		var summary: Dictionary = save_games.get_slot_summary(slot)
+		var exists := bool(summary.get("exists", false))
+		var valid := bool(summary.get("valid", false))
+		if exists and valid:
+			var saved_at := int(summary.get("saved_at", 0))
+			if saved_at > newest_timestamp:
+				newest_timestamp = saved_at
+				newest_slot = slot
+		elif not exists and first_empty_slot == 0:
+			first_empty_slot = slot
+	return newest_slot if newest_slot > 0 else first_empty_slot
 
 
 func start_run() -> void:

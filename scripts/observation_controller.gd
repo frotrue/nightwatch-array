@@ -7,6 +7,7 @@ var meteor_layer: Node2D
 var progression: Node
 var hud: CanvasLayer
 var selected_meteor = null
+var hovered_meteor = null
 var tracked_meteors: Array = []
 var cursor_position := Vector2.ZERO
 var previous_cursor_position := Vector2.ZERO
@@ -36,6 +37,7 @@ func _exit_tree() -> void:
 
 func reset() -> void:
 	selected_meteor = null
+	hovered_meteor = null
 	tracked_meteors.clear()
 	tracking_grace_remaining = 0.0
 	was_holding = false
@@ -57,11 +59,13 @@ func _process(delta: float) -> void:
 		cursor_position = sampled_cursor
 	var holding: bool = Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
 	if holding and not _cursor_is_on_interactive_ui():
+		hovered_meteor = null
 		_update_manual_tracking(delta)
 	else:
 		selected_meteor = null
 		tracked_meteors.clear()
 		tracking_grace_remaining = 0.0
+		hovered_meteor = null if _cursor_is_on_interactive_ui() else _find_target_under_cursor()
 
 	if _selection_is_valid():
 		var predicted_multiplier: float = selected_meteor.get_predicted_multiplier()
@@ -165,6 +169,8 @@ func _valid_tracked_count() -> int:
 func release_target(target = null) -> void:
 	if target != null:
 		tracked_meteors.erase(target)
+		if hovered_meteor == target:
+			hovered_meteor = null
 	if target == null or selected_meteor == target:
 		selected_meteor = null
 		if target == null:
@@ -224,7 +230,7 @@ func _cursor_is_on_interactive_ui() -> bool:
 
 func _draw() -> void:
 	# Lightweight software cursor and tracking feedback.
-	var cursor_tint := Color(0.62, 0.81, 1.0, 0.34)
+	var cursor_tint := Color(0.62, 0.81, 1.0, 0.22)
 	draw_arc(cursor_position, 9.0, 0.0, TAU, 24, cursor_tint, 1.0, true)
 	draw_line(cursor_position + Vector2(-14, 0), cursor_position + Vector2(-7, 0), cursor_tint, 1.0)
 	draw_line(cursor_position + Vector2(7, 0), cursor_position + Vector2(14, 0), cursor_tint, 1.0)
@@ -232,6 +238,8 @@ func _draw() -> void:
 	draw_line(cursor_position + Vector2(0, 7), cursor_position + Vector2(0, 14), cursor_tint, 1.0)
 	if _selection_is_valid():
 		_draw_tracking_ring(selected_meteor, true)
+	elif _target_is_valid(hovered_meteor):
+		_draw_hover_ring(hovered_meteor)
 	for target in tracked_meteors:
 		if target != selected_meteor and _target_is_valid(target):
 			_draw_tracking_ring(target, false)
@@ -241,9 +249,10 @@ func _draw_tracking_ring(target, is_primary: bool) -> void:
 	var tracking_radius: float = target.get_tracking_radius(progression.get_tracking_radius())
 	var quality: float = target.get_quality()
 	var ring_color := Color("82d7ff").lerp(Color("77ffd0"), quality)
-	var outer_alpha := 0.22 if is_primary else 0.14
-	var progress_alpha := 0.9 if is_primary else 0.68
-	draw_arc(target.global_position, tracking_radius, 0.0, TAU, 48, Color(ring_color, outer_alpha), 1.5 if is_primary else 1.1, true)
+	var outer_alpha := 0.48 if is_primary else 0.22
+	var progress_alpha := 1.0 if is_primary else 0.76
+	draw_circle(target.global_position, tracking_radius + 4.0, Color(ring_color, 0.035 if is_primary else 0.018))
+	draw_arc(target.global_position, tracking_radius, 0.0, TAU, 48, Color(ring_color, outer_alpha), 2.0 if is_primary else 1.3, true)
 	draw_arc(
 		target.global_position,
 		tracking_radius - 4.0,
@@ -251,8 +260,25 @@ func _draw_tracking_ring(target, is_primary: bool) -> void:
 		-PI * 0.5 + TAU * target.get_progress(),
 		48,
 		Color(ring_color, progress_alpha),
-		2.4 if is_primary else 1.8,
+		3.5 if is_primary else 2.1,
 		true
 	)
 	if is_primary:
-		draw_line(cursor_position, target.global_position, Color(ring_color, 0.12), 1.0, true)
+		draw_line(cursor_position, target.global_position, Color(ring_color, 0.18), 1.0, true)
+
+
+func _draw_hover_ring(target) -> void:
+	var tracking_radius: float = target.get_tracking_radius(progression.get_tracking_radius())
+	var ring_color := Color("82d7ff")
+	var pulse := 1.0 + sin(Time.get_ticks_msec() * 0.006) * 0.06
+	var radius := tracking_radius * pulse
+	draw_arc(target.global_position, radius, 0.0, TAU, 40, Color(ring_color, 0.34), 1.8, true)
+	for angle in [0.0, PI * 0.5, PI, PI * 1.5]:
+		var direction := Vector2.from_angle(angle)
+		draw_line(
+			target.global_position + direction * (radius - 5.0),
+			target.global_position + direction * (radius + 5.0),
+			Color(ring_color, 0.62),
+			2.0,
+			true
+		)
