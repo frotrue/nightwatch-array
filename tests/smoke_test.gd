@@ -152,11 +152,15 @@ func _run() -> void:
 	await process_frame
 
 	var initial: Dictionary = game.get_debug_snapshot()
+	var balance = load("res://scripts/game_balance.gd")
 	_check(initial.upgrade_level == 0, "run begins with no upgrades")
 	_check(initial.successes == 0, "run begins with no observations")
 	_check(not initial.final_started, "final event is initially inactive")
 	_check(initial.observation_round == 1 and initial.observation_phase_active, "run begins in observation round 1")
 	_check(absf(float(initial.observation_phase_remaining) - 30.0) < 1.0, "first observation round starts at 30 seconds")
+	_check(game.progression.get_max_active() == 4, "the opening sky supports four concurrent targets so attention starts scarce")
+	_check(balance.FIRST_METEOR_DELAY <= 2.0, "the opening meteor arrives before the sky feels empty")
+	_check(balance.REGULAR_SPAWN_INTERVAL_MIN == 1.6 and balance.REGULAR_SPAWN_INTERVAL_MAX == 2.4, "regular spawn cadence keeps multiple choices in flight")
 	_check(game.progression.get_available_nodes().size() == 3, "only three opening choices are revealed")
 	_check(game.hud.array_progress_bar.max_value == 19.0, "HUD exposes the finite array completion goal")
 	_check(game.hud.top_panel.size.x <= 510.0, "live HUD stays compact after removing secondary progression copy")
@@ -320,6 +324,7 @@ func _run() -> void:
 
 	game.progression.debug_purchase_all()
 	_check(game.progression.upgrade_level == 19, "all tree nodes unlock through prerequisite-safe debug purchase")
+	_check(game.progression.get_max_active() == 6, "research raises dense-sky capacity without removing the six-target performance cap")
 	_check(game.hud.array_progress_bar.value == 19.0, "compact HUD resolves to full array completion")
 	for legacy_id in ["better_lens", "long_exposure", "wide_field", "trajectory", "precision_multiplier", "secondary_camera", "shower_detector", "automated_tracking"]:
 		_check(game.progression.has_upgrade(legacy_id), "legacy upgrade migrated: " + legacy_id)

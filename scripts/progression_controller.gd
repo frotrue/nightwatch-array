@@ -218,12 +218,11 @@ func get_observation_duration() -> float:
 
 
 func get_max_active() -> int:
-	return (
-		1
+	return mini(
+		Balance.MAX_ACTIVE_METEORS,
+		Balance.BASE_MAX_ACTIVE_METEORS
 		+ int(has_upgrade("array_planning"))
-		+ int(has_upgrade("wide_field"))
-		+ int(has_upgrade("multi_target_analysis")) * 2
-		+ int(has_upgrade("observatory_network"))
+		+ int(has_upgrade("multi_target_analysis"))
 	)
 
 

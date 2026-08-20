@@ -1,12 +1,16 @@
 extends RefCounted
 class_name GameBalance
 
-const FIRST_METEOR_DELAY := 3.8
+const FIRST_METEOR_DELAY := 1.8
 const FINAL_EVENT_TIME := 1080.0 # 18 minutes; Ctrl+Shift+F skips to it.
 const SHOWER_WARNING_TIME := 2.6
 const SHOWER_DURATION := 9.0
 const BASE_OBSERVATION_DURATION := 30.0
 const MAX_OBSERVATION_DURATION := 60.0
+const BASE_MAX_ACTIVE_METEORS := 4
+const MAX_ACTIVE_METEORS := 6
+const REGULAR_SPAWN_INTERVAL_MIN := 1.6
+const REGULAR_SPAWN_INTERVAL_MAX := 2.4
 
 const BRANCHES := {
 	"optics": {"name": "OPTICS / MANUAL", "color": Color("53d6ff")},
@@ -97,7 +101,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "array_planning", "name": "Array Planning", "icon": "⬡", "cost": 20,
-		"description": "Opens a second observation lane so the sky can support concurrent targets.",
+		"description": "Adds another observation channel for a crowded sky.",
 		"branch": "network", "position": Vector2(90, 510), "prerequisites": [],
 		"hidden_until": [], "effect_type": "unlock", "effect_parameters": {"max_active": 1},
 		"major": false
