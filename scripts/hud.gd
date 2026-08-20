@@ -5,6 +5,7 @@ signal upgrade_tree_requested
 signal save_slot_requested(slot: int)
 signal load_slot_requested(slot: int)
 signal startup_slot_selected(slot: int)
+signal new_game_slot_requested(slot: int)
 signal tutorial_replay_requested
 
 const Balance = preload("res://scripts/game_balance.gd")
@@ -470,6 +471,10 @@ func _on_save_slot_pressed(slot: int) -> void:
 		overwrite_dialog.dialog_text = tr("SAVE_OVERWRITE_PROMPT") % slot
 		overwrite_dialog.popup_centered(Vector2i(430, 180))
 		return
+	var summary: Dictionary = save_game_controller.get_slot_summary(slot)
+	if not bool(summary.get("exists", false)):
+		new_game_slot_requested.emit(slot)
+		return
 	save_slot_requested.emit(slot)
 
 
@@ -507,7 +512,12 @@ func _refresh_save_slots() -> void:
 		var exists := bool(summary.get("exists", false))
 		var valid := bool(summary.get("valid", false))
 		load_slot_buttons[index].disabled = not exists or not valid
-		save_slot_buttons[index].text = tr("SAVE_OVERWRITE") if exists and valid else tr("SAVE_ACTION")
+		if exists and valid:
+			save_slot_buttons[index].text = tr("SAVE_OVERWRITE")
+		elif exists:
+			save_slot_buttons[index].text = tr("SAVE_ACTION")
+		else:
+			save_slot_buttons[index].text = tr("STARTUP_NEW_GAME")
 		load_slot_buttons[index].text = tr("LOAD_ACTION")
 		save_slot_details[index].text = _format_slot_details(summary)
 
@@ -1113,7 +1123,7 @@ func _build_save_slot_row(parent: VBoxContainer, slot: int) -> void:
 	info.add_child(details)
 	var save_button := Button.new()
 	save_button.text = tr("SAVE_ACTION")
-	save_button.custom_minimum_size = Vector2(104, 42)
+	save_button.custom_minimum_size = Vector2(128, 42)
 	save_button.pressed.connect(_on_save_slot_pressed.bind(slot))
 	row.add_child(save_button)
 	var load_button := Button.new()

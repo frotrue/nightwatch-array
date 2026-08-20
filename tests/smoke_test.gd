@@ -48,6 +48,13 @@ func _run() -> void:
 	game.progression.reset()
 	game._on_startup_slot_selected(2)
 	_check(int(game.progression.observation_data) == 23, "choosing an occupied startup slot resumes its autosave")
+	game.elapsed_time = 42.0
+	game.hud.open_settings()
+	_check(game.hud.save_slot_buttons[2].text == TranslationServer.translate("STARTUP_NEW_GAME"), "an empty settings slot is presented as a new game action")
+	game.hud._on_save_slot_pressed(3)
+	_check(game.active_save_slot == 3 and game.save_games.has_slot(3), "clicking an empty settings slot creates and activates a new save")
+	_check(is_zero_approx(game.elapsed_time) and is_zero_approx(game.progression.observation_data), "an empty settings slot starts from a fresh run instead of copying current progress")
+	_check(not game.hud.is_settings_open() and not paused, "starting a new game from an empty slot closes settings and resumes gameplay")
 	_cleanup_smoke_saves(startup_save_directory)
 	game.active_save_slot = 0
 	game.hud.set_active_save_slot(0)

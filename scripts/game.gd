@@ -48,6 +48,7 @@ func _ready() -> void:
 	hud.save_slot_requested.connect(_on_save_slot_requested)
 	hud.load_slot_requested.connect(_on_load_slot_requested)
 	hud.startup_slot_selected.connect(_on_startup_slot_selected)
+	hud.new_game_slot_requested.connect(_on_new_game_slot_requested)
 	hud.tutorial_replay_requested.connect(_on_tutorial_replay_requested)
 	upgrade_tree.tree_opened.connect(tutorial.notify_upgrade_tree_opened)
 	observer.setup(meteor_layer, progression, hud)
@@ -319,6 +320,14 @@ func _on_startup_slot_selected(slot: int) -> void:
 	if exists:
 		hud.show_banner(tr("BANNER_SLOT_LOADED") % slot, Color("80e6d2"), 2.2)
 	_start_tutorial_after_slot_if_needed()
+
+
+func _on_new_game_slot_requested(slot: int) -> void:
+	var summary: Dictionary = save_games.get_slot_summary(slot)
+	if bool(summary.get("exists", false)):
+		return
+	_on_startup_slot_selected(slot)
+	hud.close_settings()
 
 
 func _start_fresh_slot() -> void:
