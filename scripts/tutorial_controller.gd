@@ -3,6 +3,7 @@ extends CanvasLayer
 signal tutorial_started
 signal tutorial_completed
 
+const Balance = preload("res://scripts/game_balance.gd")
 const STEP_WELCOME := 0
 const STEP_OBSERVE := 1
 const STEP_UPGRADE_TREE := 2
@@ -107,7 +108,7 @@ func _set_step(step: int) -> void:
 			title_label.text = tr("TUTORIAL_INSTALL_TITLE")
 			body_label.text = tr("TUTORIAL_INSTALL_BODY")
 			hint_label.text = tr("TUTORIAL_INSTALL_HINT")
-			if progression != null and progression.upgrade_level >= 16:
+			if progression != null and progression.upgrade_level >= Balance.UPGRADE_NODES.size():
 				primary_button.visible = true
 				primary_button.text = tr("TUTORIAL_CONTINUE")
 		STEP_COMPLETE:

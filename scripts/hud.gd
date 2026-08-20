@@ -14,6 +14,7 @@ var progression: Node
 var settings_controller: Node
 var save_game_controller: Node
 var root_control: Control
+var top_panel: PanelContainer
 var data_caption_label: Label
 var data_label: Label
 var data_gain_label: Label
@@ -74,6 +75,11 @@ var pending_overwrite_slot: int = 0
 var banner_timer: float = 0.0
 var tutorial_complete: bool = false
 var last_runtime_second: int = -1
+var runtime_seconds: float = 0.0
+var phase_display_configured: bool = false
+var observation_phase_active: bool = false
+var observation_phase_round: int = 1
+var observation_phase_second: int = 30
 var last_tracking_text: String = ""
 var last_tracking_progress_percent: int = -1
 var last_tracking_target_type: String = ""
@@ -134,13 +140,60 @@ func _process(delta: float) -> void:
 
 
 func set_runtime(seconds: float) -> void:
+	runtime_seconds = maxf(0.0, seconds)
 	var whole_seconds := int(seconds)
 	if whole_seconds == last_runtime_second:
 		return
 	last_runtime_second = whole_seconds
+	if phase_display_configured:
+		return
 	var minutes := whole_seconds / 60
 	var remaining := whole_seconds % 60
 	time_label.text = tr("HUD_TIME") % [minutes, remaining]
+
+
+func set_observation_phase(round_number: int, seconds_remaining: float) -> void:
+	var whole_seconds := maxi(0, ceili(seconds_remaining))
+	var phase_changed := (
+		not phase_display_configured
+		or not observation_phase_active
+		or observation_phase_round != round_number
+		or observation_phase_second != whole_seconds
+	)
+	phase_display_configured = true
+	observation_phase_active = true
+	observation_phase_round = maxi(1, round_number)
+	observation_phase_second = whole_seconds
+	if phase_changed:
+		_refresh_phase_time_label()
+	_set_tree_launcher_expanded(false)
+
+
+func set_upgrade_phase(completed_round: int) -> void:
+	phase_display_configured = true
+	observation_phase_active = false
+	observation_phase_round = maxi(1, completed_round)
+	observation_phase_second = 0
+	_refresh_phase_time_label()
+	if progression != null:
+		_refresh_progression()
+
+
+func _refresh_phase_time_label() -> void:
+	if time_label == null:
+		return
+	if not phase_display_configured:
+		var whole_seconds := int(runtime_seconds)
+		time_label.text = tr("HUD_TIME") % [whole_seconds / 60, whole_seconds % 60]
+		return
+	if observation_phase_active:
+		time_label.text = tr("HUD_OBSERVATION_TIME") % [
+			observation_phase_round,
+			observation_phase_second / 60,
+			observation_phase_second % 60,
+		]
+	else:
+		time_label.text = tr("HUD_UPGRADE_PHASE") % observation_phase_round
 
 
 func show_banner(text: String, color: Color = Color.WHITE, duration: float = 2.5) -> void:
@@ -221,6 +274,16 @@ func toggle_debug() -> void:
 
 func is_debug_visible() -> bool:
 	return debug_panel.visible
+
+
+func is_pointer_over_hud(pointer_position: Vector2) -> bool:
+	for surface in [
+		top_panel, tree_panel, tracking_panel, debug_panel,
+		settings_button, banner_label, tutorial_label,
+	]:
+		if surface is Control and surface.is_visible_in_tree() and surface.get_global_rect().has_point(pointer_position):
+			return true
+	return false
 
 
 func show_end(success: bool, stats_text: String) -> void:
@@ -353,7 +416,7 @@ func _refresh_next_system(affordable: int) -> void:
 		upgrade_available_label.add_theme_color_override("font_color", Color("8fffe5"))
 		next_system_name_label.text = tr("HUD_NETWORK_STABLE")
 		next_system_name_label.add_theme_color_override("font_color", Color("dffff7"))
-		next_system_branch_label.text = "16 / 16"
+		next_system_branch_label.text = "%d / %d" % [Balance.UPGRADE_NODES.size(), Balance.UPGRADE_NODES.size()]
 		next_system_branch_label.add_theme_color_override("font_color", Color("7ee9dc"))
 		next_system_cost_label.text = tr("HUD_ALL_SYSTEMS_ONLINE")
 		next_system_cost_label.add_theme_color_override("font_color", Color("7ee9dc"))
@@ -370,7 +433,7 @@ func _refresh_next_system(affordable: int) -> void:
 	var branch_color: Color = branch.get("color", Color("53d6ff"))
 	var cost := float(definition.cost)
 	var ready: bool = bool(progression.can_purchase(String(definition.id)))
-	_set_tree_launcher_expanded(ready)
+	_set_tree_launcher_expanded(ready and not observation_phase_active)
 	upgrade_available_label.text = tr("HUD_NEXT_SYSTEM")
 	upgrade_available_label.add_theme_color_override("font_color", Color("7f9bb1"))
 	next_system_name_label.text = tr("UPGRADE_%s_NAME" % String(definition.id).to_upper())
@@ -562,7 +625,8 @@ func _format_slot_details(summary: Dictionary) -> String:
 	var seconds := int(summary.get("elapsed_time", 0.0))
 	return tr("SAVE_SLOT_META") % [
 		stamp, seconds / 60, seconds % 60,
-		int(summary.get("observation_data", 0.0)), int(summary.get("upgrade_level", 0))
+		int(summary.get("observation_data", 0.0)), int(summary.get("upgrade_level", 0)),
+		Balance.UPGRADE_NODES.size()
 	]
 
 
@@ -635,6 +699,7 @@ func _apply_locale() -> void:
 		])
 	])
 	last_runtime_second = -1
+	_refresh_phase_time_label()
 	_invalidate_tracking_cache()
 	_refresh_save_mode_label(autosave_status_timer > 0.0)
 	if progression != null:
@@ -652,12 +717,12 @@ func _build_interface() -> void:
 	interface_font.font_names = PackedStringArray(["Pretendard", "Noto Sans CJK KR", "Malgun Gothic", "Segoe UI"])
 	root_control.add_theme_font_override("font", interface_font)
 
-	var top_panel := PanelContainer.new()
+	top_panel = PanelContainer.new()
 	top_panel.name = "TopStatus"
 	top_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	top_panel.offset_left = 18.0
 	top_panel.offset_top = 16.0
-	top_panel.offset_right = 520.0
+	top_panel.offset_right = 570.0
 	top_panel.offset_bottom = 80.0
 	top_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.025, 0.055, 0.10, 0.82), Color(0.26, 0.48, 0.68, 0.34), 8))
 	top_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -728,7 +793,7 @@ func _build_interface() -> void:
 	top_row.add_child(second_divider)
 	var run_column := VBoxContainer.new()
 	run_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	run_column.custom_minimum_size = Vector2(86, 0)
+	run_column.custom_minimum_size = Vector2(136, 0)
 	run_column.alignment = BoxContainer.ALIGNMENT_CENTER
 	run_column.add_theme_constant_override("separation", 2)
 	top_row.add_child(run_column)

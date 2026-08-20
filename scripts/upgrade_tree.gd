@@ -5,7 +5,7 @@ signal tree_closed
 
 const Balance = preload("res://scripts/game_balance.gd")
 
-const TREE_SIZE := Vector2(1460, 620)
+const TREE_SIZE := Vector2(1460, 780)
 const NODE_SIZE := Vector2(124, 92)
 const MAJOR_NODE_SIZE := Vector2(142, 104)
 const MIN_ZOOM := 0.55
@@ -15,7 +15,8 @@ const BACKGROUND_STARS := [
 	Vector2(488, 215), Vector2(594, 590), Vector2(704, 82), Vector2(812, 414),
 	Vector2(916, 177), Vector2(1018, 568), Vector2(1119, 88), Vector2(1230, 408),
 	Vector2(1342, 155), Vector2(1410, 544), Vector2(154, 612), Vector2(670, 332),
-	Vector2(1072, 357), Vector2(1288, 604), Vector2(437, 511), Vector2(947, 46)
+	Vector2(1072, 357), Vector2(1288, 604), Vector2(437, 511), Vector2(947, 46),
+	Vector2(214, 704), Vector2(742, 746), Vector2(1088, 682), Vector2(1380, 735)
 ]
 
 var progression: Node
@@ -53,6 +54,9 @@ var panning: bool = false
 var paused_by_tree: bool = false
 var refresh_pending: bool = false
 var node_visual_keys: Dictionary = {}
+var intermission_active: bool = false
+var intermission_next_round: int = 1
+var intermission_next_duration: int = 30
 
 
 func _ready() -> void:
@@ -103,6 +107,29 @@ func close_tree() -> void:
 
 func is_open() -> bool:
 	return overlay != null and overlay.visible
+
+
+func set_intermission_context(next_round: int, next_duration: int) -> void:
+	intermission_active = true
+	intermission_next_round = maxi(1, next_round)
+	intermission_next_duration = maxi(1, next_duration)
+	_refresh_phase_context()
+
+
+func clear_intermission_context() -> void:
+	intermission_active = false
+	_refresh_phase_context()
+
+
+func _refresh_phase_context() -> void:
+	if subtitle_label == null or close_button == null:
+		return
+	if intermission_active:
+		subtitle_label.text = tr("TREE_INTERMISSION_SUBTITLE") % [intermission_next_round, intermission_next_duration]
+		close_button.text = tr("TREE_START_OBSERVATION")
+	else:
+		subtitle_label.text = tr("TREE_SUBTITLE")
+		close_button.text = tr("TREE_CLOSE")
 
 
 func _input(event: InputEvent) -> void:
@@ -416,9 +443,8 @@ func _apply_locale() -> void:
 	if overlay == null:
 		return
 	title_label.text = tr("TREE_TITLE")
-	subtitle_label.text = tr("TREE_SUBTITLE")
 	reset_view_button.text = tr("TREE_CENTER")
-	close_button.text = tr("TREE_CLOSE")
+	_refresh_phase_context()
 	legend_label.text = tr("TREE_LEGEND")
 	controls_label.text = "    " + tr("TREE_CONTROLS")
 	for branch_id in branch_labels:
@@ -656,7 +682,7 @@ func _draw_tree() -> void:
 	var branch_lanes := {
 		"optics": [Vector2(55, 145), Vector2(1395, 115)],
 		"detection": [Vector2(55, 350), Vector2(1395, 305)],
-		"network": [Vector2(55, 555), Vector2(1395, 535)]
+		"network": [Vector2(55, 555), Vector2(1395, 645)]
 	}
 	for branch_id in branch_lanes:
 		var branch_color: Color = Balance.BRANCHES[branch_id].color

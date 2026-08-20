@@ -5,6 +5,8 @@ const FIRST_METEOR_DELAY := 3.8
 const FINAL_EVENT_TIME := 1080.0 # 18 minutes; Ctrl+Shift+F skips to it.
 const SHOWER_WARNING_TIME := 2.6
 const SHOWER_DURATION := 9.0
+const BASE_OBSERVATION_DURATION := 30.0
+const MAX_OBSERVATION_DURATION := 60.0
 
 const BRANCHES := {
 	"optics": {"name": "OPTICS / MANUAL", "color": Color("53d6ff")},
@@ -101,30 +103,51 @@ const UPGRADE_NODES: Array[Dictionary] = [
 		"major": false
 	},
 	{
+		"id": "observation_scheduling", "name": "Observation Scheduling", "icon": "◷", "cost": 36,
+		"description": "Plans longer shifts and extends each future observation window by 10 seconds.",
+		"branch": "network", "position": Vector2(300, 450), "prerequisites": ["array_planning"],
+		"hidden_until": ["array_planning"], "effect_type": "passive", "effect_parameters": {"observation_duration_bonus": 10.0},
+		"major": false
+	},
+	{
+		"id": "thermal_management", "name": "Equipment Thermal Control", "icon": "❄", "cost": 110,
+		"description": "Controls sensor heat during longer shifts and adds another 10 seconds to future observation windows.",
+		"branch": "network", "position": Vector2(520, 450), "prerequisites": ["observation_scheduling", "wide_field"],
+		"hidden_until": ["observation_scheduling"], "effect_type": "passive", "effect_parameters": {"observation_duration_bonus": 10.0},
+		"major": false
+	},
+	{
+		"id": "extended_watch_protocol", "name": "Extended Watch Protocol", "icon": "◴", "cost": 260,
+		"description": "Coordinates a full long-watch protocol and raises future observation windows to their 60-second maximum.",
+		"branch": "network", "position": Vector2(750, 450), "prerequisites": ["thermal_management", "trajectory"],
+		"hidden_until": ["thermal_management"], "effect_type": "transformation", "effect_parameters": {"observation_duration_bonus": 10.0},
+		"major": true
+	},
+	{
 		"id": "secondary_camera", "name": "Secondary Camera", "icon": "▣", "cost": 240,
 		"description": "One unattended non-rare target receives a slow automatic scan.",
-		"branch": "network", "position": Vector2(320, 535), "prerequisites": ["array_planning"],
+		"branch": "network", "position": Vector2(320, 620), "prerequisites": ["array_planning"],
 		"hidden_until": ["array_planning"], "effect_type": "automation", "effect_parameters": {"assist_slots": 1},
 		"major": true
 	},
 	{
 		"id": "multi_target_analysis", "name": "Multi-Target Analysis", "icon": "⊕", "cost": 330,
 		"description": "All meteors inside the manual tracking field advance together; also adds a second camera lane and fragment assistance.",
-		"branch": "network", "position": Vector2(610, 490), "prerequisites": ["secondary_camera", "fragment_analysis"],
+		"branch": "network", "position": Vector2(610, 610), "prerequisites": ["secondary_camera", "fragment_analysis"],
 		"hidden_until": ["secondary_camera"], "effect_type": "transformation", "effect_parameters": {"assist_slots": 2, "manual_group_tracking": true},
 		"major": true
 	},
 	{
 		"id": "automated_tracking", "name": "Automated Common Tracking", "icon": "⚙", "cost": 550,
 		"description": "Common targets are analyzed automatically; rare and high-value targets still need you.",
-		"branch": "network", "position": Vector2(900, 535), "prerequisites": ["multi_target_analysis"],
+		"branch": "network", "position": Vector2(900, 620), "prerequisites": ["multi_target_analysis"],
 		"hidden_until": ["multi_target_analysis"], "effect_type": "automation", "effect_parameters": {"common_rate": 0.29},
 		"major": true
 	},
 	{
 		"id": "observatory_network", "name": "Observatory Network", "icon": "✧", "cost": 720,
 		"description": "Links the whole array, previews shower entry sectors, and adds a third assistance lane.",
-		"branch": "network", "position": Vector2(1200, 480), "prerequisites": ["automated_tracking", "shower_detector"],
+		"branch": "network", "position": Vector2(1200, 575), "prerequisites": ["automated_tracking", "shower_detector"],
 		"hidden_until": ["automated_tracking"], "effect_type": "transformation", "effect_parameters": {"assist_slots": 3, "shower_preview": true},
 		"major": true
 	}

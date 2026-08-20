@@ -25,6 +25,10 @@ var startup_slot_prompt_enabled: bool = true
 var tutorial_auto_start_after_slot: bool = false
 var active_save_slot: int = 0
 var autosave_elapsed: float = 0.0
+var observation_round: int = 1
+var observation_phase_active: bool = false
+var observation_phase_remaining: float = Balance.BASE_OBSERVATION_DURATION
+var suppress_phase_transition: bool = false
 
 
 func _ready() -> void:
@@ -51,6 +55,7 @@ func _ready() -> void:
 	hud.new_game_slot_requested.connect(_on_new_game_slot_requested)
 	hud.tutorial_replay_requested.connect(_on_tutorial_replay_requested)
 	upgrade_tree.tree_opened.connect(tutorial.notify_upgrade_tree_opened)
+	upgrade_tree.tree_closed.connect(_on_upgrade_tree_closed)
 	observer.setup(meteor_layer, progression, hud)
 	spawner.setup(meteor_layer, progression)
 	events.setup(spawner, progression)
@@ -102,17 +107,18 @@ func start_run() -> void:
 	autosave_elapsed = 0.0
 	completed = false
 	last_completion_success = false
+	observation_round = 1
 	hud.hide_end()
 	hud.reset_tutorial()
 	hud.set_runtime(0.0)
 	starfield.set_activity(0.0)
-	spawner.start_spawning()
-	events.start()
+	_begin_observation_phase()
 
 
 func reset_run() -> void:
 	completed = false
-	upgrade_tree.close_tree()
+	_close_upgrade_tree_without_transition()
+	get_tree().paused = false
 	observer.reset()
 	effects.reset()
 	events.reset()
@@ -126,15 +132,70 @@ func reset_run() -> void:
 
 
 func _process(delta: float) -> void:
-	if completed:
+	if completed or not observation_phase_active:
 		return
 	elapsed_time += delta
+	observation_phase_remaining = maxf(0.0, observation_phase_remaining - delta)
 	hud.set_runtime(elapsed_time)
+	hud.set_observation_phase(observation_round, observation_phase_remaining)
 	if active_save_slot > 0:
 		autosave_elapsed += delta
 		if autosave_elapsed >= AUTOSAVE_INTERVAL_SECONDS:
 			autosave_elapsed = fmod(autosave_elapsed, AUTOSAVE_INTERVAL_SECONDS)
 			_autosave_active_slot()
+	if observation_phase_remaining <= 0.0 and not events.final_started and events.shower_state == "idle":
+		_end_observation_phase()
+
+
+func _observation_duration() -> float:
+	return progression.get_observation_duration()
+
+
+func _begin_observation_phase(advance_round: bool = false, remaining_override: float = -1.0, resume_game: bool = false) -> void:
+	if advance_round:
+		observation_round += 1
+	var duration := _observation_duration()
+	observation_phase_remaining = duration if remaining_override < 0.0 else clampf(remaining_override, 0.05, duration)
+	observation_phase_active = true
+	upgrade_tree.clear_intermission_context()
+	hud.set_observation_phase(observation_round, observation_phase_remaining)
+	spawner.start_spawning()
+	events.start()
+	events.run_time = elapsed_time
+	spawner.refresh_active_features()
+	if resume_game:
+		get_tree().paused = false
+
+
+func _end_observation_phase() -> void:
+	if completed or not observation_phase_active:
+		return
+	observation_phase_active = false
+	observation_phase_remaining = 0.0
+	observer.reset()
+	effects.reset()
+	events.reset()
+	spawner.reset()
+	starfield.set_activity(progression.get_progression_ratio() * 0.16)
+	hud.set_upgrade_phase(observation_round)
+	var next_round := observation_round + 1
+	var next_duration := int(_observation_duration())
+	upgrade_tree.set_intermission_context(next_round, next_duration)
+	_autosave_active_slot()
+	get_tree().paused = true
+	upgrade_tree.open_tree()
+
+
+func _on_upgrade_tree_closed() -> void:
+	if suppress_phase_transition or completed or observation_phase_active:
+		return
+	_begin_observation_phase(true, -1.0, true)
+
+
+func _close_upgrade_tree_without_transition() -> void:
+	suppress_phase_transition = true
+	upgrade_tree.close_tree()
+	suppress_phase_transition = false
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
@@ -207,10 +268,13 @@ func _on_meteor_expired(meteor, was_major: bool) -> void:
 func _on_upgrade_purchased(definition: Dictionary) -> void:
 	tutorial.notify_upgrade_purchased()
 	spawner.refresh_active_features()
+	if not observation_phase_active:
+		upgrade_tree.set_intermission_context(observation_round + 1, int(_observation_duration()))
 	effects.spawn_upgrade_pulse()
 	sound.play_upgrade()
 	hud.show_banner(tr("BANNER_SYSTEM_ONLINE") % _upgrade_name(definition), Color("80e6d2"), 2.4)
 	starfield.set_activity(progression.get_progression_ratio() * 0.16)
+	_autosave_active_slot()
 
 
 func _on_rare_spawned(type_id: String) -> void:
@@ -332,7 +396,7 @@ func _on_new_game_slot_requested(slot: int) -> void:
 
 func _start_fresh_slot() -> void:
 	completed = false
-	upgrade_tree.close_tree()
+	_close_upgrade_tree_without_transition()
 	observer.reset()
 	effects.reset()
 	events.reset()
@@ -368,12 +432,15 @@ func _on_tutorial_replay_requested() -> void:
 func _build_save_data() -> Dictionary:
 	return {
 		"elapsed_time": elapsed_time,
+		"observation_round": observation_round,
+		"observation_phase_active": observation_phase_active,
+		"observation_phase_remaining": observation_phase_remaining,
 		"progression": progression.get_save_data(),
 	}
 
 
 func _apply_save_data(data: Dictionary) -> void:
-	upgrade_tree.close_tree()
+	_close_upgrade_tree_without_transition()
 	observer.reset()
 	effects.reset()
 	events.reset()
@@ -382,16 +449,34 @@ func _apply_save_data(data: Dictionary) -> void:
 	last_completion_success = false
 	elapsed_time = maxf(0.0, float(data.get("elapsed_time", 0.0)))
 	autosave_elapsed = 0.0
+	observation_round = maxi(1, int(data.get("observation_round", 1)))
 	var progression_data = data.get("progression", {})
 	progression.load_save_data(progression_data if progression_data is Dictionary else {})
 	hud.hide_end()
 	hud.restore_tutorial(progression.success_count > 0)
 	hud.set_runtime(elapsed_time)
 	starfield.set_activity(progression.get_progression_ratio() * 0.16)
-	spawner.start_spawning()
-	events.start()
-	events.run_time = elapsed_time
-	spawner.refresh_active_features()
+	var saved_phase_active := bool(data.get("observation_phase_active", true))
+	if saved_phase_active:
+		var saved_remaining := float(data.get(
+			"observation_phase_remaining",
+			_observation_duration()
+		))
+		_begin_observation_phase(false, saved_remaining)
+	else:
+		observation_phase_active = false
+		observation_phase_remaining = 0.0
+		hud.set_upgrade_phase(observation_round)
+		var next_round := observation_round + 1
+		upgrade_tree.set_intermission_context(next_round, int(_observation_duration()))
+		call_deferred("_resume_upgrade_intermission")
+
+
+func _resume_upgrade_intermission() -> void:
+	if completed or observation_phase_active:
+		return
+	get_tree().paused = true
+	upgrade_tree.open_tree()
 
 
 func get_debug_snapshot() -> Dictionary:
@@ -404,5 +489,8 @@ func get_debug_snapshot() -> Dictionary:
 		"meteor_count": meteor_layer.get_child_count(),
 		"shower_state": events.shower_state,
 		"final_started": events.final_started,
+		"observation_round": observation_round,
+		"observation_phase_active": observation_phase_active,
+		"observation_phase_remaining": observation_phase_remaining,
 		"completed": completed
 	}

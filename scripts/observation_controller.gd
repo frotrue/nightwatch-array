@@ -2,6 +2,7 @@ extends Node2D
 
 const TRACKING_BREAK_MULTIPLIER := 1.72
 const TRACKING_GRACE_SECONDS := 0.14
+const DEFAULT_TRACKING_RADIUS := 36.0
 
 var meteor_layer: Node2D
 var progression: Node
@@ -15,6 +16,7 @@ var cursor_initialized: bool = false
 var was_holding: bool = false
 var tracking_grace_remaining: float = 0.0
 var tracking_visual_active_last_frame: bool = false
+var native_cursor_visible: bool = false
 
 
 func setup(target_layer: Node2D, progression_controller: Node, hud_layer: CanvasLayer) -> void:
@@ -27,6 +29,7 @@ func setup(target_layer: Node2D, progression_controller: Node, hud_layer: Canvas
 	# The game draws its own cursor below. Hiding the native cursor prevents the
 	# OS-composited cursor from racing ahead of the rendered game during a stall.
 	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
+	native_cursor_visible = false
 	cursor_position = get_viewport().get_mouse_position()
 	previous_cursor_position = cursor_position
 	cursor_initialized = true
@@ -60,15 +63,16 @@ func _process(delta: float) -> void:
 		previous_cursor_position = cursor_position
 		cursor_position = sampled_cursor
 	var holding: bool = Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
-	var cursor_on_interactive_ui := _cursor_is_on_interactive_ui()
-	if holding and not cursor_on_interactive_ui:
+	var cursor_on_ui := _cursor_is_on_ui()
+	_set_native_cursor_visible(cursor_on_ui)
+	if holding and not cursor_on_ui:
 		hovered_meteor = null
 		_update_manual_tracking(delta)
 	else:
 		selected_meteor = null
 		tracked_meteors.clear()
 		tracking_grace_remaining = 0.0
-		hovered_meteor = null if cursor_on_interactive_ui else _find_target_under_cursor()
+		hovered_meteor = null if cursor_on_ui else _find_target_under_cursor()
 
 	if _selection_is_valid():
 		var predicted_multiplier: float = selected_meteor.get_predicted_multiplier()
@@ -238,19 +242,26 @@ func _target_is_valid(target) -> bool:
 	return is_instance_valid(target) and not target.is_queued_for_deletion() and target.has_method("can_be_tracked") and target.can_be_tracked()
 
 
-func _cursor_is_on_interactive_ui() -> bool:
+func _cursor_is_on_ui() -> bool:
 	var hovered: Control = get_viewport().gui_get_hovered_control()
-	return hovered != null and hovered.get_mouse_filter_with_override() != Control.MOUSE_FILTER_IGNORE
+	if hovered != null and hovered.get_mouse_filter_with_override() != Control.MOUSE_FILTER_IGNORE:
+		return true
+	return hud != null and hud.has_method("is_pointer_over_hud") and hud.is_pointer_over_hud(cursor_position)
+
+
+func _set_native_cursor_visible(visible: bool) -> void:
+	var desired_mode := Input.MOUSE_MODE_VISIBLE if visible else Input.MOUSE_MODE_HIDDEN
+	var mode_changed := native_cursor_visible != visible
+	native_cursor_visible = visible
+	if Input.mouse_mode != desired_mode:
+		Input.mouse_mode = desired_mode
+	if mode_changed:
+		queue_redraw()
 
 
 func _draw() -> void:
-	# Lightweight software cursor and tracking feedback.
-	var cursor_tint := Color(0.62, 0.81, 1.0, 0.22)
-	draw_arc(cursor_position, 9.0, 0.0, TAU, 24, cursor_tint, 1.0, true)
-	draw_line(cursor_position + Vector2(-14, 0), cursor_position + Vector2(-7, 0), cursor_tint, 1.0)
-	draw_line(cursor_position + Vector2(7, 0), cursor_position + Vector2(14, 0), cursor_tint, 1.0)
-	draw_line(cursor_position + Vector2(0, -14), cursor_position + Vector2(0, -7), cursor_tint, 1.0)
-	draw_line(cursor_position + Vector2(0, 7), cursor_position + Vector2(0, 14), cursor_tint, 1.0)
+	if not native_cursor_visible:
+		_draw_software_cursor()
 	if _selection_is_valid():
 		_draw_tracking_ring(selected_meteor, true)
 	elif _target_is_valid(hovered_meteor):
@@ -258,6 +269,33 @@ func _draw() -> void:
 	for target in tracked_meteors:
 		if target != selected_meteor and _target_is_valid(target):
 			_draw_tracking_ring(target, false)
+
+
+func _draw_software_cursor() -> void:
+	# The cursor is the observation field itself, so Better Lens communicates its
+	# wider range directly instead of relying on a separate crosshair.
+	var observation_radius := _software_cursor_radius()
+	var shadow_color := Color(0.01, 0.025, 0.05, 0.94)
+	var cursor_color := Color("7dffe0") if was_holding else Color("b8f3ff")
+	var field_alpha := 0.065 if was_holding else 0.026
+	draw_circle(cursor_position, observation_radius, Color(cursor_color, field_alpha))
+	draw_arc(cursor_position, observation_radius, 0.0, TAU, 64, shadow_color, 4.2, true)
+	draw_arc(cursor_position, observation_radius, 0.0, TAU, 64, Color(cursor_color, 0.96 if was_holding else 0.72), 1.8, true)
+	for direction in [Vector2.LEFT, Vector2.RIGHT, Vector2.UP, Vector2.DOWN]:
+		var range_tick_start: Vector2 = cursor_position + direction * (observation_radius - 4.0)
+		var range_tick_end: Vector2 = cursor_position + direction * (observation_radius + 5.0)
+		draw_line(range_tick_start, range_tick_end, shadow_color, 4.2, true)
+		draw_line(range_tick_start, range_tick_end, cursor_color, 1.8, true)
+		var center_mark_start: Vector2 = cursor_position + direction * 4.0
+		var center_mark_end: Vector2 = cursor_position + direction * 8.0
+		draw_line(center_mark_start, center_mark_end, shadow_color, 4.0, true)
+		draw_line(center_mark_start, center_mark_end, cursor_color, 1.6, true)
+	draw_circle(cursor_position, 4.0, shadow_color)
+	draw_circle(cursor_position, 1.8, Color("f4ffff"))
+
+
+func _software_cursor_radius() -> float:
+	return progression.get_tracking_radius() if progression != null else DEFAULT_TRACKING_RADIUS
 
 
 func _draw_tracking_ring(target, is_primary: bool) -> void:

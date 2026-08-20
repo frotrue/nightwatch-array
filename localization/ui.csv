@@ -44,7 +44,7 @@ SAVE_SLOT_TITLE,SLOT %d,슬롯 %d
 SAVE_ACTIVE_MARKER,  •  ACTIVE,  •  사용 중
 SAVE_SLOT_EMPTY,EMPTY SLOT,빈 슬롯
 SAVE_SLOT_INVALID,SAVE DATA IS DAMAGED,저장 파일이 손상되었습니다
-SAVE_SLOT_META,%s  •  %02d:%02d  •  DATA %d  •  %d/16,%s  •  %02d:%02d  •  관측 데이터 %d  •  %d/16
+SAVE_SLOT_META,%s  •  %02d:%02d  •  DATA %d  •  %d/%d,%s  •  %02d:%02d  •  관측 데이터 %d  •  %d/%d
 SAVE_ACTION,SAVE,저장
 SAVE_OVERWRITE,OVERWRITE,덮어쓰기
 LOAD_ACTION,LOAD,불러오기
@@ -65,10 +65,12 @@ HUD_ARRAY_PROGRESS,%d / %d SYSTEMS,%d / %d 시스템
 HUD_OBSERVED_COUNT,%d OBJECTS LOGGED,관측 기록 %d건
 HUD_DATA_GAIN,+%d DATA,+%d 데이터
 HUD_TIME,RUN  %02d:%02d,진행  %02d:%02d
+HUD_OBSERVATION_TIME,OBSERVATION %d  •  %02d:%02d,%d차 관측  •  %02d:%02d
+HUD_UPGRADE_PHASE,OBSERVATION %d COMPLETE  •  UPGRADE,%d차 관측 완료  •  업그레이드
 HUD_AUTOSAVED,AUTOSAVED,자동 저장됨
 HUD_TUTORIAL_START,Hold LMB and follow the meteor,마우스 왼쪽 버튼을 누른 채 유성을 따라가세요
 HUD_TUTORIAL_DONE,Observation logged. Open the Upgrade Tree [U] to expand the array.,관측이 기록되었습니다. 업그레이드 트리 [U]에서 관측망을 확장하세요.
-HUD_UPGRADE_BUTTON,UPGRADE TREE  [U]    %d/%d,업그레이드 트리  [U]    %d/%d
+HUD_UPGRADE_BUTTON,UPGRADES  [U]    %d/%d,업그레이드  [U]    %d/%d
 HUD_UPGRADE_AVAILABLE,◆  UPGRADE AVAILABLE,◆  업그레이드 가능
 HUD_NEXT_DISCOVERY,NEXT DISCOVERY AWAITS,다음 발견 대기 중
 HUD_NEXT_SYSTEM,NEXT SYSTEM,다음 시스템
@@ -94,10 +96,12 @@ HUD_DEBUG_FINAL,Ctrl+Shift+F   Trigger final event,Ctrl+Shift+F   최종 이벤�
 HUD_DEBUG_RESET,Ctrl+Shift+Backspace   Reset run,Ctrl+Shift+Backspace   관측 초기화
 TREE_TITLE,OBSERVATION ARRAY,관측망
 TREE_SUBTITLE,UPGRADE CONSTELLATION  /  NIGHTWATCH SYSTEMS,업그레이드 별자리  /  나이트워치 시스템
+TREE_INTERMISSION_SUBTITLE,UPGRADE BREAK  /  OBSERVATION %d STARTS AT %d SECONDS,업그레이드 시간  /  %d차 관측은 %d초
 TREE_DATA,DATA  %d,데이터  %d
 TREE_SYSTEMS,%d / %d  ONLINE,%d / %d  가동
 TREE_CENTER,CENTER,중앙으로
 TREE_CLOSE,CLOSE  [U],닫기  [U]
+TREE_START_OBSERVATION,START OBSERVATION  [U],관측 시작  [U]
 TREE_LEGEND,CYAN  OPTICS    VIOLET  DETECTION    MINT  NETWORK,청록  광학    보라  탐지    민트  관측망
 TREE_CONTROLS,RIGHT-DRAG  /  WHEEL ZOOM,우클릭 드래그로 이동  /  휠로 확대·축소
 TREE_STATUS_READY,%d UPGRADE READY,시스템 설치 가능 %d개
@@ -154,6 +158,12 @@ UPGRADE_SHOWER_DETECTOR_NAME,Meteor Shower Forecast,유성우 예보
 UPGRADE_SHOWER_DETECTOR_DESC,Unlocks warned meteor-shower events across the whole sky.,하늘 전역에서 발생하는 유성우 예보 이벤트를 해금합니다.
 UPGRADE_ARRAY_PLANNING_NAME,Array Planning,관측망 설계
 UPGRADE_ARRAY_PLANNING_DESC,Opens a second observation lane so the sky can support concurrent targets.,두 번째 관측 채널을 열어 여러 표적을 동시에 처리합니다.
+UPGRADE_OBSERVATION_SCHEDULING_NAME,Observation Scheduling,관측 일정 최적화
+UPGRADE_OBSERVATION_SCHEDULING_DESC,Plans longer shifts and extends each future observation window by 10 seconds.,관측 일정을 조정해 다음 관측부터 관측 시간을 10초 늘립니다.
+UPGRADE_THERMAL_MANAGEMENT_NAME,Equipment Thermal Control,장비 열 관리
+UPGRADE_THERMAL_MANAGEMENT_DESC,Controls sensor heat during longer shifts and adds another 10 seconds to future observation windows.,장시간 가동 중 센서의 열을 제어해 다음 관측부터 관측 시간을 10초 더 늘립니다.
+UPGRADE_EXTENDED_WATCH_PROTOCOL_NAME,Extended Watch Protocol,장시간 관측 프로토콜
+UPGRADE_EXTENDED_WATCH_PROTOCOL_DESC,Coordinates a full long-watch protocol and raises future observation windows to their 60-second maximum.,장시간 관측 절차를 확립해 다음 관측부터 관측 시간을 최대 60초로 늘립니다.
 UPGRADE_SECONDARY_CAMERA_NAME,Secondary Camera,보조 카메라
 UPGRADE_SECONDARY_CAMERA_DESC,One unattended non-rare target receives a slow automatic scan.,직접 관측하지 않은 일반 표적 하나를 천천히 자동 분석합니다.
 UPGRADE_MULTI_TARGET_ANALYSIS_NAME,Multi-Target Analysis,다중 표적 분석

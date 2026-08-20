@@ -206,6 +206,17 @@ func get_spawn_interval_scale() -> float:
 	return lerpf(1.0, 0.34, get_progression_ratio())
 
 
+func get_observation_duration() -> float:
+	var duration: float = Balance.BASE_OBSERVATION_DURATION
+	for definition in Balance.UPGRADE_NODES:
+		var node_id := String(definition.id)
+		if not has_upgrade(node_id):
+			continue
+		var parameters: Dictionary = definition.get("effect_parameters", {})
+		duration += float(parameters.get("observation_duration_bonus", 0.0))
+	return minf(duration, Balance.MAX_OBSERVATION_DURATION)
+
+
 func get_max_active() -> int:
 	return (
 		1
