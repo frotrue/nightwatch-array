@@ -60,7 +60,10 @@ func _process(delta: float) -> void:
 		_spawn_first_meteor()
 	else:
 		spawn_meteor(_choose_regular_type())
-	var base_interval := rng.randf_range(5.2, 7.0)
+	var base_interval := rng.randf_range(
+		Balance.REGULAR_SPAWN_INTERVAL_MIN,
+		Balance.REGULAR_SPAWN_INTERVAL_MAX
+	)
 	next_spawn_time = maxf(1.15, base_interval * progression.get_spawn_interval_scale())
 
 

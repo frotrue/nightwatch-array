@@ -179,7 +179,7 @@ UPGRADE_FRAGMENT_ANALYSIS_DESC,Discovers splitting meteors; network analysis can
 UPGRADE_SHOWER_DETECTOR_NAME,Meteor Shower Forecast,유성우 예보
 UPGRADE_SHOWER_DETECTOR_DESC,Unlocks warned meteor-shower events across the whole sky.,하늘 전역에서 발생하는 유성우 예보 이벤트를 해금합니다.
 UPGRADE_ARRAY_PLANNING_NAME,Array Planning,관측망 설계
-UPGRADE_ARRAY_PLANNING_DESC,Opens a second observation lane so the sky can support concurrent targets.,두 번째 관측 채널을 열어 여러 표적을 동시에 처리합니다.
+UPGRADE_ARRAY_PLANNING_DESC,Adds another observation channel for a crowded sky.,혼잡한 하늘을 위한 추가 관측 채널을 엽니다.
 UPGRADE_OBSERVATION_SCHEDULING_NAME,Observation Scheduling,관측 일정 최적화
 UPGRADE_OBSERVATION_SCHEDULING_DESC,Plans longer shifts and extends each future observation window by 10 seconds.,관측 일정을 조정해 다음 관측부터 관측 시간을 10초 늘립니다.
 UPGRADE_THERMAL_MANAGEMENT_NAME,Equipment Thermal Control,장비 열 관리
