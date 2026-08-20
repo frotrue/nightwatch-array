@@ -115,7 +115,7 @@ func _run() -> void:
 	_check(TranslationServer.translate("PHASE_SUMMARY_TITLE") % 1 == "1차 관측 완료", "Korean phase summary title reads naturally")
 	_check(TranslationServer.translate("UPGRADE_OBSERVATION_SCHEDULING_NAME") == "관측 일정 최적화", "Korean duration-research name is localized")
 	_check(TranslationServer.translate("UPGRADE_ERROR_NEED_DATA") % 12 == "데이터가 12개 더 필요합니다", "Korean shortfall text is a complete sentence")
-	_check(TranslationServer.translate("TREE_NEED_MORE") % [8, 12] == "◇  보유 데이터 8    /    12개 더 필요", "Korean tree shortfall text includes its unit")
+	_check(TranslationServer.translate("TREE_NEED_MORE") % [8, 12] == "◇  데이터 8 / 12", "Korean tree affordability text shows current and required Data")
 	_check(game.hud.language_selector.get_item_metadata(1) == "ko", "language selector exposes Korean")
 	game.hud.open_settings()
 	_check(game.hud.is_settings_open(), "settings overlay opens")
@@ -173,25 +173,43 @@ func _run() -> void:
 	}
 	_check(is_equal_approx(opening_optics.position.x, opening_detection.position.x) and is_equal_approx(opening_detection.position.x, opening_network.position.x), "opening branch cards use the permanent branch-aligned layout")
 	_check(opening_optics.position.y < opening_detection.position.y and opening_detection.position.y < opening_network.position.y, "opening branches are stacked like the full research tree")
-	_check(not game.upgrade_tree.node_buttons["long_exposure"].visible, "follow-up systems stay hidden until the first opening choice is installed")
-	_check(not game.upgrade_tree.detail_panel.visible, "node detail starts hidden until a card is hovered")
-	game.upgrade_tree._on_node_hovered("better_lens")
-	_check(game.upgrade_tree.detail_panel.visible and game.upgrade_tree.selected_node_id == "better_lens", "hovering a node reveals its detail")
+	_check(game.upgrade_tree.node_buttons["long_exposure"].visible and game.upgrade_tree.node_buttons["long_exposure"].get_meta("visual_state") == "teaser", "one upcoming system is previewed as an unresolved signal")
+	_check(opening_optics.size.x <= 104.0 and opening_optics.size.y <= 82.0, "research nodes use compact icon-first tiles")
+	_check(game.upgrade_tree.detail_panel.visible and game.upgrade_tree.selected_node_id == "better_lens", "fixed inspector defaults to the first actionable system")
+	game.upgrade_tree._on_node_hovered("edge_detection")
+	_check(game.upgrade_tree.selected_node_id == "edge_detection", "hovering a node updates the fixed inspector")
 	game.upgrade_tree._on_node_unhovered("better_lens")
-	_check(not game.upgrade_tree.detail_panel.visible and game.upgrade_tree.selected_node_id.is_empty(), "leaving a node dismisses its detail")
-	var pan_before_right_drag: Vector2 = game.upgrade_tree.pan_position
-	var right_down := InputEventMouseButton.new()
-	right_down.button_index = MOUSE_BUTTON_RIGHT
-	right_down.pressed = true
-	game.upgrade_tree._input(right_down)
-	var right_drag := InputEventMouseMotion.new()
-	right_drag.relative = Vector2(23.0, -11.0)
-	game.upgrade_tree._input(right_drag)
-	var right_up := InputEventMouseButton.new()
-	right_up.button_index = MOUSE_BUTTON_RIGHT
-	right_up.pressed = false
-	game.upgrade_tree._input(right_up)
-	_check(game.upgrade_tree.pan_position == pan_before_right_drag + right_drag.relative and not game.upgrade_tree.panning, "right-drag pans the research tree and releases cleanly")
+	_check(game.upgrade_tree.detail_panel.visible and game.upgrade_tree.selected_node_id == "edge_detection", "fixed inspector remains readable after the pointer leaves a node")
+	game.progression.add_debug_data(12.0)
+	var upgrades_before_selection: int = int(game.progression.upgrade_level)
+	game.upgrade_tree._on_node_hold_started("better_lens")
+	game.upgrade_tree._process(game.upgrade_tree.HOLD_PURCHASE_SECONDS * 0.45)
+	var partial_hold_bar = game.upgrade_tree.node_hold_bars["better_lens"]
+	_check(partial_hold_bar.size.y >= opening_optics.size.y - 1.0 and partial_hold_bar.fill_ratio > 0.0 and partial_hold_bar.fill_ratio < 1.0, "node installation draws a partial liquid fill across the full tile")
+	_check(game.progression.upgrade_level == upgrades_before_selection and partial_hold_bar.visible, "holding an affordable node fills it without purchasing early")
+	game.upgrade_tree._on_node_hold_released("better_lens")
+	_check(game.progression.upgrade_level == upgrades_before_selection and not partial_hold_bar.visible, "releasing a node before the meter fills cancels installation")
+	game.upgrade_tree._on_node_hold_started("better_lens")
+	game.upgrade_tree._process(game.upgrade_tree.HOLD_PURCHASE_SECONDS + 0.01)
+	_check(game.progression.has_upgrade("better_lens") and game.upgrade_tree.held_node_id.is_empty(), "a full node hold purchases the system exactly once")
+	game.progression.reset()
+	var zoom_before_button: float = float(game.upgrade_tree.zoom)
+	game.upgrade_tree._zoom_from_center(1.10)
+	_check(game.upgrade_tree.zoom > zoom_before_button, "explicit zoom controls change the research-tree scale")
+	game.upgrade_tree._reset_view()
+	var pan_before_left_drag: Vector2 = game.upgrade_tree.pan_position
+	var left_down := InputEventMouseButton.new()
+	left_down.button_index = MOUSE_BUTTON_LEFT
+	left_down.pressed = true
+	game.upgrade_tree._on_tree_viewport_gui_input(left_down)
+	var left_drag := InputEventMouseMotion.new()
+	left_drag.relative = Vector2(23.0, -11.0)
+	game.upgrade_tree._on_tree_viewport_gui_input(left_drag)
+	var left_up := InputEventMouseButton.new()
+	left_up.button_index = MOUSE_BUTTON_LEFT
+	left_up.pressed = false
+	game.upgrade_tree._on_tree_viewport_gui_input(left_up)
+	_check(game.upgrade_tree.pan_position == pan_before_left_drag + left_drag.relative and not game.upgrade_tree.panning, "left-dragging empty space pans the research tree and releases cleanly")
 	game.upgrade_tree.close_tree()
 	_check(not paused, "closing the upgrade tree resumes gameplay")
 

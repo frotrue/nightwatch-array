@@ -6,10 +6,11 @@ signal tree_closed
 const Balance = preload("res://scripts/game_balance.gd")
 
 const TREE_SIZE := Vector2(1460, 780)
-const NODE_SIZE := Vector2(124, 92)
-const MAJOR_NODE_SIZE := Vector2(142, 104)
+const NODE_SIZE := Vector2(92, 72)
+const MAJOR_NODE_SIZE := Vector2(104, 82)
 const MIN_ZOOM := 0.55
 const MAX_ZOOM := 1.28
+const HOLD_PURCHASE_SECONDS := 0.75
 const BACKGROUND_STARS := [
 	Vector2(74, 48), Vector2(184, 238), Vector2(267, 91), Vector2(386, 390),
 	Vector2(488, 215), Vector2(594, 590), Vector2(704, 82), Vector2(812, 414),
@@ -18,6 +19,64 @@ const BACKGROUND_STARS := [
 	Vector2(1072, 357), Vector2(1288, 604), Vector2(437, 511), Vector2(947, 46),
 	Vector2(214, 704), Vector2(742, 746), Vector2(1088, 682), Vector2(1380, 735)
 ]
+
+
+class LiquidNodeFill:
+	extends Control
+
+	var fill_ratio: float = 0.0
+	var fill_color := Color(0.2, 0.8, 1.0, 0.46)
+	var surface_color := Color(0.75, 0.96, 1.0, 0.92)
+	var wave_phase: float = 0.0
+
+
+	func set_fill_progress(ratio: float, elapsed: float) -> void:
+		fill_ratio = clampf(ratio, 0.0, 1.0)
+		wave_phase = elapsed * 8.0
+		queue_redraw()
+
+
+	func clear_fill() -> void:
+		fill_ratio = 0.0
+		wave_phase = 0.0
+		queue_redraw()
+
+
+	func _draw() -> void:
+		if fill_ratio <= 0.0 or size.x <= 8.0 or size.y <= 8.0:
+			return
+		var inset := 4.0
+		var left := inset
+		var right := size.x - inset
+		var top := inset
+		var bottom := size.y - inset
+		var surface_y := lerpf(bottom, top, fill_ratio)
+		var filled_height := bottom - surface_y
+		var top_clearance := surface_y - top
+		var wave_amplitude := minf(minf(2.3, filled_height * 0.22), top_clearance * 0.45)
+		var surface := PackedVector2Array()
+		for step in range(17):
+			var amount := float(step) / 16.0
+			var x := lerpf(left, right, amount)
+			var y := surface_y + sin(amount * TAU * 1.35 + wave_phase) * wave_amplitude
+			surface.append(Vector2(x, y))
+
+		var shape := PackedVector2Array()
+		for point in surface:
+			shape.append(point)
+		var corner_radius := minf(minf(8.0, filled_height * 0.45), (right - left) * 0.25)
+		shape.append(Vector2(right, bottom - corner_radius))
+		var bottom_right_center := Vector2(right - corner_radius, bottom - corner_radius)
+		for step in range(1, 6):
+			var angle := lerpf(0.0, PI * 0.5, float(step) / 5.0)
+			shape.append(bottom_right_center + Vector2(cos(angle), sin(angle)) * corner_radius)
+		var bottom_left_center := Vector2(left + corner_radius, bottom - corner_radius)
+		for step in range(1, 6):
+			var angle := lerpf(PI * 0.5, PI, float(step) / 5.0)
+			shape.append(bottom_left_center + Vector2(cos(angle), sin(angle)) * corner_radius)
+
+		draw_colored_polygon(shape, fill_color)
+		draw_polyline(surface, surface_color, 1.6, true)
 
 var progression: Node
 var settings_controller: Node
@@ -32,9 +91,13 @@ var detail_branch: Label
 var detail_name: Label
 var detail_description: Label
 var detail_meta: Label
+var detail_action_button: Button
 var title_label: Label
 var subtitle_label: Label
 var reset_view_button: Button
+var zoom_out_button: Button
+var zoom_in_button: Button
+var zoom_label: Label
 var close_button: Button
 var legend_label: Label
 var controls_label: Label
@@ -45,12 +108,16 @@ var node_icons: Dictionary = {}
 var node_costs: Dictionary = {}
 var node_names: Dictionary = {}
 var node_major_badges: Dictionary = {}
+var node_hold_bars: Dictionary = {}
 var branch_labels: Dictionary = {}
 
 var selected_node_id: String = ""
+var held_node_id: String = ""
+var hold_elapsed: float = 0.0
 var zoom: float = 0.78
 var pan_position := Vector2.ZERO
 var panning: bool = false
+var pan_mouse_button: int = 0
 var paused_by_tree: bool = false
 var refresh_pending: bool = false
 var node_visual_keys: Dictionary = {}
@@ -82,6 +149,7 @@ func bind_settings(controller: Node) -> void:
 func open_tree() -> void:
 	if overlay.visible or progression == null:
 		return
+	_cancel_node_hold()
 	overlay.visible = true
 	_hide_node_detail()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -95,8 +163,10 @@ func open_tree() -> void:
 func close_tree() -> void:
 	if not overlay.visible:
 		return
+	_cancel_node_hold()
 	overlay.visible = false
 	panning = false
+	pan_mouse_button = 0
 	_hide_node_detail()
 	if paused_by_tree:
 		get_tree().paused = false
@@ -140,9 +210,38 @@ func _input(event: InputEvent) -> void:
 			close_tree()
 			get_viewport().set_input_as_handled()
 			return
+	if event is InputEventMouseButton and not event.pressed and event.button_index == pan_mouse_button:
+		panning = false
+		pan_mouse_button = 0
+
+
+func _process(delta: float) -> void:
+	if held_node_id.is_empty():
+		return
+	if not is_open() or progression == null:
+		_cancel_node_hold()
+		return
+	if progression.get_node_state(held_node_id) != "available" or not progression.can_purchase(held_node_id):
+		_cancel_node_hold()
+		return
+	hold_elapsed = minf(HOLD_PURCHASE_SECONDS, hold_elapsed + delta)
+	var hold_bar: LiquidNodeFill = node_hold_bars[held_node_id]
+	hold_bar.set_fill_progress(hold_elapsed / HOLD_PURCHASE_SECONDS, hold_elapsed)
+	if hold_elapsed >= HOLD_PURCHASE_SECONDS:
+		_complete_node_hold()
+
+
+func _on_tree_viewport_gui_input(event: InputEvent) -> void:
+	if not is_open():
+		return
 	if event is InputEventMouseButton:
-		if event.button_index == MOUSE_BUTTON_RIGHT:
-			panning = event.pressed
+		if event.button_index == MOUSE_BUTTON_LEFT or event.button_index == MOUSE_BUTTON_RIGHT:
+			if event.pressed:
+				panning = true
+				pan_mouse_button = event.button_index
+			elif pan_mouse_button == event.button_index:
+				panning = false
+				pan_mouse_button = 0
 			get_viewport().set_input_as_handled()
 			return
 		if event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_UP:
@@ -167,6 +266,12 @@ func _zoom_at(screen_position: Vector2, factor: float) -> void:
 	var local_focus := (screen_position - tree_canvas.global_position) / old_zoom
 	pan_position += local_focus * (old_zoom - zoom)
 	_apply_transform()
+
+
+func _zoom_from_center(factor: float) -> void:
+	if content_clip == null:
+		return
+	_zoom_at(content_clip.global_position + content_clip.size * 0.5, factor)
 
 
 func _reset_view() -> void:
@@ -202,17 +307,48 @@ func _on_content_resized() -> void:
 func _apply_transform() -> void:
 	tree_canvas.position = pan_position
 	tree_canvas.scale = Vector2.ONE * zoom
-	if not selected_node_id.is_empty():
-		_position_detail_panel(selected_node_id)
+	if zoom_label != null:
+		zoom_label.text = "%d%%" % int(round(zoom * 100.0))
 
 
-func _on_node_pressed(node_id: String) -> void:
+func _on_node_hold_started(node_id: String) -> void:
+	_cancel_node_hold()
 	_show_node_detail(node_id)
-	if progression.get_node_state(node_id) != "available":
+	if progression == null or progression.get_node_state(node_id) != "available" or not progression.can_purchase(node_id):
 		return
-	if progression.request_purchase(node_id):
-		var definition := Balance.upgrade_definition(node_id)
+	held_node_id = node_id
+	hold_elapsed = 0.0
+	var hold_bar: LiquidNodeFill = node_hold_bars[node_id]
+	hold_bar.clear_fill()
+	hold_bar.visible = true
+
+
+func _on_node_hold_released(node_id: String) -> void:
+	if held_node_id == node_id:
+		_cancel_node_hold()
+
+
+func _complete_node_hold() -> void:
+	if held_node_id.is_empty():
+		return
+	var completed_node_id := held_node_id
+	var hold_bar: LiquidNodeFill = node_hold_bars[completed_node_id]
+	held_node_id = ""
+	hold_elapsed = 0.0
+	if progression.request_purchase(completed_node_id):
+		var definition := Balance.upgrade_definition(completed_node_id)
 		tree_status.text = tr("TREE_STATUS_ONLINE") % _upgrade_name(definition)
+	hold_bar.visible = false
+	hold_bar.clear_fill()
+
+
+func _cancel_node_hold() -> void:
+	if not held_node_id.is_empty() and node_hold_bars.has(held_node_id):
+		var hold_bar: LiquidNodeFill = node_hold_bars[held_node_id]
+		hold_bar.visible = false
+		hold_bar.clear_fill()
+	held_node_id = ""
+	hold_elapsed = 0.0
 
 
 func _on_node_hovered(node_id: String) -> void:
@@ -220,14 +356,21 @@ func _on_node_hovered(node_id: String) -> void:
 
 
 func _on_node_unhovered(node_id: String) -> void:
-	if selected_node_id == node_id:
-		_hide_node_detail()
+	if held_node_id == node_id:
+		_cancel_node_hold()
 
 
 func _hide_node_detail() -> void:
 	selected_node_id = ""
 	if detail_panel != null:
-		detail_panel.visible = false
+		detail_branch.text = tr("TREE_INSPECTOR_LABEL")
+		detail_name.text = tr("TREE_INSPECTOR_TITLE")
+		detail_description.text = tr("TREE_INSPECTOR_HINT")
+		detail_meta.text = tr("TREE_INSPECTOR_META")
+		detail_action_button.text = tr("TREE_SELECT_NODE")
+		detail_action_button.disabled = true
+		detail_panel.add_theme_stylebox_override("panel", _panel_style(Color("0b1020"), Color("2d4055"), 12, 1))
+		detail_panel.visible = true
 
 
 func _on_purchase_rejected(node_id: String, reason_key: String, value) -> void:
@@ -264,8 +407,6 @@ func _refresh() -> void:
 		if state == "hidden" and _is_teaser_visible(definition):
 			visual_state = "teaser"
 		var visible := visual_state != "hidden"
-		if progression.upgrade_level == 0 and not definition.prerequisites.is_empty():
-			visible = false
 		var button: Button = node_buttons[node_id]
 		var shadow: PanelContainer = node_shadows[node_id]
 		var name_label: Label = node_names[node_id]
@@ -290,11 +431,33 @@ func _refresh() -> void:
 		tree_status.text = tr("TREE_STATUS_PATHS") % available_count
 	else:
 		tree_status.text = tr("TREE_STATUS_STABLE")
-	if not selected_node_id.is_empty() and node_buttons.has(selected_node_id) and node_buttons[selected_node_id].visible and detail_panel.visible:
+	if not selected_node_id.is_empty() and node_buttons.has(selected_node_id) and node_buttons[selected_node_id].visible:
 		_show_node_detail(selected_node_id)
 	else:
-		_hide_node_detail()
+		var recommended_node_id := _recommended_node_id()
+		if recommended_node_id.is_empty():
+			_hide_node_detail()
+		else:
+			_show_node_detail(recommended_node_id)
 	tree_canvas.queue_redraw()
+
+
+func _recommended_node_id() -> String:
+	var first_available := ""
+	var first_visible := ""
+	for definition in Balance.UPGRADE_NODES:
+		var node_id := String(definition.id)
+		var button: Button = node_buttons[node_id]
+		if not button.visible:
+			continue
+		if first_visible.is_empty():
+			first_visible = node_id
+		if progression.get_node_state(node_id) == "available":
+			if progression.can_purchase(node_id):
+				return node_id
+			if first_available.is_empty():
+				first_available = node_id
+	return first_available if not first_available.is_empty() else first_visible
 
 
 func _is_teaser_visible(definition: Dictionary) -> bool:
@@ -370,11 +533,11 @@ func _apply_node_visual(definition: Dictionary, visual_state: String) -> void:
 	major_badge.add_theme_color_override("font_color", branch_color.lightened(0.24))
 	button.modulate.a = opacity
 	shadow.modulate.a = opacity
-	button.add_theme_stylebox_override("normal", _panel_style(background, border, 12 if major else 10, border_width))
-	button.add_theme_stylebox_override("hover", _panel_style(background.lightened(0.08), border.lightened(0.18), 12 if major else 10, border_width))
-	button.add_theme_stylebox_override("pressed", _panel_style(background.darkened(0.08), border, 12 if major else 10, border_width))
+	button.add_theme_stylebox_override("normal", _panel_style(background, border, 18 if major else 16, border_width))
+	button.add_theme_stylebox_override("hover", _panel_style(background.lightened(0.08), border.lightened(0.18), 18 if major else 16, border_width))
+	button.add_theme_stylebox_override("pressed", _panel_style(background.darkened(0.08), border, 18 if major else 16, border_width))
 	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
-	shadow.add_theme_stylebox_override("panel", _panel_style(background.darkened(0.45), Color.TRANSPARENT, 12 if major else 10, 0))
+	shadow.add_theme_stylebox_override("panel", _panel_style(background.darkened(0.45), Color.TRANSPARENT, 18 if major else 16, 0))
 
 
 func _show_node_detail(node_id: String) -> void:
@@ -390,6 +553,8 @@ func _show_node_detail(node_id: String) -> void:
 		detail_name.text = "???"
 		detail_description.text = tr("TREE_TEASER_DESCRIPTION")
 		detail_meta.text = tr("TREE_SIGNAL_OBSCURED")
+		detail_action_button.text = tr("TREE_SIGNAL_BUTTON")
+		detail_action_button.disabled = true
 	else:
 		detail_branch.text = "%s  /  %s" % [_branch_name(String(definition.branch)), tr("EFFECT_%s" % String(definition.effect_type).to_upper())]
 		detail_name.text = _upgrade_name(definition)
@@ -397,42 +562,30 @@ func _show_node_detail(node_id: String) -> void:
 		match visual_state:
 			"purchased":
 				detail_meta.text = tr("TREE_SYSTEM_ONLINE")
+				detail_action_button.text = tr("TREE_SYSTEM_ONLINE")
+				detail_action_button.disabled = true
 			"available":
 				if progression.can_purchase(node_id):
 					detail_meta.text = tr("TREE_INSTALL") % int(definition.cost)
+					detail_action_button.text = tr("TREE_INSTALL_BUTTON") % int(definition.cost)
+					detail_action_button.disabled = true
 				else:
 					var missing := int(ceil(float(definition.cost) - progression.observation_data))
-					detail_meta.text = tr("TREE_NEED_MORE") % [int(definition.cost), missing]
+					detail_meta.text = tr("TREE_NEED_MORE") % [int(floor(progression.observation_data)), int(definition.cost)]
+					detail_action_button.text = tr("TREE_NEED_DATA_BUTTON") % missing
+					detail_action_button.disabled = true
 			_:
 				var prerequisite_names: Array[String] = []
 				for prerequisite_variant in definition.prerequisites:
 					var prerequisite := Balance.upgrade_definition(String(prerequisite_variant))
 					prerequisite_names.append(_upgrade_name(prerequisite))
-				detail_meta.text = tr("TREE_REQUIRES") % ", ".join(prerequisite_names)
+					detail_meta.text = tr("TREE_REQUIRES") % ", ".join(prerequisite_names)
+				detail_action_button.text = tr("TREE_LOCKED_BUTTON")
+				detail_action_button.disabled = true
 	detail_branch.add_theme_color_override("font_color", branch_color)
 	detail_meta.add_theme_color_override("font_color", Color("ffe078") if visual_state == "available" and progression.can_purchase(node_id) else branch_color.lightened(0.2))
 	detail_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.035, 0.045, 0.09, 0.97), branch_color, 12, 2))
 	detail_panel.visible = true
-	_position_detail_panel(node_id)
-
-
-func _position_detail_panel(node_id: String) -> void:
-	if content_clip == null or detail_panel == null or not node_buttons.has(node_id):
-		return
-	var button: Button = node_buttons[node_id]
-	var node_top_left := tree_canvas.position + button.position * zoom
-	var node_size := button.size * zoom
-	var panel_size := Vector2(390.0, 154.0)
-	var desired := Vector2(node_top_left.x + node_size.x + 18.0, node_top_left.y + node_size.y * 0.5 - panel_size.y * 0.5)
-	if desired.x + panel_size.x > content_clip.size.x - 14.0:
-		desired.x = node_top_left.x - panel_size.x - 18.0
-	if desired.y + panel_size.y > content_clip.size.y - 14.0:
-		desired.y = node_top_left.y - panel_size.y - 18.0
-	desired.x = clampf(desired.x, 14.0, maxf(14.0, content_clip.size.x - panel_size.x - 14.0))
-	desired.y = clampf(desired.y, 14.0, maxf(14.0, content_clip.size.y - panel_size.y - 14.0))
-	detail_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	detail_panel.position = desired
-	detail_panel.size = panel_size
 
 
 func _on_language_changed(_locale: String) -> void:
@@ -519,6 +672,26 @@ func _build_interface() -> void:
 	systems_readout = _make_label(tr("TREE_SYSTEMS") % [0, Balance.UPGRADE_NODES.size()], 13, Color("67e2bd"))
 	systems_readout.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	top_row.add_child(systems_readout)
+	var zoom_controls := HBoxContainer.new()
+	zoom_controls.add_theme_constant_override("separation", 3)
+	top_row.add_child(zoom_controls)
+	zoom_out_button = Button.new()
+	zoom_out_button.text = "−"
+	zoom_out_button.custom_minimum_size = Vector2(34, 34)
+	_style_header_button(zoom_out_button)
+	zoom_out_button.pressed.connect(_zoom_from_center.bind(1.0 / 1.10))
+	zoom_controls.add_child(zoom_out_button)
+	zoom_label = _make_label("78%", 10, Color("8297aa"))
+	zoom_label.custom_minimum_size = Vector2(46, 34)
+	zoom_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	zoom_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	zoom_controls.add_child(zoom_label)
+	zoom_in_button = Button.new()
+	zoom_in_button.text = "+"
+	zoom_in_button.custom_minimum_size = Vector2(34, 34)
+	_style_header_button(zoom_in_button)
+	zoom_in_button.pressed.connect(_zoom_from_center.bind(1.10))
+	zoom_controls.add_child(zoom_in_button)
 	reset_view_button = Button.new()
 	reset_view_button.text = tr("TREE_CENTER")
 	reset_view_button.custom_minimum_size = Vector2(104, 34)
@@ -543,15 +716,21 @@ func _build_interface() -> void:
 	controls_label = _make_label("    " + tr("TREE_CONTROLS"), 10, Color("5e6b7f"))
 	sub_row.add_child(controls_label)
 
+	var content_row := HBoxContainer.new()
+	content_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	content_row.add_theme_constant_override("separation", 10)
+	column.add_child(content_row)
 	var content_frame := PanelContainer.new()
+	content_frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	content_frame.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	content_frame.add_theme_stylebox_override("panel", _panel_style(Color("060817"), Color("202d43"), 10, 1))
-	column.add_child(content_frame)
+	content_row.add_child(content_frame)
 	content_clip = Control.new()
 	content_clip.name = "TreeViewport"
 	content_clip.clip_contents = true
 	content_clip.mouse_filter = Control.MOUSE_FILTER_PASS
 	content_clip.resized.connect(_on_content_resized)
+	content_clip.gui_input.connect(_on_tree_viewport_gui_input)
 	content_frame.add_child(content_clip)
 
 	tree_canvas = Control.new()
@@ -565,7 +744,7 @@ func _build_interface() -> void:
 	_build_branch_labels()
 	for definition in Balance.UPGRADE_NODES:
 		_build_node_button(definition)
-	_build_detail_panel()
+	_build_detail_panel(content_row)
 
 
 func _build_branch_labels() -> void:
@@ -586,7 +765,7 @@ func _build_node_button(definition: Dictionary) -> void:
 	var position := Vector2(definition.position)
 	var shadow := PanelContainer.new()
 	shadow.name = "Shadow_" + node_id
-	shadow.position = position + Vector2(0, 8)
+	shadow.position = position + Vector2(0, 5)
 	shadow.size = node_size
 	shadow.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	tree_canvas.add_child(shadow)
@@ -596,18 +775,30 @@ func _build_node_button(definition: Dictionary) -> void:
 	button.position = position
 	button.size = node_size
 	button.custom_minimum_size = node_size
+	button.clip_contents = true
 	button.mouse_filter = Control.MOUSE_FILTER_STOP
 	button.focus_mode = Control.FOCUS_NONE
 	button.set_meta("node_id", node_id)
 	button.set_meta("visual_state", "hidden")
-	button.pressed.connect(_on_node_pressed.bind(node_id))
+	button.button_down.connect(_on_node_hold_started.bind(node_id))
+	button.button_up.connect(_on_node_hold_released.bind(node_id))
 	button.mouse_entered.connect(_on_node_hovered.bind(node_id))
 	button.mouse_exited.connect(_on_node_unhovered.bind(node_id))
 	tree_canvas.add_child(button)
 
-	var icon_label := _make_label(String(definition.icon), 38 if major else 34, Color.WHITE)
+	var hold_bar := LiquidNodeFill.new()
+	hold_bar.name = "HoldProgress"
+	hold_bar.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	hold_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hold_bar.visible = false
+	var branch_color: Color = Balance.BRANCHES[String(definition.branch)].color
+	hold_bar.fill_color = Color(branch_color, 0.46)
+	hold_bar.surface_color = Color(branch_color.lightened(0.42), 0.92)
+	button.add_child(hold_bar)
+
+	var icon_label := _make_label(String(definition.icon), 33 if major else 29, Color.WHITE)
 	icon_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	icon_label.offset_bottom = -16.0
+	icon_label.offset_bottom = -14.0
 	icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	icon_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	button.add_child(icon_label)
@@ -628,8 +819,8 @@ func _build_node_button(definition: Dictionary) -> void:
 	button.add_child(major_badge)
 
 	var name_label := _make_label(_upgrade_name(definition), 12 if major else 11, Color("c8d5e1"))
-	name_label.position = Vector2(position.x + node_size.x * 0.5 - 95.0, position.y + node_size.y + 7.0)
-	name_label.size = Vector2(190, 38)
+	name_label.position = Vector2(position.x + node_size.x * 0.5 - 84.0, position.y + node_size.y + 6.0)
+	name_label.size = Vector2(168, 36)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -641,35 +832,68 @@ func _build_node_button(definition: Dictionary) -> void:
 	node_costs[node_id] = cost_label
 	node_names[node_id] = name_label
 	node_major_badges[node_id] = major_badge
+	node_hold_bars[node_id] = hold_bar
 
 
-func _build_detail_panel() -> void:
+func _build_detail_panel(parent: Control) -> void:
 	detail_panel = PanelContainer.new()
-	detail_panel.name = "NodeDetailCard"
-	detail_panel.z_index = 50
-	detail_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	detail_panel.custom_minimum_size = Vector2(390.0, 154.0)
-	detail_panel.visible = false
-	content_clip.add_child(detail_panel)
+	detail_panel.name = "SystemInspector"
+	detail_panel.mouse_filter = Control.MOUSE_FILTER_PASS
+	detail_panel.custom_minimum_size = Vector2(306.0, 0.0)
+	detail_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	detail_panel.add_theme_stylebox_override("panel", _panel_style(Color("0b1020"), Color("2d4055"), 12, 1))
+	parent.add_child(detail_panel)
 	var margin := MarginContainer.new()
-	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	margin.mouse_filter = Control.MOUSE_FILTER_PASS
 	for side in ["margin_left", "margin_top", "margin_right", "margin_bottom"]:
-		margin.add_theme_constant_override(side, 14)
+		margin.add_theme_constant_override(side, 18)
 	detail_panel.add_child(margin)
 	var column := VBoxContainer.new()
-	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	column.add_theme_constant_override("separation", 3)
+	column.mouse_filter = Control.MOUSE_FILTER_PASS
+	column.add_theme_constant_override("separation", 7)
 	margin.add_child(column)
-	detail_branch = _make_label(tr("BRANCH_OPTICS"), 10, Color("53d6ff"))
+	detail_branch = _make_label(tr("TREE_INSPECTOR_LABEL"), 10, Color("6f879b"))
 	column.add_child(detail_branch)
-	detail_name = _make_label(tr("UPGRADE_BETTER_LENS_NAME"), 19, Color("f3f8ff"))
+	detail_name = _make_label(tr("TREE_INSPECTOR_TITLE"), 20, Color("f3f8ff"))
+	detail_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(detail_name)
-	detail_description = _make_label("", 12, Color("b4c2d2"))
+	var divider := HSeparator.new()
+	divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(divider)
+	detail_description = _make_label(tr("TREE_INSPECTOR_HINT"), 12, Color("b4c2d2"))
 	detail_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	detail_description.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	column.add_child(detail_description)
-	detail_meta = _make_label("", 12, Color("ffe078"))
+	detail_meta = _make_label(tr("TREE_INSPECTOR_META"), 12, Color("7f9caf"))
+	detail_meta.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(detail_meta)
+	detail_action_button = Button.new()
+	detail_action_button.text = tr("TREE_SELECT_NODE")
+	detail_action_button.custom_minimum_size = Vector2(0, 44)
+	detail_action_button.disabled = true
+	detail_action_button.add_theme_font_size_override("font_size", 13)
+	detail_action_button.add_theme_color_override("font_color", Color("e8fbff"))
+	detail_action_button.add_theme_color_override("font_disabled_color", Color("bdefff"))
+	detail_action_button.add_theme_stylebox_override("normal", _panel_style(Color("12354b"), Color("4a7c96"), 7, 1))
+	detail_action_button.add_theme_stylebox_override("hover", _panel_style(Color("18536d"), Color("72bdd5"), 7, 1))
+	detail_action_button.add_theme_stylebox_override("pressed", _panel_style(Color("0d2a3b"), Color("8bdff0"), 7, 1))
+	detail_action_button.add_theme_stylebox_override("disabled", _panel_style(Color("101726"), Color("29384a"), 7, 1))
+	column.add_child(detail_action_button)
+
+
+func _connection_points(source_button: Button, target_button: Button) -> PackedVector2Array:
+	var start := source_button.position + source_button.size * 0.5
+	var finish := target_button.position + target_button.size * 0.5
+	var direction := finish - start
+	if absf(direction.x) >= absf(direction.y):
+		var horizontal_sign := signf(direction.x)
+		start.x += source_button.size.x * 0.5 * horizontal_sign
+		finish.x -= target_button.size.x * 0.5 * horizontal_sign
+	else:
+		var vertical_sign := signf(direction.y)
+		start.y += source_button.size.y * 0.5 * vertical_sign
+		finish.y -= target_button.size.y * 0.5 * vertical_sign
+	return PackedVector2Array([start, finish])
 
 
 func _draw_tree() -> void:
@@ -701,8 +925,9 @@ func _draw_tree() -> void:
 			var source_button: Button = node_buttons[source_id]
 			if not source_button.visible:
 				continue
-			var start := source_button.position + source_button.size * 0.5
-			var finish := target_button.position + target_button.size * 0.5
+			var connection := _connection_points(source_button, target_button)
+			var start := connection[0]
+			var finish := connection[1]
 			var visual_state := String(target_button.get_meta("visual_state"))
 			var branch_color: Color = Balance.BRANCHES[String(definition.branch)].color
 			var underlay_width := 4.0
