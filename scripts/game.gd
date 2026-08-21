@@ -3,6 +3,13 @@ extends Node2D
 const Balance = preload("res://scripts/game_balance.gd")
 const SoundSynth = preload("res://scripts/sound_synth.gd")
 const AUTOSAVE_INTERVAL_SECONDS := 60.0
+# A manual chain expires on rhythm, not on a miss. Late rounds carry more
+# meteors than anyone can reach, so resetting on every expiry would pin the
+# streak near zero exactly when the array is at its busiest.
+const STREAK_TIMEOUT := 2.6
+const HITSTOP_TIME_SCALE := 0.06
+const SHAKE_STRENGTH_FLOOR := 0.50
+const HITSTOP_STRENGTH_FLOOR := 0.66
 
 @onready var starfield: Node2D = $Starfield
 @onready var meteor_layer: Node2D = $MeteorLayer
@@ -40,6 +47,9 @@ var phase_resumed_from_save: bool = false
 var last_clean_round_result: Dictionary = {}
 var best_round_rate: float = 0.0
 var suppress_phase_transition: bool = false
+var success_streak: int = 0
+var streak_remaining: float = 0.0
+var hitstop_active: bool = false
 
 
 func _ready() -> void:
@@ -78,6 +88,7 @@ func _ready() -> void:
 	spawner.contact_announced.connect(sky_contacts.on_contact_announced)
 	spawner.contact_resolved.connect(sky_contacts.on_contact_resolved)
 	progression.upgrade_purchased.connect(_on_upgrade_purchased)
+	effects.packet_landed.connect(_on_packet_landed)
 	events.banner_requested.connect(_on_event_banner)
 	events.sky_activity_changed.connect(_on_sky_activity_changed)
 	events.forecast_requested.connect(_on_shower_forecast_requested)
@@ -136,6 +147,7 @@ func start_run() -> void:
 
 func reset_run() -> void:
 	completed = false
+	_release_hitstop()
 	_close_upgrade_tree_without_transition()
 	get_tree().paused = false
 	observer.reset()
@@ -155,13 +167,21 @@ func reset_run() -> void:
 func _process(delta: float) -> void:
 	if completed or not observation_phase_active:
 		return
-	elapsed_time += delta
-	observation_phase_remaining = maxf(0.0, observation_phase_remaining - delta)
+	# Hitstop scales the engine clock. The round is the measuring stick for
+	# Data/min, so its countdown is converted back to real seconds and a freeze
+	# cannot quietly buy the player extra observation time.
+	var real_delta := delta / maxf(Engine.time_scale, 0.001)
+	elapsed_time += real_delta
+	observation_phase_remaining = maxf(0.0, observation_phase_remaining - real_delta)
 	spawner.set_phase_time_remaining(observation_phase_remaining)
 	hud.set_runtime(elapsed_time)
 	hud.set_observation_phase(observation_round, observation_phase_remaining)
+	if streak_remaining > 0.0:
+		streak_remaining = maxf(0.0, streak_remaining - real_delta)
+		if streak_remaining <= 0.0:
+			success_streak = 0
 	if active_save_slot > 0:
-		autosave_elapsed += delta
+		autosave_elapsed += real_delta
 		if autosave_elapsed >= AUTOSAVE_INTERVAL_SECONDS:
 			autosave_elapsed = fmod(autosave_elapsed, AUTOSAVE_INTERVAL_SECONDS)
 			_autosave_active_slot()
@@ -186,6 +206,8 @@ func _begin_observation_phase(advance_round: bool = false, remaining_override: f
 	observation_phase_remaining = duration if remaining_override < 0.0 else clampf(remaining_override, 0.05, duration)
 	spawner.set_phase_time_remaining(observation_phase_remaining)
 	observation_phase_active = true
+	success_streak = 0
+	streak_remaining = 0.0
 	phase_start_successes = progression.success_count
 	phase_start_manual_successes = progression.manual_successes
 	phase_start_automatic_successes = progression.automatic_successes
@@ -363,8 +385,32 @@ func _on_meteor_spawned(meteor) -> void:
 func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: bool, quality_grade: String) -> void:
 	observer.release_target(meteor)
 	var final_reward: float = progression.add_observation(reward, was_manual, multiplier)
-	effects.spawn_success(meteor.global_position, final_reward, meteor.get_visual_color(), multiplier)
-	sound.play_success(multiplier)
+	if was_manual:
+		success_streak += 1
+		streak_remaining = STREAK_TIMEOUT
+	var strength := _observation_strength(final_reward, was_manual, quality_grade)
+	effects.spawn_success(
+		meteor.global_position,
+		final_reward,
+		meteor.get_visual_color(),
+		multiplier,
+		strength,
+		quality_grade,
+		hud.get_data_anchor()
+	)
+	if was_manual:
+		sound.play_success(multiplier, success_streak, strength)
+	else:
+		# Automation gets its own quiet voice. Routing it through the manual
+		# ladder would hold the chain at the top note for free and erase the one
+		# signal that reports the player is still the one keeping rhythm.
+		sound.play_automatic_tick()
+	if strength >= SHAKE_STRENGTH_FLOOR:
+		var weight := clampf((strength - SHAKE_STRENGTH_FLOOR) / (1.0 - SHAKE_STRENGTH_FLOOR), 0.0, 1.0)
+		effects.add_shake(lerpf(0.24, 0.88, weight))
+	if strength >= HITSTOP_STRENGTH_FLOOR:
+		var freeze_weight := clampf((strength - HITSTOP_STRENGTH_FLOOR) / (1.0 - HITSTOP_STRENGTH_FLOOR), 0.0, 1.0)
+		_apply_hitstop(lerpf(0.05, 0.11, freeze_weight))
 	if progression.has_upgrade("perfect_observation") and was_manual and quality_grade in ["EXCELLENT", "PERFECT"]:
 		hud.show_banner(tr("BANNER_QUALITY") % [tr("QUALITY_%s" % quality_grade), multiplier], meteor.get_visual_color(), 1.5)
 	if progression.success_count == 1:
@@ -372,6 +418,40 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 	tutorial.notify_observation_completed()
 	if meteor.is_major():
 		_complete_prototype(true)
+
+
+func _observation_strength(reward: float, was_manual: bool, quality_grade: String) -> float:
+	# One scalar drives every feedback channel so they cannot drift apart. Log
+	# scaled: a 14-point common sits near the floor and a 650-point major at the
+	# ceiling, which is the spread the reward table actually has.
+	var span: float = log(300.0) - log(10.0)
+	var strength := clampf((log(maxf(reward, 10.0)) - log(10.0)) / span, 0.0, 1.0)
+	if not was_manual:
+		return strength * 0.45
+	match quality_grade:
+		"PERFECT":
+			strength = minf(1.0, strength + 0.30)
+		"EXCELLENT":
+			strength = minf(1.0, strength + 0.15)
+	return minf(1.0, strength + minf(float(success_streak), 12.0) * 0.015)
+
+
+func _apply_hitstop(duration: float) -> void:
+	if hitstop_active:
+		return
+	hitstop_active = true
+	Engine.time_scale = HITSTOP_TIME_SCALE
+	# Real-time timer. A scaled one would stretch a 70 ms freeze past a second.
+	get_tree().create_timer(duration, true, false, true).timeout.connect(_release_hitstop)
+
+
+func _release_hitstop() -> void:
+	hitstop_active = false
+	Engine.time_scale = 1.0
+
+
+func _on_packet_landed(amount: float) -> void:
+	hud.pulse_data_counter(amount)
 
 
 func _on_meteor_expired(meteor, was_major: bool) -> void:
