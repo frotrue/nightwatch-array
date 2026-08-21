@@ -1,0 +1,30 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/probe/probe_controller.gd" id="1_probe"]
+[ext_resource type="Script" path="res://scripts/starfield.gd" id="2_starfield"]
+[ext_resource type="Script" path="res://scripts/effects_layer.gd" id="3_effects"]
+[ext_resource type="Script" path="res://scripts/star_twinkle.gd" id="4_twinkle"]
+[ext_resource type="Script" path="res://scripts/probe/probe_hud.gd" id="5_probe_hud"]
+
+[node name="ProbeLayer2" type="Node2D"]
+z_index = 20
+script = ExtResource("1_probe")
+
+[node name="Starfield" type="Node2D" parent="."]
+z_index = -20
+script = ExtResource("2_starfield")
+
+[node name="TwinkleStars" type="Node2D" parent="."]
+z_index = -19
+script = ExtResource("4_twinkle")
+
+[node name="MeteorLayer" type="Node2D" parent="."]
+z_index = 30
+
+[node name="EffectsLayer" type="Node2D" parent="."]
+z_index = 40
+script = ExtResource("3_effects")
+
+[node name="ProbeHUD" type="CanvasLayer" parent="."]
+layer = 80
+script = ExtResource("5_probe_hud")
