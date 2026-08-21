@@ -18,6 +18,7 @@ var contacts: Array[Dictionary] = []
 var dishes: Array[Dictionary] = []
 var cursor_position := Vector2.ZERO
 var hovered_contact_id: int = -1
+var dish_assignment_learned: bool = false
 
 
 func setup(target_layer: Node2D, progression_controller: Node) -> void:
@@ -55,9 +56,11 @@ func refresh_dishes() -> void:
 	queue_redraw()
 
 
-func reset() -> void:
+func reset(clear_assignment_learning: bool = false) -> void:
 	contacts.clear()
 	hovered_contact_id = -1
+	if clear_assignment_learning:
+		dish_assignment_learned = false
 	for index in range(dishes.size()):
 		var dish: Dictionary = dishes[index]
 		dish.assigned_id = -1
@@ -87,10 +90,6 @@ func on_contact_resolved(contact: Dictionary, meteor) -> void:
 			dish.locked_id = meteor.get_instance_id()
 			dish.assigned_id = -1
 			dishes[index] = dish
-
-
-func is_pointer_over_contact(pointer_position: Vector2) -> bool:
-	return dish_active() and _contact_at(pointer_position) >= 0
 
 
 func _contact_at(point: Vector2) -> int:
@@ -223,7 +222,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if not (event is InputEventMouseButton) or not event.pressed:
 		return
-	if event.button_index != MOUSE_BUTTON_LEFT:
+	if event.button_index != MOUSE_BUTTON_RIGHT:
 		return
 	var contact_id := _contact_at(get_viewport().get_mouse_position())
 	if contact_id < 0:
@@ -254,6 +253,7 @@ func assign_to_contact(contact_id: int) -> bool:
 	dish.target = _estimate_of(contact)
 	dish.arrived = false
 	dishes[index] = dish
+	dish_assignment_learned = true
 	queue_redraw()
 	return true
 
@@ -323,7 +323,11 @@ func _draw_contact(contact: Dictionary) -> void:
 	draw_string(font, estimate + Vector2(-60.0, 40.0), "%.1fs" % maxf(0.0, float(contact.countdown)),
 		HORIZONTAL_ALIGNMENT_CENTER, 120.0, 13, Color(base_color, 0.7))
 
-	# Hovering shows which dish answers this call, and therefore what it drops.
+	# Teach the unfamiliar input until the first successful assignment. After
+	# that, hovering keeps the reminder available without repeating it all night.
+	if not dish_assignment_learned or hovered:
+		_draw_assignment_hint(estimate, base_color, font)
+	# Hovering also shows which dish answers this call, and therefore what it drops.
 	if not hovered:
 		return
 	var index := candidate_dish_for(contact)
@@ -342,3 +346,14 @@ func _draw_contact(contact: Dictionary) -> void:
 	draw_arc(dropped_point, 27.0, 0.0, TAU, 32, Color("ff6a5e"), 2.2, true)
 	draw_line(dropped_point + Vector2(-13, -13), dropped_point + Vector2(13, 13), Color("ff6a5e"), 2.0, true)
 	draw_line(dropped_point + Vector2(13, -13), dropped_point + Vector2(-13, 13), Color("ff6a5e"), 2.0, true)
+
+
+func _draw_assignment_hint(estimate: Vector2, base_color: Color, font: Font) -> void:
+	var hint_top := 49.0
+	if estimate.y + hint_top + 24.0 > get_viewport_rect().size.y - 8.0:
+		hint_top = -73.0
+	var hint_rect := Rect2(estimate + Vector2(-94.0, hint_top), Vector2(188.0, 24.0))
+	draw_rect(hint_rect, Color(0.015, 0.035, 0.07, 0.92), true)
+	draw_rect(hint_rect, Color(base_color, 0.68), false, 1.0)
+	draw_string(font, estimate + Vector2(-94.0, hint_top + 17.0), tr("CONTACT_RIGHT_CLICK_HINT"),
+		HORIZONTAL_ALIGNMENT_CENTER, 188.0, 12, Color("f2fbff"))
