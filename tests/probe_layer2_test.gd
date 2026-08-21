@@ -3,6 +3,8 @@ extends SceneTree
 # Verifies the Layer 2 probe holds together mechanically. It cannot tell us
 # whether the probe is fun; that is what playing it is for.
 
+const PROBE_SEED := 20260821
+
 var failures: Array[String] = []
 
 
@@ -16,10 +18,10 @@ func _check(condition: bool, message: String) -> void:
 		push_error("PROBE: " + message)
 
 
-# The probe is driven by hand at a fixed step so the run is deterministic and
-# does not depend on how fast a headless frame happens to be. Meteors are
-# ticked alongside it: they age on their own _process, which no engine frame
-# would deliver at this rate.
+# The fixed step makes simulation timing independent of headless frame speed;
+# _run separately pins the probe's content RNG. Meteors are ticked alongside
+# it because they age in their own _process, which no engine frame would
+# deliver at this rate.
 func _step(probe, seconds: float, step: float = 1.0 / 60.0) -> void:
 	var remaining := seconds
 	while remaining > 0.0:
@@ -42,6 +44,9 @@ func _run() -> void:
 	root.add_child(probe)
 	await process_frame
 	await process_frame
+	# Real play keeps the controller's randomize(); only this repeatable night is
+	# pinned so content draws cannot turn a mechanism assertion intermittent.
+	probe.rng.seed = PROBE_SEED
 
 	_check(probe.instruments.size() == 2, "the probe opens with exactly two dishes")
 	_check(probe.signals.is_empty(), "no contacts before the first interval elapses")
@@ -82,13 +87,20 @@ func _run() -> void:
 	# commitment must visibly cost one of the first two.
 	while probe.signals.size() < 3:
 		probe._emit_signal_contact()
+	var second = probe.signals[1]
+	probe._assign_to_signal(second.id)
+	var occupied_before_third := 0
+	for instrument in probe.instruments:
+		if int(instrument.assigned_id) != -1:
+			occupied_before_third += 1
+	_check(occupied_before_third == 2, "two commitments occupy both dishes before a third choice")
 	var third = probe.signals[2]
 	var taken: int = probe.candidate_instrument_for(third)
 	var displaced_id := int(probe.instruments[taken].assigned_id)
+	_check(displaced_id != -1, "a third commitment must displace existing coverage")
 	probe._assign_to_signal(third.id)
-	if displaced_id != -1:
-		var dropped = probe._find_signal(displaced_id)
-		_check(dropped != null and dropped.abandoned_flash > 0.0, "re-tasking a dish marks what it abandoned")
+	var dropped = probe._find_signal(displaced_id)
+	_check(dropped != null and dropped.abandoned_flash > 0.0, "re-tasking a dish marks what it abandoned")
 	var occupied := 0
 	for instrument in probe.instruments:
 		if int(instrument.assigned_id) != -1:
