@@ -140,13 +140,13 @@ func _run() -> void:
 	_check(TranslationServer.translate("CONTACT_MANUAL_ONLY_HINT") == "수동 관측 전용", "Korean rare-contact hint reserves the target for manual observation")
 	_check(
 		game.upgrade_tree._upgrade_description(multi_target_definition)
-		== "수동 관측 범위 안의 모든 유성을 함께 분석합니다. 자동 카메라 채널 하나와 파편 분석 지원도 추가합니다.",
-		"Korean Multi-Target Analysis description names one automatic lane"
+		== "수동 관측 범위 안의 모든 유성을 함께 분석합니다. 진행 중인 분석을 가속하는 지원 카메라 채널 하나와 파편 분석 지원도 추가합니다.",
+		"Korean Multi-Target Analysis description names one support lane"
 	)
 	_check(
 		game.upgrade_tree._upgrade_description(observatory_definition)
-		== "전체 관측망을 연결해 유성우 진입 구역을 예측하고 직접 조준하는 두 번째 접시를 추가하며 자동 카메라 채널 두 개를 유지합니다.",
-		"Korean Observatory Network description names the second dish and two automatic lanes"
+		== "전체 관측망을 연결해 유성우 진입 구역을 예측하고 직접 조준하는 두 번째 접시를 추가하며 진행 중인 분석을 가속하는 지원 카메라 채널 두 개를 유지합니다.",
+		"Korean Observatory Network description names the second dish and two support lanes"
 	)
 	_check(TranslationServer.translate("UPGRADE_ERROR_NEED_DATA") % 12 == "데이터가 12개 더 필요합니다", "Korean shortfall text is a complete sentence")
 	_check(TranslationServer.translate("TREE_NEED_MORE") % [8, 12] == "◇  데이터 8 / 12", "Korean tree affordability text shows current and required Data")
@@ -167,13 +167,13 @@ func _run() -> void:
 	_check(TranslationServer.translate("CONTACT_MANUAL_ONLY_HINT") == "MANUAL OBSERVATION ONLY", "English rare-contact hint reserves the target for manual observation")
 	_check(
 		game.upgrade_tree._upgrade_description(multi_target_definition)
-		== "All meteors inside the manual tracking field advance together; also adds one automatic camera lane and fragment assistance.",
-		"English Multi-Target Analysis description names one automatic lane"
+		== "All meteors inside the manual tracking field advance together; also adds one support camera lane that accelerates active analysis and fragment assistance.",
+		"English Multi-Target Analysis description names one support lane"
 	)
 	_check(
 		game.upgrade_tree._upgrade_description(observatory_definition)
-		== "Links the whole array; previews shower entry sectors; adds a second steerable dish; and keeps two automatic lanes.",
-		"English Observatory Network description names the second dish and two automatic lanes"
+		== "Links the whole array; previews shower entry sectors; adds a second steerable dish; and keeps two support camera lanes that accelerate active analysis.",
+		"English Observatory Network description names the second dish and two support lanes"
 	)
 	_check(
 		String(multi_target_definition.description)
@@ -499,10 +499,23 @@ func _run() -> void:
 	game.sky_contacts.dishes[0] = dish
 	game.sky_contacts._update_dishes(0.1)
 	_check(int(game.sky_contacts.dishes[0].locked_id) == scanned.get_instance_id(), "an arrived dish acquires an object inside its coverage")
+	scanned.set_lane_assist_rate(scanned.get_assist_rate(game.spawner.LANE_TIME_MULTIPLIER))
 	var progress_before: float = scanned.observation_progress
 	game.sky_contacts._update_dishes(0.2)
+	var combined_assist_rate: float = scanned.dish_assist_rate + scanned.lane_assist_rate
+	_check(scanned.dish_assist_rate > 0.0 and scanned.lane_assist_rate > 0.0, "dish and support-lane contributions coexist on one target")
+	_check(is_equal_approx(scanned.get_automatic_rate(), combined_assist_rate), "machine contributions sum instead of overwriting each other")
 	scanned._process(0.2)
-	_check(scanned.observation_progress > progress_before, "a locked dish advances the observation it holds")
+	_check(is_equal_approx(scanned.observation_progress - progress_before, combined_assist_rate * 0.2), "a dish and support lane advance their shared target additively")
+	game.spawner._refresh_secondary_camera()
+	_check(is_zero_approx(scanned.lane_assist_rate) and scanned.dish_assist_rate > 0.0, "a disabled lane source clears only its own contribution")
+	dish = game.sky_contacts.dishes[0]
+	dish.locked_id = 0
+	dish.target = Vector2(dish.position) + Vector2(500.0, 0.0)
+	dish.arrived = false
+	game.sky_contacts.dishes[0] = dish
+	game.sky_contacts._update_dishes(0.05)
+	_check(is_zero_approx(scanned.dish_assist_rate), "retasking a dish clears assistance from its abandoned target")
 	scanned.queue_free()
 	await process_frame
 	game.sky_contacts.reset()
@@ -539,7 +552,7 @@ func _run() -> void:
 	game.sky_contacts.on_contact_resolved({"id": 9001}, fireball)
 	game.sky_contacts._update_dishes(0.2)
 	fireball._process(0.2)
-	_check(int(game.sky_contacts.dishes[0].locked_id) == 0 and is_zero_approx(fireball.secondary_assist), "an assigned fireball never receives dish assistance through the resolved-contact path")
+	_check(int(game.sky_contacts.dishes[0].locked_id) == 0 and is_zero_approx(fireball.dish_assist_rate), "an assigned fireball never receives dish assistance through the resolved-contact path")
 	_check(is_zero_approx(fireball.observation_progress), "dish rejection cannot degrade a rare fireball into an automatic observation")
 
 	var major = game.spawner.spawn_meteor("major", Vector2(-2000, -2000), Vector2.ZERO, 1.0)
@@ -552,7 +565,7 @@ func _run() -> void:
 	game.sky_contacts.dishes[0] = dish
 	game.sky_contacts._update_dishes(0.2)
 	major._process(0.2)
-	_check(int(game.sky_contacts.dishes[0].locked_id) == 0 and is_zero_approx(major.secondary_assist), "a dish parked beside a contactless major cannot acquire it opportunistically")
+	_check(int(game.sky_contacts.dishes[0].locked_id) == 0 and is_zero_approx(major.dish_assist_rate), "a dish parked beside a contactless major cannot acquire it opportunistically")
 	_check(is_zero_approx(major.observation_progress), "the dish cannot reduce the contactless major prize to an automatic reward")
 	_check(not game.sky_contacts._dish_can_track(fireball) and not game.sky_contacts._dish_can_track(major), "rare objects are outside the dish role by type")
 	for rare_target in [fireball, major]:
@@ -614,6 +627,33 @@ func _run() -> void:
 	_check(game.progression.get_dish_count() == 2, "observatory network adds a second steerable dish for late-game capacity")
 	_check(game.sky_contacts.dishes.size() == 2, "purchasing the observatory network places both steerable dishes")
 	_check(game.progression.get_automation_strength("fireball") == 0.0, "rare fireballs remain manual high-value targets")
+	# Additive machine sources must not reopen the finale-value regression. The
+	# major receives its intended 49% passive lifetime coverage, while dish and
+	# lane type guards keep every limited hardware contribution at zero.
+	var machine_only_major = game.spawner.spawn_meteor(
+		"major", Vector2(-5000, -5000), Vector2.ZERO, 14.0
+	)
+	machine_only_major.split_done = true
+	var game_major_expiry_handler := Callable(game, "_on_meteor_expired")
+	if machine_only_major.expired.is_connected(game_major_expiry_handler):
+		machine_only_major.expired.disconnect(game_major_expiry_handler)
+	for dish_index in range(game.sky_contacts.dishes.size()):
+		dish = game.sky_contacts.dishes[dish_index]
+		dish.position = machine_only_major.global_position
+		dish.target = machine_only_major.global_position
+		dish.assigned_id = -1
+		dish.locked_id = 0
+		dish.arrived = true
+		game.sky_contacts.dishes[dish_index] = dish
+	for _step in range(281):
+		game.spawner._refresh_secondary_camera()
+		game.sky_contacts._update_dishes(0.05)
+		machine_only_major._process(0.05)
+		if not machine_only_major.alive:
+			break
+	_check(is_zero_approx(machine_only_major.dish_assist_rate) and is_zero_approx(machine_only_major.lane_assist_rate), "every limited machine source excludes the major target")
+	_check(not machine_only_major.observed_successfully and machine_only_major.observation_progress > 0.47 and machine_only_major.observation_progress < 0.51, "all active machine systems leave a major target at its intended passive coverage without manual input")
+	machine_only_major.free()
 	_check(game.progression.get_node_state("perfect_observation") == "purchased", "cross-branch Perfect Observation resolves")
 	_check(game.progression.get_node_state("observatory_network") == "purchased", "cross-branch Observatory Network resolves")
 	for duration_node in ["observation_scheduling", "thermal_management", "extended_watch_protocol"]:

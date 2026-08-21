@@ -136,7 +136,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "multi_target_analysis", "name": "Multi-Target Analysis", "icon": "⊕", "cost": 330,
-		"description": "All meteors inside the manual tracking field advance together; also adds one automatic camera lane and fragment assistance.",
+		"description": "All meteors inside the manual tracking field advance together; also adds one support camera lane that accelerates active analysis and fragment assistance.",
 		"branch": "network", "position": Vector2(610, 610), "prerequisites": ["secondary_camera", "fragment_analysis"],
 		"hidden_until": ["secondary_camera"], "effect_type": "transformation", "effect_parameters": {"assist_slots": 2, "manual_group_tracking": true},
 		"major": true
@@ -150,7 +150,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "observatory_network", "name": "Observatory Network", "icon": "✧", "cost": 720,
-		"description": "Links the whole array; previews shower entry sectors; adds a second steerable dish; and keeps two automatic lanes.",
+		"description": "Links the whole array; previews shower entry sectors; adds a second steerable dish; and keeps two support camera lanes that accelerate active analysis.",
 		"branch": "network", "position": Vector2(1200, 575), "prerequisites": ["automated_tracking", "shower_detector"],
 		"hidden_until": ["automated_tracking"], "effect_type": "transformation", "effect_parameters": {"assist_slots": 3, "shower_preview": true},
 		"major": true

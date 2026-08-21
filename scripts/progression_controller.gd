@@ -271,6 +271,9 @@ func get_progression_ratio() -> float:
 	return clampf(float(upgrade_level) / float(Balance.UPGRADE_NODES.size()), 0.0, 1.0)
 
 
+# Passive automation is unattended lifetime coverage, not a limited hardware
+# analysis duration. At base lifetimes its tuned rates cover common 139%, fast
+# 58%, fragment 65%, piece 81%, and major 49%; keep it outside dish/lane multipliers.
 func get_automation_strength(type_id: String) -> float:
 	var strength := 0.0
 	if has_upgrade("automated_tracking"):

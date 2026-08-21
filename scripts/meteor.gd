@@ -23,7 +23,8 @@ var precision_focus: float = 0.0
 var last_quality: float = 0.0
 var last_manual_frame: int = -100
 var base_automatic_rate: float = 0.0
-var secondary_assist: float = 0.0
+var dish_assist_rate: float = 0.0
+var lane_assist_rate: float = 0.0
 var prediction_enabled: bool = false
 var wide_field_enabled: bool = false
 var precision_enabled: bool = false
@@ -65,7 +66,6 @@ func configure(spec: Dictionary, meteor_type: String, start_position: Vector2, m
 	precision_enabled = bool(features.get("precision", false))
 	perfect_enabled = bool(features.get("perfect", false))
 	base_automatic_rate = float(features.get("automation", 0.0))
-	secondary_assist = float(features.get("secondary", 0.0))
 	rng.seed = int(start_position.x * 193.0 + start_position.y * 877.0 + velocity.length() * 31.0) & 0x7fffffff
 	wobble_phase = rng.randf_range(0.0, TAU)
 	trail_points.append(start_position)
@@ -113,7 +113,7 @@ func _process(delta: float) -> void:
 		if trail_points.size() > max_trail_points:
 			trail_points.pop_back()
 
-	var auto_rate := base_automatic_rate + secondary_assist
+	var auto_rate := get_automatic_rate()
 	if auto_rate > 0.0:
 		observation_progress += auto_rate * delta
 		last_quality = maxf(last_quality * 0.96, 0.38)
@@ -163,11 +163,27 @@ func set_features(features: Dictionary) -> void:
 	precision_enabled = bool(features.get("precision", precision_enabled))
 	perfect_enabled = bool(features.get("perfect", perfect_enabled))
 	base_automatic_rate = float(features.get("automation", base_automatic_rate))
-	secondary_assist = float(features.get("secondary", secondary_assist))
 
 
-func set_secondary_assist(value: float) -> void:
-	secondary_assist = value
+func set_dish_assist_rate(value: float) -> void:
+	dish_assist_rate = value
+
+
+func set_lane_assist_rate(value: float) -> void:
+	lane_assist_rate = value
+
+
+func get_automatic_rate() -> float:
+	return base_automatic_rate + dish_assist_rate + lane_assist_rate
+
+
+func has_dish_assist() -> bool:
+	return dish_assist_rate > 0.0
+
+
+func has_non_dish_lane_partner() -> bool:
+	var manual_is_live := manual_touched and Engine.get_process_frames() - last_manual_frame <= 1
+	return base_automatic_rate > 0.0 or manual_is_live
 
 
 func get_assist_rate(duration_multiplier: float) -> float:
@@ -274,7 +290,7 @@ func _draw() -> void:
 			var center := flame_dir * r * (1.0 + index * 0.42) + side
 			draw_circle(center, r * (0.52 - index * 0.045), Color(glow_color, (0.28 - index * 0.025) * visibility))
 
-	var scan_rate := base_automatic_rate + secondary_assist
+	var scan_rate := get_automatic_rate()
 	if scan_rate > 0.0 and alive:
 		var scan_radius := body_radius + 12.0 + sin(age * 5.0) * 2.0
 		var start_angle := age * 2.5
