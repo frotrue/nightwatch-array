@@ -149,6 +149,7 @@ func _process(delta: float) -> void:
 		return
 	elapsed_time += delta
 	observation_phase_remaining = maxf(0.0, observation_phase_remaining - delta)
+	spawner.set_phase_time_remaining(observation_phase_remaining)
 	hud.set_runtime(elapsed_time)
 	hud.set_observation_phase(observation_round, observation_phase_remaining)
 	if active_save_slot > 0:
@@ -170,6 +171,7 @@ func _begin_observation_phase(advance_round: bool = false, remaining_override: f
 	var duration := _observation_duration()
 	observation_phase_duration = duration
 	observation_phase_remaining = duration if remaining_override < 0.0 else clampf(remaining_override, 0.05, duration)
+	spawner.set_phase_time_remaining(observation_phase_remaining)
 	observation_phase_active = true
 	phase_start_successes = progression.success_count
 	phase_start_manual_successes = progression.manual_successes

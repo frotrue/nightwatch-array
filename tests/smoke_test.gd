@@ -322,20 +322,76 @@ func _run() -> void:
 	_check(game.progression.has_upgrade("better_lens"), "loading restores purchased upgrades")
 	_check(game.progression.success_count == 1, "loading restores observation statistics")
 
-	_check(not game.spawner.forecast_enabled(), "objects arrive unannounced before the dish research")
-	_check(not game.sky_contacts.is_active(), "no dish exists before its research")
+	_check(not game.spawner.forecast_enabled(), "objects arrive unannounced before forecast research")
+	_check(not game.progression.forecast_visible(), "the opening array has no forecast feed")
+	_check(not game.progression.dish_active(), "the opening array has no player-aimed dish")
+	_check(game.progression.get_forecast_lead() == 2.0, "a forecast without dish hardware uses the two-second cursor warning")
+	_check(game.progression.get_forecast_max_error() == 70.0, "baseline forecasts expose a seventy-pixel uncertainty envelope")
+	_check(not game.progression.forecast_classifies(), "baseline forecasts do not classify contacts")
+	game.progression.debug_purchase_node("edge_detection")
+	game.progression.debug_purchase_node("wide_field")
+	game.sky_contacts.refresh_dishes()
+	_check(game.spawner.forecast_enabled(), "Wide Field Sensor reveals incoming contacts")
+	_check(game.sky_contacts.forecast_visible() and not game.sky_contacts.dish_active(), "Wide Field Sensor reveals contacts without adding hardware")
+
+	game.spawner.pending_contacts.clear()
+	game.sky_contacts.contacts.clear()
+	game.spawner.rng.seed = 10101
+	game.spawner.forecast_rng.seed = 20202
+	game.spawner.warm_contact_rng.seed = 30303
+	game.spawner.set_phase_time_remaining(game.progression.get_forecast_lead() + game.spawner.MINIMUM_PAYABLE_TRACK_TIME - 0.01)
+	game.spawner._announce_regular_spawn()
+	_check(game.spawner.pending_contacts.is_empty(), "a contact is not announced when the phase cannot honor its forecast")
+	var shower_count_before_cutoff: int = game.meteor_layer.get_child_count()
+	game.spawner.spawn_for_shower(0)
+	_check(game.meteor_layer.get_child_count() == shower_count_before_cutoff + 1, "the regular-contact cutoff does not suppress shower objects")
+	game.meteor_layer.get_child(game.meteor_layer.get_child_count() - 1).queue_free()
+	await process_frame
+	game.spawner.set_phase_time_remaining(30.0)
+	game.spawner._announce_regular_spawn()
+	_check(game.spawner.pending_contacts.size() == 1, "a wide-field forecast is queued before its object exists")
+	var wide_contact: Dictionary = game.spawner.pending_contacts[0]
+	_check(game.sky_contacts.contacts.size() == 1, "a wide-field contact is retained without a dish")
+	_check(not game.sky_contacts.assign_to_contact(int(wide_contact.id)), "a pre-dish contact remains non-interactive")
+	_check(float(wide_contact.lead_time) == 2.0, "Wide Field Sensor provides two seconds of warning")
+	_check(float(wide_contact.max_error) == 70.0, "Wide Field Sensor begins with the baseline error envelope")
+	_check(not bool(wide_contact.classified), "Wide Field Sensor contacts begin unclassified")
+	_check(not bool(wide_contact.trajectory_known), "Wide Field Sensor alone does not reveal the approach vector")
+
+	game.progression.debug_purchase_node("trajectory")
+	game.spawner._announce_regular_spawn()
+	var trajectory_contact: Dictionary = game.spawner.pending_contacts[1]
+	_check(float(trajectory_contact.max_error) < float(wide_contact.max_error), "Trajectory Prediction strictly shrinks forecast error")
+	_check(float(trajectory_contact.max_error) == 40.0, "Trajectory Prediction caps the uncertainty envelope at forty pixels")
+	_check(trajectory_contact.error_offset.length() >= 14.0 and trajectory_contact.error_offset.length() <= 40.0, "Trajectory Prediction samples offsets inside its upgraded envelope")
+	_check(bool(trajectory_contact.trajectory_known), "Trajectory Prediction reveals the contact approach vector")
+	_check(not bool(trajectory_contact.classified), "Trajectory Prediction does not classify contacts by itself")
+
+	game.progression.debug_purchase_node("rare_detection")
+	game.spawner._announce_regular_spawn()
+	var classified_contact: Dictionary = game.spawner.pending_contacts[2]
+	_check(bool(classified_contact.classified), "Rare Meteor Detection classifies every forecast deterministically")
+
+	# Secondary Camera remains independently useful through the network branch:
+	# it reveals the same feed when Wide Field Sensor is absent and adds the dish.
+	game.spawner.pending_contacts.clear()
+	game.sky_contacts.reset()
+	game.progression.reset()
 	game.progression.debug_purchase_node("array_planning")
 	game.progression.debug_purchase_node("secondary_camera")
 	game.sky_contacts.refresh_dishes()
-	_check(game.spawner.forecast_enabled(), "the dish research turns on the forecast")
-	_check(game.sky_contacts.is_active() and game.sky_contacts.dishes.size() == 1, "the dish research places one dish")
+	_check(not game.progression.has_upgrade("wide_field"), "Secondary Camera compatibility does not depend on the detection branch")
+	_check(game.spawner.forecast_enabled(), "the dish research independently turns on the forecast")
+	_check(game.sky_contacts.forecast_visible() and game.sky_contacts.dish_active(), "the dish research reveals contacts and enables interaction")
+	_check(game.sky_contacts.dishes.size() == 1, "the dish research places one dish")
+	_check(game.progression.get_forecast_lead() == 4.0, "dish hardware extends the warning to four seconds for slew time")
 
 	game.spawner.pending_contacts.clear()
 	game.sky_contacts.contacts.clear()
 	game.spawner._announce_regular_spawn()
 	_check(game.spawner.pending_contacts.size() == 1, "a forecast is queued before its object exists")
 	var contact: Dictionary = game.spawner.pending_contacts[0]
-	_check(float(contact.countdown) > 0.0, "a contact leads the object it predicts")
+	_check(float(contact.countdown) == 4.0 and float(contact.lead_time) == 4.0, "a dish contact leads its object by four seconds")
 	_check(game.sky_contacts.contacts.size() == 1, "an announced contact reaches the sky array")
 	_check(
 		game.sky_contacts._estimate_of(contact).distance_to(Vector2(contact.intercept)) > 1.0,
