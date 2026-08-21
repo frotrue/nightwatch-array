@@ -5,12 +5,14 @@ extends Node2D
 # its slew time; Wide Field Sensor alone still supports cursor pre-positioning.
 
 const SLEW_SPEED := 420.0
-# Below the 390 of a fast meteor on purpose: a dish cannot hold the quick ones,
-# so manual observation stays the only way to take them.
-const TRACK_SPEED := 330.0
+# Forecast pre-positioning lets the dish take routine high-motion work. Entry
+# planning can raise a fast meteor from 390 to 436.8, so the servo clears the
+# real ceiling rather than only the nominal speed.
+const TRACK_SPEED := 460.0
 const COVERAGE_RADIUS := 105.0
 const SCAN_RATE := 0.45
 const CONTACT_HIT_RADIUS := 30.0
+const DISH_TRACKABLE_TYPES := ["common", "fast", "fragment"]
 
 var progression: Node
 var meteor_layer: Node2D
@@ -172,7 +174,17 @@ func _locked_target(dish: Dictionary):
 		return null
 	if not locked.has_method("can_be_tracked") or not locked.can_be_tracked():
 		return null
+	if not _dish_can_track(locked):
+		return null
 	return locked
+
+
+func _dish_can_track(target) -> bool:
+	return is_instance_valid(target) and _dish_can_track_type(String(target.type_id))
+
+
+func _dish_can_track_type(type_id: String) -> bool:
+	return type_id in DISH_TRACKABLE_TYPES
 
 
 func _acquire_target(dish: Dictionary, own_index: int):
@@ -181,6 +193,8 @@ func _acquire_target(dish: Dictionary, own_index: int):
 	for child_index in range(meteor_layer.get_child_count()):
 		var meteor = meteor_layer.get_child(child_index)
 		if not meteor.has_method("can_be_tracked") or not meteor.can_be_tracked():
+			continue
+		if not _dish_can_track(meteor):
 			continue
 		var taken := false
 		for other_index in range(dishes.size()):
@@ -236,6 +250,10 @@ func assign_to_contact(contact_id: int) -> bool:
 		return false
 	var contact := _find_contact(contact_id)
 	if contact.is_empty():
+		return false
+	# Reject manual prizes before choosing a dish so a failed assignment cannot
+	# abandon existing coverage or spend any slew time.
+	if not _dish_can_track_type(String(contact.type_id)):
 		return false
 	var index := candidate_dish_for(contact)
 	if index < 0:
@@ -326,7 +344,10 @@ func _draw_contact(contact: Dictionary) -> void:
 	# Teach the unfamiliar input until the first successful assignment. After
 	# that, hovering keeps the reminder available without repeating it all night.
 	if not dish_assignment_learned or hovered:
-		_draw_assignment_hint(estimate, base_color, font)
+		# Ineligible contact types must already be classified. Unlocking one before
+		# classification would turn this manual-only hint into a type oracle.
+		var hint_key := "CONTACT_RIGHT_CLICK_HINT" if _dish_can_track_type(String(contact.type_id)) else "CONTACT_MANUAL_ONLY_HINT"
+		_draw_assignment_hint(estimate, base_color, font, hint_key)
 	# Hovering also shows which dish answers this call, and therefore what it drops.
 	if not hovered:
 		return
@@ -348,12 +369,12 @@ func _draw_contact(contact: Dictionary) -> void:
 	draw_line(dropped_point + Vector2(13, -13), dropped_point + Vector2(-13, 13), Color("ff6a5e"), 2.0, true)
 
 
-func _draw_assignment_hint(estimate: Vector2, base_color: Color, font: Font) -> void:
+func _draw_assignment_hint(estimate: Vector2, base_color: Color, font: Font, hint_key: String) -> void:
 	var hint_top := 49.0
 	if estimate.y + hint_top + 24.0 > get_viewport_rect().size.y - 8.0:
 		hint_top = -73.0
 	var hint_rect := Rect2(estimate + Vector2(-94.0, hint_top), Vector2(188.0, 24.0))
 	draw_rect(hint_rect, Color(0.015, 0.035, 0.07, 0.92), true)
 	draw_rect(hint_rect, Color(base_color, 0.68), false, 1.0)
-	draw_string(font, estimate + Vector2(-94.0, hint_top + 17.0), tr("CONTACT_RIGHT_CLICK_HINT"),
+	draw_string(font, estimate + Vector2(-94.0, hint_top + 17.0), tr(hint_key),
 		HORIZONTAL_ALIGNMENT_CENTER, 188.0, 12, Color("f2fbff"))
