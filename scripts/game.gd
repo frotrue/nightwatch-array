@@ -64,7 +64,7 @@ func _ready() -> void:
 	upgrade_tree.tree_opened.connect(tutorial.notify_upgrade_tree_opened)
 	upgrade_tree.tree_closed.connect(_on_upgrade_tree_closed)
 	sky_contacts.setup(meteor_layer, progression)
-	observer.setup(meteor_layer, progression, hud, sky_contacts)
+	observer.setup(meteor_layer, progression, hud)
 	spawner.setup(meteor_layer, progression)
 	events.setup(spawner, progression)
 
@@ -131,7 +131,7 @@ func reset_run() -> void:
 	_close_upgrade_tree_without_transition()
 	get_tree().paused = false
 	observer.reset()
-	sky_contacts.reset()
+	sky_contacts.reset(true)
 	effects.reset()
 	events.reset()
 	spawner.reset()
@@ -469,7 +469,7 @@ func _start_fresh_slot() -> void:
 	completed = false
 	_close_upgrade_tree_without_transition()
 	observer.reset()
-	sky_contacts.reset()
+	sky_contacts.reset(true)
 	effects.reset()
 	events.reset()
 	spawner.reset()
@@ -519,7 +519,7 @@ func _build_save_data() -> Dictionary:
 func _apply_save_data(data: Dictionary) -> void:
 	_close_upgrade_tree_without_transition()
 	observer.reset()
-	sky_contacts.reset()
+	sky_contacts.reset(true)
 	effects.reset()
 	events.reset()
 	spawner.reset()

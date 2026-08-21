@@ -7,7 +7,6 @@ const DEFAULT_TRACKING_RADIUS := 36.0
 var meteor_layer: Node2D
 var progression: Node
 var hud: CanvasLayer
-var sky_contacts: Node2D
 var selected_meteor = null
 var hovered_meteor = null
 var tracked_meteors: Array = []
@@ -20,11 +19,10 @@ var tracking_visual_active_last_frame: bool = false
 var native_cursor_visible: bool = false
 
 
-func setup(target_layer: Node2D, progression_controller: Node, hud_layer: CanvasLayer, contacts_layer: Node2D = null) -> void:
+func setup(target_layer: Node2D, progression_controller: Node, hud_layer: CanvasLayer) -> void:
 	meteor_layer = target_layer
 	progression = progression_controller
 	hud = hud_layer
-	sky_contacts = contacts_layer
 	# Keep the engine-side mouse state coalesced. Gameplay samples that state once
 	# per rendered frame and does not subscribe to raw mouse-motion callbacks.
 	Input.set_use_accumulated_input(true)
@@ -247,10 +245,6 @@ func _target_is_valid(target) -> bool:
 func _cursor_is_on_ui() -> bool:
 	var hovered: Control = get_viewport().gui_get_hovered_control()
 	if hovered != null and hovered.get_mouse_filter_with_override() != Control.MOUSE_FILTER_IGNORE:
-		return true
-	# A contact marker takes the click to aim a dish, so holding over one must
-	# not also begin a manual observation underneath it.
-	if sky_contacts != null and sky_contacts.is_pointer_over_contact(cursor_position):
 		return true
 	return hud != null and hud.has_method("is_pointer_over_hud") and hud.is_pointer_over_hud(cursor_position)
 

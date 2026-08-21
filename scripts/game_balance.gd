@@ -129,7 +129,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "secondary_camera", "name": "Secondary Camera", "icon": "▣", "cost": 240,
-		"description": "Forecasts incoming objects and gives you a dish to aim at them. Click a contact to commit it.",
+		"description": "Forecasts incoming objects and gives you a dish to aim at them. Right-click a contact to commit it.",
 		"branch": "network", "position": Vector2(320, 620), "prerequisites": ["array_planning"],
 		"hidden_until": ["array_planning"], "effect_type": "automation", "effect_parameters": {"assist_slots": 1},
 		"major": true

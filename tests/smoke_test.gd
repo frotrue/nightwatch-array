@@ -133,6 +133,7 @@ func _run() -> void:
 	_check(TranslationServer.translate("TREE_INTERMISSION_SUBTITLE") % [2, 40] == "업그레이드 시간  /  2차 관측은 40초", "Korean upgrade-break guidance explains the next round")
 	_check(TranslationServer.translate("PHASE_SUMMARY_TITLE") % 1 == "1차 관측 완료", "Korean phase summary title reads naturally")
 	_check(TranslationServer.translate("UPGRADE_OBSERVATION_SCHEDULING_NAME") == "관측 일정 최적화", "Korean duration-research name is localized")
+	_check(TranslationServer.translate("CONTACT_RIGHT_CLICK_HINT") == "우클릭: 접시 배정", "Korean contact hover hint names the right mouse button")
 	_check(TranslationServer.translate("UPGRADE_ERROR_NEED_DATA") % 12 == "데이터가 12개 더 필요합니다", "Korean shortfall text is a complete sentence")
 	_check(TranslationServer.translate("TREE_NEED_MORE") % [8, 12] == "◇  데이터 8 / 12", "Korean tree affordability text shows current and required Data")
 	_check(TranslationServer.translate("SAVE_RESET_PROMPT") % 2 == "슬롯 2의 모든 진행 상황을 삭제합니다. 이 작업은 되돌릴 수 없습니다.", "Korean reset warning clearly explains permanent deletion")
@@ -148,6 +149,7 @@ func _run() -> void:
 	game.settings.set_language("en", false)
 	await process_frame
 	_check(game.hud.settings_button.text.ends_with("SETTINGS"), "English can be restored at runtime")
+	_check(TranslationServer.translate("CONTACT_RIGHT_CLICK_HINT") == "RIGHT-CLICK: ASSIGN DISH", "English contact hover hint names the right mouse button")
 	game.settings.set_language(starting_locale, false)
 	await process_frame
 
@@ -397,9 +399,43 @@ func _run() -> void:
 		game.sky_contacts._estimate_of(contact).distance_to(Vector2(contact.intercept)) > 1.0,
 		"an early estimate is offset from the truth, so committing early is a bet"
 	)
-	_check(game.sky_contacts.assign_to_contact(int(contact.id)), "a contact can be committed to a dish")
+	# Contact assignment uses a separate button so manual left-button tracking
+	# remains live while the pointer crosses a forecast marker.
+	var pointer_position: Vector2 = game.sky_contacts.get_viewport().get_mouse_position()
+	contact.intercept = pointer_position
+	contact.error_offset = Vector2.ZERO
+	var left_click := InputEventMouseButton.new()
+	left_click.button_index = MOUSE_BUTTON_LEFT
+	left_click.pressed = true
+	game.sky_contacts._unhandled_input(left_click)
+	_check(int(game.sky_contacts.dishes[0].assigned_id) == -1, "left-clicking a contact does not assign the dish")
+	var right_click := InputEventMouseButton.new()
+	right_click.button_index = MOUSE_BUTTON_RIGHT
+	right_click.pressed = true
+	game.sky_contacts._unhandled_input(right_click)
+	_check(int(game.sky_contacts.dishes[0].assigned_id) == int(contact.id), "right-clicking a contact assigns the dish")
+	_check(game.sky_contacts.dish_assignment_learned, "the first successful dish assignment dismisses the persistent teaching hint")
 	_check(int(game.sky_contacts.dishes[0].assigned_id) == int(contact.id), "committing occupies the dish")
 	_check(not bool(game.sky_contacts.dishes[0].arrived), "a committed dish has to slew before it records")
+	var isolated_contact_position := Vector2(-1000.0, -1000.0)
+	contact.intercept = isolated_contact_position
+	game.observer.cursor_position = isolated_contact_position
+	game.observer.previous_cursor_position = isolated_contact_position
+	game.observer.selected_meteor = null
+	game.observer.tracking_grace_remaining = 0.0
+	var hud_was_visible: bool = game.hud.visible
+	game.hud.visible = false
+	_check(
+		game.sky_contacts._contact_at(isolated_contact_position) == int(contact.id),
+		"the observation regression cursor is positioned over the forecast contact"
+	)
+	_check(not game.observer._cursor_is_on_ui(), "a forecast contact does not suppress manual observation tracking")
+	game.observer._update_manual_tracking(0.016)
+	_check(
+		game.observer.selected_meteor == null and is_zero_approx(game.observer.tracking_grace_remaining),
+		"left-button tracking fallthrough on an empty contact leaves selection and grace clean"
+	)
+	game.hud.visible = hud_was_visible
 	game.spawner._announce_regular_spawn()
 	var second_contact: Dictionary = game.spawner.pending_contacts[1]
 	game.sky_contacts.assign_to_contact(int(second_contact.id))
