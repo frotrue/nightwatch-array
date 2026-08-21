@@ -129,9 +129,19 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "secondary_camera", "name": "Secondary Camera", "icon": "▣", "cost": 240,
-		"description": "Forecasts incoming objects and gives you a dish to aim at them. Right-click a contact to commit it.",
+		"description": "Forecasts incoming objects and gives you a dish. Right-click anywhere to move the nearest dish.",
 		"branch": "network", "position": Vector2(320, 620), "prerequisites": ["array_planning"],
 		"hidden_until": ["array_planning"], "effect_type": "automation", "effect_parameters": {"assist_slots": 1},
+		"major": true
+	},
+	{
+		# Known follow-up: the 70px and 40px forecast envelopes both fit inside
+		# 105px dish coverage, so Trajectory's precision half does not improve a
+		# safe center placement. Its direction line still enables downstream catches.
+		"id": "predictive_dish_control", "name": "Predictive Dish Control", "icon": "⌁", "cost": 285,
+		"description": "Shift-right-click a forecast contact to reserve a dish and hand it directly to the object on entry.",
+		"branch": "network", "position": Vector2(1000, 450), "prerequisites": ["secondary_camera", "trajectory"],
+		"hidden_until": ["secondary_camera"], "effect_type": "automation", "effect_parameters": {"dish_commitment": true},
 		"major": true
 	},
 	{

@@ -5,6 +5,7 @@ signal upgrade_purchased(definition)
 signal purchase_rejected(node_id, reason_key, value)
 
 const Balance = preload("res://scripts/game_balance.gd")
+const LEGACY_PACING_NODE_COUNT := 19
 
 var observation_data: float = 0.0
 var success_count: int = 0
@@ -226,13 +227,18 @@ func get_max_active() -> int:
 	)
 
 
-# Secondary Camera no longer scans on its own; it hands the player a dish to
-# aim. The later network nodes keep their automatic lanes, one fewer each,
-# while the final Observatory Network deliberately adds late-game dish capacity.
+# Secondary Camera hands the player a manually placed dish. Predictive Dish
+# Control later adds contact reservation without changing plain right-click.
+# The network nodes keep their automatic lanes, one fewer each, while the final
+# Observatory Network deliberately adds late-game dish capacity.
 func get_dish_count() -> int:
 	if has_upgrade("observatory_network"):
 		return 2
 	return 1 if has_upgrade("secondary_camera") else 0
+
+
+func dish_commitment_enabled() -> bool:
+	return has_upgrade("predictive_dish_control")
 
 
 func forecast_visible() -> bool:
@@ -268,7 +274,10 @@ func get_secondary_slots() -> int:
 
 
 func get_progression_ratio() -> float:
-	return clampf(float(upgrade_level) / float(Balance.UPGRADE_NODES.size()), 0.0, 1.0)
+	# Predictive Dish Control adds an interaction, not a density or pacing retune.
+	# Excluding it preserves the exact 19-node spawn curve that preceded the node.
+	var pacing_level := upgrade_level - int(has_upgrade("predictive_dish_control"))
+	return clampf(float(pacing_level) / float(LEGACY_PACING_NODE_COUNT), 0.0, 1.0)
 
 
 # Passive automation is unattended lifetime coverage, not a limited hardware
