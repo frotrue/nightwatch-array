@@ -32,6 +32,7 @@ func _step(probe, seconds: float, step: float = 1.0 / 60.0) -> void:
 
 
 func _run() -> void:
+	var starting_max_fps := Engine.max_fps
 	var packed: PackedScene = load("res://scenes/probe_layer2.tscn")
 	_check(packed != null, "probe scene loads")
 	if packed == null:
@@ -108,6 +109,8 @@ func _run() -> void:
 
 	await _step(probe, 60.0)
 	_check(probe.finished, "the probe ends on its own after ninety seconds")
+	_check(not probe.is_processing(), "the finished summary stops gameplay frame processing")
+	_check(Engine.max_fps == probe.SUMMARY_MAX_FPS, "the static summary lowers the engine frame cap")
 	_check(probe.meteor_layer.get_child_count() == 0, "ending the probe clears the sky")
 	var total: int = probe.observed_count + probe.missed_count
 	_check(total > 0, "the probe produced a readable result")
@@ -118,7 +121,13 @@ func _run() -> void:
 
 	probe._restart()
 	_check(probe.elapsed == 0.0 and not probe.finished, "the probe restarts clean")
+	_check(probe.is_processing(), "restarting resumes gameplay frame processing")
+	_check(Engine.max_fps == probe.ACTIVE_MAX_FPS, "restarting restores the active probe frame cap")
 	_check(probe.data_missed == 0.0 and probe.observed_count == 0, "restart clears the tallies")
+	probe.queue_free()
+	await process_frame
+	await process_frame
+	_check(Engine.max_fps == starting_max_fps, "leaving the probe restores the previous engine frame cap")
 
 	if failures.is_empty():
 		print("PROBE_TEST_PASS: signals, uncertainty, commitment, abandonment, misses, and completion")

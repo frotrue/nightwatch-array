@@ -23,6 +23,10 @@ const SCAN_RATE := 0.45
 const CURSOR_RADIUS := 46.0
 const SIGNAL_HIT_RADIUS := 30.0
 const MAX_ESTIMATE_ERROR := 74.0
+const ACTIVE_MAX_FPS := 60
+const SUMMARY_MAX_FPS := 30
+const VISUAL_REFRESH_INTERVAL := 1.0 / 60.0
+const HUD_REFRESH_INTERVAL := 0.1
 
 # Signal pressure climbs so the last third is the crunch we actually want to
 # read: more signals than instruments, every few seconds.
@@ -78,6 +82,9 @@ var elapsed: float = 0.0
 var finished: bool = false
 var next_signal_in: float = 2.0
 var next_signal_id: int = 1
+var visual_refresh_accumulator: float = 0.0
+var hud_refresh_accumulator: float = 0.0
+var previous_max_fps: int = 0
 
 var signals: Array[SkySignal] = []
 var instruments: Array[Dictionary] = []
@@ -97,6 +104,8 @@ var miss_marks: Array[Dictionary] = []
 
 
 func _ready() -> void:
+	previous_max_fps = Engine.max_fps
+	_apply_probe_fps_limit(ACTIVE_MAX_FPS)
 	rng.randomize()
 	sound = SoundSynth.new()
 	sound.name = "SoundSynth"
@@ -114,16 +123,21 @@ func _ready() -> void:
 		})
 	hud.bind_probe(self)
 	starfield.set_activity(0.08)
+	queue_redraw()
 
 
 func _exit_tree() -> void:
+	Engine.max_fps = previous_max_fps
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
+
+func _apply_probe_fps_limit(limit: int) -> void:
+	Engine.max_fps = limit if previous_max_fps == 0 else mini(previous_max_fps, limit)
 
 
 func _process(delta: float) -> void:
 	cursor_position = get_viewport().get_mouse_position()
 	if finished:
-		queue_redraw()
 		return
 
 	elapsed += delta
@@ -136,15 +150,22 @@ func _process(delta: float) -> void:
 	_update_instruments(delta)
 	_update_manual_tracking(delta)
 	_update_miss_marks(delta)
-	hovered_signal_id = _signal_under_cursor()
 
 	next_signal_in -= delta
 	if next_signal_in <= 0.0:
 		_emit_signal_contact()
 		next_signal_in = _current_interval() * rng.randf_range(0.82, 1.18)
 
-	hud.refresh()
-	queue_redraw()
+	hud_refresh_accumulator += delta
+	if hud_refresh_accumulator >= HUD_REFRESH_INTERVAL:
+		hud_refresh_accumulator = fmod(hud_refresh_accumulator, HUD_REFRESH_INTERVAL)
+		hud.refresh()
+
+	visual_refresh_accumulator += delta
+	if visual_refresh_accumulator >= VISUAL_REFRESH_INTERVAL:
+		visual_refresh_accumulator = fmod(visual_refresh_accumulator, VISUAL_REFRESH_INTERVAL)
+		hovered_signal_id = _signal_under_cursor()
+		queue_redraw()
 
 
 func _current_interval() -> float:
@@ -403,6 +424,11 @@ func _assign_to_signal(contact_id: int) -> void:
 	instrument.arrived = false
 	instruments[index] = instrument
 	sound.play_upgrade()
+	hud.refresh()
+	hud_refresh_accumulator = 0.0
+	hovered_signal_id = contact_id
+	queue_redraw()
+	visual_refresh_accumulator = 0.0
 
 
 func _release_instrument_for_signal(contact_id: int) -> void:
@@ -460,13 +486,20 @@ func _finish() -> void:
 	signals.clear()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	hud.show_summary()
+	queue_redraw()
+	set_process(false)
+	_apply_probe_fps_limit(SUMMARY_MAX_FPS)
 
 
 func _restart() -> void:
+	_apply_probe_fps_limit(ACTIVE_MAX_FPS)
+	set_process(true)
 	finished = false
 	elapsed = 0.0
 	next_signal_in = 2.0
 	next_signal_id = 1
+	visual_refresh_accumulator = 0.0
+	hud_refresh_accumulator = 0.0
 	signals.clear()
 	miss_marks.clear()
 	meteor_signal_ids.clear()
@@ -490,6 +523,9 @@ func _restart() -> void:
 		}
 	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
 	hud.hide_summary()
+	hud.refresh()
+	hovered_signal_id = _signal_under_cursor()
+	queue_redraw()
 
 
 func coverage_ratio() -> float:
