@@ -189,11 +189,11 @@ UPGRADE_EXTENDED_WATCH_PROTOCOL_DESC,Coordinates a full long-watch protocol and 
 UPGRADE_SECONDARY_CAMERA_NAME,Secondary Camera,보조 카메라
 UPGRADE_SECONDARY_CAMERA_DESC,Forecasts incoming objects and gives you a dish to aim at them. Right-click a contact to commit it.,진입할 천체를 미리 예보하고 직접 조준하는 접시 1대를 제공합니다. 신호를 우클릭해 배정하세요.
 UPGRADE_MULTI_TARGET_ANALYSIS_NAME,Multi-Target Analysis,다중 표적 분석
-UPGRADE_MULTI_TARGET_ANALYSIS_DESC,All meteors inside the manual tracking field advance together; also adds a second camera lane and fragment assistance.,수동 관측 범위 안의 모든 유성을 함께 분석합니다. 두 번째 카메라 채널과 파편 분석 지원도 추가합니다.
+UPGRADE_MULTI_TARGET_ANALYSIS_DESC,All meteors inside the manual tracking field advance together; also adds one automatic camera lane and fragment assistance.,수동 관측 범위 안의 모든 유성을 함께 분석합니다. 자동 카메라 채널 하나와 파편 분석 지원도 추가합니다.
 UPGRADE_AUTOMATED_TRACKING_NAME,Automated Common Tracking,일반 표적 자동 추적
 UPGRADE_AUTOMATED_TRACKING_DESC,Common targets are analyzed automatically; rare and high-value targets still need you.,일반 표적은 자동으로 분석하지만 희귀하거나 가치가 높은 표적은 직접 관측해야 합니다.
 UPGRADE_OBSERVATORY_NETWORK_NAME,Observatory Network,천문대 네트워크
-UPGRADE_OBSERVATORY_NETWORK_DESC,Links the whole array; previews shower entry sectors; and adds a third assistance lane.,전체 관측망을 연결해 유성우 진입 구역을 예측하고 세 번째 보조 채널을 추가합니다.
+UPGRADE_OBSERVATORY_NETWORK_DESC,Links the whole array; previews shower entry sectors; adds a second steerable dish; and keeps two automatic lanes.,전체 관측망을 연결해 유성우 진입 구역을 예측하고 직접 조준하는 두 번째 접시를 추가하며 자동 카메라 채널 두 개를 유지합니다.
 CONTACT_UNCLASSIFIED,UNCLASSIFIED,미분류 신호
 CONTACT_RIGHT_CLICK_HINT,RIGHT-CLICK: ASSIGN DISH,우클릭: 접시 배정
 CONTACT_MANUAL_ONLY_HINT,MANUAL OBSERVATION ONLY,수동 관측 전용

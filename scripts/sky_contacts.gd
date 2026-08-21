@@ -10,9 +10,11 @@ const SLEW_SPEED := 420.0
 # real ceiling rather than only the nominal speed.
 const TRACK_SPEED := 460.0
 const COVERAGE_RADIUS := 105.0
-const SCAN_RATE := 0.45
+# Track time is shared analysis complexity. Cursor ergonomics belong in the
+# manual quality curve and tracking radius, not in hardware scan duration.
+const DISH_TIME_MULTIPLIER := 2.3
 const CONTACT_HIT_RADIUS := 30.0
-const DISH_TRACKABLE_TYPES := ["common", "fast", "fragment"]
+const DISH_TRACKABLE_TYPES := ["common", "fast", "fragment", "fragment_piece"]
 
 var progression: Node
 var meteor_layer: Node2D
@@ -136,7 +138,7 @@ func _update_dishes(delta: float) -> void:
 			if Vector2(dish.position).distance_to(locked.global_position) > COVERAGE_RADIUS:
 				dish.locked_id = 0
 			else:
-				locked.set_secondary_assist(SCAN_RATE)
+				locked.set_secondary_assist(locked.get_assist_rate(DISH_TIME_MULTIPLIER))
 			dishes[index] = dish
 			continue
 
@@ -161,7 +163,7 @@ func _update_dishes(delta: float) -> void:
 			var acquired = _acquire_target(dish, index)
 			if acquired != null:
 				dish.locked_id = acquired.get_instance_id()
-				acquired.set_secondary_assist(SCAN_RATE)
+				acquired.set_secondary_assist(acquired.get_assist_rate(DISH_TIME_MULTIPLIER))
 		dishes[index] = dish
 
 
