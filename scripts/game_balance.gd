@@ -5,7 +5,7 @@ const FIRST_METEOR_DELAY := 1.8
 const FINAL_EVENT_TIME := 1080.0 # 18 minutes; Ctrl+Shift+F skips to it.
 const SHOWER_WARNING_TIME := 2.6
 const SHOWER_DURATION := 9.0
-const BASE_OBSERVATION_DURATION := 30.0
+const BASE_OBSERVATION_DURATION := 20.0
 const MAX_OBSERVATION_DURATION := 60.0
 const BASE_MAX_ACTIVE_METEORS := 4
 const MAX_ACTIVE_METEORS := 6
@@ -67,7 +67,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	{
 		"id": "wide_field", "name": "Wide Field Sensor", "icon": "⌗", "cost": 55,
 		"description": "Reveals incoming contacts before they enter the sky so you can pre-position.",
-		"branch": "detection", "position": Vector2(320, 310), "prerequisites": ["edge_detection"],
+		"branch": "detection", "position": Vector2(320, 310), "prerequisites": ["edge_detection", "observation_scheduling"],
 		"hidden_until": ["edge_detection"], "effect_type": "unlock", "effect_parameters": {"entry_warning": true},
 		"major": false
 	},
@@ -107,24 +107,33 @@ const UPGRADE_NODES: Array[Dictionary] = [
 		"major": false
 	},
 	{
-		"id": "observation_scheduling", "name": "Observation Scheduling", "icon": "◷", "cost": 36,
+		"id": "observation_scheduling", "name": "Observation Scheduling", "icon": "◷", "cost": 60,
 		"description": "Plans longer shifts and extends each future observation window by 10 seconds.",
 		"branch": "network", "position": Vector2(300, 450), "prerequisites": ["array_planning"],
 		"hidden_until": ["array_planning"], "effect_type": "passive", "effect_parameters": {"observation_duration_bonus": 10.0},
 		"major": false
 	},
 	{
-		"id": "thermal_management", "name": "Equipment Thermal Control", "icon": "❄", "cost": 110,
+		# Ordering depends on Wide Field's own Observation Scheduling prerequisite;
+		# do not add the implied edge here because the tree renders every edge.
+		"id": "thermal_management", "name": "Equipment Thermal Control", "icon": "❄", "cost": 180,
 		"description": "Controls sensor heat during longer shifts and adds another 10 seconds to future observation windows.",
-		"branch": "network", "position": Vector2(520, 450), "prerequisites": ["observation_scheduling", "wide_field"],
-		"hidden_until": ["observation_scheduling"], "effect_type": "passive", "effect_parameters": {"observation_duration_bonus": 10.0},
+		"branch": "network", "position": Vector2(520, 450), "prerequisites": ["wide_field"],
+		"hidden_until": ["wide_field"], "effect_type": "passive", "effect_parameters": {"observation_duration_bonus": 10.0},
 		"major": false
 	},
 	{
-		"id": "extended_watch_protocol", "name": "Extended Watch Protocol", "icon": "◴", "cost": 260,
-		"description": "Coordinates a full long-watch protocol and raises future observation windows to their 60-second maximum.",
+		"id": "extended_watch_protocol", "name": "Extended Watch Protocol", "icon": "◴", "cost": 280,
+		"description": "Coordinates a long-watch protocol and extends each future observation window by 10 seconds.",
 		"branch": "network", "position": Vector2(750, 450), "prerequisites": ["thermal_management", "trajectory"],
 		"hidden_until": ["thermal_management"], "effect_type": "transformation", "effect_parameters": {"observation_duration_bonus": 10.0},
+		"major": true
+	},
+	{
+		"id": "continuous_watch_rotation", "name": "Continuous Watch Rotation", "icon": "↻", "cost": 380,
+		"description": "Coordinates uninterrupted handoffs and extends future observation windows to their 60-second maximum.",
+		"branch": "network", "position": Vector2(1050, 150), "prerequisites": ["extended_watch_protocol", "rare_detection"],
+		"hidden_until": ["extended_watch_protocol"], "effect_type": "transformation", "effect_parameters": {"observation_duration_bonus": 10.0},
 		"major": true
 	},
 	{

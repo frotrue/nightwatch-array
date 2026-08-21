@@ -41,7 +41,8 @@ var phase_summary_subtitle: Label
 var phase_summary_observations: Label
 var phase_summary_data: Label
 var phase_summary_split: Label
-var phase_summary_next: Label
+var phase_summary_comparison: Label
+var phase_summary_badges: Label
 var phase_summary_button: Button
 var settings_button: Button
 var settings_overlay: Control
@@ -297,24 +298,71 @@ func hide_end() -> void:
 
 
 func show_phase_summary(
-	round_number: int,
-	duration_seconds: int,
-	data_earned: int,
-	observations: int,
-	manual_observations: int,
-	automatic_observations: int,
-	next_duration_seconds: int
+	result: Dictionary,
+	previous_result: Dictionary,
+	comparison_state: String,
+	new_best: bool
 ) -> void:
+	var round_number := maxi(1, int(result.get("round", 1)))
+	var data_earned := maxi(0, int(result.get("data", 0)))
+	var duration_seconds := maxi(1, int(round(float(result.get("duration", 20.0)))))
+	var round_rate := maxf(0.0, float(result.get("rate", 0.0)))
+	var observations := maxi(0, int(result.get("observations", 0)))
+	var manual_observations := maxi(0, int(result.get("manual", 0)))
+	var automatic_observations := maxi(0, int(result.get("automatic", 0)))
 	phase_summary_title.text = tr("PHASE_SUMMARY_TITLE") % round_number
 	phase_summary_subtitle.text = tr("PHASE_SUMMARY_SUBTITLE") % duration_seconds
-	phase_summary_observations.text = "%s    %d" % [tr("PHASE_SUMMARY_OBSERVATIONS"), observations]
-	phase_summary_data.text = "%s    +%d" % [tr("PHASE_SUMMARY_DATA"), data_earned]
+	phase_summary_data.text = tr("PHASE_SUMMARY_OUTPUT") % data_earned
+	phase_summary_observations.text = tr("PHASE_SUMMARY_OBSERVATIONS") % observations
 	phase_summary_split.text = tr("PHASE_SUMMARY_MANUAL_AUTO") % [manual_observations, automatic_observations]
-	phase_summary_next.text = tr("PHASE_SUMMARY_NEXT") % next_duration_seconds
+	phase_summary_comparison.text = _round_comparison_text(round_rate, previous_result, comparison_state)
+	var badge_texts: Array[String] = []
+	var systems_since_baseline = result.get("systems_since_baseline", [])
+	if systems_since_baseline is Array and not systems_since_baseline.is_empty():
+		var system_names: PackedStringArray = []
+		for system_variant in systems_since_baseline:
+			var node_id := String(system_variant)
+			if not Balance.upgrade_definition(node_id).is_empty():
+				system_names.append(tr("UPGRADE_%s_NAME" % node_id.to_upper()).to_upper())
+		if not system_names.is_empty():
+			badge_texts.append(tr("PHASE_SUMMARY_SINCE_BASELINE") % ", ".join(system_names))
+	if bool(result.get("shower", false)):
+		badge_texts.append(tr("PHASE_SUMMARY_BADGE_SHOWER"))
+	if new_best:
+		badge_texts.append(tr("PHASE_SUMMARY_BADGE_BEST"))
+	phase_summary_badges.text = "  •  ".join(badge_texts)
+	phase_summary_badges.visible = not badge_texts.is_empty()
 	phase_summary_button.text = tr("PHASE_SUMMARY_CONTINUE")
 	phase_summary_overlay.visible = true
 	phase_summary_overlay.move_to_front()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
+
+func _round_comparison_text(round_rate: float, previous_result: Dictionary, comparison_state: String) -> String:
+	match comparison_state:
+		"systems_changed":
+			return tr("PHASE_SUMMARY_SYSTEMS_CHANGED") % round_rate
+		"session_resumed":
+			return tr("PHASE_SUMMARY_SESSION_RESUMED") % round_rate
+		"first_baseline":
+			return tr("PHASE_SUMMARY_FIRST_BASELINE") % round_rate
+	if previous_result.is_empty():
+		return tr("PHASE_SUMMARY_FIRST_BASELINE") % round_rate
+	var previous_rate := maxf(0.0, float(previous_result.get("rate", 0.0)))
+	var delta := round_rate - previous_rate
+	var signed_delta := _signed_rate_value(delta)
+	if previous_rate <= 0.0:
+		return tr("PHASE_SUMMARY_COMPARE_DELTA") % [round_rate, signed_delta]
+	var percent_delta := int(round(delta * 100.0 / previous_rate))
+	return tr("PHASE_SUMMARY_COMPARE") % [round_rate, signed_delta, _signed_round_value(percent_delta)]
+
+
+func _signed_round_value(value: int) -> String:
+	return "+%d" % value if value > 0 else "%d" % value
+
+
+func _signed_rate_value(value: float) -> String:
+	return "+%.1f" % value if value > 0.0 else "%.1f" % value
 
 
 func hide_phase_summary() -> void:
@@ -1037,9 +1085,9 @@ func _build_phase_summary_overlay() -> void:
 	var panel := PanelContainer.new()
 	panel.set_anchors_preset(Control.PRESET_CENTER)
 	panel.offset_left = -230.0
-	panel.offset_top = -166.0
+	panel.offset_top = -180.0
 	panel.offset_right = 230.0
-	panel.offset_bottom = 166.0
+	panel.offset_bottom = 180.0
 	panel.add_theme_stylebox_override("panel", _panel_style(Color("071522"), Color("4eb3c9"), 13))
 	phase_summary_overlay.add_child(panel)
 	var margin := MarginContainer.new()
@@ -1061,20 +1109,24 @@ func _build_phase_summary_overlay() -> void:
 	var divider := HSeparator.new()
 	divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(divider)
+	phase_summary_data = _make_label("", 28, Color("8fffe5"))
+	phase_summary_data.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	phase_summary_comparison = _make_label("", 14, Color("8fc5d5"))
+	phase_summary_comparison.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	phase_summary_observations = _make_label("", 17, Color("cceaf2"))
 	phase_summary_observations.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	phase_summary_data = _make_label("", 20, Color("8fffe5"))
-	phase_summary_data.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	phase_summary_split = _make_label("", 13, Color("91adbd"))
 	phase_summary_split.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	column.add_child(phase_summary_observations)
 	column.add_child(phase_summary_data)
+	column.add_child(phase_summary_comparison)
+	column.add_child(phase_summary_observations)
 	column.add_child(phase_summary_split)
-	phase_summary_next = _make_label("", 12, Color("8fc5d5"))
-	phase_summary_next.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	phase_summary_next.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	phase_summary_next.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
-	column.add_child(phase_summary_next)
+	phase_summary_badges = _make_label("", 12, Color("d8ccff"))
+	phase_summary_badges.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	phase_summary_badges.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	phase_summary_badges.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	phase_summary_badges.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	column.add_child(phase_summary_badges)
 	phase_summary_button = Button.new()
 	phase_summary_button.custom_minimum_size = Vector2(0, 44)
 	phase_summary_button.add_theme_font_size_override("font_size", 15)

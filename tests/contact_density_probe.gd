@@ -7,6 +7,7 @@ const SPAWN_SEED_ENV := "NIGHTWATCH_CONTACT_PROBE_SEED"
 const TYPE_BUCKETS := ["common", "fast", "fragment", "fragment_piece", "fireball", "major"]
 const MODE_NO_INPUT := "no-input"
 const MODE_SCRIPTED_ENGAGED := "scripted-engaged"
+const MODE_BASELINE_ENGAGED := "baseline-engaged"
 const MODE_FAST_MANUAL_ONE_DISH := "fast-manual-placement-one-dish"
 const MODE_FAST_MANUAL_TWO_DISH := "fast-manual-placement-two-dish"
 const MODE_FAST_COMMITTED_ONE_DISH := "fast-predictive-commit-one-dish"
@@ -17,20 +18,44 @@ const MODE_SELECTOR_PARTNER_FIRST := "selector-partner-first"
 const MODE_SELECTOR_BANK_FIRST := "selector-bank-first"
 const ROWS := [
 	{
+		# This row is the literal no-upgrade opening state. It deliberately uses a
+		# manual-only driver so measurement does not smuggle forecast research into
+		# the baseline just to make the probe interact with a target.
+		"name": "duration-ladder-start",
+		"upgrades": [],
+		"modes": [MODE_NO_INPUT, MODE_BASELINE_ENGAGED],
+	},
+	{
+		# The completed 21-node tree has 20 pacing upgrades; Predictive Dish
+		# Control is the sole interaction-only exclusion from density.
+		"name": "duration-ladder-end",
+		"upgrades": [
+			"better_lens", "long_exposure", "observation_streak",
+			"precision_multiplier", "perfect_observation", "edge_detection",
+			"wide_field", "trajectory", "rare_detection", "fragment_analysis",
+			"shower_detector", "array_planning", "observation_scheduling",
+			"thermal_management", "extended_watch_protocol",
+			"continuous_watch_rotation", "secondary_camera",
+			"predictive_dish_control", "multi_target_analysis",
+			"automated_tracking", "observatory_network",
+		],
+		"modes": [MODE_NO_INPUT, MODE_SCRIPTED_ENGAGED],
+	},
+	{
 		"name": "forecast-off",
 		"upgrades": ["edge_detection"],
 		"modes": [MODE_NO_INPUT, MODE_SCRIPTED_ENGAGED],
 	},
 	{
 		"name": "wide-only",
-		"upgrades": ["edge_detection", "wide_field"],
+		"upgrades": ["edge_detection", "array_planning", "observation_scheduling", "wide_field"],
 		"modes": [MODE_NO_INPUT, MODE_SCRIPTED_ENGAGED],
 	},
 	{
 		"name": "wide+dish",
 		# Both capacity configurations own the commitment node's prerequisites;
 		# the only control difference is Predictive Dish Control itself.
-		"upgrades": ["edge_detection", "wide_field", "trajectory", "array_planning", "secondary_camera"],
+		"upgrades": ["edge_detection", "array_planning", "observation_scheduling", "wide_field", "trajectory", "secondary_camera"],
 		"modes": [
 			MODE_NO_INPUT,
 			MODE_SCRIPTED_ENGAGED,
@@ -46,22 +71,22 @@ const ROWS := [
 		# Direct node activation deliberately isolates one automatic lane without
 		# the steerable dish that is normally its prerequisite.
 		"name": "wide+one-lane",
-		"upgrades": ["edge_detection", "wide_field", "multi_target_analysis"],
+		"upgrades": ["edge_detection", "array_planning", "observation_scheduling", "wide_field", "multi_target_analysis"],
 		"modes": [MODE_NO_INPUT],
 	},
 	{
 		"name": "all-eligible+dish",
 		"upgrades": [
-			"edge_detection", "wide_field", "trajectory", "fragment_analysis",
-			"array_planning", "secondary_camera", "predictive_dish_control",
+			"edge_detection", "array_planning", "observation_scheduling", "wide_field",
+			"trajectory", "fragment_analysis", "secondary_camera", "predictive_dish_control",
 		],
 		"modes": [MODE_ALL_ELIGIBLE_TWO_DISH],
 	},
 	{
 		"name": "fragment+dish",
 		"upgrades": [
-			"edge_detection", "wide_field", "trajectory", "fragment_analysis",
-			"array_planning", "secondary_camera", "predictive_dish_control",
+			"edge_detection", "array_planning", "observation_scheduling", "wide_field",
+			"trajectory", "fragment_analysis", "secondary_camera", "predictive_dish_control",
 		],
 		"modes": [MODE_FRAGMENT_ASSIGNED_ONE_DISH],
 	},
@@ -70,8 +95,9 @@ const ROWS := [
 		# one support lane, before global passive tracking makes every target a partner.
 		"name": "selector+dish+lane",
 		"upgrades": [
-			"edge_detection", "wide_field", "trajectory", "fragment_analysis",
-			"array_planning", "secondary_camera", "predictive_dish_control", "multi_target_analysis",
+			"edge_detection", "array_planning", "observation_scheduling", "wide_field",
+			"trajectory", "fragment_analysis", "secondary_camera",
+			"predictive_dish_control", "multi_target_analysis",
 		],
 		"modes": [MODE_SELECTOR_PARTNER_FIRST, MODE_SELECTOR_BANK_FIRST],
 	},
@@ -86,6 +112,8 @@ var realized_objects: int = 0
 var observations_completed: int = 0
 var data_earned: float = 0.0
 var visible_samples: Array[float] = []
+var live_meteor_samples: Array[float] = []
+var workload_samples: Array[float] = []
 var slew_fractions: Array[float] = []
 var assignment_elapsed: Dictionary = {}
 var assignment_leads: Dictionary = {}
@@ -167,7 +195,14 @@ func _run_row(row: Dictionary, mode: String) -> void:
 		_record_lane_participation()
 		_record_dish_busy_step()
 		_process_meteors(STEP)
-		visible_samples.append(float(game.sky_contacts.contacts.size()))
+		var forecast_contacts := float(game.sky_contacts.contacts.size())
+		var live_meteors := float(_live_meteor_count())
+		# p50_visible/p95_visible historically meant forecast contacts only. Keep
+		# that series intact and add explicit live/workload series rather than
+		# relabeling old evidence as simultaneous meteors.
+		visible_samples.append(forecast_contacts)
+		live_meteor_samples.append(live_meteors)
+		workload_samples.append(forecast_contacts + live_meteors)
 		elapsed += STEP
 
 	_record_open_assignments()
@@ -185,6 +220,8 @@ func _prepare_row(row: Dictionary, mode: String) -> void:
 	observations_completed = 0
 	data_earned = 0.0
 	visible_samples.clear()
+	live_meteor_samples.clear()
+	workload_samples.clear()
 	slew_fractions.clear()
 	assignment_elapsed.clear()
 	assignment_leads.clear()
@@ -548,7 +585,7 @@ func _dish_busy_fraction_text() -> String:
 
 func _process_meteors(delta: float) -> void:
 	var manual_target = null
-	if probe_mode == MODE_SCRIPTED_ENGAGED:
+	if probe_mode in [MODE_SCRIPTED_ENGAGED, MODE_BASELINE_ENGAGED]:
 		manual_target = _first_uncovered_meteor()
 	for meteor in game.meteor_layer.get_children():
 		if not is_instance_valid(meteor):
@@ -558,6 +595,14 @@ func _process_meteors(delta: float) -> void:
 		meteor._process(delta)
 		if not meteor.alive:
 			meteor.free()
+
+
+func _live_meteor_count() -> int:
+	var count := 0
+	for meteor in game.meteor_layer.get_children():
+		if is_instance_valid(meteor) and meteor.can_be_tracked():
+			count += 1
+	return count
 
 
 func _first_uncovered_meteor():
@@ -593,12 +638,16 @@ func _capacity_evidence_scope_text() -> String:
 func _print_row(row_name: String, mode: String) -> void:
 	var sorted_visible: Array[float] = visible_samples.duplicate()
 	sorted_visible.sort()
+	var sorted_live_meteors: Array[float] = live_meteor_samples.duplicate()
+	sorted_live_meteors.sort()
+	var sorted_workload: Array[float] = workload_samples.duplicate()
+	sorted_workload.sort()
 	var average_slew := 0.0
 	for fraction in slew_fractions:
 		average_slew += fraction
 	if not slew_fractions.is_empty():
 		average_slew /= float(slew_fractions.size())
-	print("CONTACT_DENSITY_PROBE row=%s mode=%s lane_config=dishes:%d|automatic_lanes:%d|manual:%s dish_control=%s capacity_evidence_scope=%s announcements=%d resolutions=%d p50_visible=%.1f p95_visible=%.1f dish_slew_fraction=%.3f fast_contacts_announced=%d successful_fast_assignments=%d successful_fast_placements=%d unassigned_fast_contacts=%d fast_contacts_while_all_dishes_busy=%d eligible_contacts_announced=%d successful_eligible_assignments=%d unassigned_eligible_contacts=%d eligible_contacts_while_all_dishes_busy=%d dish_busy_fraction=%s dish_acquisitions=%d dish_acquisitions_by_type=%s dish_completions_by_type=%s dish_conversion_by_type=%s lane_participations=%d lane_participations_by_type=%s lane_completions=%d lane_completions_by_type=%s lane_conversion_by_type=%s lane_covered_only_completions_by_type=%s lane_uncovered_only_completions_by_type=%s lane_mixed_completions_by_type=%s opportunistic_acquisitions=%d opportunistic_acquisitions_by_type=%s manual_placements=%d manual_placement_opportunistic_acquisitions=%d manual_placement_opportunistic_acquisitions_by_type=%s opportunistic_completions=%d opportunistic_completions_by_type=%s opportunistic_dropped_without_completion=%d opportunistic_dropped_by_type=%s manual_only_completions_by_type=%s dish_only_completions_by_type=%s shared_completions_by_type=%s automatic_only_completions_by_type=%s realized_objects_30s=%d observations_completed=%d data_earned=%.0f" % [
+	print("CONTACT_DENSITY_PROBE row=%s mode=%s lane_config=dishes:%d|automatic_lanes:%d|manual:%s dish_control=%s capacity_evidence_scope=%s announcements=%d resolutions=%d p50_visible=%.1f p95_visible=%.1f p50_live_meteors=%.1f p95_live_meteors=%.1f p50_workload=%.1f p95_workload=%.1f dish_slew_fraction=%.3f fast_contacts_announced=%d successful_fast_assignments=%d successful_fast_placements=%d unassigned_fast_contacts=%d fast_contacts_while_all_dishes_busy=%d eligible_contacts_announced=%d successful_eligible_assignments=%d unassigned_eligible_contacts=%d eligible_contacts_while_all_dishes_busy=%d dish_busy_fraction=%s dish_acquisitions=%d dish_acquisitions_by_type=%s dish_completions_by_type=%s dish_conversion_by_type=%s lane_participations=%d lane_participations_by_type=%s lane_completions=%d lane_completions_by_type=%s lane_conversion_by_type=%s lane_covered_only_completions_by_type=%s lane_uncovered_only_completions_by_type=%s lane_mixed_completions_by_type=%s opportunistic_acquisitions=%d opportunistic_acquisitions_by_type=%s manual_placements=%d manual_placement_opportunistic_acquisitions=%d manual_placement_opportunistic_acquisitions_by_type=%s opportunistic_completions=%d opportunistic_completions_by_type=%s opportunistic_dropped_without_completion=%d opportunistic_dropped_by_type=%s manual_only_completions_by_type=%s dish_only_completions_by_type=%s shared_completions_by_type=%s automatic_only_completions_by_type=%s realized_objects_30s=%d observations_completed=%d data_earned=%.0f" % [
 		row_name,
 		mode,
 		game.sky_contacts.dishes.size(),
@@ -610,6 +659,10 @@ func _print_row(row_name: String, mode: String) -> void:
 		resolutions,
 		_percentile(sorted_visible, 0.50),
 		_percentile(sorted_visible, 0.95),
+		_percentile(sorted_live_meteors, 0.50),
+		_percentile(sorted_live_meteors, 0.95),
+		_percentile(sorted_workload, 0.50),
+		_percentile(sorted_workload, 0.95),
 		average_slew,
 		fast_contacts_announced,
 		successful_fast_assignments,

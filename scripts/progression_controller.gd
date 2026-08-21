@@ -5,7 +5,10 @@ signal upgrade_purchased(definition)
 signal purchase_rejected(node_id, reason_key, value)
 
 const Balance = preload("res://scripts/game_balance.gd")
-const LEGACY_PACING_NODE_COUNT := 19
+# The 21-node topology has 20 pacing upgrades. Predictive Dish Control remains
+# interaction-only, so excluding it normalizes the completed tree to 1.0 rather
+# than silently turning the added duration node into a density retune.
+const PACING_NODE_COUNT := 20
 
 var observation_data: float = 0.0
 var success_count: int = 0
@@ -274,10 +277,10 @@ func get_secondary_slots() -> int:
 
 
 func get_progression_ratio() -> float:
-	# Predictive Dish Control adds an interaction, not a density or pacing retune.
-	# Excluding it preserves the exact 19-node spawn curve that preceded the node.
+	# Topology normalization only: all duration research genuinely advances
+	# pacing, while Predictive Dish Control adds interaction without density.
 	var pacing_level := upgrade_level - int(has_upgrade("predictive_dish_control"))
-	return clampf(float(pacing_level) / float(LEGACY_PACING_NODE_COUNT), 0.0, 1.0)
+	return clampf(float(pacing_level) / float(PACING_NODE_COUNT), 0.0, 1.0)
 
 
 # Passive automation is unattended lifetime coverage, not a limited hardware
