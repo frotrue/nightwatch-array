@@ -8,6 +8,7 @@ const AUTOSAVE_INTERVAL_SECONDS := 60.0
 @onready var meteor_layer: Node2D = $MeteorLayer
 @onready var effects: Node2D = $EffectsLayer
 @onready var observer: Node2D = $ObservationController
+@onready var sky_contacts: Node2D = $SkyContacts
 @onready var progression: Node = $ProgressionController
 @onready var spawner: Node = $MeteorSpawner
 @onready var events: Node = $EventController
@@ -62,12 +63,15 @@ func _ready() -> void:
 	hud.tutorial_replay_requested.connect(_on_tutorial_replay_requested)
 	upgrade_tree.tree_opened.connect(tutorial.notify_upgrade_tree_opened)
 	upgrade_tree.tree_closed.connect(_on_upgrade_tree_closed)
-	observer.setup(meteor_layer, progression, hud)
+	sky_contacts.setup(meteor_layer, progression)
+	observer.setup(meteor_layer, progression, hud, sky_contacts)
 	spawner.setup(meteor_layer, progression)
 	events.setup(spawner, progression)
 
 	spawner.meteor_spawned.connect(_on_meteor_spawned)
 	spawner.rare_spawned.connect(_on_rare_spawned)
+	spawner.contact_announced.connect(sky_contacts.on_contact_announced)
+	spawner.contact_resolved.connect(sky_contacts.on_contact_resolved)
 	progression.upgrade_purchased.connect(_on_upgrade_purchased)
 	events.banner_requested.connect(_on_event_banner)
 	events.sky_activity_changed.connect(_on_sky_activity_changed)
@@ -127,6 +131,7 @@ func reset_run() -> void:
 	_close_upgrade_tree_without_transition()
 	get_tree().paused = false
 	observer.reset()
+	sky_contacts.reset()
 	effects.reset()
 	events.reset()
 	spawner.reset()
@@ -187,6 +192,7 @@ func _end_observation_phase() -> void:
 	observation_phase_active = false
 	observation_phase_remaining = 0.0
 	observer.reset()
+	sky_contacts.reset()
 	effects.reset()
 	events.reset()
 	spawner.reset()
@@ -305,6 +311,7 @@ func _on_meteor_expired(meteor, was_major: bool) -> void:
 
 func _on_upgrade_purchased(definition: Dictionary) -> void:
 	tutorial.notify_upgrade_purchased()
+	sky_contacts.refresh_dishes()
 	spawner.refresh_active_features()
 	if not observation_phase_active:
 		upgrade_tree.set_intermission_context(observation_round + 1, int(_observation_duration()))
@@ -460,6 +467,7 @@ func _start_fresh_slot() -> void:
 	completed = false
 	_close_upgrade_tree_without_transition()
 	observer.reset()
+	sky_contacts.reset()
 	effects.reset()
 	events.reset()
 	spawner.reset()
@@ -509,6 +517,7 @@ func _build_save_data() -> Dictionary:
 func _apply_save_data(data: Dictionary) -> void:
 	_close_upgrade_tree_without_transition()
 	observer.reset()
+	sky_contacts.reset()
 	effects.reset()
 	events.reset()
 	spawner.reset()
@@ -519,6 +528,7 @@ func _apply_save_data(data: Dictionary) -> void:
 	observation_round = maxi(1, int(data.get("observation_round", 1)))
 	var progression_data = data.get("progression", {})
 	progression.load_save_data(progression_data if progression_data is Dictionary else {})
+	sky_contacts.refresh_dishes()
 	hud.hide_end()
 	hud.hide_phase_summary()
 	hud.restore_tutorial(progression.success_count > 0)

@@ -226,12 +226,19 @@ func get_max_active() -> int:
 	)
 
 
+# Secondary Camera no longer scans on its own; it hands the player a dish to
+# aim. The later network nodes keep their automatic lanes, one fewer each,
+# so the array's total coverage is unchanged and one lane of it is now steered.
+func get_dish_count() -> int:
+	return 1 if has_upgrade("secondary_camera") else 0
+
+
 func get_secondary_slots() -> int:
 	if has_upgrade("observatory_network"):
-		return 3
-	if has_upgrade("multi_target_analysis"):
 		return 2
-	return 1 if has_upgrade("secondary_camera") else 0
+	if has_upgrade("multi_target_analysis"):
+		return 1
+	return 0
 
 
 func get_progression_ratio() -> float:

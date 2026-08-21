@@ -322,6 +322,54 @@ func _run() -> void:
 	_check(game.progression.has_upgrade("better_lens"), "loading restores purchased upgrades")
 	_check(game.progression.success_count == 1, "loading restores observation statistics")
 
+	_check(not game.spawner.forecast_enabled(), "objects arrive unannounced before the dish research")
+	_check(not game.sky_contacts.is_active(), "no dish exists before its research")
+	game.progression.debug_purchase_node("array_planning")
+	game.progression.debug_purchase_node("secondary_camera")
+	game.sky_contacts.refresh_dishes()
+	_check(game.spawner.forecast_enabled(), "the dish research turns on the forecast")
+	_check(game.sky_contacts.is_active() and game.sky_contacts.dishes.size() == 1, "the dish research places one dish")
+
+	game.spawner.pending_contacts.clear()
+	game.sky_contacts.contacts.clear()
+	game.spawner._announce_regular_spawn()
+	_check(game.spawner.pending_contacts.size() == 1, "a forecast is queued before its object exists")
+	var contact: Dictionary = game.spawner.pending_contacts[0]
+	_check(float(contact.countdown) > 0.0, "a contact leads the object it predicts")
+	_check(game.sky_contacts.contacts.size() == 1, "an announced contact reaches the sky array")
+	_check(
+		game.sky_contacts._estimate_of(contact).distance_to(Vector2(contact.intercept)) > 1.0,
+		"an early estimate is offset from the truth, so committing early is a bet"
+	)
+	_check(game.sky_contacts.assign_to_contact(int(contact.id)), "a contact can be committed to a dish")
+	_check(int(game.sky_contacts.dishes[0].assigned_id) == int(contact.id), "committing occupies the dish")
+	_check(not bool(game.sky_contacts.dishes[0].arrived), "a committed dish has to slew before it records")
+	game.spawner._announce_regular_spawn()
+	var second_contact: Dictionary = game.spawner.pending_contacts[1]
+	game.sky_contacts.assign_to_contact(int(second_contact.id))
+	_check(float(contact.abandoned_flash) > 0.0, "re-tasking the only dish marks the contact it abandoned")
+	_check(int(game.sky_contacts.dishes[0].assigned_id) == int(second_contact.id), "one dish cannot hold two contacts")
+	game.spawner.pending_contacts.clear()
+	game.sky_contacts.reset()
+	_check(game.sky_contacts.contacts.is_empty() and int(game.sky_contacts.dishes[0].assigned_id) == -1, "resetting clears contacts and frees the dish")
+
+	# An arrived dish must actually record, not merely sit on the mark.
+	var scanned = game.spawner.spawn_meteor("common")
+	var dish: Dictionary = game.sky_contacts.dishes[0]
+	dish.position = scanned.global_position
+	dish.target = scanned.global_position
+	dish.arrived = true
+	game.sky_contacts.dishes[0] = dish
+	game.sky_contacts._update_dishes(0.1)
+	_check(int(game.sky_contacts.dishes[0].locked_id) == scanned.get_instance_id(), "an arrived dish acquires an object inside its coverage")
+	var progress_before: float = scanned.observation_progress
+	game.sky_contacts._update_dishes(0.2)
+	scanned._process(0.2)
+	_check(scanned.observation_progress > progress_before, "a locked dish advances the observation it holds")
+	scanned.queue_free()
+	await process_frame
+	game.sky_contacts.reset()
+
 	game.progression.debug_purchase_all()
 	_check(game.progression.upgrade_level == 19, "all tree nodes unlock through prerequisite-safe debug purchase")
 	_check(game.progression.get_max_active() == 6, "research raises dense-sky capacity without removing the six-target performance cap")
@@ -329,7 +377,8 @@ func _run() -> void:
 	for legacy_id in ["better_lens", "long_exposure", "wide_field", "trajectory", "precision_multiplier", "secondary_camera", "shower_detector", "automated_tracking"]:
 		_check(game.progression.has_upgrade(legacy_id), "legacy upgrade migrated: " + legacy_id)
 	_check(game.progression.has_upgrade("automated_tracking"), "final automation system is active")
-	_check(game.progression.get_secondary_slots() == 3, "observatory network provides three assistance lanes")
+	_check(game.progression.get_secondary_slots() == 2, "observatory network keeps two automatic lanes once one becomes a steerable dish")
+	_check(game.progression.get_dish_count() == 1, "secondary camera research grants a dish the player aims")
 	_check(game.progression.get_automation_strength("fireball") == 0.0, "rare fireballs remain manual high-value targets")
 	_check(game.progression.get_node_state("perfect_observation") == "purchased", "cross-branch Perfect Observation resolves")
 	_check(game.progression.get_node_state("observatory_network") == "purchased", "cross-branch Observatory Network resolves")
