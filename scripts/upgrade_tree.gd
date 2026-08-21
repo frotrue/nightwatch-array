@@ -123,7 +123,7 @@ var refresh_pending: bool = false
 var node_visual_keys: Dictionary = {}
 var intermission_active: bool = false
 var intermission_next_round: int = 1
-var intermission_next_duration: int = 30
+var intermission_next_duration: int = 20
 
 
 func _ready() -> void:

@@ -34,6 +34,11 @@ var phase_start_successes: int = 0
 var phase_start_manual_successes: int = 0
 var phase_start_automatic_successes: int = 0
 var phase_start_total_data: float = 0.0
+var phase_start_upgrade_signature: Array[String] = []
+var phase_had_shower: bool = false
+var phase_resumed_from_save: bool = false
+var last_clean_round_result: Dictionary = {}
+var best_round_rate: float = 0.0
 var suppress_phase_transition: bool = false
 
 
@@ -76,6 +81,7 @@ func _ready() -> void:
 	events.banner_requested.connect(_on_event_banner)
 	events.sky_activity_changed.connect(_on_sky_activity_changed)
 	events.forecast_requested.connect(_on_shower_forecast_requested)
+	events.shower_started.connect(_on_shower_started)
 
 	if startup_slot_prompt_enabled:
 		call_deferred("_enter_preferred_save")
@@ -118,6 +124,8 @@ func start_run() -> void:
 	completed = false
 	last_completion_success = false
 	observation_round = 1
+	last_clean_round_result.clear()
+	best_round_rate = 0.0
 	hud.hide_end()
 	hud.hide_phase_summary()
 	hud.reset_tutorial()
@@ -157,7 +165,12 @@ func _process(delta: float) -> void:
 		if autosave_elapsed >= AUTOSAVE_INTERVAL_SECONDS:
 			autosave_elapsed = fmod(autosave_elapsed, AUTOSAVE_INTERVAL_SECONDS)
 			_autosave_active_slot()
-	if observation_phase_remaining <= 0.0 and not events.final_started and events.shower_state == "idle":
+	# The finale is the sole terminal exception to an observation window. Trigger
+	# it here as well as in EventController so parent/child process order cannot
+	# insert a research break at exactly 18:00.
+	if elapsed_time >= Balance.FINAL_EVENT_TIME and not events.final_started:
+		events.trigger_final()
+	if observation_phase_remaining <= 0.0 and not events.final_started:
 		_end_observation_phase()
 
 
@@ -177,12 +190,15 @@ func _begin_observation_phase(advance_round: bool = false, remaining_override: f
 	phase_start_manual_successes = progression.manual_successes
 	phase_start_automatic_successes = progression.automatic_successes
 	phase_start_total_data = progression.total_data_earned
+	phase_start_upgrade_signature = _current_build_signature()
+	phase_had_shower = false
+	phase_resumed_from_save = false
 	upgrade_tree.clear_intermission_context()
 	hud.hide_phase_summary()
 	hud.set_observation_phase(observation_round, observation_phase_remaining)
 	spawner.start_spawning()
-	events.start()
 	events.run_time = elapsed_time
+	events.start()
 	spawner.refresh_active_features()
 	if resume_game:
 		get_tree().paused = false
@@ -191,33 +207,86 @@ func _begin_observation_phase(advance_round: bool = false, remaining_override: f
 func _end_observation_phase() -> void:
 	if completed or not observation_phase_active:
 		return
+	var result := _build_round_result()
+	var previous_result := last_clean_round_result.duplicate(true)
+	var build_changed := bool(result.get("build_changed", false))
+	result["systems_since_baseline"] = _systems_since_baseline(result, previous_result)
+	var comparison_state := "comparison"
+	if build_changed:
+		comparison_state = "systems_changed"
+	elif phase_resumed_from_save:
+		comparison_state = "session_resumed"
+	elif previous_result.is_empty():
+		comparison_state = "first_baseline"
+	var round_rate := float(result.get("rate", 0.0))
+	var new_best := round_rate > best_round_rate
+	best_round_rate = maxf(best_round_rate, round_rate)
+	# Mixed-build rounds are honest total-output achievements, but they do not
+	# replace the clean before/after baseline. A resumed sample establishes a new
+	# baseline because loading necessarily resets the live sky.
+	if not build_changed:
+		last_clean_round_result = result.duplicate(true)
 	observation_phase_active = false
 	observation_phase_remaining = 0.0
+	events.pause_for_intermission()
 	observer.reset()
 	sky_contacts.reset()
 	effects.reset()
-	events.reset()
 	spawner.reset()
 	starfield.set_activity(progression.get_progression_ratio() * 0.16)
 	hud.set_upgrade_phase(observation_round)
 	var next_round := observation_round + 1
-	var next_duration := int(_observation_duration())
-	upgrade_tree.set_intermission_context(next_round, next_duration)
-	var observations := maxi(0, progression.success_count - phase_start_successes)
-	var manual_observations := maxi(0, progression.manual_successes - phase_start_manual_successes)
-	var automatic_observations := maxi(0, progression.automatic_successes - phase_start_automatic_successes)
-	var data_earned := maxi(0, int(round(progression.total_data_earned - phase_start_total_data)))
+	upgrade_tree.set_intermission_context(next_round, int(_observation_duration()))
 	_autosave_active_slot()
 	get_tree().paused = true
 	hud.show_phase_summary(
-		observation_round,
-		int(round(observation_phase_duration)),
-		data_earned,
-		observations,
-		manual_observations,
-		automatic_observations,
-		next_duration
+		result,
+		previous_result,
+		comparison_state,
+		new_best
 	)
+
+
+func _build_round_result() -> Dictionary:
+	var current_signature := _current_build_signature()
+	var duration := maxf(0.05, observation_phase_duration)
+	var data_earned := maxi(0, int(round(progression.total_data_earned - phase_start_total_data)))
+	return {
+		"round": observation_round,
+		"duration": duration,
+		"data": data_earned,
+		"rate": float(data_earned) * 60.0 / duration,
+		"observations": maxi(0, progression.success_count - phase_start_successes),
+		"manual": maxi(0, progression.manual_successes - phase_start_manual_successes),
+		"automatic": maxi(0, progression.automatic_successes - phase_start_automatic_successes),
+		"systems_installed": maxi(0, current_signature.size() - phase_start_upgrade_signature.size()),
+		"shower": phase_had_shower,
+		"build_changed": current_signature != phase_start_upgrade_signature,
+		"build_signature": current_signature,
+	}
+
+
+func _current_build_signature() -> Array[String]:
+	var signature: Array[String] = []
+	for node_variant in progression.purchased_nodes.keys():
+		signature.append(String(node_variant))
+	signature.sort()
+	return signature
+
+
+func _systems_since_baseline(result: Dictionary, previous_result: Dictionary) -> Array[String]:
+	# A resumed sky becomes its own baseline, so pre-load installs are not
+	# presented as fresh growth. A live purchase after resuming still takes the
+	# mixed-build path and retains its context.
+	if phase_resumed_from_save and not bool(result.get("build_changed", false)):
+		return []
+	var current_signature := _validated_signature(result.get("build_signature", []))
+	var baseline_signature := _validated_signature(previous_result.get("build_signature", []))
+	var installed: Array[String] = []
+	for node_id in current_signature:
+		if node_id not in baseline_signature:
+			installed.append(node_id)
+	return installed
 
 
 func _on_phase_summary_continue_requested() -> void:
@@ -272,8 +341,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		KEY_R:
 			spawner.spawn_meteor("fireball")
 		KEY_S:
-			events.trigger_shower()
-			sound.play_warning()
+			if events.trigger_shower():
+				sound.play_warning()
 		KEY_F:
 			events.trigger_final()
 			sound.play_warning()
@@ -345,6 +414,11 @@ func _on_sky_activity_changed(value: float) -> void:
 
 func _on_shower_forecast_requested(entry_points: Array) -> void:
 	effects.spawn_forecast(entry_points)
+
+
+func _on_shower_started() -> void:
+	if observation_phase_active:
+		phase_had_shower = true
 
 
 func _complete_prototype(success: bool) -> void:
@@ -503,6 +577,7 @@ func _on_tutorial_replay_requested() -> void:
 
 func _build_save_data() -> Dictionary:
 	return {
+		"rate_measurement_version": 1,
 		"elapsed_time": elapsed_time,
 		"observation_round": observation_round,
 		"observation_phase_active": observation_phase_active,
@@ -512,6 +587,10 @@ func _build_save_data() -> Dictionary:
 		"phase_start_manual_successes": phase_start_manual_successes,
 		"phase_start_automatic_successes": phase_start_automatic_successes,
 		"phase_start_total_data": phase_start_total_data,
+		"phase_start_upgrade_signature": phase_start_upgrade_signature.duplicate(),
+		"phase_had_shower": phase_had_shower,
+		"last_clean_round_result": last_clean_round_result.duplicate(true),
+		"best_round_rate": best_round_rate,
 		"progression": progression.get_save_data(),
 	}
 
@@ -530,6 +609,14 @@ func _apply_save_data(data: Dictionary) -> void:
 	observation_round = maxi(1, int(data.get("observation_round", 1)))
 	var progression_data = data.get("progression", {})
 	progression.load_save_data(progression_data if progression_data is Dictionary else {})
+	last_clean_round_result = _sanitize_round_result(data.get(
+		"last_clean_round_result",
+		data.get("last_round_result", {})
+	))
+	best_round_rate = maxf(0.0, float(data.get(
+		"best_round_rate",
+		data.get("best_round_data", 0.0)
+	)))
 	sky_contacts.refresh_dishes()
 	hud.hide_end()
 	hud.hide_phase_summary()
@@ -543,11 +630,13 @@ func _apply_save_data(data: Dictionary) -> void:
 			_observation_duration()
 		))
 		_begin_observation_phase(false, saved_remaining)
-		observation_phase_duration = maxf(0.05, float(data.get("observation_phase_duration", _observation_duration())))
 		phase_start_successes = maxi(0, int(data.get("phase_start_successes", progression.success_count)))
 		phase_start_manual_successes = maxi(0, int(data.get("phase_start_manual_successes", progression.manual_successes)))
 		phase_start_automatic_successes = maxi(0, int(data.get("phase_start_automatic_successes", progression.automatic_successes)))
 		phase_start_total_data = maxf(0.0, float(data.get("phase_start_total_data", progression.total_data_earned)))
+		phase_start_upgrade_signature = _validated_signature(data.get("phase_start_upgrade_signature", _current_build_signature()))
+		phase_had_shower = bool(data.get("phase_had_shower", false))
+		phase_resumed_from_save = true
 	else:
 		observation_phase_active = false
 		observation_phase_remaining = 0.0
@@ -555,6 +644,42 @@ func _apply_save_data(data: Dictionary) -> void:
 		var next_round := observation_round + 1
 		upgrade_tree.set_intermission_context(next_round, int(_observation_duration()))
 		call_deferred("_resume_upgrade_intermission")
+
+
+func _validated_signature(value) -> Array[String]:
+	var signature: Array[String] = []
+	if value is Array:
+		for node_variant in value:
+			var node_id := String(node_variant)
+			if not Balance.upgrade_definition(node_id).is_empty() and node_id not in signature:
+				signature.append(node_id)
+	signature.sort()
+	return signature
+
+
+func _sanitize_round_result(value) -> Dictionary:
+	if not (value is Dictionary) or value.is_empty():
+		return {}
+	var duration := clampf(
+		float(value.get("duration", Balance.MAX_OBSERVATION_DURATION)),
+		Balance.BASE_OBSERVATION_DURATION,
+		Balance.MAX_OBSERVATION_DURATION
+	)
+	var data_earned := maxi(0, int(value.get("data", 0)))
+	return {
+		"round": maxi(1, int(value.get("round", 1))),
+		"duration": duration,
+		"data": data_earned,
+		"rate": maxf(0.0, float(value.get("rate", float(data_earned) * 60.0 / duration))),
+		"observations": maxi(0, int(value.get("observations", 0))),
+		"manual": maxi(0, int(value.get("manual", 0))),
+		"automatic": maxi(0, int(value.get("automatic", 0))),
+		"systems_installed": maxi(0, int(value.get("systems_installed", 0))),
+		"systems_since_baseline": _validated_signature(value.get("systems_since_baseline", [])),
+		"shower": bool(value.get("shower", false)),
+		"build_changed": bool(value.get("build_changed", false)),
+		"build_signature": _validated_signature(value.get("build_signature", [])),
+	}
 
 
 func _resume_upgrade_intermission() -> void:

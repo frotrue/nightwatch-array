@@ -3,6 +3,7 @@ extends Node
 signal banner_requested(text, color)
 signal sky_activity_changed(value)
 signal forecast_requested(entry_points)
+signal shower_started
 
 const Balance = preload("res://scripts/game_balance.gd")
 
@@ -20,6 +21,8 @@ var final_timer: float = 0.0
 var final_started: bool = false
 var rng := RandomNumberGenerator.new()
 
+const SHOWER_BOUNDARY_MARGIN := 0.12
+
 
 func setup(meteor_spawner: Node, progression_controller: Node) -> void:
 	spawner = meteor_spawner
@@ -29,6 +32,20 @@ func setup(meteor_spawner: Node, progression_controller: Node) -> void:
 
 func start() -> void:
 	running = true
+
+
+func pause_for_intermission() -> void:
+	running = false
+	# A production shower is deferred before it starts. This fallback protects
+	# the active round boundary if a debug or future path forces one late.
+	if shower_state != "idle":
+		shower_state = "idle"
+		shower_timer = 0.0
+		shower_spawn_timer = 0.0
+		shower_index = 0
+		next_shower_time = run_time
+	if spawner != null:
+		spawner.pause_regular_spawns = false
 
 
 func reset() -> void:
@@ -63,14 +80,22 @@ func _process(delta: float) -> void:
 	_update_final(delta)
 
 
-func trigger_shower() -> void:
+func trigger_shower() -> bool:
 	if final_started or shower_state != "idle":
-		return
+		return false
+	if not _shower_fits_current_observation():
+		# Leave next_shower_time due. The first viable frame of the next round
+		# starts the deferred shower without resetting its 40-58s cadence.
+		if next_shower_time < 0.0:
+			next_shower_time = run_time
+		return false
 	shower_state = "warning"
 	shower_timer = Balance.SHOWER_WARNING_TIME
 	shower_spawn_timer = 0.0
 	shower_index = 0
 	spawner.pause_regular_spawns = true
+	next_shower_time = -1.0
+	shower_started.emit()
 	banner_requested.emit("EVENT_SHOWER_INCOMING", Color("b9a7ff"))
 	if progression.has_upgrade("observatory_network"):
 		var size := get_viewport().get_visible_rect().size
@@ -81,6 +106,14 @@ func trigger_shower() -> void:
 			Vector2(54.0, size.y * 0.42)
 		])
 	sky_activity_changed.emit(0.55)
+	return true
+
+
+func _shower_fits_current_observation() -> bool:
+	if spawner == null:
+		return true
+	var required := Balance.SHOWER_WARNING_TIME + Balance.SHOWER_DURATION + SHOWER_BOUNDARY_MARGIN
+	return float(spawner.phase_time_remaining) >= required
 
 
 func trigger_final() -> void:

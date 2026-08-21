@@ -51,8 +51,8 @@ func start_spawning() -> void:
 	next_spawn_time = Balance.FIRST_METEOR_DELAY
 	first_spawn_pending = true
 	# Forecast phases start with one warm contact so their information pipeline
-	# does not reduce the number of payable objects in a bounded watch. Keep the
-	# bespoke first meteor as the immediate opening action; never prefill a burst.
+	# does not reduce the number of payable objects in a bounded watch. Exactly
+	# one common contact anchors every measured round; never prefill a burst.
 	if forecast_enabled() and pending_contacts.is_empty():
 		_announce_regular_spawn(warm_contact_rng)
 

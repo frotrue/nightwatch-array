@@ -74,11 +74,18 @@ HUD_TIME,RUN  %02d:%02d,진행  %02d:%02d
 HUD_OBSERVATION_TIME,OBSERVATION %d  •  %02d:%02d,%d차 관측  •  %02d:%02d
 HUD_UPGRADE_PHASE,OBSERVATION %d COMPLETE  •  UPGRADE,%d차 관측 완료  •  업그레이드
 PHASE_SUMMARY_TITLE,OBSERVATION %d COMPLETE,%d차 관측 완료
-PHASE_SUMMARY_SUBTITLE,%d-SECOND OBSERVATION LOG,%d초 관측 기록
-PHASE_SUMMARY_OBSERVATIONS,OBJECTS OBSERVED,관측
-PHASE_SUMMARY_DATA,DATA EARNED,획득 데이터
+PHASE_SUMMARY_SUBTITLE,%d-SECOND ROUND OUTPUT,%d초 라운드 출력
+PHASE_SUMMARY_OUTPUT,%d DATA,데이터 %d
+PHASE_SUMMARY_COMPARE,REALIZED PRODUCTIVITY %.1f DATA/MIN  •  %s DATA/MIN VS PREVIOUS  •  %s%%,실현 처리량 %.1f 데이터/분  •  이전 대비 %s 데이터/분  •  %s%%
+PHASE_SUMMARY_COMPARE_DELTA,REALIZED PRODUCTIVITY %.1f DATA/MIN  •  %s DATA/MIN VS PREVIOUS,실현 처리량 %.1f 데이터/분  •  이전 대비 %s 데이터/분
+PHASE_SUMMARY_FIRST_BASELINE,REALIZED PRODUCTIVITY %.1f DATA/MIN  •  FIRST BASELINE,실현 처리량 %.1f 데이터/분  •  첫 기준 기록
+PHASE_SUMMARY_SYSTEMS_CHANGED,REALIZED PRODUCTIVITY %.1f DATA/MIN  •  SYSTEMS CHANGED  •  NEW BASELINE NEXT ROUND,실현 처리량 %.1f 데이터/분  •  시스템 변경  •  다음 라운드에서 새 기준 기록
+PHASE_SUMMARY_SESSION_RESUMED,REALIZED PRODUCTIVITY %.1f DATA/MIN  •  SESSION RESUMED  •  NEW BASELINE,실현 처리량 %.1f 데이터/분  •  불러오기 후 재개  •  새 기준 기록
+PHASE_SUMMARY_OBSERVATIONS,%d OBJECTS,관측 %d건
 PHASE_SUMMARY_MANUAL_AUTO,MANUAL %d  •  AUTO %d,수동 %d  •  자동 %d
-PHASE_SUMMARY_NEXT,NEXT OBSERVATION  %d SEC,다음 관측  %d초
+PHASE_SUMMARY_SINCE_BASELINE,SINCE BASELINE: %s,기준 이후 설치: %s
+PHASE_SUMMARY_BADGE_SHOWER,METEOR SHOWER,유성우
+PHASE_SUMMARY_BADGE_BEST,NEW BEST REALIZED RATE,최고 실현 처리량
 PHASE_SUMMARY_CONTINUE,OPEN RESEARCH,연구 단계로
 HUD_AUTOSAVED,AUTOSAVED,자동 저장됨
 HUD_TUTORIAL_START,Hold LMB and follow the meteor,마우스 왼쪽 버튼을 누른 채 유성을 따라가세요
@@ -185,7 +192,9 @@ UPGRADE_OBSERVATION_SCHEDULING_DESC,Plans longer shifts and extends each future 
 UPGRADE_THERMAL_MANAGEMENT_NAME,Equipment Thermal Control,장비 열 관리
 UPGRADE_THERMAL_MANAGEMENT_DESC,Controls sensor heat during longer shifts and adds another 10 seconds to future observation windows.,장시간 가동 중 센서의 열을 제어해 다음 관측부터 관측 시간을 10초 더 늘립니다.
 UPGRADE_EXTENDED_WATCH_PROTOCOL_NAME,Extended Watch Protocol,장시간 관측 프로토콜
-UPGRADE_EXTENDED_WATCH_PROTOCOL_DESC,Coordinates a full long-watch protocol and raises future observation windows to their 60-second maximum.,장시간 관측 절차를 확립해 다음 관측부터 관측 시간을 최대 60초로 늘립니다.
+UPGRADE_EXTENDED_WATCH_PROTOCOL_DESC,Coordinates a long-watch protocol and extends each future observation window by 10 seconds.,장시간 관측 절차를 확립해 다음 관측부터 관측 시간을 10초 더 늘립니다.
+UPGRADE_CONTINUOUS_WATCH_ROTATION_NAME,Continuous Watch Rotation,연속 관측 교대
+UPGRADE_CONTINUOUS_WATCH_ROTATION_DESC,Coordinates uninterrupted handoffs and extends future observation windows to their 60-second maximum.,빈틈없는 교대 절차를 마련해 다음 관측부터 관측 시간을 최대 60초로 늘립니다.
 UPGRADE_SECONDARY_CAMERA_NAME,Secondary Camera,보조 카메라
 UPGRADE_SECONDARY_CAMERA_DESC,Forecasts incoming objects and gives you a dish. Right-click anywhere to move the nearest dish.,진입할 천체를 미리 예보하고 직접 배치할 수 있는 접시 1대를 제공합니다. 하늘을 우클릭하면 가장 가까운 접시가 이동합니다.
 UPGRADE_PREDICTIVE_DISH_CONTROL_NAME,Predictive Dish Control,예측 접시 제어

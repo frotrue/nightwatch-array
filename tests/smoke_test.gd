@@ -134,10 +134,10 @@ func _run() -> void:
 	_check("설정" in game.hud.settings_button.text, "HUD refreshes with Korean text")
 	_check(game.upgrade_tree.title_label.text == "관측망", "upgrade tree refreshes with Korean text")
 	_check(TranslationServer.translate("HUD_AUTOSAVED") == "자동 저장됨", "Korean autosave status stays concise")
-	_check(TranslationServer.translate("HUD_OBSERVATION_TIME") % [1, 0, 30] == "1차 관측  •  00:30", "Korean round countdown reads naturally")
-	_check(TranslationServer.translate("TREE_INTERMISSION_SUBTITLE") % [2, 40] == "업그레이드 시간  /  2차 관측은 40초", "Korean upgrade-break guidance explains the next round")
+	_check(TranslationServer.translate("HUD_OBSERVATION_TIME") % [1, 1, 0] == "1차 관측  •  01:00", "Korean round countdown reads naturally")
+	_check(TranslationServer.translate("TREE_INTERMISSION_SUBTITLE") % [2, 30] == "업그레이드 시간  /  2차 관측은 30초", "Korean upgrade-break guidance explains the next round and duration")
 	_check(TranslationServer.translate("PHASE_SUMMARY_TITLE") % 1 == "1차 관측 완료", "Korean phase summary title reads naturally")
-	_check(TranslationServer.translate("UPGRADE_OBSERVATION_SCHEDULING_NAME") == "관측 일정 최적화", "Korean duration-research name is localized")
+	_check(TranslationServer.translate("PHASE_SUMMARY_SYSTEMS_CHANGED") % 130.0 == "실현 처리량 130.0 데이터/분  •  시스템 변경  •  다음 라운드에서 새 기준 기록", "Korean mixed-build summary explains realized productivity and the next baseline")
 	_check(TranslationServer.translate("CONTACT_RIGHT_CLICK_HINT") == "우클릭: 가장 가까운 접시 이동", "Korean contact hover hint teaches literal nearest-dish movement")
 	_check(TranslationServer.translate("CONTACT_COMMIT_HINT") == "Shift+우클릭: 접시 예약", "Korean predictive-control hint teaches its separate gesture")
 	_check(TranslationServer.translate("CONTACT_MANUAL_ONLY_HINT") == "수동 관측 전용", "Korean rare-contact hint reserves the target for manual observation")
@@ -217,15 +217,22 @@ func _run() -> void:
 	_check(initial.successes == 0, "run begins with no observations")
 	_check(not initial.final_started, "final event is initially inactive")
 	_check(initial.observation_round == 1 and initial.observation_phase_active, "run begins in observation round 1")
-	_check(absf(float(initial.observation_phase_remaining) - 30.0) < 1.0, "first observation round starts at 30 seconds")
+	_check(absf(float(initial.observation_phase_remaining) - 20.0) < 1.0, "first observation round starts at 20 seconds")
 	_check(game.progression.get_max_active() == 4, "the opening sky supports four concurrent targets so attention starts scarce")
 	_check(balance.FIRST_METEOR_DELAY <= 2.0, "the opening meteor arrives before the sky feels empty")
 	_check(balance.REGULAR_SPAWN_INTERVAL_MIN == 1.6 and balance.REGULAR_SPAWN_INTERVAL_MAX == 2.4, "regular spawn cadence keeps multiple choices in flight")
 	_check(game.progression.get_available_nodes().size() == 3, "only three opening choices are revealed")
-	_check(game.hud.array_progress_bar.max_value == 20.0, "HUD exposes the finite array completion goal")
+	_check(game.hud.array_progress_bar.max_value == 21.0, "HUD exposes the full 21-system completion goal")
 	_check(game.hud.top_panel.size.x <= 510.0, "live HUD stays compact after removing secondary progression copy")
 	_check(game.progression.get_node_state("long_exposure") == "hidden", "adjacent optics node begins hidden")
-	_check(game.progression.get_node_state("observation_scheduling") == "hidden", "observation-duration research begins behind Array Planning")
+	_check(not balance.upgrade_definition("observation_scheduling").is_empty(), "duration research is present in the tree")
+	_check(int(balance.upgrade_definition("observation_scheduling").cost) == 60, "the mandatory first duration gate stays inexpensive")
+	_check(int(balance.upgrade_definition("thermal_management").cost) == 180, "the second duration step uses its measured price")
+	_check(int(balance.upgrade_definition("extended_watch_protocol").cost) == 280, "the third duration step uses its measured price")
+	_check(int(balance.upgrade_definition("continuous_watch_rotation").cost) == 380, "the fourth duration step uses its measured price")
+	_check("observation_scheduling" in balance.upgrade_definition("wide_field").prerequisites, "Wide Field requires Observation Scheduling")
+	_check(balance.upgrade_definition("thermal_management").prerequisites == ["wide_field"], "Thermal Management relies on Wide Field without a redundant edge")
+	_check(balance.upgrade_definition("continuous_watch_rotation").prerequisites == ["extended_watch_protocol", "rare_detection"], "Continuous Watch Rotation closes the duration/detection alternation")
 	var closed_tree_style_id: int = game.upgrade_tree.node_buttons["better_lens"].get_theme_stylebox("normal").get_instance_id()
 	var closed_tree_optics_position: Vector2 = game.upgrade_tree.node_buttons["better_lens"].position
 	var data_before_rejected_purchase: float = game.progression.observation_data
@@ -363,6 +370,22 @@ func _run() -> void:
 	game.observation_round = 3
 	game.observation_phase_remaining = 17.0
 	game.hud.set_observation_phase(3, 17.0)
+	game.last_clean_round_result = {
+		"round": 2,
+		"duration": 20.0,
+		"data": 42,
+		"rate": 126.0,
+		"observations": 3,
+		"manual": 2,
+		"automatic": 1,
+		"systems_installed": 0,
+		"systems_since_baseline": [],
+		"shower": false,
+		"build_changed": false,
+		"build_signature": [],
+	}
+	game.best_round_rate = 153.0
+	game.phase_had_shower = true
 	var saved_observation_data: float = game.progression.observation_data
 	var save_error: Error = game.save_games.save_slot(1, game._build_save_data())
 	_check(save_error == OK, "slot 1 save is written")
@@ -381,6 +404,8 @@ func _run() -> void:
 	_check(is_equal_approx(game.progression.observation_data, saved_observation_data), "loading restores Observation Data")
 	_check(game.progression.has_upgrade("better_lens"), "loading restores purchased upgrades")
 	_check(game.progression.success_count == 1, "loading restores observation statistics")
+	_check(game.phase_resumed_from_save and game.phase_had_shower, "loading marks the reset-sky sample as resumed and restores its shower context")
+	_check(is_equal_approx(float(game.last_clean_round_result.get("rate", 0.0)), 126.0) and is_equal_approx(game.best_round_rate, 153.0), "clean-round rate history and best realized rate survive save/load")
 
 	_check(not game.spawner.forecast_enabled(), "objects arrive unannounced before forecast research")
 	_check(not game.progression.forecast_visible(), "the opening array has no forecast feed")
@@ -389,6 +414,10 @@ func _run() -> void:
 	_check(game.progression.get_forecast_max_error() == 70.0, "baseline forecasts expose a seventy-pixel uncertainty envelope")
 	_check(not game.progression.forecast_classifies(), "baseline forecasts do not classify contacts")
 	game.progression.debug_purchase_node("edge_detection")
+	_check(game.progression.get_node_state("wide_field") == "locked", "Wide Field cannot bypass its mandatory duration gate")
+	game.progression.debug_purchase_node("array_planning")
+	game.progression.debug_purchase_node("observation_scheduling")
+	_check(game.progression.get_node_state("wide_field") == "available", "Observation Scheduling opens the Wide Field path")
 	game.progression.debug_purchase_node("wide_field")
 	game.sky_contacts.refresh_dishes()
 	_check(game.spawner.forecast_enabled(), "Wide Field Sensor reveals incoming contacts")
@@ -498,7 +527,7 @@ func _run() -> void:
 	)
 	game.hud.visible = hud_was_visible
 
-	for prerequisite_id in ["edge_detection", "wide_field", "trajectory"]:
+	for prerequisite_id in ["edge_detection", "observation_scheduling", "wide_field", "trajectory"]:
 		game.progression.debug_purchase_node(prerequisite_id)
 	var pacing_ratio_before_predictive_control: float = game.progression.get_progression_ratio()
 	game.progression.debug_purchase_node("predictive_dish_control")
@@ -677,9 +706,10 @@ func _run() -> void:
 	game.sky_contacts.reset()
 
 	game.progression.debug_purchase_all()
-	_check(game.progression.upgrade_level == 20, "all tree nodes unlock through prerequisite-safe debug purchase")
+	_check(game.progression.upgrade_level == 21, "all tree nodes unlock through prerequisite-safe debug purchase")
 	_check(game.progression.get_max_active() == 6, "research raises dense-sky capacity without removing the six-target performance cap")
-	_check(game.hud.array_progress_bar.value == 20.0, "compact HUD resolves to full array completion")
+	_check(game.hud.array_progress_bar.value == 21.0, "compact HUD resolves to the full 21-system array completion")
+	_check(is_equal_approx(game.progression.get_progression_ratio(), 1.0), "21-node topology normalization preserves the completed-tree density endpoint")
 	for legacy_id in ["better_lens", "long_exposure", "wide_field", "trajectory", "precision_multiplier", "secondary_camera", "shower_detector", "automated_tracking"]:
 		_check(game.progression.has_upgrade(legacy_id), "legacy upgrade migrated: " + legacy_id)
 	_check(game.progression.has_upgrade("automated_tracking"), "final automation system is active")
@@ -741,15 +771,11 @@ func _run() -> void:
 	machine_only_major.free()
 	_check(game.progression.get_node_state("perfect_observation") == "purchased", "cross-branch Perfect Observation resolves")
 	_check(game.progression.get_node_state("observatory_network") == "purchased", "cross-branch Observatory Network resolves")
-	for duration_node in ["observation_scheduling", "thermal_management", "extended_watch_protocol"]:
-		_check(game.progression.has_upgrade(duration_node), "observation-duration research resolves: " + duration_node)
+	for duration_node in ["observation_scheduling", "thermal_management", "extended_watch_protocol", "continuous_watch_rotation"]:
+		_check(game.progression.has_upgrade(duration_node) and game.upgrade_tree.node_buttons.has(duration_node), "duration research has a live purchased tree surface: " + duration_node)
 	game.upgrade_tree.open_tree()
 	await process_frame
-	_check(game.upgrade_tree.node_buttons["observation_scheduling"].visible, "Observation Scheduling appears in the completed research tree")
-	_check(game.upgrade_tree.node_buttons["thermal_management"].visible, "Equipment Thermal Control appears in the completed research tree")
-	_check(game.upgrade_tree.node_buttons["extended_watch_protocol"].visible, "Extended Watch Protocol appears in the completed research tree")
 	_check(game.upgrade_tree.node_buttons["predictive_dish_control"].visible, "Predictive Dish Control appears in the completed research tree")
-	_check(game.upgrade_tree.node_buttons["observation_scheduling"].position.y < game.upgrade_tree.node_buttons["secondary_camera"].position.y, "duration research uses a separate network-tree lane")
 	game.upgrade_tree.close_tree()
 	_check(not game.hud.root_control.has_node("UpgradePanel"), "legacy upgrade purchase panel is absent")
 	_check(not game.hud.root_control.has_node("UpgradeTreeLauncher"), "live playfield has no persistent upgrade entry")
@@ -806,50 +832,135 @@ func _run() -> void:
 	_check(reset_state.shower_state == "idle", "reset clears shower state")
 	_check(not reset_state.final_started, "reset makes the final event available again")
 	_check(reset_state.observation_round == 1 and reset_state.observation_phase_active, "reset returns to the first observation round")
-	_check(absf(float(reset_state.observation_phase_remaining) - 30.0) < 1.0, "reset restores the 30-second opening round")
-	_check(game._observation_duration() == 30.0, "round number alone does not increase observation time")
+	_check(absf(float(reset_state.observation_phase_remaining) - 20.0) < 1.0, "reset restores the base 20-second round")
+	_check(game._observation_duration() == 20.0, "the base observation window is 20 seconds")
+	_check(game.progression.debug_purchase_node("array_planning"), "Array Planning opens duration research")
+	_check(game.progression.debug_purchase_node("observation_scheduling") and game._observation_duration() == 30.0, "Observation Scheduling extends future rounds to 30 seconds")
+	_check(game.progression.debug_purchase_node("edge_detection"), "Edge Detection opens the gated detection path")
+	_check(game.progression.debug_purchase_node("wide_field"), "the mandatory duration gate allows Wide Field")
+	_check(game.progression.debug_purchase_node("thermal_management") and game._observation_duration() == 40.0, "Thermal Management extends future rounds to 40 seconds")
+	_check(game.progression.debug_purchase_node("trajectory"), "Trajectory Prediction opens the next duration pairing")
+	_check(game.progression.debug_purchase_node("extended_watch_protocol") and game._observation_duration() == 50.0, "Extended Watch Protocol extends future rounds to 50 seconds")
+	_check(game.progression.debug_purchase_node("rare_detection"), "Rare Meteor Detection opens the final duration pairing")
+	_check(game.progression.debug_purchase_node("continuous_watch_rotation") and game._observation_duration() == 60.0, "Continuous Watch Rotation reaches the 60-second maximum")
+	var duration_save: Dictionary = game.progression.get_save_data()
+	duration_save.observation_data = 7.0
+	game.progression.load_save_data(duration_save)
+	_check(is_equal_approx(game.progression.observation_data, 7.0), "restored duration systems load without retirement refunds")
+	_check(game.progression.has_upgrade("continuous_watch_rotation") and game._observation_duration() == 60.0, "restored saves retain the full duration ladder")
+	game.progression.reset()
+	game.phase_start_upgrade_signature = game._current_build_signature()
+	# The first common is a deliberate measured-round anchor. Consume it once
+	# before the regular weighted type chooser takes over.
+	game.spawner.reset()
+	game.spawner.start_spawning()
+	game.spawner.set_phase_time_remaining(20.0)
+	game.spawner._process(balance.FIRST_METEOR_DELAY + 0.01)
+	_check(game.meteor_layer.get_child_count() == 1 and String(game.meteor_layer.get_child(0).type_id) == "common", "each measured round opens with exactly one forced common anchor")
+	_check(not game.spawner.first_spawn_pending, "the forced common anchor is consumed only once per round")
+	game.spawner.reset()
+	game.spawner.start_spawning()
+	game.spawner.set_phase_time_remaining(20.0)
+	# A due shower remains due when too little time is left, then starts as soon
+	# as a fresh round can contain its warning and active duration.
+	game.elapsed_time = 100.0
+	game.events.run_time = game.elapsed_time
+	game.events.next_shower_time = 100.0
+	game.spawner.set_phase_time_remaining(balance.SHOWER_WARNING_TIME + balance.SHOWER_DURATION)
+	_check(not game.events.trigger_shower() and game.events.shower_state == "idle", "a shower that cannot finish before zero is deferred")
+	_check(is_equal_approx(game.events.next_shower_time, 100.0), "a deferred shower preserves its due time")
+	game.spawner.set_phase_time_remaining(20.0)
+	_check(game.events.trigger_shower() and game.events.shower_state == "warning", "a deferred shower starts in the next viable observation window")
+	_check(game.phase_had_shower, "the measured round records its meteor-shower badge")
+	game.events.pause_for_intermission()
+	game.events.start()
+	game.events.next_shower_time = game.events.run_time + 37.0
 	game.progression.success_count = 4
 	game.progression.manual_successes = 3
 	game.progression.automatic_successes = 1
 	game.progression.total_data_earned = 55.0
 	game.observation_phase_remaining = 0.05
-	game.events.shower_state = "active"
 	game._process(0.1)
-	_check(game.observation_phase_active and not game.upgrade_tree.is_open(), "round expiry waits for an active meteor shower to finish")
-	game.events.shower_state = "idle"
-	game._process(0.0)
-	_check(not game.observation_phase_active and game.hud.is_phase_summary_open() and not game.upgrade_tree.is_open() and paused, "round expiry pauses the sky and opens a concise phase summary")
-	_check(game.hud.phase_summary_observations.text.ends_with("4"), "phase summary reports observations from the completed phase")
-	_check(game.hud.phase_summary_data.text.ends_with("+55"), "phase summary reports Data earned during the completed phase")
+	_check(not game.observation_phase_active and game.hud.is_phase_summary_open() and not game.upgrade_tree.is_open() and paused, "round expiry pauses the sky and opens the comparison summary")
+	_check(game.hud.phase_summary_observations.text == TranslationServer.translate("PHASE_SUMMARY_OBSERVATIONS") % 4, "phase summary reports observations from the measured round")
+	_check(game.hud.phase_summary_data.text == TranslationServer.translate("PHASE_SUMMARY_OUTPUT") % 55, "phase summary keeps total round Data as the headline")
 	_check(game.hud.phase_summary_split.text == TranslationServer.translate("PHASE_SUMMARY_MANUAL_AUTO") % [3, 1], "phase summary separates manual and automatic observations")
-	_check(game.upgrade_tree.intermission_next_round == 2 and game.upgrade_tree.intermission_next_duration == 30, "upgrade break keeps the next round at 30 seconds without research")
+	_check(game.hud.phase_summary_comparison.text == TranslationServer.translate("PHASE_SUMMARY_FIRST_BASELINE") % 165.0, "the first round establishes a realized-productivity baseline")
+	_check(TranslationServer.translate("PHASE_SUMMARY_BADGE_SHOWER") in game.hud.phase_summary_badges.text and TranslationServer.translate("PHASE_SUMMARY_BADGE_BEST") in game.hud.phase_summary_badges.text, "summary badges explain shower context and a new best")
+	_check(is_equal_approx(float(game.last_clean_round_result.get("rate", 0.0)), 165.0) and is_equal_approx(game.best_round_rate, 165.0), "first clean rate and best realized productivity persist in game state")
+	_check(is_equal_approx(game.events.next_shower_time, 137.0), "the 40-58s shower schedule survives the research intermission")
+	_check(game.upgrade_tree.intermission_next_round == 2 and game.upgrade_tree.intermission_next_duration == 20, "upgrade break identifies the next round and duration")
 	game.hud._on_phase_summary_continue_pressed()
 	_check(not game.hud.is_phase_summary_open() and game.upgrade_tree.is_open() and paused, "one summary action opens the research phase")
 	_check(game.upgrade_tree.close_button.text == TranslationServer.translate("TREE_START_OBSERVATION"), "upgrade break close action is labeled as starting observation")
+	_check(game.progression.debug_purchase_node("array_planning"), "research intermission can open Observation Scheduling")
+	_check(game.progression.debug_purchase_node("observation_scheduling"), "research intermission can buy the mandatory first duration node")
+	_check(game.upgrade_tree.intermission_next_duration == 30, "research subtitle updates the next round duration immediately")
 	game.upgrade_tree.close_tree()
 	_check(not paused and game.observation_phase_active and game.observation_round == 2, "closing the upgrade tree starts round 2")
-	_check(absf(game.observation_phase_remaining - 30.0) < 0.1, "round 2 remains 30 seconds without duration research")
-	_check(game.progression.debug_purchase_node("array_planning"), "Array Planning can open the duration research path")
-	_check(game.progression.debug_purchase_node("observation_scheduling"), "Observation Scheduling can be researched")
-	_check(game._observation_duration() == 40.0, "Observation Scheduling adds 10 seconds")
-	_check(absf(game.observation_phase_remaining - 30.0) < 0.1, "duration research does not alter the observation already in progress")
+	_check(absf(game.observation_phase_remaining - 30.0) < 0.1, "the purchased duration step applies to the next round")
+	game.progression.success_count += 6
+	game.progression.manual_successes += 2
+	game.progression.automatic_successes += 4
+	game.progression.total_data_earned += 70.0
 	game._end_observation_phase()
-	_check(game.upgrade_tree.intermission_next_duration == 40, "the next upgrade break previews the researched 40-second window")
+	_check(game.hud.phase_summary_comparison.text == TranslationServer.translate("PHASE_SUMMARY_COMPARE") % [140.0, "-25.0", "-15"], "different-length rounds compare realized Data per minute rather than totals")
+	_check(is_equal_approx(float(game.last_clean_round_result.get("rate", 0.0)), 140.0) and is_equal_approx(game.best_round_rate, 165.0), "a higher total but lower rate replaces the clean baseline without creating a false best")
+	_check(TranslationServer.translate("PHASE_SUMMARY_BADGE_BEST") not in game.hud.phase_summary_badges.text, "a longer round does not earn a best badge from total output alone")
 	game._on_phase_summary_continue_requested()
 	game.upgrade_tree.close_tree()
-	_check(game.observation_round == 3 and absf(game.observation_phase_remaining - 40.0) < 0.1, "the researched duration applies to the next observation")
-	_check(game.progression.debug_purchase_node("edge_detection"), "duration path can satisfy Edge Detection prerequisite")
-	_check(game.progression.debug_purchase_node("wide_field"), "duration path can satisfy Wide Field prerequisite")
-	_check(game.progression.debug_purchase_node("thermal_management"), "Equipment Thermal Control can be researched")
-	_check(game._observation_duration() == 50.0, "Equipment Thermal Control adds a second 10 seconds")
-	_check(game.progression.debug_purchase_node("trajectory"), "duration path can satisfy Trajectory Prediction prerequisite")
-	_check(game.progression.debug_purchase_node("extended_watch_protocol"), "Extended Watch Protocol can be researched")
-	_check(game._observation_duration() == 60.0, "Extended Watch Protocol reaches the 60-second maximum")
+	_check(game.observation_round == 3 and absf(game.observation_phase_remaining - 30.0) < 0.1, "round 3 retains the researched duration")
+	_check(game.progression.debug_purchase_node("better_lens"), "a live research purchase changes the active build signature")
+	game.progression.success_count += 5
+	game.progression.manual_successes += 3
+	game.progression.automatic_successes += 2
+	game.progression.total_data_earned += 65.0
 	game._end_observation_phase()
-	_check(game.upgrade_tree.intermission_next_duration == 60, "upgrade break previews the maximum researched duration")
+	_check(game.hud.phase_summary_comparison.text == TranslationServer.translate("PHASE_SUMMARY_SYSTEMS_CHANGED") % 130.0, "a mixed-build round suppresses its percentage comparison")
+	_check("VS PREVIOUS" not in game.hud.phase_summary_comparison.text, "a mixed-build round never presents a misleading comparison")
+	_check(game.hud.phase_summary_badges.text == TranslationServer.translate("PHASE_SUMMARY_SINCE_BASELINE") % TranslationServer.translate("UPGRADE_BETTER_LENS_NAME").to_upper(), "a live purchase names the system installed since the clean baseline")
+	_check(is_equal_approx(float(game.last_clean_round_result.get("rate", 0.0)), 140.0), "a mixed-build round does not replace the last clean baseline")
 	game._on_phase_summary_continue_requested()
 	game.upgrade_tree.close_tree()
-	_check(game.observation_round == 4 and absf(game.observation_phase_remaining - 60.0) < 0.1, "the maximum duration applies to the following observation")
+	_check(game.progression.debug_purchase_node("edge_detection"), "a second mixed minute can add another root system")
+	game.progression.success_count += 4
+	game.progression.manual_successes += 2
+	game.progression.automatic_successes += 2
+	game.progression.total_data_earned += 60.0
+	game._end_observation_phase()
+	var cumulative_system_names := ", ".join(PackedStringArray([
+		TranslationServer.translate("UPGRADE_BETTER_LENS_NAME").to_upper(),
+		TranslationServer.translate("UPGRADE_EDGE_DETECTION_NAME").to_upper(),
+	]))
+	_check(game.hud.phase_summary_comparison.text == TranslationServer.translate("PHASE_SUMMARY_SYSTEMS_CHANGED") % 120.0, "consecutive mixed rounds remain non-comparable")
+	_check(game.hud.phase_summary_badges.text == TranslationServer.translate("PHASE_SUMMARY_SINCE_BASELINE") % cumulative_system_names, "consecutive mixed minutes list every install since the clean baseline")
+	_check(is_equal_approx(float(game.last_clean_round_result.get("rate", 0.0)), 140.0), "consecutive mixed rounds retain the older clean baseline")
+	game._on_phase_summary_continue_requested()
+	game.upgrade_tree.close_tree()
+	game.progression.success_count += 7
+	game.progression.manual_successes += 4
+	game.progression.automatic_successes += 3
+	game.progression.total_data_earned += 80.0
+	game._end_observation_phase()
+	_check(game.hud.phase_summary_comparison.text == TranslationServer.translate("PHASE_SUMMARY_COMPARE") % [160.0, "+20.0", "+14"], "the next stable build compares realized productivity against the last clean baseline")
+	_check(TranslationServer.translate("PHASE_SUMMARY_SINCE_BASELINE") % cumulative_system_names in game.hud.phase_summary_badges.text, "the stable comparison retains cumulative install context")
+	_check(is_equal_approx(float(game.last_clean_round_result.get("rate", 0.0)), 160.0) and is_equal_approx(game.best_round_rate, 165.0), "the stable post-change round establishes a new clean baseline without erasing the higher rate best")
+	game._on_phase_summary_continue_requested()
+	game.upgrade_tree.close_tree()
+	game.observation_phase_remaining = 12.0
+	var resumed_round_save: Dictionary = game._build_save_data()
+	game.last_clean_round_result.clear()
+	game.best_round_rate = 0.0
+	game._apply_save_data(resumed_round_save)
+	_check(game.phase_resumed_from_save and absf(game.observation_phase_remaining - 12.0) < 0.1, "round saves resume the remaining measured sample")
+	_check(is_equal_approx(float(game.last_clean_round_result.get("rate", 0.0)), 160.0) and is_equal_approx(game.best_round_rate, 165.0), "resuming restores clean-baseline rate history")
+	game.progression.success_count += 3
+	game.progression.manual_successes += 2
+	game.progression.automatic_successes += 1
+	game.progression.total_data_earned += 40.0
+	game._end_observation_phase()
+	_check(game.hud.phase_summary_comparison.text == TranslationServer.translate("PHASE_SUMMARY_SESSION_RESUMED") % 80.0, "a reset-sky resumed sample is labeled as a new baseline")
+	_check(is_equal_approx(float(game.last_clean_round_result.get("rate", 0.0)), 80.0) and is_equal_approx(game.best_round_rate, 165.0), "a resumed sample replaces the session baseline without erasing the all-run rate best")
 	game.reset_run()
 	await process_frame
 	await process_frame
