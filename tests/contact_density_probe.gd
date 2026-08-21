@@ -7,11 +7,54 @@ const SPAWN_SEED_ENV := "NIGHTWATCH_CONTACT_PROBE_SEED"
 const TYPE_BUCKETS := ["common", "fast", "fragment", "fragment_piece", "fireball", "major"]
 const MODE_NO_INPUT := "no-input"
 const MODE_SCRIPTED_ENGAGED := "scripted-engaged"
-const MODE_FAST_ASSIGNED_ONLY := "fast-assigned-only"
+const MODE_FAST_ASSIGNED_ONE_DISH := "fast-assigned-one-dish"
+const MODE_FAST_ASSIGNED_TWO_DISH := "fast-assigned-two-dish"
+const MODE_ALL_ELIGIBLE_TWO_DISH := "all-eligible-two-dish"
+const MODE_FRAGMENT_ASSIGNED_ONE_DISH := "fragment-assigned-one-dish"
 const ROWS := [
-	{"name": "forecast-off", "upgrades": ["edge_detection"]},
-	{"name": "wide-only", "upgrades": ["edge_detection", "wide_field"]},
-	{"name": "wide+dish", "upgrades": ["edge_detection", "wide_field", "array_planning", "secondary_camera"]},
+	{
+		"name": "forecast-off",
+		"upgrades": ["edge_detection"],
+		"modes": [MODE_NO_INPUT, MODE_SCRIPTED_ENGAGED],
+	},
+	{
+		"name": "wide-only",
+		"upgrades": ["edge_detection", "wide_field"],
+		"modes": [MODE_NO_INPUT, MODE_SCRIPTED_ENGAGED],
+	},
+	{
+		"name": "wide+dish",
+		"upgrades": ["edge_detection", "wide_field", "array_planning", "secondary_camera"],
+		"modes": [
+			MODE_NO_INPUT,
+			MODE_SCRIPTED_ENGAGED,
+			MODE_FAST_ASSIGNED_ONE_DISH,
+			MODE_FAST_ASSIGNED_TWO_DISH,
+		],
+	},
+	{
+		# Direct node activation deliberately isolates one automatic lane without
+		# the steerable dish that is normally its prerequisite.
+		"name": "wide+one-lane",
+		"upgrades": ["edge_detection", "wide_field", "multi_target_analysis"],
+		"modes": [MODE_NO_INPUT],
+	},
+	{
+		"name": "all-eligible+dish",
+		"upgrades": [
+			"edge_detection", "wide_field", "trajectory", "fragment_analysis",
+			"array_planning", "secondary_camera",
+		],
+		"modes": [MODE_ALL_ELIGIBLE_TWO_DISH],
+	},
+	{
+		"name": "fragment+dish",
+		"upgrades": [
+			"edge_detection", "wide_field", "trajectory", "fragment_analysis",
+			"array_planning", "secondary_camera",
+		],
+		"modes": [MODE_FRAGMENT_ASSIGNED_ONE_DISH],
+	},
 ]
 
 var game
@@ -32,6 +75,23 @@ var dish_completions_by_type: Dictionary = {}
 var manual_only_completions_by_type: Dictionary = {}
 var dish_only_completions_by_type: Dictionary = {}
 var shared_completions_by_type: Dictionary = {}
+var automatic_only_completions_by_type: Dictionary = {}
+var assigned_contact_ids: Dictionary = {}
+var planned_target_ids: Dictionary = {}
+var opportunistic_acquired_ids: Dictionary = {}
+var opportunistic_completed_ids: Dictionary = {}
+var opportunistic_dropped_ids: Dictionary = {}
+var last_locked_by_dish: Array[int] = []
+var dish_busy_steps: Array[int] = []
+var total_steps: int = 0
+var fast_contacts_announced: int = 0
+var successful_fast_assignments: int = 0
+var unassigned_fast_contacts: int = 0
+var fast_contacts_while_all_dishes_busy: int = 0
+var eligible_contacts_announced: int = 0
+var successful_eligible_assignments: int = 0
+var unassigned_eligible_contacts: int = 0
+var eligible_contacts_while_all_dishes_busy: int = 0
 
 
 func _initialize() -> void:
@@ -47,10 +107,8 @@ func _run() -> void:
 		spawn_seed,
 	])
 	for row in ROWS:
-		await _run_row(row, MODE_NO_INPUT)
-		await _run_row(row, MODE_SCRIPTED_ENGAGED)
-		if String(row.name) == "wide+dish":
-			await _run_row(row, MODE_FAST_ASSIGNED_ONLY)
+		for mode in row.modes:
+			await _run_row(row, String(mode))
 	print("CONTACT_DENSITY_PROBE_COMPLETE")
 	quit(0)
 
@@ -73,6 +131,8 @@ func _run_row(row: Dictionary, mode: String) -> void:
 		if game.sky_contacts.dish_active():
 			game.sky_contacts._update_dishes(STEP)
 			_record_dish_acquisitions()
+			_record_dish_lock_transitions()
+		_record_dish_busy_step()
 		_process_meteors(STEP)
 		visible_samples.append(float(game.sky_contacts.contacts.size()))
 		elapsed += STEP
@@ -101,6 +161,23 @@ func _prepare_row(row: Dictionary, mode: String) -> void:
 	manual_only_completions_by_type.clear()
 	dish_only_completions_by_type.clear()
 	shared_completions_by_type.clear()
+	automatic_only_completions_by_type.clear()
+	assigned_contact_ids.clear()
+	planned_target_ids.clear()
+	opportunistic_acquired_ids.clear()
+	opportunistic_completed_ids.clear()
+	opportunistic_dropped_ids.clear()
+	last_locked_by_dish.clear()
+	dish_busy_steps.clear()
+	total_steps = 0
+	fast_contacts_announced = 0
+	successful_fast_assignments = 0
+	unassigned_fast_contacts = 0
+	fast_contacts_while_all_dishes_busy = 0
+	eligible_contacts_announced = 0
+	successful_eligible_assignments = 0
+	unassigned_eligible_contacts = 0
+	eligible_contacts_while_all_dishes_busy = 0
 
 	game.set_process(false)
 	game.spawner.set_process(false)
@@ -118,6 +195,20 @@ func _prepare_row(row: Dictionary, mode: String) -> void:
 		game.progression.purchased_nodes[String(node_id)] = true
 		game.progression.purchase_order.append(String(node_id))
 	game.sky_contacts.refresh_dishes()
+	if _mode_uses_two_dishes(mode):
+		var size: Vector2 = game.sky_contacts.get_viewport_rect().size
+		var home := Vector2(size.x * 0.62, size.y * 0.55)
+		game.sky_contacts.dishes.append({
+			"position": home,
+			"target": home,
+			"assigned_id": -1,
+			"locked_id": 0,
+			"arrived": true,
+		})
+	last_locked_by_dish.resize(game.sky_contacts.dishes.size())
+	last_locked_by_dish.fill(0)
+	dish_busy_steps.resize(game.sky_contacts.dishes.size())
+	dish_busy_steps.fill(0)
 
 	var game_spawn_handler := Callable(game, "_on_meteor_spawned")
 	if game.spawner.meteor_spawned.is_connected(game_spawn_handler):
@@ -135,28 +226,48 @@ func _prepare_row(row: Dictionary, mode: String) -> void:
 
 func _on_contact_announced(contact: Dictionary) -> void:
 	announcements += 1
+	var type_id := String(contact.type_id)
+	if type_id == "fast":
+		fast_contacts_announced += 1
 	if not game.sky_contacts.dish_active():
 		return
-	var should_assign := (
+	var all_eligible_mode: bool = probe_mode == MODE_ALL_ELIGIBLE_TWO_DISH
+	var dish_eligible: bool = game.sky_contacts._dish_can_track_type(type_id)
+	if _is_fast_capacity_mode() and type_id == "fast" and _all_dishes_busy():
+		fast_contacts_while_all_dishes_busy += 1
+	if all_eligible_mode and dish_eligible:
+		eligible_contacts_announced += 1
+		if _all_dishes_busy():
+			eligible_contacts_while_all_dishes_busy += 1
+	var should_assign: bool = (
 		probe_mode == MODE_SCRIPTED_ENGAGED
-		or (probe_mode == MODE_FAST_ASSIGNED_ONLY and String(contact.type_id) == "fast")
+		or (_is_fast_capacity_mode() and type_id == "fast")
+		or (all_eligible_mode and dish_eligible)
+		or (probe_mode == MODE_FRAGMENT_ASSIGNED_ONE_DISH and type_id == "fragment")
 	)
 	if not should_assign:
 		return
-	var dish: Dictionary = game.sky_contacts.dishes[0]
-	var dish_is_free := (
-		int(dish.assigned_id) == -1
-		and game.sky_contacts._locked_target(dish) == null
-	)
-	if not dish_is_free or not game.sky_contacts.assign_to_contact(int(contact.id)):
+	if not _has_free_dish() or not game.sky_contacts.assign_to_contact(int(contact.id)):
+		if _is_fast_capacity_mode() and type_id == "fast":
+			unassigned_fast_contacts += 1
+		if all_eligible_mode and dish_eligible:
+			unassigned_eligible_contacts += 1
 		return
-	assignment_elapsed[int(contact.id)] = 0.0
-	assignment_leads[int(contact.id)] = float(contact.lead_time)
+	var contact_id := int(contact.id)
+	assigned_contact_ids[contact_id] = type_id
+	assignment_elapsed[contact_id] = 0.0
+	assignment_leads[contact_id] = float(contact.lead_time)
+	if _is_fast_capacity_mode() and type_id == "fast":
+		successful_fast_assignments += 1
+	if all_eligible_mode and dish_eligible:
+		successful_eligible_assignments += 1
 
 
-func _on_contact_resolved(contact: Dictionary, _meteor) -> void:
+func _on_contact_resolved(contact: Dictionary, meteor) -> void:
 	resolutions += 1
 	_record_slew_fraction(int(contact.id))
+	if meteor != null and assigned_contact_ids.has(int(contact.id)):
+		planned_target_ids[meteor.get_instance_id()] = int(contact.id)
 
 
 func _on_meteor_spawned(meteor) -> void:
@@ -176,7 +287,31 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 		_increment_type_count(manual_only_completions_by_type, type_id)
 	elif dish_participated:
 		_increment_type_count(dish_only_completions_by_type, type_id)
+	else:
+		_increment_type_count(automatic_only_completions_by_type, type_id)
+	var meteor_id: int = meteor.get_instance_id()
+	if opportunistic_acquired_ids.has(meteor_id):
+		opportunistic_completed_ids[meteor_id] = type_id
 	data_earned += game.progression.add_observation(reward, was_manual, multiplier)
+
+
+func _is_fast_capacity_mode() -> bool:
+	return probe_mode in [MODE_FAST_ASSIGNED_ONE_DISH, MODE_FAST_ASSIGNED_TWO_DISH]
+
+
+func _mode_uses_two_dishes(mode: String) -> bool:
+	return mode in [MODE_FAST_ASSIGNED_TWO_DISH, MODE_ALL_ELIGIBLE_TWO_DISH]
+
+
+func _has_free_dish() -> bool:
+	for dish in game.sky_contacts.dishes:
+		if int(dish.assigned_id) == -1 and game.sky_contacts._locked_target(dish) == null:
+			return true
+	return false
+
+
+func _all_dishes_busy() -> bool:
+	return not game.sky_contacts.dishes.is_empty() and not _has_free_dish()
 
 
 func _update_assignment_slew(delta: float) -> void:
@@ -212,6 +347,29 @@ func _record_dish_acquisitions() -> void:
 			var type_id := String(target.type_id)
 			acquired_ids[locked_id] = type_id
 			_increment_type_count(dish_acquisitions_by_type, type_id)
+			if not planned_target_ids.has(locked_id):
+				opportunistic_acquired_ids[locked_id] = type_id
+
+
+func _record_dish_lock_transitions() -> void:
+	for index in range(game.sky_contacts.dishes.size()):
+		var current_id := int(game.sky_contacts.dishes[index].locked_id)
+		var previous_id := last_locked_by_dish[index]
+		if previous_id != 0 and previous_id != current_id:
+			if (
+				opportunistic_acquired_ids.has(previous_id)
+				and not opportunistic_completed_ids.has(previous_id)
+			):
+				opportunistic_dropped_ids[previous_id] = opportunistic_acquired_ids[previous_id]
+		last_locked_by_dish[index] = current_id
+
+
+func _record_dish_busy_step() -> void:
+	total_steps += 1
+	for index in range(game.sky_contacts.dishes.size()):
+		var dish: Dictionary = game.sky_contacts.dishes[index]
+		if int(dish.assigned_id) >= 0 or int(dish.locked_id) != 0:
+			dish_busy_steps[index] += 1
 
 
 func _increment_type_count(counts: Dictionary, type_id: String) -> void:
@@ -234,6 +392,16 @@ func _dish_conversion_text() -> String:
 			int(dish_acquisitions_by_type.get(type_id, 0)),
 		])
 	return "|".join(parts)
+
+
+func _dish_busy_fraction_text() -> String:
+	var parts: PackedStringArray = []
+	for index in range(dish_busy_steps.size()):
+		parts.append("%d:%.3f" % [
+			index,
+			0.0 if total_steps == 0 else float(dish_busy_steps[index]) / float(total_steps),
+		])
+	return "none" if parts.is_empty() else "|".join(parts)
 
 
 func _process_meteors(delta: float) -> void:
@@ -270,25 +438,51 @@ func _print_row(row_name: String, mode: String) -> void:
 		average_slew += fraction
 	if not slew_fractions.is_empty():
 		average_slew /= float(slew_fractions.size())
-	print("CONTACT_DENSITY_PROBE row=%s mode=%s announcements=%d resolutions=%d p50_visible=%.1f p95_visible=%.1f dish_slew_fraction=%.3f dish_acquisitions=%d dish_acquisitions_by_type=%s dish_completions_by_type=%s dish_conversion_by_type=%s manual_only_completions_by_type=%s dish_only_completions_by_type=%s shared_completions_by_type=%s realized_objects_30s=%d observations_completed=%d data_earned=%.0f" % [
+	print("CONTACT_DENSITY_PROBE row=%s mode=%s lane_config=dishes:%d|automatic_lanes:%d|manual:%s announcements=%d resolutions=%d p50_visible=%.1f p95_visible=%.1f dish_slew_fraction=%.3f fast_contacts_announced=%d successful_fast_assignments=%d unassigned_fast_contacts=%d fast_contacts_while_all_dishes_busy=%d eligible_contacts_announced=%d successful_eligible_assignments=%d unassigned_eligible_contacts=%d eligible_contacts_while_all_dishes_busy=%d dish_busy_fraction=%s dish_acquisitions=%d dish_acquisitions_by_type=%s dish_completions_by_type=%s dish_conversion_by_type=%s opportunistic_acquisitions=%d opportunistic_acquisitions_by_type=%s opportunistic_completions=%d opportunistic_completions_by_type=%s opportunistic_dropped_without_completion=%d opportunistic_dropped_by_type=%s manual_only_completions_by_type=%s dish_only_completions_by_type=%s shared_completions_by_type=%s automatic_only_completions_by_type=%s realized_objects_30s=%d observations_completed=%d data_earned=%.0f" % [
 		row_name,
 		mode,
+		game.sky_contacts.dishes.size(),
+		game.progression.get_secondary_slots(),
+		"on" if mode == MODE_SCRIPTED_ENGAGED else "off",
 		announcements,
 		resolutions,
 		_percentile(sorted_visible, 0.50),
 		_percentile(sorted_visible, 0.95),
 		average_slew,
+		fast_contacts_announced,
+		successful_fast_assignments,
+		unassigned_fast_contacts,
+		fast_contacts_while_all_dishes_busy,
+		eligible_contacts_announced,
+		successful_eligible_assignments,
+		unassigned_eligible_contacts,
+		eligible_contacts_while_all_dishes_busy,
+		_dish_busy_fraction_text(),
 		acquired_ids.size(),
 		_type_counts_text(dish_acquisitions_by_type),
 		_type_counts_text(dish_completions_by_type),
 		_dish_conversion_text(),
+		opportunistic_acquired_ids.size(),
+		_type_counts_text(_counts_by_recorded_type(opportunistic_acquired_ids)),
+		opportunistic_completed_ids.size(),
+		_type_counts_text(_counts_by_recorded_type(opportunistic_completed_ids)),
+		opportunistic_dropped_ids.size(),
+		_type_counts_text(_counts_by_recorded_type(opportunistic_dropped_ids)),
 		_type_counts_text(manual_only_completions_by_type),
 		_type_counts_text(dish_only_completions_by_type),
 		_type_counts_text(shared_completions_by_type),
+		_type_counts_text(automatic_only_completions_by_type),
 		realized_objects,
 		observations_completed,
 		data_earned,
 	])
+
+
+func _counts_by_recorded_type(records: Dictionary) -> Dictionary:
+	var counts: Dictionary = {}
+	for type_id in records.values():
+		_increment_type_count(counts, String(type_id))
+	return counts
 
 
 func _percentile(sorted_values: Array[float], ratio: float) -> float:

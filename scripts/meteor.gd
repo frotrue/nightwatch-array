@@ -170,6 +170,10 @@ func set_secondary_assist(value: float) -> void:
 	secondary_assist = value
 
 
+func get_assist_rate(duration_multiplier: float) -> float:
+	return 1.0 / maxf(required_track_time * duration_multiplier, 0.001)
+
+
 func can_be_tracked() -> bool:
 	return alive
 

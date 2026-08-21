@@ -123,6 +123,9 @@ func _run() -> void:
 	game.tutorial._on_primary_pressed()
 	_check(not game.tutorial.is_active(), "finishing hides the tutorial")
 	var starting_locale: String = game.settings.locale
+	var balance = load("res://scripts/game_balance.gd")
+	var multi_target_definition: Dictionary = balance.upgrade_definition("multi_target_analysis")
+	var observatory_definition: Dictionary = balance.upgrade_definition("observatory_network")
 	game.settings.set_language("ko", false)
 	await process_frame
 	_check(TranslationServer.get_locale().left(2) == "ko", "Korean locale activates through game settings")
@@ -135,6 +138,16 @@ func _run() -> void:
 	_check(TranslationServer.translate("UPGRADE_OBSERVATION_SCHEDULING_NAME") == "관측 일정 최적화", "Korean duration-research name is localized")
 	_check(TranslationServer.translate("CONTACT_RIGHT_CLICK_HINT") == "우클릭: 접시 배정", "Korean contact hover hint names the right mouse button")
 	_check(TranslationServer.translate("CONTACT_MANUAL_ONLY_HINT") == "수동 관측 전용", "Korean rare-contact hint reserves the target for manual observation")
+	_check(
+		game.upgrade_tree._upgrade_description(multi_target_definition)
+		== "수동 관측 범위 안의 모든 유성을 함께 분석합니다. 자동 카메라 채널 하나와 파편 분석 지원도 추가합니다.",
+		"Korean Multi-Target Analysis description names one automatic lane"
+	)
+	_check(
+		game.upgrade_tree._upgrade_description(observatory_definition)
+		== "전체 관측망을 연결해 유성우 진입 구역을 예측하고 직접 조준하는 두 번째 접시를 추가하며 자동 카메라 채널 두 개를 유지합니다.",
+		"Korean Observatory Network description names the second dish and two automatic lanes"
+	)
 	_check(TranslationServer.translate("UPGRADE_ERROR_NEED_DATA") % 12 == "데이터가 12개 더 필요합니다", "Korean shortfall text is a complete sentence")
 	_check(TranslationServer.translate("TREE_NEED_MORE") % [8, 12] == "◇  데이터 8 / 12", "Korean tree affordability text shows current and required Data")
 	_check(TranslationServer.translate("SAVE_RESET_PROMPT") % 2 == "슬롯 2의 모든 진행 상황을 삭제합니다. 이 작업은 되돌릴 수 없습니다.", "Korean reset warning clearly explains permanent deletion")
@@ -152,11 +165,30 @@ func _run() -> void:
 	_check(game.hud.settings_button.text.ends_with("SETTINGS"), "English can be restored at runtime")
 	_check(TranslationServer.translate("CONTACT_RIGHT_CLICK_HINT") == "RIGHT-CLICK: ASSIGN DISH", "English contact hover hint names the right mouse button")
 	_check(TranslationServer.translate("CONTACT_MANUAL_ONLY_HINT") == "MANUAL OBSERVATION ONLY", "English rare-contact hint reserves the target for manual observation")
+	_check(
+		game.upgrade_tree._upgrade_description(multi_target_definition)
+		== "All meteors inside the manual tracking field advance together; also adds one automatic camera lane and fragment assistance.",
+		"English Multi-Target Analysis description names one automatic lane"
+	)
+	_check(
+		game.upgrade_tree._upgrade_description(observatory_definition)
+		== "Links the whole array; previews shower entry sectors; adds a second steerable dish; and keeps two automatic lanes.",
+		"English Observatory Network description names the second dish and two automatic lanes"
+	)
+	_check(
+		String(multi_target_definition.description)
+		== game.upgrade_tree._upgrade_description(multi_target_definition),
+		"Multi-Target Analysis fallback description stays in sync with rendered localization"
+	)
+	_check(
+		String(observatory_definition.description)
+		== game.upgrade_tree._upgrade_description(observatory_definition),
+		"Observatory Network fallback description stays in sync with rendered localization"
+	)
 	game.settings.set_language(starting_locale, false)
 	await process_frame
 
 	var initial: Dictionary = game.get_debug_snapshot()
-	var balance = load("res://scripts/game_balance.gd")
 	_check(initial.upgrade_level == 0, "run begins with no upgrades")
 	_check(initial.successes == 0, "run begins with no observations")
 	_check(not initial.final_started, "final event is initially inactive")
@@ -523,10 +555,51 @@ func _run() -> void:
 	_check(int(game.sky_contacts.dishes[0].locked_id) == 0 and is_zero_approx(major.secondary_assist), "a dish parked beside a contactless major cannot acquire it opportunistically")
 	_check(is_zero_approx(major.observation_progress), "the dish cannot reduce the contactless major prize to an automatic reward")
 	_check(not game.sky_contacts._dish_can_track(fireball) and not game.sky_contacts._dish_can_track(major), "rare objects are outside the dish role by type")
-	var fragment_piece = game.spawner.spawn_meteor("fragment_piece", Vector2(-3000, -3000), Vector2.ZERO, 1.0)
-	_check(not game.sky_contacts._dish_can_track(fragment_piece), "unforecast fragment pieces stay outside the flat-rate dish role")
-	for rare_target in [fireball, major, fragment_piece]:
+	for rare_target in [fireball, major]:
 		rare_target.queue_free()
+	await process_frame
+	game.sky_contacts.reset()
+
+	# A forecasted fragment can hand its remaining split to the same parked dish.
+	# This is deterministic and verifies the parent-to-piece synergy, rather than
+	# merely asserting that a standalone piece appears on an allowlist.
+	game.spawner.rng.seed = 77119
+	var splitting = game.spawner.spawn_meteor(
+		"fragment", Vector2(-3000, -3000), Vector2(245.0, 0.0), 5.0
+	)
+	dish = game.sky_contacts.dishes[0]
+	dish.position = splitting.global_position
+	# Keep the parked target at the parent's expected completion point so the
+	# waiting dish can immediately scan the nearby split instead of slewing home.
+	dish.target = splitting.global_position + Vector2(245.0, 0.0) * 2.5
+	dish.assigned_id = -1
+	dish.locked_id = splitting.get_instance_id()
+	dish.arrived = true
+	game.sky_contacts.dishes[0] = dish
+	var split_piece_created := false
+	var split_piece_acquired := false
+	var split_piece_completed := false
+	for _step in range(100):
+		game.sky_contacts._update_dishes(0.05)
+		var locked = game.sky_contacts._locked_target(game.sky_contacts.dishes[0])
+		if locked != null and String(locked.type_id) == "fragment_piece":
+			split_piece_acquired = true
+		for split_target in game.meteor_layer.get_children():
+			if not is_instance_valid(split_target):
+				continue
+			if String(split_target.type_id) == "fragment_piece":
+				split_piece_created = true
+			split_target._process(0.05)
+			if String(split_target.type_id) == "fragment_piece" and split_target.observed_successfully and not split_target.manual_touched:
+				split_piece_completed = true
+		if split_piece_completed:
+			break
+	_check(split_piece_created, "a fragment creates child pieces during its observation window")
+	_check(split_piece_acquired, "a dish acquires a nearby piece after its fragment parent splits")
+	_check(split_piece_completed, "a dish completes a split piece without manual help")
+	for split_target in game.meteor_layer.get_children():
+		if String(split_target.type_id) in ["fragment", "fragment_piece"]:
+			split_target.queue_free()
 	await process_frame
 	game.sky_contacts.reset()
 
@@ -537,8 +610,9 @@ func _run() -> void:
 	for legacy_id in ["better_lens", "long_exposure", "wide_field", "trajectory", "precision_multiplier", "secondary_camera", "shower_detector", "automated_tracking"]:
 		_check(game.progression.has_upgrade(legacy_id), "legacy upgrade migrated: " + legacy_id)
 	_check(game.progression.has_upgrade("automated_tracking"), "final automation system is active")
-	_check(game.progression.get_secondary_slots() == 2, "observatory network keeps two automatic lanes once one becomes a steerable dish")
-	_check(game.progression.get_dish_count() == 1, "secondary camera research grants a dish the player aims")
+	_check(game.progression.get_secondary_slots() == 2, "observatory network keeps its two automatic lanes when dish capacity grows")
+	_check(game.progression.get_dish_count() == 2, "observatory network adds a second steerable dish for late-game capacity")
+	_check(game.sky_contacts.dishes.size() == 2, "purchasing the observatory network places both steerable dishes")
 	_check(game.progression.get_automation_strength("fireball") == 0.0, "rare fireballs remain manual high-value targets")
 	_check(game.progression.get_node_state("perfect_observation") == "purchased", "cross-branch Perfect Observation resolves")
 	_check(game.progression.get_node_state("observatory_network") == "purchased", "cross-branch Observatory Network resolves")

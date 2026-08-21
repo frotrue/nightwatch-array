@@ -10,6 +10,9 @@ const MeteorScript = preload("res://scripts/meteor.gd")
 const MAX_TOTAL_METEORS := 32
 const FORECAST_INTERCEPT_DISTANCE := 190.0
 const MINIMUM_PAYABLE_TRACK_TIME := 0.95
+# Automatic lanes are partial assist: at 7x analysis time the scan duration
+# exceeds every eligible target's lifetime, so completion needs another source.
+const LANE_TIME_MULTIPLIER := 7.0
 
 var meteor_layer: Node2D
 var progression: Node
@@ -271,14 +274,7 @@ func _refresh_secondary_camera() -> void:
 	candidates.sort_custom(func(a, b): return float(a.observation_progress) > float(b.observation_progress))
 	for index in range(mini(slots, candidates.size())):
 		var candidate = candidates[index]
-		var rate := 0.19
-		if candidate.type_id == "fast":
-			rate = 0.12
-		elif candidate.type_id == "fragment":
-			rate = 0.14
-		elif candidate.type_id == "fragment_piece" and progression.has_upgrade("multi_target_analysis"):
-			rate = 0.22
-		candidate.set_secondary_assist(rate)
+		candidate.set_secondary_assist(candidate.get_assist_rate(LANE_TIME_MULTIPLIER))
 
 
 func _on_fragment_requested(origin: Vector2, parent_velocity: Vector2, parent_type: String) -> void:
