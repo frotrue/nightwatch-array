@@ -2,10 +2,15 @@ extends Node
 
 signal meteor_spawned(meteor)
 signal rare_spawned(type_id)
+signal contact_announced(contact)
+signal contact_resolved(contact, meteor)
 
 const Balance = preload("res://scripts/game_balance.gd")
 const MeteorScript = preload("res://scripts/meteor.gd")
 const MAX_TOTAL_METEORS := 32
+const FORECAST_LEAD_TIME := 4.0
+const FORECAST_INTERCEPT_DISTANCE := 190.0
+const FORECAST_MAX_ERROR := 70.0
 
 var meteor_layer: Node2D
 var progression: Node
@@ -15,6 +20,8 @@ var pause_regular_spawns: bool = false
 var next_spawn_time: float = Balance.FIRST_METEOR_DELAY
 var first_spawn_pending: bool = true
 var secondary_refresh: float = 0.0
+var pending_contacts: Array[Dictionary] = []
+var next_contact_id: int = 1
 
 
 func setup(target_layer: Node2D, progression_controller: Node) -> void:
@@ -38,6 +45,7 @@ func reset() -> void:
 	next_spawn_time = Balance.FIRST_METEOR_DELAY
 	first_spawn_pending = true
 	secondary_refresh = 0.0
+	pending_contacts.clear()
 
 
 func _process(delta: float) -> void:
@@ -47,17 +55,20 @@ func _process(delta: float) -> void:
 	if secondary_refresh <= 0.0:
 		secondary_refresh = 0.35
 		_refresh_secondary_camera()
+	_update_pending_contacts(delta)
 	if pause_regular_spawns:
 		return
 	next_spawn_time -= delta
 	if next_spawn_time > 0.0:
 		return
-	if _active_count() >= progression.get_max_active():
+	if _active_count() + pending_contacts.size() >= progression.get_max_active():
 		next_spawn_time = 0.45
 		return
 	if first_spawn_pending:
 		first_spawn_pending = false
 		_spawn_first_meteor()
+	elif forecast_enabled():
+		_announce_regular_spawn()
 	else:
 		spawn_meteor(_choose_regular_type())
 	var base_interval := rng.randf_range(
@@ -74,24 +85,13 @@ func spawn_meteor(type_id: String = "common", custom_start := Vector2.INF, custo
 	var instance_limit := MAX_TOTAL_METEORS if type_id == "major" else MAX_TOTAL_METEORS - 1
 	if meteor_layer == null or meteor_layer.get_child_count() >= instance_limit:
 		return null
-	var size := get_viewport().get_visible_rect().size
 	var spec := Balance.meteor_spec(type_id)
 	var start := custom_start
 	var move_velocity := custom_velocity
 	if custom_start == Vector2.INF:
-		var edge := rng.randi_range(0, 2)
-		match edge:
-			0:
-				start = Vector2(rng.randf_range(70.0, size.x - 70.0), -24.0)
-			1:
-				start = Vector2(-24.0, rng.randf_range(55.0, size.y * 0.68))
-			_:
-				start = Vector2(size.x + 24.0, rng.randf_range(55.0, size.y * 0.62))
-		var target := Vector2(
-			rng.randf_range(size.x * 0.24, size.x * 0.78),
-			rng.randf_range(size.y * 0.30, size.y * 0.78)
-		)
-		move_velocity = (target - start).normalized() * float(spec.speed) * rng.randf_range(0.9, 1.12)
+		var entry := plan_entry(type_id)
+		start = entry.start
+		move_velocity = entry.velocity
 	var lifetime_scale: float = progression.get_lifetime_multiplier()
 	if lifetime_override > 0.0:
 		lifetime_scale = lifetime_override / float(spec.lifetime)
@@ -104,6 +104,67 @@ func spawn_meteor(type_id: String = "common", custom_start := Vector2.INF, custo
 	if type_id == "fireball" or type_id == "major":
 		rare_spawned.emit(type_id)
 	return meteor
+
+
+func plan_entry(type_id: String) -> Dictionary:
+	var size := get_viewport().get_visible_rect().size
+	var spec := Balance.meteor_spec(type_id)
+	var start := Vector2.ZERO
+	match rng.randi_range(0, 2):
+		0:
+			start = Vector2(rng.randf_range(70.0, size.x - 70.0), -24.0)
+		1:
+			start = Vector2(-24.0, rng.randf_range(55.0, size.y * 0.68))
+		_:
+			start = Vector2(size.x + 24.0, rng.randf_range(55.0, size.y * 0.62))
+	var target := Vector2(
+		rng.randf_range(size.x * 0.24, size.x * 0.78),
+		rng.randf_range(size.y * 0.30, size.y * 0.78)
+	)
+	return {
+		"start": start,
+		"velocity": (target - start).normalized() * float(spec.speed) * rng.randf_range(0.9, 1.12),
+	}
+
+
+func forecast_enabled() -> bool:
+	return progression != null and progression.get_dish_count() > 0
+
+
+# A forecast names where the object will be before it exists, and names it
+# wrong: the estimate carries an error that only resolves as the object closes.
+func _announce_regular_spawn() -> void:
+	var type_id := _choose_regular_type()
+	var entry := plan_entry(type_id)
+	var direction: Vector2 = Vector2(entry.velocity).normalized()
+	var contact := {
+		"id": next_contact_id,
+		"type_id": type_id,
+		"start": entry.start,
+		"velocity": entry.velocity,
+		"direction": direction,
+		"intercept": Vector2(entry.start) + direction * FORECAST_INTERCEPT_DISTANCE,
+		"error_offset": Vector2.from_angle(rng.randf_range(0.0, TAU)) * rng.randf_range(28.0, FORECAST_MAX_ERROR),
+		"countdown": FORECAST_LEAD_TIME,
+		"lead_time": FORECAST_LEAD_TIME,
+		"classified": rng.randf() > 0.4,
+		"abandoned_flash": 0.0,
+	}
+	next_contact_id += 1
+	pending_contacts.append(contact)
+	contact_announced.emit(contact)
+
+
+func _update_pending_contacts(delta: float) -> void:
+	for index in range(pending_contacts.size() - 1, -1, -1):
+		var contact: Dictionary = pending_contacts[index]
+		contact.abandoned_flash = maxf(0.0, float(contact.abandoned_flash) - delta)
+		contact.countdown = maxf(0.0, float(contact.countdown) - delta)
+		if float(contact.countdown) > 0.0:
+			continue
+		pending_contacts.remove_at(index)
+		var meteor = spawn_meteor(String(contact.type_id), contact.start, contact.velocity)
+		contact_resolved.emit(contact, meteor)
 
 
 func spawn_for_shower(index: int) -> void:
