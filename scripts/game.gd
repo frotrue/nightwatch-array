@@ -8,8 +8,18 @@ const AUTOSAVE_INTERVAL_SECONDS := 60.0
 # streak near zero exactly when the array is at its busiest.
 const STREAK_TIMEOUT := 2.6
 const HITSTOP_TIME_SCALE := 0.06
+# Every manual observation gets a directional kick; the rumble and the freeze
+# are reserved for the top of the value range so a big hit still has something
+# quieter to stand out against.
+const KICK_MIN_PIXELS := 1.3
+const KICK_MAX_PIXELS := 3.0
 const SHAKE_STRENGTH_FLOOR := 0.50
 const HITSTOP_STRENGTH_FLOOR := 0.66
+# Trauma reaches pixels squared, so the rumble has to enter near the kick's
+# ceiling. Entering lower would make crossing the floor a downgrade in felt
+# impact rather than an escalation.
+const SHAKE_TRAUMA_FLOOR := 0.54
+const SHAKE_TRAUMA_CEILING := 0.88
 
 @onready var starfield: Node2D = $Starfield
 @onready var meteor_layer: Node2D = $MeteorLayer
@@ -405,12 +415,21 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 		# ladder would hold the chain at the top note for free and erase the one
 		# signal that reports the player is still the one keeping rhythm.
 		sound.play_automatic_tick()
-	if strength >= SHAKE_STRENGTH_FLOOR:
-		var weight := clampf((strength - SHAKE_STRENGTH_FLOOR) / (1.0 - SHAKE_STRENGTH_FLOOR), 0.0, 1.0)
-		effects.add_shake(lerpf(0.24, 0.88, weight))
-	if strength >= HITSTOP_STRENGTH_FLOOR:
-		var freeze_weight := clampf((strength - HITSTOP_STRENGTH_FLOOR) / (1.0 - HITSTOP_STRENGTH_FLOOR), 0.0, 1.0)
-		_apply_hitstop(lerpf(0.05, 0.11, freeze_weight))
+	# View motion answers "you did that", so it is manual only. An automatic
+	# completion is the payoff of a research decision made minutes ago, not an
+	# action taken now, and once the array is built they fire continuously: a
+	# permanently moving screen would leave a real hit nothing to stand against.
+	# The audio channels split on the same line. Automatic strength peaks at 0.45
+	# and could not reach either floor today, but that is arithmetic, not intent,
+	# and it would break silently the first time either number is tuned.
+	if was_manual:
+		effects.add_kick(meteor.global_position, lerpf(KICK_MIN_PIXELS, KICK_MAX_PIXELS, strength))
+		if strength >= SHAKE_STRENGTH_FLOOR:
+			var weight := clampf((strength - SHAKE_STRENGTH_FLOOR) / (1.0 - SHAKE_STRENGTH_FLOOR), 0.0, 1.0)
+			effects.add_shake(lerpf(SHAKE_TRAUMA_FLOOR, SHAKE_TRAUMA_CEILING, weight))
+		if strength >= HITSTOP_STRENGTH_FLOOR:
+			var freeze_weight := clampf((strength - HITSTOP_STRENGTH_FLOOR) / (1.0 - HITSTOP_STRENGTH_FLOOR), 0.0, 1.0)
+			_apply_hitstop(lerpf(0.05, 0.11, freeze_weight))
 	if progression.has_upgrade("perfect_observation") and was_manual and quality_grade in ["EXCELLENT", "PERFECT"]:
 		hud.show_banner(tr("BANNER_QUALITY") % [tr("QUALITY_%s" % quality_grade), multiplier], meteor.get_visual_color(), 1.5)
 	if progression.success_count == 1:

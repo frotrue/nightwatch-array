@@ -8,6 +8,12 @@ const MAX_INCOMING_MARKERS := 24
 const MAX_RINGS := 10
 const MAX_SHAKE_OFFSET := 9.0
 const SHAKE_DECAY := 2.6
+# A separate channel from trauma. Trauma is squared before it reaches pixels, so
+# a small value lands under half a pixel and shows nothing; a directional punch
+# stays legible down here, and at low amplitude direction reads as force where
+# random jitter reads as a rendering fault.
+const MAX_KICK_OFFSET := 3.4
+const KICK_DURATION := 0.15
 # A packet reads as a readout first and cargo second: it lifts off the meteor,
 # then commits to the counter. Without the pause the number never registers.
 const PACKET_RISE_TIME := 0.26
@@ -24,6 +30,11 @@ var shake_trauma: float = 0.0
 var shake_offset := Vector2.ZERO
 var shake_time: float = 0.0
 var shake_enabled: bool = true
+var kick_direction := Vector2.ZERO
+var kick_amplitude: float = 0.0
+var kick_time: float = 0.0
+var kick_offset := Vector2.ZERO
+var view_offset := Vector2.ZERO
 var rng := RandomNumberGenerator.new()
 
 
@@ -38,7 +49,9 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	shake_offset = Vector2.ZERO
-	_apply_shake_transform()
+	kick_offset = Vector2.ZERO
+	view_offset = Vector2.ZERO
+	_apply_view_transform()
 
 
 func reset() -> void:
@@ -50,7 +63,12 @@ func reset() -> void:
 	shake_trauma = 0.0
 	shake_time = 0.0
 	shake_offset = Vector2.ZERO
-	_apply_shake_transform()
+	kick_direction = Vector2.ZERO
+	kick_amplitude = 0.0
+	kick_time = 0.0
+	kick_offset = Vector2.ZERO
+	view_offset = Vector2.ZERO
+	_apply_view_transform()
 	queue_redraw()
 	set_process(false)
 
@@ -126,6 +144,21 @@ func add_shake(amount: float) -> void:
 	set_process(true)
 
 
+func add_kick(from_point: Vector2, amount: float) -> void:
+	if amount <= 0.0:
+		return
+	# Overwrite instead of accumulating. A manual chain lands several
+	# observations a second and a summing kick would fuse them into one drift
+	# instead of reading as separate hits.
+	if absf(_kick_envelope()) * kick_amplitude > amount:
+		return
+	var away := from_point - get_viewport_rect().size * 0.5
+	kick_direction = away.normalized() if away.length() > 1.0 else Vector2.UP
+	kick_amplitude = minf(amount, MAX_KICK_OFFSET)
+	kick_time = 0.0
+	set_process(true)
+
+
 func spawn_upgrade_pulse() -> void:
 	flash_color = Color("79d9ff")
 	flash_strength = maxf(flash_strength, 0.07)
@@ -172,6 +205,8 @@ func spawn_forecast(entry_points: Array) -> void:
 func _process(delta: float) -> void:
 	flash_strength = move_toward(flash_strength, 0.0, delta * (0.42 + flash_strength * 3.4))
 	_update_shake(delta)
+	_update_kick(delta)
+	_update_view_offset()
 	for index in range(particles.size() - 1, -1, -1):
 		var particle := particles[index]
 		particle.life = float(particle.life) - delta
@@ -194,15 +229,13 @@ func _process(delta: float) -> void:
 		if float(marker.life) <= 0.0:
 			incoming_markers.remove_at(index)
 	queue_redraw()
-	if particles.is_empty() and popups.is_empty() and incoming_markers.is_empty() and rings.is_empty() and flash_strength <= 0.001 and shake_trauma <= 0.0:
+	if particles.is_empty() and popups.is_empty() and incoming_markers.is_empty() and rings.is_empty() and flash_strength <= 0.001 and shake_trauma <= 0.0 and kick_amplitude <= 0.0:
 		set_process(false)
 
 
 func _update_shake(delta: float) -> void:
 	if shake_trauma <= 0.0:
-		if shake_offset != Vector2.ZERO:
-			shake_offset = Vector2.ZERO
-			_apply_shake_transform()
+		shake_offset = Vector2.ZERO
 		return
 	shake_time += delta
 	shake_trauma = maxf(0.0, shake_trauma - delta * SHAKE_DECAY)
@@ -212,10 +245,38 @@ func _update_shake(delta: float) -> void:
 		sin(shake_time * 73.0) * magnitude,
 		sin(shake_time * 61.0 + 1.9) * magnitude
 	)
-	_apply_shake_transform()
 
 
-func _apply_shake_transform() -> void:
+func _kick_envelope() -> float:
+	if kick_time >= KICK_DURATION:
+		return 0.0
+	# One snap out and back rather than a decay to zero. A plain decay at two
+	# pixels reads as the view sliding; the return through zero reads as a hit.
+	return exp(-kick_time * 21.0) * cos(kick_time * 40.0)
+
+
+func _update_kick(delta: float) -> void:
+	if kick_amplitude <= 0.0:
+		kick_offset = Vector2.ZERO
+		return
+	kick_time += delta
+	if kick_time >= KICK_DURATION:
+		kick_amplitude = 0.0
+		kick_offset = Vector2.ZERO
+		return
+	# Negated: the view recoils away from where the observation landed.
+	kick_offset = -kick_direction * kick_amplitude * _kick_envelope()
+
+
+func _update_view_offset() -> void:
+	var combined := shake_offset + kick_offset
+	if combined == view_offset:
+		return
+	view_offset = combined
+	_apply_view_transform()
+
+
+func _apply_view_transform() -> void:
 	if not shake_enabled or not is_inside_tree():
 		return
 	var viewport := get_viewport()
@@ -227,7 +288,7 @@ func _apply_shake_transform() -> void:
 	# transform. The drawn cursor lives in this canvas too, so it shakes with the
 	# sky and stays exactly where the game thinks it is relative to a meteor.
 	var canvas := viewport.canvas_transform
-	canvas.origin = shake_offset
+	canvas.origin = view_offset
 	viewport.canvas_transform = canvas
 
 
@@ -256,7 +317,7 @@ func _update_packets(delta: float) -> void:
 		var flight := clampf((age - PACKET_RISE_TIME) / PACKET_FLIGHT_TIME, 0.0, 1.0)
 		var eased := flight * flight * (3.0 - 2.0 * flight)
 		var origin: Vector2 = popup.origin
-		var target := anchor - shake_offset
+		var target := anchor - view_offset
 		var straight := origin.lerp(target, eased)
 		var travel := target - origin
 		var side := Vector2(-travel.y, travel.x).normalized()
@@ -302,5 +363,5 @@ func _draw() -> void:
 	if flash_strength > 0.001:
 		# Grown by the shake budget so a displaced canvas cannot expose an
 		# unpainted strip along the edge the screen shook away from.
-		var margin := Vector2.ONE * (MAX_SHAKE_OFFSET + 2.0)
+		var margin := Vector2.ONE * (MAX_SHAKE_OFFSET + MAX_KICK_OFFSET + 2.0)
 		draw_rect(Rect2(-margin, get_viewport_rect().size + margin * 2.0), Color(flash_color, flash_strength), true)
