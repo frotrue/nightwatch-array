@@ -90,6 +90,7 @@ var last_tracking_multiplier_hundredths: int = -1
 var last_tracking_target_count: int = -1
 var last_observation_data: float = -1.0
 var data_gain_tween: Tween
+var data_pulse_tween: Tween
 var last_end_success: bool = false
 var paused_by_settings: bool = false
 var paused_by_startup: bool = false
@@ -489,6 +490,29 @@ func _refresh_progression() -> void:
 		progression.upgrade_level,
 		Balance.UPGRADE_NODES.size()
 	]
+
+
+func get_data_anchor() -> Vector2:
+	# Where a delivered observation packet is aimed. Returned in viewport
+	# coordinates: this CanvasLayer carries no transform, so its controls and the
+	# default canvas the effects layer draws into share one space.
+	if data_label == null:
+		return Vector2.ZERO
+	var extent := data_label.size
+	if extent == Vector2.ZERO:
+		extent = data_label.get_minimum_size()
+	return data_label.global_position + extent * 0.5
+
+
+func pulse_data_counter(amount: float) -> void:
+	if data_label == null or amount < 1.0:
+		return
+	if data_pulse_tween != null and data_pulse_tween.is_valid():
+		data_pulse_tween.kill()
+	data_label.pivot_offset = data_label.size * 0.5
+	data_label.scale = Vector2(1.16, 1.16)
+	data_pulse_tween = create_tween()
+	data_pulse_tween.tween_property(data_label, "scale", Vector2.ONE, 0.24) 		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
 func _show_data_gain(amount: float) -> void:
