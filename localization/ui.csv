@@ -206,7 +206,6 @@ UPGRADE_AUTOMATED_TRACKING_DESC,Common targets are analyzed automatically; rare 
 UPGRADE_OBSERVATORY_NETWORK_NAME,Observatory Network,천문대 네트워크
 UPGRADE_OBSERVATORY_NETWORK_DESC,Links the whole array; previews shower entry sectors; adds a second steerable dish; and keeps two support camera lanes that accelerate active analysis.,전체 관측망을 연결해 유성우 진입 구역을 예측하고 직접 조준하는 두 번째 접시를 추가하며 진행 중인 분석을 가속하는 지원 카메라 채널 두 개를 유지합니다.
 CONTACT_UNCLASSIFIED,UNCLASSIFIED,미분류 신호
-CONTACT_RIGHT_CLICK_HINT,RIGHT-CLICK: MOVE NEAREST DISH,우클릭: 가장 가까운 접시 이동
 CONTACT_COMMIT_HINT,SHIFT+RIGHT-CLICK: COMMIT DISH,Shift+우클릭: 접시 예약
 CONTACT_MANUAL_ONLY_HINT,MANUAL OBSERVATION ONLY,수동 관측 전용
 METEOR_COMMON,COMMON METEOR,일반 유성

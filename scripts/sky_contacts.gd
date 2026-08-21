@@ -455,8 +455,9 @@ func _draw_contact(contact: Dictionary) -> void:
 		HORIZONTAL_ALIGNMENT_CENTER, 120.0, 13, Color(base_color, 0.7))
 
 	var hint_keys: Array[String] = []
-	if not dish_movement_learned or hovered:
-		hint_keys.append("CONTACT_RIGHT_CLICK_HINT")
+	# Plain right-click moves whichever dish is nearest the click, so it is not a
+	# per-contact action. Advertising it under every marker implied a targeting
+	# gesture the control does not have; the Secondary Camera node teaches it.
 	if _commitment_enabled() and (not dish_commitment_learned or hovered):
 		hint_keys.append("CONTACT_COMMIT_HINT")
 	# Manual-only information is secondary and appears only after classification,

@@ -138,7 +138,6 @@ func _run() -> void:
 	_check(TranslationServer.translate("TREE_INTERMISSION_SUBTITLE") % [2, 30] == "업그레이드 시간  /  2차 관측은 30초", "Korean upgrade-break guidance explains the next round and duration")
 	_check(TranslationServer.translate("PHASE_SUMMARY_TITLE") % 1 == "1차 관측 완료", "Korean phase summary title reads naturally")
 	_check(TranslationServer.translate("PHASE_SUMMARY_SYSTEMS_CHANGED") % 130.0 == "실현 처리량 130.0 데이터/분  •  시스템 변경  •  다음 라운드에서 새 기준 기록", "Korean mixed-build summary explains realized productivity and the next baseline")
-	_check(TranslationServer.translate("CONTACT_RIGHT_CLICK_HINT") == "우클릭: 가장 가까운 접시 이동", "Korean contact hover hint teaches literal nearest-dish movement")
 	_check(TranslationServer.translate("CONTACT_COMMIT_HINT") == "Shift+우클릭: 접시 예약", "Korean predictive-control hint teaches its separate gesture")
 	_check(TranslationServer.translate("CONTACT_MANUAL_ONLY_HINT") == "수동 관측 전용", "Korean rare-contact hint reserves the target for manual observation")
 	_check(
@@ -171,7 +170,6 @@ func _run() -> void:
 	game.settings.set_language("en", false)
 	await process_frame
 	_check(game.hud.settings_button.text.ends_with("SETTINGS"), "English can be restored at runtime")
-	_check(TranslationServer.translate("CONTACT_RIGHT_CLICK_HINT") == "RIGHT-CLICK: MOVE NEAREST DISH", "English contact hover hint teaches literal nearest-dish movement")
 	_check(TranslationServer.translate("CONTACT_COMMIT_HINT") == "SHIFT+RIGHT-CLICK: COMMIT DISH", "English predictive-control hint teaches its separate gesture")
 	_check(TranslationServer.translate("CONTACT_MANUAL_ONLY_HINT") == "MANUAL OBSERVATION ONLY", "English rare-contact hint reserves the target for manual observation")
 	_check(
