@@ -4,6 +4,10 @@ const PROBE_DURATION := 30.0
 const STEP := 0.05
 const SPAWN_SEED := 20260821
 const SPAWN_SEED_ENV := "NIGHTWATCH_CONTACT_PROBE_SEED"
+const TYPE_BUCKETS := ["common", "fast", "fragment", "fragment_piece", "fireball", "major"]
+const MODE_NO_INPUT := "no-input"
+const MODE_SCRIPTED_ENGAGED := "scripted-engaged"
+const MODE_FAST_ASSIGNED_ONLY := "fast-assigned-only"
 const ROWS := [
 	{"name": "forecast-off", "upgrades": ["edge_detection"]},
 	{"name": "wide-only", "upgrades": ["edge_detection", "wide_field"]},
@@ -12,7 +16,7 @@ const ROWS := [
 
 var game
 var spawn_seed: int = SPAWN_SEED
-var scripted_clear: bool = false
+var probe_mode: String = MODE_NO_INPUT
 var announcements: int = 0
 var resolutions: int = 0
 var realized_objects: int = 0
@@ -23,6 +27,11 @@ var slew_fractions: Array[float] = []
 var assignment_elapsed: Dictionary = {}
 var assignment_leads: Dictionary = {}
 var acquired_ids: Dictionary = {}
+var dish_acquisitions_by_type: Dictionary = {}
+var dish_completions_by_type: Dictionary = {}
+var manual_only_completions_by_type: Dictionary = {}
+var dish_only_completions_by_type: Dictionary = {}
+var shared_completions_by_type: Dictionary = {}
 
 
 func _initialize() -> void:
@@ -38,13 +47,15 @@ func _run() -> void:
 		spawn_seed,
 	])
 	for row in ROWS:
-		await _run_row(row, false)
-		await _run_row(row, true)
+		await _run_row(row, MODE_NO_INPUT)
+		await _run_row(row, MODE_SCRIPTED_ENGAGED)
+		if String(row.name) == "wide+dish":
+			await _run_row(row, MODE_FAST_ASSIGNED_ONLY)
 	print("CONTACT_DENSITY_PROBE_COMPLETE")
 	quit(0)
 
 
-func _run_row(row: Dictionary, use_scripted_clear: bool) -> void:
+func _run_row(row: Dictionary, mode: String) -> void:
 	var packed: PackedScene = load("res://scenes/main.tscn")
 	game = packed.instantiate()
 	game.startup_slot_prompt_enabled = false
@@ -52,7 +63,7 @@ func _run_row(row: Dictionary, use_scripted_clear: bool) -> void:
 	root.add_child(game)
 	await process_frame
 	await process_frame
-	_prepare_row(row, use_scripted_clear)
+	_prepare_row(row, mode)
 
 	var elapsed := 0.0
 	while elapsed < PROBE_DURATION:
@@ -67,14 +78,14 @@ func _run_row(row: Dictionary, use_scripted_clear: bool) -> void:
 		elapsed += STEP
 
 	_record_open_assignments()
-	_print_row(String(row.name), use_scripted_clear)
+	_print_row(String(row.name), mode)
 	game.free()
 	game = null
 	await process_frame
 
 
-func _prepare_row(row: Dictionary, use_scripted_clear: bool) -> void:
-	scripted_clear = use_scripted_clear
+func _prepare_row(row: Dictionary, mode: String) -> void:
+	probe_mode = mode
 	announcements = 0
 	resolutions = 0
 	realized_objects = 0
@@ -85,6 +96,11 @@ func _prepare_row(row: Dictionary, use_scripted_clear: bool) -> void:
 	assignment_elapsed.clear()
 	assignment_leads.clear()
 	acquired_ids.clear()
+	dish_acquisitions_by_type.clear()
+	dish_completions_by_type.clear()
+	manual_only_completions_by_type.clear()
+	dish_only_completions_by_type.clear()
+	shared_completions_by_type.clear()
 
 	game.set_process(false)
 	game.spawner.set_process(false)
@@ -119,7 +135,13 @@ func _prepare_row(row: Dictionary, use_scripted_clear: bool) -> void:
 
 func _on_contact_announced(contact: Dictionary) -> void:
 	announcements += 1
-	if not scripted_clear or not game.sky_contacts.dish_active():
+	if not game.sky_contacts.dish_active():
+		return
+	var should_assign := (
+		probe_mode == MODE_SCRIPTED_ENGAGED
+		or (probe_mode == MODE_FAST_ASSIGNED_ONLY and String(contact.type_id) == "fast")
+	)
+	if not should_assign:
 		return
 	var dish: Dictionary = game.sky_contacts.dishes[0]
 	var dish_is_free := (
@@ -142,8 +164,18 @@ func _on_meteor_spawned(meteor) -> void:
 	meteor.observed.connect(_on_meteor_observed)
 
 
-func _on_meteor_observed(_meteor, reward: float, multiplier: float, was_manual: bool, _quality_grade: String) -> void:
+func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: bool, _quality_grade: String) -> void:
 	observations_completed += 1
+	var type_id := String(meteor.type_id)
+	var dish_participated := acquired_ids.has(meteor.get_instance_id())
+	if dish_participated:
+		_increment_type_count(dish_completions_by_type, type_id)
+	if was_manual and dish_participated:
+		_increment_type_count(shared_completions_by_type, type_id)
+	elif was_manual:
+		_increment_type_count(manual_only_completions_by_type, type_id)
+	elif dish_participated:
+		_increment_type_count(dish_only_completions_by_type, type_id)
 	data_earned += game.progression.add_observation(reward, was_manual, multiplier)
 
 
@@ -177,12 +209,36 @@ func _record_dish_acquisitions() -> void:
 			continue
 		var target = instance_from_id(locked_id)
 		if target != null and is_instance_valid(target) and target.can_be_tracked():
-			acquired_ids[locked_id] = true
+			var type_id := String(target.type_id)
+			acquired_ids[locked_id] = type_id
+			_increment_type_count(dish_acquisitions_by_type, type_id)
+
+
+func _increment_type_count(counts: Dictionary, type_id: String) -> void:
+	counts[type_id] = int(counts.get(type_id, 0)) + 1
+
+
+func _type_counts_text(counts: Dictionary) -> String:
+	var parts: PackedStringArray = []
+	for type_id in TYPE_BUCKETS:
+		parts.append("%s:%d" % [type_id, int(counts.get(type_id, 0))])
+	return "|".join(parts)
+
+
+func _dish_conversion_text() -> String:
+	var parts: PackedStringArray = []
+	for type_id in TYPE_BUCKETS:
+		parts.append("%s:%d/%d" % [
+			type_id,
+			int(dish_completions_by_type.get(type_id, 0)),
+			int(dish_acquisitions_by_type.get(type_id, 0)),
+		])
+	return "|".join(parts)
 
 
 func _process_meteors(delta: float) -> void:
 	var manual_target = null
-	if scripted_clear:
+	if probe_mode == MODE_SCRIPTED_ENGAGED:
 		manual_target = _first_uncovered_meteor()
 	for meteor in game.meteor_layer.get_children():
 		if not is_instance_valid(meteor):
@@ -206,7 +262,7 @@ func _first_uncovered_meteor():
 	return null
 
 
-func _print_row(row_name: String, use_scripted_clear: bool) -> void:
+func _print_row(row_name: String, mode: String) -> void:
 	var sorted_visible: Array[float] = visible_samples.duplicate()
 	sorted_visible.sort()
 	var average_slew := 0.0
@@ -214,15 +270,21 @@ func _print_row(row_name: String, use_scripted_clear: bool) -> void:
 		average_slew += fraction
 	if not slew_fractions.is_empty():
 		average_slew /= float(slew_fractions.size())
-	print("CONTACT_DENSITY_PROBE row=%s mode=%s announcements=%d resolutions=%d p50_visible=%.1f p95_visible=%.1f dish_slew_fraction=%.3f dish_acquisitions=%d realized_objects_30s=%d observations_completed=%d data_earned=%.0f" % [
+	print("CONTACT_DENSITY_PROBE row=%s mode=%s announcements=%d resolutions=%d p50_visible=%.1f p95_visible=%.1f dish_slew_fraction=%.3f dish_acquisitions=%d dish_acquisitions_by_type=%s dish_completions_by_type=%s dish_conversion_by_type=%s manual_only_completions_by_type=%s dish_only_completions_by_type=%s shared_completions_by_type=%s realized_objects_30s=%d observations_completed=%d data_earned=%.0f" % [
 		row_name,
-		"scripted-engaged" if use_scripted_clear else "no-input",
+		mode,
 		announcements,
 		resolutions,
 		_percentile(sorted_visible, 0.50),
 		_percentile(sorted_visible, 0.95),
 		average_slew,
 		acquired_ids.size(),
+		_type_counts_text(dish_acquisitions_by_type),
+		_type_counts_text(dish_completions_by_type),
+		_dish_conversion_text(),
+		_type_counts_text(manual_only_completions_by_type),
+		_type_counts_text(dish_only_completions_by_type),
+		_type_counts_text(shared_completions_by_type),
 		realized_objects,
 		observations_completed,
 		data_earned,

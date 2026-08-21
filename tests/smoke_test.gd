@@ -134,6 +134,7 @@ func _run() -> void:
 	_check(TranslationServer.translate("PHASE_SUMMARY_TITLE") % 1 == "1차 관측 완료", "Korean phase summary title reads naturally")
 	_check(TranslationServer.translate("UPGRADE_OBSERVATION_SCHEDULING_NAME") == "관측 일정 최적화", "Korean duration-research name is localized")
 	_check(TranslationServer.translate("CONTACT_RIGHT_CLICK_HINT") == "우클릭: 접시 배정", "Korean contact hover hint names the right mouse button")
+	_check(TranslationServer.translate("CONTACT_MANUAL_ONLY_HINT") == "수동 관측 전용", "Korean rare-contact hint reserves the target for manual observation")
 	_check(TranslationServer.translate("UPGRADE_ERROR_NEED_DATA") % 12 == "데이터가 12개 더 필요합니다", "Korean shortfall text is a complete sentence")
 	_check(TranslationServer.translate("TREE_NEED_MORE") % [8, 12] == "◇  데이터 8 / 12", "Korean tree affordability text shows current and required Data")
 	_check(TranslationServer.translate("SAVE_RESET_PROMPT") % 2 == "슬롯 2의 모든 진행 상황을 삭제합니다. 이 작업은 되돌릴 수 없습니다.", "Korean reset warning clearly explains permanent deletion")
@@ -150,6 +151,7 @@ func _run() -> void:
 	await process_frame
 	_check(game.hud.settings_button.text.ends_with("SETTINGS"), "English can be restored at runtime")
 	_check(TranslationServer.translate("CONTACT_RIGHT_CLICK_HINT") == "RIGHT-CLICK: ASSIGN DISH", "English contact hover hint names the right mouse button")
+	_check(TranslationServer.translate("CONTACT_MANUAL_ONLY_HINT") == "MANUAL OBSERVATION ONLY", "English rare-contact hint reserves the target for manual observation")
 	game.settings.set_language(starting_locale, false)
 	await process_frame
 
@@ -441,6 +443,17 @@ func _run() -> void:
 	game.sky_contacts.assign_to_contact(int(second_contact.id))
 	_check(float(contact.abandoned_flash) > 0.0, "re-tasking the only dish marks the contact it abandoned")
 	_check(int(game.sky_contacts.dishes[0].assigned_id) == int(second_contact.id), "one dish cannot hold two contacts")
+	var fireball_contact: Dictionary = second_contact.duplicate(true)
+	fireball_contact.id = 9001
+	fireball_contact.type_id = "fireball"
+	fireball_contact.classified = true
+	fireball_contact.abandoned_flash = 0.0
+	game.sky_contacts.contacts.append(fireball_contact)
+	var retained_assignment := int(game.sky_contacts.dishes[0].assigned_id)
+	var retained_flash := float(second_contact.abandoned_flash)
+	_check(not game.sky_contacts.assign_to_contact(int(fireball_contact.id)), "a classified fireball contact rejects dish assignment as manual-only")
+	_check(int(game.sky_contacts.dishes[0].assigned_id) == retained_assignment, "rejecting a fireball preserves the dish's existing assignment")
+	_check(is_equal_approx(float(second_contact.abandoned_flash), retained_flash), "rejecting a fireball does not mark existing coverage as abandoned")
 	game.spawner.pending_contacts.clear()
 	game.sky_contacts.reset()
 	_check(game.sky_contacts.contacts.is_empty() and int(game.sky_contacts.dishes[0].assigned_id) == -1, "resetting clears contacts and frees the dish")
@@ -459,6 +472,61 @@ func _run() -> void:
 	scanned._process(0.2)
 	_check(scanned.observation_progress > progress_before, "a locked dish advances the observation it holds")
 	scanned.queue_free()
+	await process_frame
+	game.sky_contacts.reset()
+
+	# Forecast pre-positioning gives the dish a distinct routine/high-motion job.
+	# Test the real planned fast ceiling (390 * 1.12), not only the nominal spec.
+	var fastest = game.spawner.spawn_meteor("fast", Vector2(220, 260), Vector2(436.8, 0.0), 3.6)
+	dish = game.sky_contacts.dishes[0]
+	dish.position = fastest.global_position
+	dish.target = fastest.global_position
+	dish.assigned_id = -1
+	dish.locked_id = 0
+	dish.arrived = true
+	game.sky_contacts.dishes[0] = dish
+	for _step in range(55):
+		game.sky_contacts._update_dishes(0.05)
+		fastest._process(0.05)
+		if not fastest.alive:
+			break
+	_check(fastest.observed_successfully and not fastest.manual_touched, "a dish completes a fast meteor at the real velocity ceiling without manual help")
+	fastest.queue_free()
+	await process_frame
+
+	# Assigned rare contacts and nearby contactless finale objects both remain
+	# manual prizes, even though the dish servo is now fast enough to follow them.
+	var fireball = game.spawner.spawn_meteor("fireball", Vector2(-1000, -1000), Vector2.ZERO, 1.0)
+	dish = game.sky_contacts.dishes[0]
+	dish.position = fireball.global_position
+	dish.target = fireball.global_position
+	dish.assigned_id = 9001
+	dish.locked_id = 0
+	dish.arrived = true
+	game.sky_contacts.dishes[0] = dish
+	game.sky_contacts.on_contact_resolved({"id": 9001}, fireball)
+	game.sky_contacts._update_dishes(0.2)
+	fireball._process(0.2)
+	_check(int(game.sky_contacts.dishes[0].locked_id) == 0 and is_zero_approx(fireball.secondary_assist), "an assigned fireball never receives dish assistance through the resolved-contact path")
+	_check(is_zero_approx(fireball.observation_progress), "dish rejection cannot degrade a rare fireball into an automatic observation")
+
+	var major = game.spawner.spawn_meteor("major", Vector2(-2000, -2000), Vector2.ZERO, 1.0)
+	dish = game.sky_contacts.dishes[0]
+	dish.position = major.global_position
+	dish.target = major.global_position
+	dish.assigned_id = -1
+	dish.locked_id = 0
+	dish.arrived = true
+	game.sky_contacts.dishes[0] = dish
+	game.sky_contacts._update_dishes(0.2)
+	major._process(0.2)
+	_check(int(game.sky_contacts.dishes[0].locked_id) == 0 and is_zero_approx(major.secondary_assist), "a dish parked beside a contactless major cannot acquire it opportunistically")
+	_check(is_zero_approx(major.observation_progress), "the dish cannot reduce the contactless major prize to an automatic reward")
+	_check(not game.sky_contacts._dish_can_track(fireball) and not game.sky_contacts._dish_can_track(major), "rare objects are outside the dish role by type")
+	var fragment_piece = game.spawner.spawn_meteor("fragment_piece", Vector2(-3000, -3000), Vector2.ZERO, 1.0)
+	_check(not game.sky_contacts._dish_can_track(fragment_piece), "unforecast fragment pieces stay outside the flat-rate dish role")
+	for rare_target in [fireball, major, fragment_piece]:
+		rare_target.queue_free()
 	await process_frame
 	game.sky_contacts.reset()
 
