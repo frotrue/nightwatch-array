@@ -11,6 +11,8 @@ const MODE_FAST_ASSIGNED_ONE_DISH := "fast-assigned-one-dish"
 const MODE_FAST_ASSIGNED_TWO_DISH := "fast-assigned-two-dish"
 const MODE_ALL_ELIGIBLE_TWO_DISH := "all-eligible-two-dish"
 const MODE_FRAGMENT_ASSIGNED_ONE_DISH := "fragment-assigned-one-dish"
+const MODE_SELECTOR_PARTNER_FIRST := "selector-partner-first"
+const MODE_SELECTOR_BANK_FIRST := "selector-bank-first"
 const ROWS := [
 	{
 		"name": "forecast-off",
@@ -55,6 +57,16 @@ const ROWS := [
 		],
 		"modes": [MODE_FRAGMENT_ASSIGNED_ONE_DISH],
 	},
+	{
+		# Mid-tree configuration isolates the only disputed ordering: one dish and
+		# one support lane, before global passive tracking makes every target a partner.
+		"name": "selector+dish+lane",
+		"upgrades": [
+			"edge_detection", "wide_field", "trajectory", "fragment_analysis",
+			"array_planning", "secondary_camera", "multi_target_analysis",
+		],
+		"modes": [MODE_SELECTOR_PARTNER_FIRST, MODE_SELECTOR_BANK_FIRST],
+	},
 ]
 
 var game
@@ -92,6 +104,13 @@ var eligible_contacts_announced: int = 0
 var successful_eligible_assignments: int = 0
 var unassigned_eligible_contacts: int = 0
 var eligible_contacts_while_all_dishes_busy: int = 0
+var lane_participated_ids: Dictionary = {}
+var lane_covered_ids: Dictionary = {}
+var lane_uncovered_ids: Dictionary = {}
+var lane_completions_by_type: Dictionary = {}
+var lane_covered_only_completions_by_type: Dictionary = {}
+var lane_uncovered_only_completions_by_type: Dictionary = {}
+var lane_mixed_completions_by_type: Dictionary = {}
 
 
 func _initialize() -> void:
@@ -132,6 +151,7 @@ func _run_row(row: Dictionary, mode: String) -> void:
 			game.sky_contacts._update_dishes(STEP)
 			_record_dish_acquisitions()
 			_record_dish_lock_transitions()
+		_record_lane_participation()
 		_record_dish_busy_step()
 		_process_meteors(STEP)
 		visible_samples.append(float(game.sky_contacts.contacts.size()))
@@ -178,6 +198,13 @@ func _prepare_row(row: Dictionary, mode: String) -> void:
 	successful_eligible_assignments = 0
 	unassigned_eligible_contacts = 0
 	eligible_contacts_while_all_dishes_busy = 0
+	lane_participated_ids.clear()
+	lane_covered_ids.clear()
+	lane_uncovered_ids.clear()
+	lane_completions_by_type.clear()
+	lane_covered_only_completions_by_type.clear()
+	lane_uncovered_only_completions_by_type.clear()
+	lane_mixed_completions_by_type.clear()
 
 	game.set_process(false)
 	game.spawner.set_process(false)
@@ -195,6 +222,7 @@ func _prepare_row(row: Dictionary, mode: String) -> void:
 		game.progression.purchased_nodes[String(node_id)] = true
 		game.progression.purchase_order.append(String(node_id))
 	game.sky_contacts.refresh_dishes()
+	game.spawner.set_bank_unsupported_before_dish(mode == MODE_SELECTOR_BANK_FIRST)
 	if _mode_uses_two_dishes(mode):
 		var size: Vector2 = game.sky_contacts.get_viewport_rect().size
 		var home := Vector2(size.x * 0.62, size.y * 0.55)
@@ -231,7 +259,7 @@ func _on_contact_announced(contact: Dictionary) -> void:
 		fast_contacts_announced += 1
 	if not game.sky_contacts.dish_active():
 		return
-	var all_eligible_mode: bool = probe_mode == MODE_ALL_ELIGIBLE_TWO_DISH
+	var all_eligible_mode: bool = _is_all_eligible_mode()
 	var dish_eligible: bool = game.sky_contacts._dish_can_track_type(type_id)
 	if _is_fast_capacity_mode() and type_id == "fast" and _all_dishes_busy():
 		fast_contacts_while_all_dishes_busy += 1
@@ -290,6 +318,16 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 	else:
 		_increment_type_count(automatic_only_completions_by_type, type_id)
 	var meteor_id: int = meteor.get_instance_id()
+	if lane_participated_ids.has(meteor_id):
+		_increment_type_count(lane_completions_by_type, type_id)
+		var had_covered_lane := lane_covered_ids.has(meteor_id)
+		var had_uncovered_lane := lane_uncovered_ids.has(meteor_id)
+		if had_covered_lane and had_uncovered_lane:
+			_increment_type_count(lane_mixed_completions_by_type, type_id)
+		elif had_covered_lane:
+			_increment_type_count(lane_covered_only_completions_by_type, type_id)
+		else:
+			_increment_type_count(lane_uncovered_only_completions_by_type, type_id)
 	if opportunistic_acquired_ids.has(meteor_id):
 		opportunistic_completed_ids[meteor_id] = type_id
 	data_earned += game.progression.add_observation(reward, was_manual, multiplier)
@@ -297,6 +335,14 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 
 func _is_fast_capacity_mode() -> bool:
 	return probe_mode in [MODE_FAST_ASSIGNED_ONE_DISH, MODE_FAST_ASSIGNED_TWO_DISH]
+
+
+func _is_all_eligible_mode() -> bool:
+	return probe_mode in [
+		MODE_ALL_ELIGIBLE_TWO_DISH,
+		MODE_SELECTOR_PARTNER_FIRST,
+		MODE_SELECTOR_BANK_FIRST,
+	]
 
 
 func _mode_uses_two_dishes(mode: String) -> bool:
@@ -372,6 +418,21 @@ func _record_dish_busy_step() -> void:
 			dish_busy_steps[index] += 1
 
 
+func _record_lane_participation() -> void:
+	for meteor in game.meteor_layer.get_children():
+		if not is_instance_valid(meteor) or not meteor.can_be_tracked():
+			continue
+		if float(meteor.lane_assist_rate) <= 0.0:
+			continue
+		var meteor_id: int = meteor.get_instance_id()
+		var type_id := String(meteor.type_id)
+		lane_participated_ids[meteor_id] = type_id
+		if float(meteor.dish_assist_rate) > 0.0:
+			lane_covered_ids[meteor_id] = type_id
+		else:
+			lane_uncovered_ids[meteor_id] = type_id
+
+
 func _increment_type_count(counts: Dictionary, type_id: String) -> void:
 	counts[type_id] = int(counts.get(type_id, 0)) + 1
 
@@ -390,6 +451,18 @@ func _dish_conversion_text() -> String:
 			type_id,
 			int(dish_completions_by_type.get(type_id, 0)),
 			int(dish_acquisitions_by_type.get(type_id, 0)),
+		])
+	return "|".join(parts)
+
+
+func _lane_conversion_text() -> String:
+	var participated_by_type := _counts_by_recorded_type(lane_participated_ids)
+	var parts: PackedStringArray = []
+	for type_id in TYPE_BUCKETS:
+		parts.append("%s:%d/%d" % [
+			type_id,
+			int(lane_completions_by_type.get(type_id, 0)),
+			int(participated_by_type.get(type_id, 0)),
 		])
 	return "|".join(parts)
 
@@ -438,7 +511,7 @@ func _print_row(row_name: String, mode: String) -> void:
 		average_slew += fraction
 	if not slew_fractions.is_empty():
 		average_slew /= float(slew_fractions.size())
-	print("CONTACT_DENSITY_PROBE row=%s mode=%s lane_config=dishes:%d|automatic_lanes:%d|manual:%s announcements=%d resolutions=%d p50_visible=%.1f p95_visible=%.1f dish_slew_fraction=%.3f fast_contacts_announced=%d successful_fast_assignments=%d unassigned_fast_contacts=%d fast_contacts_while_all_dishes_busy=%d eligible_contacts_announced=%d successful_eligible_assignments=%d unassigned_eligible_contacts=%d eligible_contacts_while_all_dishes_busy=%d dish_busy_fraction=%s dish_acquisitions=%d dish_acquisitions_by_type=%s dish_completions_by_type=%s dish_conversion_by_type=%s opportunistic_acquisitions=%d opportunistic_acquisitions_by_type=%s opportunistic_completions=%d opportunistic_completions_by_type=%s opportunistic_dropped_without_completion=%d opportunistic_dropped_by_type=%s manual_only_completions_by_type=%s dish_only_completions_by_type=%s shared_completions_by_type=%s automatic_only_completions_by_type=%s realized_objects_30s=%d observations_completed=%d data_earned=%.0f" % [
+	print("CONTACT_DENSITY_PROBE row=%s mode=%s lane_config=dishes:%d|automatic_lanes:%d|manual:%s announcements=%d resolutions=%d p50_visible=%.1f p95_visible=%.1f dish_slew_fraction=%.3f fast_contacts_announced=%d successful_fast_assignments=%d unassigned_fast_contacts=%d fast_contacts_while_all_dishes_busy=%d eligible_contacts_announced=%d successful_eligible_assignments=%d unassigned_eligible_contacts=%d eligible_contacts_while_all_dishes_busy=%d dish_busy_fraction=%s dish_acquisitions=%d dish_acquisitions_by_type=%s dish_completions_by_type=%s dish_conversion_by_type=%s lane_participations=%d lane_participations_by_type=%s lane_completions=%d lane_completions_by_type=%s lane_conversion_by_type=%s lane_covered_only_completions_by_type=%s lane_uncovered_only_completions_by_type=%s lane_mixed_completions_by_type=%s opportunistic_acquisitions=%d opportunistic_acquisitions_by_type=%s opportunistic_completions=%d opportunistic_completions_by_type=%s opportunistic_dropped_without_completion=%d opportunistic_dropped_by_type=%s manual_only_completions_by_type=%s dish_only_completions_by_type=%s shared_completions_by_type=%s automatic_only_completions_by_type=%s realized_objects_30s=%d observations_completed=%d data_earned=%.0f" % [
 		row_name,
 		mode,
 		game.sky_contacts.dishes.size(),
@@ -462,6 +535,14 @@ func _print_row(row_name: String, mode: String) -> void:
 		_type_counts_text(dish_acquisitions_by_type),
 		_type_counts_text(dish_completions_by_type),
 		_dish_conversion_text(),
+		lane_participated_ids.size(),
+		_type_counts_text(_counts_by_recorded_type(lane_participated_ids)),
+		_lane_completion_count(),
+		_type_counts_text(lane_completions_by_type),
+		_lane_conversion_text(),
+		_type_counts_text(lane_covered_only_completions_by_type),
+		_type_counts_text(lane_uncovered_only_completions_by_type),
+		_type_counts_text(lane_mixed_completions_by_type),
 		opportunistic_acquired_ids.size(),
 		_type_counts_text(_counts_by_recorded_type(opportunistic_acquired_ids)),
 		opportunistic_completed_ids.size(),
@@ -476,6 +557,13 @@ func _print_row(row_name: String, mode: String) -> void:
 		observations_completed,
 		data_earned,
 	])
+
+
+func _lane_completion_count() -> int:
+	var total := 0
+	for count in lane_completions_by_type.values():
+		total += int(count)
+	return total
 
 
 func _counts_by_recorded_type(records: Dictionary) -> Dictionary:

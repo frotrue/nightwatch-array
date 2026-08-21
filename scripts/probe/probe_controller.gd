@@ -242,8 +242,8 @@ func _spawn_from_signal(contact: SkySignal) -> void:
 func _update_instruments(delta: float) -> void:
 	for child_index in range(meteor_layer.get_child_count()):
 		var meteor = meteor_layer.get_child(child_index)
-		if meteor.has_method("set_secondary_assist"):
-			meteor.set_secondary_assist(0.0)
+		if meteor.has_method("set_dish_assist_rate"):
+			meteor.set_dish_assist_rate(0.0)
 
 	for index in range(instruments.size()):
 		var instrument: Dictionary = instruments[index]
@@ -262,7 +262,7 @@ func _update_instruments(delta: float) -> void:
 				instrument.locked_id = 0
 				instrument.assigned_id = -1
 			else:
-				locked.set_secondary_assist(SCAN_RATE)
+				locked.set_dish_assist_rate(SCAN_RATE)
 			instruments[index] = instrument
 			continue
 
@@ -287,7 +287,7 @@ func _update_instruments(delta: float) -> void:
 			var acquired = _acquire_target(instrument, index)
 			if acquired != null:
 				instrument.locked_id = acquired.get_instance_id()
-				acquired.set_secondary_assist(SCAN_RATE)
+				acquired.set_dish_assist_rate(SCAN_RATE)
 		instruments[index] = instrument
 
 

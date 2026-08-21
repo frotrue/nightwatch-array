@@ -42,6 +42,9 @@ func dish_active() -> bool:
 # Dishes arrive with the research that grants them and park mid-sky, where they
 # are equidistant from most entry points.
 func refresh_dishes() -> void:
+	# Refreshing can also remove every dish (reset/debug/load paths), so release
+	# this source before resizing instead of relying on another process tick.
+	_clear_dish_assists()
 	var wanted: int = progression.get_dish_count() if progression != null else 0
 	while dishes.size() > wanted:
 		dishes.pop_back()
@@ -61,6 +64,7 @@ func refresh_dishes() -> void:
 
 
 func reset(clear_assignment_learning: bool = false) -> void:
+	_clear_dish_assists()
 	contacts.clear()
 	hovered_contact_id = -1
 	if clear_assignment_learning:
@@ -124,6 +128,9 @@ func _process(delta: float) -> void:
 
 
 func _update_dishes(delta: float) -> void:
+	# Dish ownership is renewed every frame. Clearing here prevents a retasked or
+	# broken lock from leaving its abandoned meteor under stale assistance.
+	_clear_dish_assists()
 	for index in range(dishes.size()):
 		var dish: Dictionary = dishes[index]
 		var locked = _locked_target(dish)
@@ -138,7 +145,7 @@ func _update_dishes(delta: float) -> void:
 			if Vector2(dish.position).distance_to(locked.global_position) > COVERAGE_RADIUS:
 				dish.locked_id = 0
 			else:
-				locked.set_secondary_assist(locked.get_assist_rate(DISH_TIME_MULTIPLIER))
+				locked.set_dish_assist_rate(locked.get_assist_rate(DISH_TIME_MULTIPLIER))
 			dishes[index] = dish
 			continue
 
@@ -163,8 +170,16 @@ func _update_dishes(delta: float) -> void:
 			var acquired = _acquire_target(dish, index)
 			if acquired != null:
 				dish.locked_id = acquired.get_instance_id()
-				acquired.set_secondary_assist(acquired.get_assist_rate(DISH_TIME_MULTIPLIER))
+				acquired.set_dish_assist_rate(acquired.get_assist_rate(DISH_TIME_MULTIPLIER))
 		dishes[index] = dish
+
+
+func _clear_dish_assists() -> void:
+	if meteor_layer == null:
+		return
+	for child in meteor_layer.get_children():
+		if child.has_method("set_dish_assist_rate"):
+			child.set_dish_assist_rate(0.0)
 
 
 func _locked_target(dish: Dictionary):

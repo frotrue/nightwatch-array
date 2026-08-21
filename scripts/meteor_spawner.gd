@@ -14,6 +14,11 @@ const MINIMUM_PAYABLE_TRACK_TIME := 0.95
 # exceeds every eligible target's lifetime, so completion needs another source.
 const LANE_TIME_MULTIPLIER := 7.0
 
+enum LaneSelectionOrder {
+	PARTNER_FIRST,
+	BANK_UNSUPPORTED_FIRST,
+}
+
 var meteor_layer: Node2D
 var progression: Node
 var rng := RandomNumberGenerator.new()
@@ -24,6 +29,9 @@ var pause_regular_spawns: bool = false
 var next_spawn_time: float = Balance.FIRST_METEOR_DELAY
 var first_spawn_pending: bool = true
 var secondary_refresh: float = 0.0
+# Production finishes work that already has a viable partner first. The probe
+# flips this switch to measure banking on unsupported targets before dish overlap.
+var lane_selection_order: LaneSelectionOrder = LaneSelectionOrder.PARTNER_FIRST
 var pending_contacts: Array[Dictionary] = []
 var next_contact_id: int = 1
 var phase_time_remaining: float = INF
@@ -253,28 +261,56 @@ func _current_features(type_id: String) -> Dictionary:
 		"precision": progression.has_upgrade("precision_multiplier"),
 		"perfect": progression.has_upgrade("perfect_observation"),
 		"automation": progression.get_automation_strength(type_id),
-		"secondary": 0.0
 	}
 
 
 func _refresh_secondary_camera() -> void:
 	var slots: int = progression.get_secondary_slots()
-	if slots <= 0:
-		return
 	var candidates: Array = []
 	for child_index in range(meteor_layer.get_child_count()):
 		var child = meteor_layer.get_child(child_index)
-		if child.has_method("set_secondary_assist"):
-			child.set_secondary_assist(0.0)
+		if child.has_method("set_lane_assist_rate"):
+			child.set_lane_assist_rate(0.0)
 		if not child.has_method("can_be_tracked") or not child.can_be_tracked():
 			continue
 		if child.type_id in ["fireball", "major"]:
 			continue
 		candidates.append(child)
-	candidates.sort_custom(func(a, b): return float(a.observation_progress) > float(b.observation_progress))
+	if slots <= 0:
+		return
+	candidates.sort_custom(_lane_candidate_precedes)
 	for index in range(mini(slots, candidates.size())):
 		var candidate = candidates[index]
-		candidate.set_secondary_assist(candidate.get_assist_rate(LANE_TIME_MULTIPLIER))
+		candidate.set_lane_assist_rate(candidate.get_assist_rate(LANE_TIME_MULTIPLIER))
+
+
+func _lane_candidate_precedes(a, b) -> bool:
+	var a_priority := _lane_candidate_priority(a)
+	var b_priority := _lane_candidate_priority(b)
+	if a_priority != b_priority:
+		return a_priority < b_priority
+	var a_progress := float(a.observation_progress)
+	var b_progress := float(b.observation_progress)
+	if not is_equal_approx(a_progress, b_progress):
+		return a_progress > b_progress
+	return a.get_instance_id() < b.get_instance_id()
+
+
+func _lane_candidate_priority(candidate) -> int:
+	var dish_held: bool = candidate.has_dish_assist()
+	if not dish_held and candidate.has_non_dish_lane_partner():
+		return 0
+	if lane_selection_order == LaneSelectionOrder.BANK_UNSUPPORTED_FIRST:
+		return 2 if dish_held else 1
+	return 1 if dish_held else 2
+
+
+func set_bank_unsupported_before_dish(enabled: bool) -> void:
+	lane_selection_order = (
+		LaneSelectionOrder.BANK_UNSUPPORTED_FIRST
+		if enabled
+		else LaneSelectionOrder.PARTNER_FIRST
+	)
 
 
 func _on_fragment_requested(origin: Vector2, parent_velocity: Vector2, parent_type: String) -> void:
