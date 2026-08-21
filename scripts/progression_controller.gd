@@ -233,6 +233,30 @@ func get_dish_count() -> int:
 	return 1 if has_upgrade("secondary_camera") else 0
 
 
+func forecast_visible() -> bool:
+	return has_upgrade("wide_field") or dish_active()
+
+
+func dish_active() -> bool:
+	return get_dish_count() > 0
+
+
+func get_forecast_lead() -> float:
+	return 4.0 if dish_active() else 2.0
+
+
+func get_forecast_max_error() -> float:
+	return 40.0 if has_upgrade("trajectory") else 70.0
+
+
+func get_forecast_min_error() -> float:
+	return 14.0 if has_upgrade("trajectory") else 28.0
+
+
+func forecast_classifies() -> bool:
+	return has_upgrade("rare_detection")
+
+
 func get_secondary_slots() -> int:
 	if has_upgrade("observatory_network"):
 		return 2

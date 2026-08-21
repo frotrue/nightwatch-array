@@ -1,8 +1,8 @@
 extends Node2D
 
-# The player-aimed half of the observation array. Secondary Camera used to hand
-# a target to the game; it now hands the player a dish and a few seconds of
-# warning, and the aiming is theirs. Inert until that research is installed.
+# Forecast information can arrive before the player owns hardware to act on it.
+# Secondary Camera adds the player-aimed dish and extends the warning to fund
+# its slew time; Wide Field Sensor alone still supports cursor pre-positioning.
 
 const SLEW_SPEED := 420.0
 # Below the 390 of a fast meteor on purpose: a dish cannot hold the quick ones,
@@ -26,7 +26,11 @@ func setup(target_layer: Node2D, progression_controller: Node) -> void:
 	refresh_dishes()
 
 
-func is_active() -> bool:
+func forecast_visible() -> bool:
+	return progression != null and progression.forecast_visible()
+
+
+func dish_active() -> bool:
 	return not dishes.is_empty()
 
 
@@ -65,7 +69,7 @@ func reset() -> void:
 
 
 func on_contact_announced(contact: Dictionary) -> void:
-	if not is_active():
+	if not forecast_visible():
 		return
 	contacts.append(contact)
 	queue_redraw()
@@ -86,7 +90,7 @@ func on_contact_resolved(contact: Dictionary, meteor) -> void:
 
 
 func is_pointer_over_contact(pointer_position: Vector2) -> bool:
-	return _contact_at(pointer_position) >= 0
+	return dish_active() and _contact_at(pointer_position) >= 0
 
 
 func _contact_at(point: Vector2) -> int:
@@ -105,11 +109,14 @@ func _estimate_of(contact: Dictionary) -> Vector2:
 
 
 func _process(delta: float) -> void:
-	if not is_active():
+	if not forecast_visible():
 		return
-	cursor_position = get_viewport().get_mouse_position()
-	hovered_contact_id = _contact_at(cursor_position)
-	_update_dishes(delta)
+	if dish_active():
+		cursor_position = get_viewport().get_mouse_position()
+		hovered_contact_id = _contact_at(cursor_position)
+		_update_dishes(delta)
+	else:
+		hovered_contact_id = -1
 	queue_redraw()
 
 
@@ -212,7 +219,7 @@ func candidate_dish_for(contact: Dictionary) -> int:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not is_active():
+	if not dish_active():
 		return
 	if not (event is InputEventMouseButton) or not event.pressed:
 		return
@@ -226,6 +233,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func assign_to_contact(contact_id: int) -> bool:
+	if not dish_active():
+		return false
 	var contact := _find_contact(contact_id)
 	if contact.is_empty():
 		return false
@@ -265,7 +274,7 @@ func _release_dish_for_contact(contact_id: int) -> void:
 
 
 func _draw() -> void:
-	if not is_active():
+	if not forecast_visible():
 		return
 	for dish in dishes:
 		_draw_dish(dish)
@@ -298,12 +307,13 @@ func _draw_contact(contact: Dictionary) -> void:
 	var hovered: bool = int(contact.id) == hovered_contact_id
 	var pulse := 1.0 + sin(Time.get_ticks_msec() * 0.006) * 0.08
 
-	var error_radius: float = lerpf(70.0, 6.0, certainty)
+	var error_radius: float = lerpf(float(contact.max_error), 6.0, certainty)
 	if error_radius > 7.0:
 		draw_arc(estimate, error_radius * pulse, 0.0, TAU, 40, Color(base_color, 0.20), 1.0, true)
 	draw_arc(estimate, 20.0 * pulse, 0.0, TAU, 32,
 		Color(base_color, 0.85 if hovered else 0.6), 2.0 if hovered else 1.5, true)
-	draw_line(estimate, estimate + Vector2(contact.direction) * 34.0, Color(base_color, 0.45), 1.2, true)
+	if bool(contact.get("trajectory_known", false)):
+		draw_line(estimate, estimate + Vector2(contact.direction) * 34.0, Color(base_color, 0.45), 1.2, true)
 
 	var label := tr("CONTACT_UNCLASSIFIED")
 	if bool(contact.classified):

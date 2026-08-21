@@ -66,21 +66,21 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "wide_field", "name": "Wide Field Sensor", "icon": "⌗", "cost": 55,
-		"description": "Edge pings warn where new meteors will enter the sky.",
+		"description": "Reveals incoming contacts before they enter the sky so you can pre-position.",
 		"branch": "detection", "position": Vector2(320, 310), "prerequisites": ["edge_detection"],
 		"hidden_until": ["edge_detection"], "effect_type": "unlock", "effect_parameters": {"entry_warning": true},
 		"major": false
 	},
 	{
 		"id": "trajectory", "name": "Trajectory Prediction", "icon": "➤", "cost": 95,
-		"description": "A dotted lead line reveals each meteor's likely path.",
+		"description": "Tightens forecast uncertainty and reveals each contact's approach.",
 		"branch": "detection", "position": Vector2(550, 300), "prerequisites": ["wide_field"],
 		"hidden_until": ["wide_field"], "effect_type": "unlock", "effect_parameters": {"trajectory_line": true},
 		"major": true
 	},
 	{
 		"id": "rare_detection", "name": "Rare Meteor Detection", "icon": "★", "cost": 155,
-		"description": "Reveals rare fireballs and turns secondary cameras into urgent rare-object alerts.",
+		"description": "Reveals rare fireballs and identifies every forecast contact before entry.",
 		"branch": "detection", "position": Vector2(800, 255), "prerequisites": ["trajectory"],
 		"hidden_until": ["trajectory"], "effect_type": "discovery", "effect_parameters": {"meteor_type": "fireball"},
 		"major": true

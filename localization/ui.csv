@@ -169,11 +169,11 @@ UPGRADE_PERFECT_OBSERVATION_DESC,Grades manual tracking. Excellent and Perfect r
 UPGRADE_EDGE_DETECTION_NAME,Edge Detection,경계 탐지
 UPGRADE_EDGE_DETECTION_DESC,Classifies high-speed entry signatures and introduces fast meteors.,고속 진입 신호를 식별해 고속 유성을 관측할 수 있게 됩니다.
 UPGRADE_WIDE_FIELD_NAME,Wide Field Sensor,광시야 센서
-UPGRADE_WIDE_FIELD_DESC,Edge pings warn where new meteors will enter the sky.,새 유성이 진입할 하늘 가장자리를 미리 표시합니다.
+UPGRADE_WIDE_FIELD_DESC,Reveals incoming contacts before they enter the sky so you can pre-position.,유성이 하늘에 진입하기 전에 접촉 신호를 표시해 미리 대비할 수 있습니다.
 UPGRADE_TRAJECTORY_NAME,Trajectory Prediction,궤적 예측
-UPGRADE_TRAJECTORY_DESC,A dotted lead line reveals each meteor's likely path.,점선으로 각 유성의 예상 이동 경로를 표시합니다.
+UPGRADE_TRAJECTORY_DESC,Tightens forecast uncertainty and reveals each contact's approach.,예보의 불확실성을 줄이고 각 접촉 신호의 진입 방향을 표시합니다.
 UPGRADE_RARE_DETECTION_NAME,Rare Meteor Detection,희귀 유성 탐지
-UPGRADE_RARE_DETECTION_DESC,Reveals rare fireballs and turns secondary cameras into urgent rare-object alerts.,희귀 화구를 발견하고 보조 카메라에 희귀 천체 긴급 경보 기능을 추가합니다.
+UPGRADE_RARE_DETECTION_DESC,Reveals rare fireballs and identifies every forecast contact before entry.,희귀 화구를 발견하고 모든 예보 접촉 신호의 천체 유형을 진입 전에 식별합니다.
 UPGRADE_FRAGMENT_ANALYSIS_NAME,Fragment Analysis,파편 분석
 UPGRADE_FRAGMENT_ANALYSIS_DESC,Discovers splitting meteors; network analysis can assist with their fragments.,분열 유성을 발견하고 관측망이 파편 분석을 지원합니다.
 UPGRADE_SHOWER_DETECTOR_NAME,Meteor Shower Forecast,유성우 예보
