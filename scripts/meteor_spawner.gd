@@ -10,6 +10,18 @@ const MeteorScript = preload("res://scripts/meteor.gd")
 const MAX_TOTAL_METEORS := 32
 const FORECAST_INTERCEPT_DISTANCE := 190.0
 const MINIMUM_PAYABLE_TRACK_TIME := 0.95
+const ENTRY_MARGIN := 24.0
+const BURNOUT_GRID_COLUMNS := 4
+const BURNOUT_GRID_ROWS := 3
+const BURNOUT_SAFE_MIN := Vector2(0.08, 0.14)
+const BURNOUT_SAFE_MAX := Vector2(0.92, 0.86)
+const BURNOUT_CELL_ORDER := [0, 5, 10, 3, 8, 1, 6, 11, 4, 9, 2, 7]
+const OUTER_BURNOUT_CELLS := [0, 1, 2, 3, 4, 5, 6, 7, 8, 11]
+const BURNOUT_JITTER_MIN := 0.18
+const BURNOUT_JITTER_MAX := 0.82
+const BURNOUT_JITTER_ATTEMPTS := 8
+const PLAN_SPEED_FACTOR_MIN := 0.96
+const PLAN_SPEED_FACTOR_MAX := 1.08
 # Automatic lanes are partial assist: at 7x analysis time the scan duration
 # exceeds every eligible target's lifetime, so completion needs another source.
 const LANE_TIME_MULTIPLIER := 7.0
@@ -35,6 +47,7 @@ var lane_selection_order: LaneSelectionOrder = LaneSelectionOrder.PARTNER_FIRST
 var pending_contacts: Array[Dictionary] = []
 var next_contact_id: int = 1
 var phase_time_remaining: float = INF
+var burnout_cell_cursors: Dictionary = {}
 
 
 func setup(target_layer: Node2D, progression_controller: Node) -> void:
@@ -67,6 +80,7 @@ func reset() -> void:
 	secondary_refresh = 0.0
 	pending_contacts.clear()
 	phase_time_remaining = INF
+	burnout_cell_cursors.clear()
 
 
 func _process(delta: float) -> void:
@@ -99,7 +113,7 @@ func _process(delta: float) -> void:
 	next_spawn_time = maxf(1.15, base_interval * progression.get_spawn_interval_scale())
 
 
-func spawn_meteor(type_id: String = "common", custom_start := Vector2.INF, custom_velocity := Vector2.INF, lifetime_override: float = -1.0):
+func spawn_meteor(type_id: String = "common", custom_start := Vector2.INF, custom_velocity := Vector2.INF, lifetime_override: float = -1.0, custom_burnout := Vector2.INF):
 	# Shower and fragment paths intentionally bypass the regular progression cap.
 	# Keep one reserved slot for the final major target while bounding all burst
 	# paths so a missed frame cannot turn into an ever-growing render workload.
@@ -109,16 +123,18 @@ func spawn_meteor(type_id: String = "common", custom_start := Vector2.INF, custo
 	var spec := Balance.meteor_spec(type_id)
 	var start := custom_start
 	var move_velocity := custom_velocity
+	var burnout := custom_burnout
 	if custom_start == Vector2.INF:
 		var entry := plan_entry(type_id)
 		start = entry.start
 		move_velocity = entry.velocity
+		burnout = entry.burnout
 	var lifetime_scale: float = progression.get_lifetime_multiplier()
 	if lifetime_override > 0.0:
 		lifetime_scale = lifetime_override / float(spec.lifetime)
 	var meteor = MeteorScript.new()
 	var features := _current_features(type_id)
-	meteor.configure(spec, type_id, start, move_velocity, lifetime_scale, features)
+	meteor.configure(spec, type_id, start, move_velocity, lifetime_scale, features, burnout)
 	meteor.fragment_requested.connect(_on_fragment_requested)
 	meteor_layer.add_child(meteor)
 	meteor_spawned.emit(meteor)
@@ -134,22 +150,171 @@ func plan_entry(type_id: String) -> Dictionary:
 func _plan_entry_with_rng(type_id: String, source_rng: RandomNumberGenerator) -> Dictionary:
 	var size := get_viewport().get_visible_rect().size
 	var spec := Balance.meteor_spec(type_id)
-	var start := Vector2.ZERO
-	match source_rng.randi_range(0, 2):
-		0:
-			start = Vector2(source_rng.randf_range(70.0, size.x - 70.0), -24.0)
-		1:
-			start = Vector2(-24.0, source_rng.randf_range(55.0, size.y * 0.68))
-		_:
-			start = Vector2(size.x + 24.0, source_rng.randf_range(55.0, size.y * 0.62))
-	var target := Vector2(
-		source_rng.randf_range(size.x * 0.24, size.x * 0.78),
-		source_rng.randf_range(size.y * 0.30, size.y * 0.78)
+	# Keep the planning stream at the legacy fixed five draws so changing spatial
+	# geometry cannot silently change later type rolls or spawn cadence.
+	var entry_selector := source_rng.randi_range(0, 2)
+	var candidate_fraction := source_rng.randf()
+	var jitter_x := source_rng.randf()
+	var jitter_y := source_rng.randf()
+	var speed := float(spec.speed) * source_rng.randf_range(
+		PLAN_SPEED_FACTOR_MIN, PLAN_SPEED_FACTOR_MAX
 	)
+	var lifetime_scale: float = progression.get_lifetime_multiplier() if progression != null else 1.0
+	var lifetime := float(spec.lifetime) * lifetime_scale
+	var burn_distance := MeteorScript.burn_distance_for(
+		speed, lifetime, float(spec.get("burn_terminal_ratio", 1.0))
+	)
+	var reachable_cells := _reachable_burnout_cells(type_id, size, burn_distance)
+	if reachable_cells.is_empty():
+		return _crossing_entry_plan(
+			size, speed, burn_distance, entry_selector,
+			candidate_fraction, jitter_x, jitter_y
+		)
+	var cell_index := _next_burnout_cell(type_id, reachable_cells)
+	var target := _burnout_cell_center(size, cell_index)
+	var entry_candidates: Array[Vector2] = []
+	for attempt in range(BURNOUT_JITTER_ATTEMPTS):
+		var center_blend := float(attempt) / float(maxi(1, BURNOUT_JITTER_ATTEMPTS - 1))
+		var jittered_target := _sample_burnout_cell(
+			size, cell_index,
+			lerpf(jitter_x, 0.5, center_blend),
+			lerpf(jitter_y, 0.5, center_blend)
+		)
+		var jittered_candidates := _entry_candidates(jittered_target, size, burn_distance)
+		if jittered_candidates.is_empty():
+			continue
+		target = jittered_target
+		entry_candidates = jittered_candidates
+		break
+	if entry_candidates.is_empty():
+		entry_candidates = _entry_candidates(target, size, burn_distance)
+	var candidate_index := (
+		entry_selector + mini(entry_candidates.size() - 1, int(candidate_fraction * entry_candidates.size()))
+	) % entry_candidates.size()
+	var start: Vector2 = entry_candidates[candidate_index]
 	return {
 		"start": start,
-		"velocity": (target - start).normalized() * float(spec.speed) * source_rng.randf_range(0.9, 1.12),
+		"velocity": (target - start).normalized() * speed,
+		"burnout": target,
+		"burn_distance": burn_distance,
 	}
+
+
+func _reachable_burnout_cells(type_id: String, size: Vector2, burn_distance: float) -> Array[int]:
+	var reachable: Array[int] = []
+	for ordered_index in BURNOUT_CELL_ORDER:
+		var cell_index := int(ordered_index)
+		if type_id in ["common", "fast"] and cell_index not in OUTER_BURNOUT_CELLS:
+			continue
+		var center := _burnout_cell_center(size, cell_index)
+		if not _entry_candidates(center, size, burn_distance).is_empty():
+			reachable.append(cell_index)
+	return reachable
+
+
+func _crossing_entry_plan(size: Vector2, speed: float, burn_distance: float, entry_selector: int, candidate_fraction: float, jitter_x: float, jitter_y: float) -> Dictionary:
+	var start := Vector2.ZERO
+	match entry_selector:
+		0:
+			start = Vector2(lerpf(0.0, size.x, candidate_fraction), -ENTRY_MARGIN)
+		1:
+			start = Vector2(-ENTRY_MARGIN, lerpf(0.0, size.y, candidate_fraction))
+		_:
+			start = Vector2(size.x + ENTRY_MARGIN, lerpf(0.0, size.y, candidate_fraction))
+	var safe_rect := _burnout_safe_rect(size)
+	var inward_target := safe_rect.position + Vector2(
+		lerpf(0.25, 0.75, jitter_x) * safe_rect.size.x,
+		lerpf(0.25, 0.75, jitter_y) * safe_rect.size.y
+	)
+	var direction := (inward_target - start).normalized()
+	if direction.is_zero_approx():
+		direction = (
+			Vector2.DOWN if entry_selector == 0
+			else (Vector2.RIGHT if entry_selector == 1 else Vector2.LEFT)
+		)
+	return {
+		"start": start,
+		"velocity": direction * speed,
+		"burnout": start + direction * burn_distance,
+		"burn_distance": burn_distance,
+	}
+
+
+func _next_burnout_cell(type_id: String, reachable_cells: Array[int]) -> int:
+	# Every distance/lifetime combination gets its own cursor. Filtering the
+	# low-discrepancy order before advancing avoids skip bias when a shallow type
+	# cannot geometrically reach one of the deep cells.
+	if reachable_cells.is_empty():
+		return 0
+	var cell_parts := PackedStringArray()
+	for cell_index in reachable_cells:
+		cell_parts.append(str(cell_index))
+	var signature := "%s:%s" % [type_id, ",".join(cell_parts)]
+	var cursor := int(burnout_cell_cursors.get(signature, 0))
+	burnout_cell_cursors[signature] = cursor + 1
+	return reachable_cells[cursor % reachable_cells.size()]
+
+
+func _burnout_safe_rect(size: Vector2) -> Rect2:
+	var minimum := Vector2(size.x * BURNOUT_SAFE_MIN.x, size.y * BURNOUT_SAFE_MIN.y)
+	var maximum := Vector2(size.x * BURNOUT_SAFE_MAX.x, size.y * BURNOUT_SAFE_MAX.y)
+	return Rect2(minimum, maximum - minimum)
+
+
+func _burnout_cell_center(size: Vector2, cell_index: int) -> Vector2:
+	var safe_rect := _burnout_safe_rect(size)
+	var cell_size := Vector2(
+		safe_rect.size.x / float(BURNOUT_GRID_COLUMNS),
+		safe_rect.size.y / float(BURNOUT_GRID_ROWS)
+	)
+	var column := cell_index % BURNOUT_GRID_COLUMNS
+	var row := cell_index / BURNOUT_GRID_COLUMNS
+	return safe_rect.position + Vector2(
+		(float(column) + 0.5) * cell_size.x,
+		(float(row) + 0.5) * cell_size.y
+	)
+
+
+func _sample_burnout_cell(size: Vector2, cell_index: int, jitter_x: float, jitter_y: float) -> Vector2:
+	var safe_rect := _burnout_safe_rect(size)
+	var cell_size := Vector2(
+		safe_rect.size.x / float(BURNOUT_GRID_COLUMNS),
+		safe_rect.size.y / float(BURNOUT_GRID_ROWS)
+	)
+	var column := cell_index % BURNOUT_GRID_COLUMNS
+	var row := cell_index / BURNOUT_GRID_COLUMNS
+	return safe_rect.position + Vector2(
+		(float(column) + lerpf(BURNOUT_JITTER_MIN, BURNOUT_JITTER_MAX, clampf(jitter_x, 0.0, 1.0))) * cell_size.x,
+		(float(row) + lerpf(BURNOUT_JITTER_MIN, BURNOUT_JITTER_MAX, clampf(jitter_y, 0.0, 1.0))) * cell_size.y
+	)
+
+
+func _entry_candidates(target: Vector2, size: Vector2, burn_distance: float) -> Array[Vector2]:
+	var candidates: Array[Vector2] = []
+	_append_horizontal_entry_candidates(candidates, target, size, burn_distance)
+	_append_vertical_entry_candidates(candidates, target, size, burn_distance, -ENTRY_MARGIN)
+	_append_vertical_entry_candidates(candidates, target, size, burn_distance, size.x + ENTRY_MARGIN)
+	return candidates
+
+
+func _append_horizontal_entry_candidates(candidates: Array[Vector2], target: Vector2, size: Vector2, burn_distance: float) -> void:
+	var normal_distance := target.y + ENTRY_MARGIN
+	if normal_distance > burn_distance:
+		return
+	var tangent_distance := sqrt(maxf(0.0, burn_distance * burn_distance - normal_distance * normal_distance))
+	for start_x in [target.x - tangent_distance, target.x + tangent_distance]:
+		if start_x >= 0.0 and start_x <= size.x:
+			candidates.append(Vector2(start_x, -ENTRY_MARGIN))
+
+
+func _append_vertical_entry_candidates(candidates: Array[Vector2], target: Vector2, size: Vector2, burn_distance: float, start_x: float) -> void:
+	var normal_distance := absf(target.x - start_x)
+	if normal_distance > burn_distance:
+		return
+	var tangent_distance := sqrt(maxf(0.0, burn_distance * burn_distance - normal_distance * normal_distance))
+	for start_y in [target.y - tangent_distance, target.y + tangent_distance]:
+		if start_y >= 0.0 and start_y <= size.y:
+			candidates.append(Vector2(start_x, start_y))
 
 
 func forecast_enabled() -> bool:
@@ -179,6 +344,7 @@ func _announce_regular_spawn(source_rng: RandomNumberGenerator = null) -> void:
 		"type_id": type_id,
 		"start": entry.start,
 		"velocity": entry.velocity,
+		"burnout": entry.burnout,
 		"direction": direction,
 		"intercept": Vector2(entry.start) + direction * FORECAST_INTERCEPT_DISTANCE,
 		"error_offset": Vector2.from_angle(forecast_rng.randf_range(0.0, TAU)) * forecast_rng.randf_range(min_error, max_error),
@@ -202,7 +368,10 @@ func _update_pending_contacts(delta: float) -> void:
 		if float(contact.countdown) > 0.0:
 			continue
 		pending_contacts.remove_at(index)
-		var meteor = spawn_meteor(String(contact.type_id), contact.start, contact.velocity)
+		var meteor = spawn_meteor(
+			String(contact.type_id), contact.start, contact.velocity, -1.0,
+			Vector2(contact.get("burnout", Vector2.INF))
+		)
 		contact_resolved.emit(contact, meteor)
 
 
@@ -316,11 +485,20 @@ func set_bank_unsupported_before_dish(enabled: bool) -> void:
 func _on_fragment_requested(origin: Vector2, parent_velocity: Vector2, parent_type: String) -> void:
 	var piece_count := 4 if parent_type == "major" else 3
 	var spread := 0.34 if parent_type == "major" else 0.25
+	var burst_direction := parent_velocity.normalized()
+	if burst_direction.is_zero_approx():
+		burst_direction = Vector2.RIGHT
+	var burst_speed := parent_velocity.length()
+	# The parent is intentionally slow at its terminal split. Preserve the old
+	# 245px/s fragment burst so the children read as released energy rather than
+	# inheriting the parent's near-stall. Major fragments keep the finale speed.
+	if parent_type != "major":
+		burst_speed = maxf(burst_speed, float(Balance.meteor_spec("fragment").speed))
 	var available_slots := maxi(0, (MAX_TOTAL_METEORS - 1) - meteor_layer.get_child_count())
 	for index in range(mini(piece_count, available_slots)):
 		var centered := float(index) - float(piece_count - 1) * 0.5
-		var direction := parent_velocity.normalized().rotated(centered * spread)
-		var speed := parent_velocity.length() * rng.randf_range(0.88, 1.18)
+		var direction := burst_direction.rotated(centered * spread)
+		var speed := burst_speed * rng.randf_range(0.88, 1.18)
 		spawn_meteor("fragment_piece", origin + direction * 7.0, direction * speed, 3.2 if parent_type == "major" else 2.65)
 
 

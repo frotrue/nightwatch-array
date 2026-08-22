@@ -16,6 +16,15 @@ var body_radius: float = 7.0
 var primary_color := Color.WHITE
 var glow_color := Color("78bfff")
 var max_trail_points: int = 28
+var entry_position := Vector2.ZERO
+var burnout_position := Vector2.ZERO
+var initial_velocity := Vector2.ZERO
+var burn_terminal_ratio: float = 0.25
+var burn_fade_start: float = 0.68
+var burn_style: String = "ember"
+var burn_wobble: float = 0.0
+var split_progress: float = 0.58
+var burnout_linger: float = 0.20
 
 var age: float = 0.0
 var observation_progress: float = 0.0
@@ -37,6 +46,7 @@ var alive: bool = true
 var observed_successfully: bool = false
 var split_done: bool = false
 var linger_time: float = 0.0
+var linger_duration: float = 0.20
 var trail_points: Array[Vector2] = []
 var trail_draw_points := PackedVector2Array()
 var trail_glow_colors := PackedColorArray()
@@ -48,10 +58,12 @@ var wobble_phase: float = 0.0
 var rng := RandomNumberGenerator.new()
 
 
-func configure(spec: Dictionary, meteor_type: String, start_position: Vector2, move_velocity: Vector2, lifetime_scale: float, features: Dictionary) -> void:
+func configure(spec: Dictionary, meteor_type: String, start_position: Vector2, move_velocity: Vector2, lifetime_scale: float, features: Dictionary, planned_burnout := Vector2.INF) -> void:
 	type_id = meteor_type
 	display_name = String(spec.name)
 	position = start_position
+	entry_position = start_position
+	initial_velocity = move_velocity
 	velocity = move_velocity
 	travel_direction = velocity.normalized()
 	visible_lifetime = float(spec.lifetime) * lifetime_scale
@@ -61,6 +73,21 @@ func configure(spec: Dictionary, meteor_type: String, start_position: Vector2, m
 	primary_color = spec.color
 	glow_color = spec.glow
 	max_trail_points = int(float(spec.trail) * (1.22 if lifetime_scale > 1.01 else 1.0))
+	burn_terminal_ratio = clampf(float(spec.get("burn_terminal_ratio", 1.0)), 0.0, 1.0)
+	burn_fade_start = float(spec.get("burn_fade_start", 0.72))
+	burn_style = String(spec.get("burn_style", "ember"))
+	burn_wobble = float(spec.get("burn_wobble", 0.0))
+	split_progress = float(spec.get("split_progress", 0.58 if meteor_type == "fragment" else 0.57))
+	burnout_linger = float(spec.get("burnout_linger", 0.20))
+	if planned_burnout == Vector2.INF:
+		burnout_position = start_position + travel_direction * burn_distance_for(
+			move_velocity.length(), visible_lifetime, burn_terminal_ratio
+		)
+	else:
+		burnout_position = Vector2(planned_burnout)
+	var planned_direction := (burnout_position - entry_position).normalized()
+	if not planned_direction.is_zero_approx():
+		travel_direction = planned_direction
 	prediction_enabled = bool(features.get("prediction", false))
 	wide_field_enabled = bool(features.get("wide_field", false))
 	precision_enabled = bool(features.get("precision", false))
@@ -70,6 +97,22 @@ func configure(spec: Dictionary, meteor_type: String, start_position: Vector2, m
 	wobble_phase = rng.randf_range(0.0, TAU)
 	trail_points.append(start_position)
 	_rebuild_prediction_draw_points()
+
+
+static func burn_distance_for(initial_speed: float, lifetime: float, terminal_ratio: float) -> float:
+	var ratio := clampf(terminal_ratio, 0.0, 1.0)
+	return initial_speed * lifetime * (1.0 + ratio) * 0.5
+
+
+static func burn_curve(progress: float, terminal_ratio: float) -> float:
+	var p := clampf(progress, 0.0, 1.0)
+	var ratio := clampf(terminal_ratio, 0.0, 1.0)
+	return (p - (1.0 - ratio) * p * p * 0.5) / ((1.0 + ratio) * 0.5)
+
+
+static func burn_speed_ratio(progress: float, terminal_ratio: float) -> float:
+	var ratio := clampf(terminal_ratio, 0.0, 1.0)
+	return 1.0 - (1.0 - ratio) * clampf(progress, 0.0, 1.0)
 
 
 func _ready() -> void:
@@ -100,11 +143,7 @@ func _process(delta: float) -> void:
 		return
 
 	age += delta
-	var move_velocity := velocity
-	if type_id == "fragment" or type_id == "fragment_piece":
-		var wobble := sin(age * 8.0 + wobble_phase) * (0.045 if type_id == "fragment" else 0.085)
-		move_velocity = velocity.rotated(wobble)
-	position += move_velocity * delta
+	_update_burn_motion(delta)
 
 	trail_sample_accumulator += delta
 	if trail_sample_accumulator >= 0.024:
@@ -122,10 +161,10 @@ func _process(delta: float) -> void:
 		observation_progress = maxf(0.0, observation_progress - delta * 0.055)
 
 	if not split_done:
-		if type_id == "fragment" and age >= visible_lifetime * 0.46:
+		if type_id == "fragment" and get_burn_progress() >= split_progress:
 			split_done = true
 			fragment_requested.emit(global_position, velocity, type_id)
-		elif type_id == "major" and age >= visible_lifetime * 0.57:
+		elif type_id == "major" and get_burn_progress() >= split_progress:
 			split_done = true
 			fragment_requested.emit(global_position, velocity, type_id)
 
@@ -133,10 +172,31 @@ func _process(delta: float) -> void:
 		_finish_observation(auto_rate)
 	elif age >= visible_lifetime:
 		alive = false
-		linger_time = 0.32
+		linger_duration = burnout_linger
+		linger_time = linger_duration
 		expired.emit(self, type_id == "major")
 
 	queue_redraw()
+
+
+func _update_burn_motion(delta: float) -> void:
+	var previous_position := position
+	var progress := get_burn_progress()
+	var path_position := entry_position.lerp(
+		burnout_position,
+		burn_curve(progress, burn_terminal_ratio)
+	)
+	var path_direction := (burnout_position - entry_position).normalized()
+	if burn_wobble > 0.0 and not path_direction.is_zero_approx():
+		var instability := smoothstep(0.12, split_progress, progress)
+		var endpoint_taper := sin(PI * progress)
+		var wobble := sin(age * 8.0 + wobble_phase) * burn_wobble * instability * endpoint_taper
+		path_position += Vector2(-path_direction.y, path_direction.x) * wobble
+	position = path_position
+	if delta > 0.000001:
+		velocity = (position - previous_position) / delta
+		if not velocity.is_zero_approx():
+			travel_direction = velocity.normalized()
 
 
 func apply_manual_observation(delta: float, cursor_distance: float, tracking_radius: float) -> void:
@@ -203,6 +263,45 @@ func get_progress() -> float:
 	return clampf(observation_progress, 0.0, 1.0)
 
 
+func get_burn_progress() -> float:
+	return clampf(age / maxf(visible_lifetime, 0.001), 0.0, 1.0)
+
+
+func get_burn_visibility() -> float:
+	var progress := get_burn_progress()
+	var ignition := lerpf(0.82, 1.0, smoothstep(0.0, 0.22, progress))
+	var fade := smoothstep(burn_fade_start, 1.0, progress)
+	var brightness := ignition * lerpf(1.0, 0.10, fade)
+	match burn_style:
+		"flare":
+			var flicker_amount := 0.11 * smoothstep(0.28, 0.82, progress)
+			brightness *= 1.0 + sin(age * 14.0 + wobble_phase) * flicker_amount
+			var flare_distance := (progress - 0.86) / 0.055
+			brightness += 0.65 * exp(-flare_distance * flare_distance)
+		"split":
+			var instability := smoothstep(0.25, split_progress, progress)
+			brightness *= 1.0 + sin(age * 18.0 + wobble_phase) * 0.10 * instability
+		"spark":
+			brightness *= 1.0 + sin(age * 20.0 + wobble_phase) * 0.07
+		"major":
+			brightness *= 1.0 + sin(age * 6.0 + wobble_phase) * 0.04
+	if progress <= burn_fade_start:
+		brightness = maxf(0.78, brightness)
+	return maxf(0.10, brightness)
+
+
+func get_burn_tail_scale() -> float:
+	var tail_fade_start := maxf(0.0, burn_fade_start - 0.10)
+	return lerpf(1.0, 0.16, smoothstep(tail_fade_start, 1.0, get_burn_progress()))
+
+
+func get_planned_position(progress: float) -> Vector2:
+	return entry_position.lerp(
+		burnout_position,
+		burn_curve(progress, burn_terminal_ratio)
+	)
+
+
 func get_quality() -> float:
 	return last_quality
 
@@ -245,7 +344,8 @@ func _finish_observation(auto_rate: float) -> void:
 		fragment_requested.emit(global_position, velocity, type_id)
 	alive = false
 	observed_successfully = true
-	linger_time = 0.62 if type_id != "major" else 1.1
+	linger_duration = 0.62 if type_id != "major" else 1.1
+	linger_time = linger_duration
 	var was_manual := manual_touched
 	var multiplier := get_predicted_multiplier()
 	if not was_manual and auto_rate > 0.0:
@@ -256,46 +356,60 @@ func _finish_observation(auto_rate: float) -> void:
 
 
 func _draw() -> void:
+	var burn_visibility := get_burn_visibility()
+	var burn_tail_scale := get_burn_tail_scale()
 	if trail_points.size() > 1:
 		trail_draw_points.clear()
 		trail_glow_colors.clear()
 		trail_core_colors.clear()
-		var linger_alpha := 1.0 if alive else clampf(linger_time * 2.4, 0.0, 1.0)
+		var linger_alpha := 1.0 if alive else clampf(linger_time / maxf(linger_duration, 0.001), 0.0, 1.0)
+		if not alive and not observed_successfully:
+			linger_alpha *= 0.12
+		var trail_visibility := burn_visibility * burn_tail_scale * linger_alpha
 		for index in range(trail_points.size()):
 			var t := float(index) / float(maxi(1, trail_points.size() - 1))
-			var alpha := pow(1.0 - t, 1.35) * linger_alpha
+			var alpha := pow(1.0 - t, 1.35) * trail_visibility
 			trail_draw_points.append(trail_points[index] - global_position)
 			trail_glow_colors.append(Color(glow_color, alpha * 0.42))
 			trail_core_colors.append(Color(primary_color, alpha * 0.82))
 		# Two batched Canvas commands replace two draw_line calls per segment.
-		draw_polyline_colors(trail_draw_points, trail_glow_colors, maxf(1.6, body_radius * 1.18), true)
-		draw_polyline_colors(trail_draw_points, trail_core_colors, maxf(0.8, body_radius * 0.42), true)
+		draw_polyline_colors(trail_draw_points, trail_glow_colors, maxf(0.6, body_radius * 1.18 * burn_tail_scale), true)
+		draw_polyline_colors(trail_draw_points, trail_core_colors, maxf(0.4, body_radius * 0.42 * burn_tail_scale), true)
 
 	if prediction_enabled and alive:
-		draw_multiline(prediction_draw_points, Color(glow_color, 0.22), 1.4, true)
+		draw_multiline(prediction_draw_points, Color(glow_color, 0.22 * minf(1.0, burn_visibility)), 1.4, true)
 
-	var visibility := 1.0 if alive else clampf(linger_time * 2.2, 0.0, 1.0)
+	var visibility := burn_visibility
+	if not alive:
+		visibility = clampf(linger_time / maxf(linger_duration, 0.001), 0.0, 1.0)
+		if not observed_successfully:
+			visibility *= 0.12
 	var success_bloom := 1.0
 	if observed_successfully:
 		success_bloom = 1.0 + (1.0 - visibility) * 3.0
-	var pulse := 1.0 + sin(age * 13.0 + wobble_phase) * 0.06
+	var pulse_amount := 0.06
+	if burn_style == "split":
+		pulse_amount += 0.08 * smoothstep(0.25, split_progress, get_burn_progress())
+	elif burn_style == "snap":
+		pulse_amount = 0.035
+	var pulse := 1.0 + sin(age * 13.0 + wobble_phase) * pulse_amount
 	var r := body_radius * pulse * success_bloom
-	draw_circle(Vector2.ZERO, r * 3.4, Color(glow_color, 0.065 * visibility))
-	draw_circle(Vector2.ZERO, r * 1.95, Color(glow_color, 0.17 * visibility))
-	draw_arc(Vector2.ZERO, r + 8.0 + sin(age * 4.0) * 1.5, 0.0, TAU, 28, Color(glow_color, 0.16 * visibility), 1.2, true)
-	draw_circle(Vector2.ZERO, r, Color(primary_color, visibility))
-	draw_circle(-travel_direction * r * 0.22, r * 0.45, Color(1.0, 1.0, 1.0, visibility))
+	draw_circle(Vector2.ZERO, r * 3.4, Color(glow_color, clampf(0.065 * visibility, 0.0, 1.0)))
+	draw_circle(Vector2.ZERO, r * 1.95, Color(glow_color, clampf(0.17 * visibility, 0.0, 1.0)))
+	draw_arc(Vector2.ZERO, r + 8.0 + sin(age * 4.0) * 1.5, 0.0, TAU, 28, Color(glow_color, clampf(0.16 * visibility, 0.0, 1.0)), 1.2, true)
+	draw_circle(Vector2.ZERO, r, Color(primary_color, clampf(visibility, 0.0, 1.0)))
+	draw_circle(-travel_direction * r * 0.22, r * 0.45, Color(1.0, 1.0, 1.0, clampf(visibility, 0.0, 1.0)))
 
 	if type_id == "fireball" or type_id == "major":
 		var flame_dir := -travel_direction
 		for index in range(3 if type_id == "fireball" else 6):
 			var side := Vector2(-flame_dir.y, flame_dir.x) * sin(age * 8.0 + index * 1.7) * r * 0.35
 			var center := flame_dir * r * (1.0 + index * 0.42) + side
-			draw_circle(center, r * (0.52 - index * 0.045), Color(glow_color, (0.28 - index * 0.025) * visibility))
+			draw_circle(center, r * (0.52 - index * 0.045), Color(glow_color, clampf((0.28 - index * 0.025) * visibility, 0.0, 1.0)))
 
 	var scan_rate := get_automatic_rate()
 	if scan_rate > 0.0 and alive:
 		var scan_radius := body_radius + 12.0 + sin(age * 5.0) * 2.0
 		var start_angle := age * 2.5
-		draw_arc(Vector2.ZERO, scan_radius, start_angle, start_angle + PI * 1.25, 30, Color("63f2d2"), 1.6, true)
-		draw_arc(Vector2.ZERO, scan_radius + 5.0, -start_angle * 0.7, -start_angle * 0.7 + PI * 0.55, 18, Color(0.38, 0.95, 0.82, 0.38), 1.0, true)
+		draw_arc(Vector2.ZERO, scan_radius, start_angle, start_angle + PI * 1.25, 30, Color(0.39, 0.95, 0.82, minf(1.0, burn_visibility)), 1.6, true)
+		draw_arc(Vector2.ZERO, scan_radius + 5.0, -start_angle * 0.7, -start_angle * 0.7 + PI * 0.55, 18, Color(0.38, 0.95, 0.82, 0.38 * minf(1.0, burn_visibility)), 1.0, true)

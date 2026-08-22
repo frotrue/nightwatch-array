@@ -143,6 +143,37 @@ Eleven driver modes:
 
 Header: `CONTACT_DENSITY_PROBE_ENV`.
 
+`no-input` rows are control observations, not acceptance targets. Burnout
+planning deliberately distributes endpoints across the whole sky, so a dish
+left at its central home position no longer earns accidental unattended
+completions. Evaluate workload and completion acceptance on the engaged,
+placement, commitment, assignment, and selector rows. Keep printing the
+`no-input` rows so that the control remains visible; do not tune trajectories
+back toward the center merely to restore those numbers.
+
+The probe also prints `realized_objects_by_type`. Use its `fragment_piece`
+bucket when a fragment split or lifetime change could alter child density.
+
+Do not accept or reject trajectory, dish, or burnout changes from the default
+single seed. The engaged/assignment rows often contain only single-digit
+completions in 30 seconds, so one changed endpoint can look like a large
+percentage regression. Run at least 8–10 paired seeds for the old and new
+builds, then aggregate `observations_completed`, `dish_acquisitions_by_type`,
+`dish_completions_by_type`, and `opportunistic_dropped_without_completion` for
+the engaged, placement, commitment, assignment, and selector rows. In the
+2026-08-22 burnout review, the default seed made the two-dish manual row look
+like a 9→4 collapse, while ten paired seeds produced 59→60. The same aggregate
+still exposed a real fast dish-conversion change (92.3%→84.9%), showing why
+both total completions and conversion/drop counts are required.
+
+```powershell
+20260821..20260830 | ForEach-Object {
+    $env:NIGHTWATCH_CONTACT_PROBE_SEED = $_
+    & $godot --headless --path . --script res://tests/contact_density_probe.gd
+}
+Remove-Item Env:NIGHTWATCH_CONTACT_PROBE_SEED -ErrorAction SilentlyContinue
+```
+
 ### Frame pacing — `frame_pacing_probe.gd`
 
 Frame-time distribution of the main game. Exists because input-driven frame

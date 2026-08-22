@@ -109,6 +109,7 @@ var probe_mode: String = MODE_NO_INPUT
 var announcements: int = 0
 var resolutions: int = 0
 var realized_objects: int = 0
+var realized_objects_by_type: Dictionary = {}
 var observations_completed: int = 0
 var data_earned: float = 0.0
 var visible_samples: Array[float] = []
@@ -217,6 +218,7 @@ func _prepare_row(row: Dictionary, mode: String) -> void:
 	announcements = 0
 	resolutions = 0
 	realized_objects = 0
+	realized_objects_by_type.clear()
 	observations_completed = 0
 	data_earned = 0.0
 	visible_samples.clear()
@@ -378,6 +380,7 @@ func _on_contact_resolved(contact: Dictionary, meteor) -> void:
 
 func _on_meteor_spawned(meteor) -> void:
 	realized_objects += 1
+	_increment_type_count(realized_objects_by_type, String(meteor.type_id))
 	meteor.observed.connect(_on_meteor_observed)
 
 
@@ -647,7 +650,7 @@ func _print_row(row_name: String, mode: String) -> void:
 		average_slew += fraction
 	if not slew_fractions.is_empty():
 		average_slew /= float(slew_fractions.size())
-	print("CONTACT_DENSITY_PROBE row=%s mode=%s lane_config=dishes:%d|automatic_lanes:%d|manual:%s dish_control=%s capacity_evidence_scope=%s announcements=%d resolutions=%d p50_visible=%.1f p95_visible=%.1f p50_live_meteors=%.1f p95_live_meteors=%.1f p50_workload=%.1f p95_workload=%.1f dish_slew_fraction=%.3f fast_contacts_announced=%d successful_fast_assignments=%d successful_fast_placements=%d unassigned_fast_contacts=%d fast_contacts_while_all_dishes_busy=%d eligible_contacts_announced=%d successful_eligible_assignments=%d unassigned_eligible_contacts=%d eligible_contacts_while_all_dishes_busy=%d dish_busy_fraction=%s dish_acquisitions=%d dish_acquisitions_by_type=%s dish_completions_by_type=%s dish_conversion_by_type=%s lane_participations=%d lane_participations_by_type=%s lane_completions=%d lane_completions_by_type=%s lane_conversion_by_type=%s lane_covered_only_completions_by_type=%s lane_uncovered_only_completions_by_type=%s lane_mixed_completions_by_type=%s opportunistic_acquisitions=%d opportunistic_acquisitions_by_type=%s manual_placements=%d manual_placement_opportunistic_acquisitions=%d manual_placement_opportunistic_acquisitions_by_type=%s opportunistic_completions=%d opportunistic_completions_by_type=%s opportunistic_dropped_without_completion=%d opportunistic_dropped_by_type=%s manual_only_completions_by_type=%s dish_only_completions_by_type=%s shared_completions_by_type=%s automatic_only_completions_by_type=%s realized_objects_30s=%d observations_completed=%d data_earned=%.0f" % [
+	print("CONTACT_DENSITY_PROBE row=%s mode=%s lane_config=dishes:%d|automatic_lanes:%d|manual:%s dish_control=%s capacity_evidence_scope=%s announcements=%d resolutions=%d p50_visible=%.1f p95_visible=%.1f p50_live_meteors=%.1f p95_live_meteors=%.1f p50_workload=%.1f p95_workload=%.1f dish_slew_fraction=%.3f fast_contacts_announced=%d successful_fast_assignments=%d successful_fast_placements=%d unassigned_fast_contacts=%d fast_contacts_while_all_dishes_busy=%d eligible_contacts_announced=%d successful_eligible_assignments=%d unassigned_eligible_contacts=%d eligible_contacts_while_all_dishes_busy=%d dish_busy_fraction=%s dish_acquisitions=%d dish_acquisitions_by_type=%s dish_completions_by_type=%s dish_conversion_by_type=%s lane_participations=%d lane_participations_by_type=%s lane_completions=%d lane_completions_by_type=%s lane_conversion_by_type=%s lane_covered_only_completions_by_type=%s lane_uncovered_only_completions_by_type=%s lane_mixed_completions_by_type=%s opportunistic_acquisitions=%d opportunistic_acquisitions_by_type=%s manual_placements=%d manual_placement_opportunistic_acquisitions=%d manual_placement_opportunistic_acquisitions_by_type=%s opportunistic_completions=%d opportunistic_completions_by_type=%s opportunistic_dropped_without_completion=%d opportunistic_dropped_by_type=%s manual_only_completions_by_type=%s dish_only_completions_by_type=%s shared_completions_by_type=%s automatic_only_completions_by_type=%s realized_objects_30s=%d realized_objects_by_type=%s observations_completed=%d data_earned=%.0f" % [
 		row_name,
 		mode,
 		game.sky_contacts.dishes.size(),
@@ -700,6 +703,7 @@ func _print_row(row_name: String, mode: String) -> void:
 		_type_counts_text(shared_completions_by_type),
 		_type_counts_text(automatic_only_completions_by_type),
 		realized_objects,
+		_type_counts_text(realized_objects_by_type),
 		observations_completed,
 		data_earned,
 	])

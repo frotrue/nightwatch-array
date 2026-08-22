@@ -187,37 +187,49 @@ static func meteor_spec(type_id: String) -> Dictionary:
 	match type_id:
 		"fast":
 			return {
-				"name": "FAST METEOR", "speed": 390.0, "lifetime": 3.6,
+				"name": "FAST METEOR", "speed": 390.0, "lifetime": 3.65,
 				"radius": 6.0, "trail": 30, "value": 24.0, "track_time": 0.82,
-				"color": Color("8eeaff"), "glow": Color("46aaff")
+				"color": Color("8eeaff"), "glow": Color("46aaff"),
+				"burn_terminal_ratio": 0.08, "burn_fade_start": 0.84, "burn_style": "snap",
+				"burnout_linger": 0.12,
 			}
 		"fragment":
 			return {
-				"name": "FRAGMENTING METEOR", "speed": 245.0, "lifetime": 5.0,
+				"name": "FRAGMENTING METEOR", "speed": 255.0, "lifetime": 5.1,
 				"radius": 9.0, "trail": 34, "value": 30.0, "track_time": 1.08,
-				"color": Color("d8c5ff"), "glow": Color("a26cff")
+				"color": Color("d8c5ff"), "glow": Color("a26cff"),
+				"burn_terminal_ratio": 0.20, "burn_fade_start": 0.60, "burn_style": "split",
+				"burn_wobble": 11.0, "split_progress": 0.46, "burnout_linger": 0.24,
 			}
 		"fragment_piece":
 			return {
-				"name": "FRAGMENT", "speed": 270.0, "lifetime": 2.8,
+				"name": "FRAGMENT", "speed": 280.0, "lifetime": 2.9,
 				"radius": 5.0, "trail": 22, "value": 11.0, "track_time": 0.62,
-				"color": Color("e8d9ff"), "glow": Color("bf8cff")
+				"color": Color("e8d9ff"), "glow": Color("bf8cff"),
+				"burn_terminal_ratio": 0.12, "burn_fade_start": 0.72, "burn_style": "spark",
+				"burn_wobble": 7.0, "burnout_linger": 0.16,
 			}
 		"fireball":
 			return {
-				"name": "RARE FIREBALL", "speed": 185.0, "lifetime": 7.2,
+				"name": "RARE FIREBALL", "speed": 190.0, "lifetime": 7.4,
 				"radius": 19.0, "trail": 52, "value": 82.0, "track_time": 1.75,
-				"color": Color("fff2b0"), "glow": Color("ff7438")
+				"color": Color("fff2b0"), "glow": Color("ff7438"),
+				"burn_terminal_ratio": 0.12, "burn_fade_start": 0.74, "burn_style": "flare",
+				"burnout_linger": 0.38,
 			}
 		"major":
 			return {
 				"name": "MAJOR FIREBALL", "speed": 128.0, "lifetime": 14.0,
 				"radius": 35.0, "trail": 82, "value": 650.0, "track_time": 3.0,
-				"color": Color("fff8d6"), "glow": Color("ff4d32")
+				"color": Color("fff8d6"), "glow": Color("ff4d32"),
+				"burn_terminal_ratio": 0.90, "burn_fade_start": 0.96, "burn_style": "major",
+				"split_progress": 0.57, "burnout_linger": 0.42,
 			}
 		_:
 			return {
-				"name": "COMMON METEOR", "speed": 215.0, "lifetime": 4.8,
+				"name": "COMMON METEOR", "speed": 220.0, "lifetime": 5.0,
 				"radius": 7.5, "trail": 28, "value": 14.0, "track_time": 0.95,
-				"color": Color("f3fbff"), "glow": Color("78bfff")
+				"color": Color("f3fbff"), "glow": Color("78bfff"),
+				"burn_terminal_ratio": 0.25, "burn_fade_start": 0.68, "burn_style": "ember",
+				"burnout_linger": 0.20,
 			}
