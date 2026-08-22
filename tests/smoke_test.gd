@@ -607,8 +607,100 @@ func _run() -> void:
 	await process_frame
 	game.sky_contacts.reset()
 
+	# Burnout planning must spread readable endpoints across the safe sky while
+	# preserving the old entry speed as a mathematical identity.
+	var meteor_script = load("res://scripts/meteor.gd")
+	game.spawner.rng.seed = 20260822
+	game.spawner.burnout_cell_cursors.clear()
+	var viewport_size: Vector2 = game.spawner.get_viewport().get_visible_rect().size
+	var burnout_safe_rect: Rect2 = game.spawner._burnout_safe_rect(viewport_size)
+	var minimum_reachable_cells := {
+		"common": 10,
+		"fast": 8,
+		"fragment": 10,
+		"fragment_piece": 10,
+		"fireball": 10,
+	}
+	for reachability_type in minimum_reachable_cells:
+		var reachability_spec: Dictionary = balance.meteor_spec(reachability_type)
+		for speed_factor in [game.spawner.PLAN_SPEED_FACTOR_MIN, game.spawner.PLAN_SPEED_FACTOR_MAX]:
+			var extreme_distance: float = meteor_script.burn_distance_for(
+				float(reachability_spec.speed) * speed_factor,
+				float(reachability_spec.lifetime),
+				float(reachability_spec.burn_terminal_ratio)
+			)
+			var reachable_cells: Array[int] = game.spawner._reachable_burnout_cells(
+				reachability_type, viewport_size, extreme_distance
+			)
+			_check(reachable_cells.size() >= int(minimum_reachable_cells[reachability_type]), "%s keeps enough burnout cells at planning speed %.2f" % [reachability_type, speed_factor])
+			if reachability_type in ["common", "fast"]:
+				var outer_profile_only := true
+				for reachable_cell in reachable_cells:
+					if reachable_cell not in game.spawner.OUTER_BURNOUT_CELLS:
+						outer_profile_only = false
+				_check(outer_profile_only, "%s never uses deep-center burnout cells" % reachability_type)
+	for burnout_type in ["common", "fast", "fragment", "fragment_piece", "fireball"]:
+		var covered_columns: Dictionary = {}
+		var covered_rows: Dictionary = {}
+		for _plan_index in range(12):
+			var entry_plan: Dictionary = game.spawner.plan_entry(burnout_type)
+			var planned_start: Vector2 = entry_plan.start
+			var planned_burnout: Vector2 = entry_plan.burnout
+			_check(burnout_safe_rect.has_point(planned_burnout), "%s burnout stays inside the safe sky" % burnout_type)
+			var allowed_entry := (
+				is_equal_approx(planned_start.y, -game.spawner.ENTRY_MARGIN)
+				or is_equal_approx(planned_start.x, -game.spawner.ENTRY_MARGIN)
+				or is_equal_approx(planned_start.x, viewport_size.x + game.spawner.ENTRY_MARGIN)
+			)
+			_check(allowed_entry and not is_equal_approx(planned_start.y, viewport_size.y + game.spawner.ENTRY_MARGIN), "%s uses only top/side entry boundaries" % burnout_type)
+			_check(absf(planned_start.distance_to(planned_burnout) - float(entry_plan.burn_distance)) < 0.05, "%s entry reaches its exact planned burnout distance" % burnout_type)
+			var normalized_in_safe := (planned_burnout - burnout_safe_rect.position) / burnout_safe_rect.size
+			covered_columns[clampi(int(normalized_in_safe.x * game.spawner.BURNOUT_GRID_COLUMNS), 0, game.spawner.BURNOUT_GRID_COLUMNS - 1)] = true
+			covered_rows[clampi(int(normalized_in_safe.y * game.spawner.BURNOUT_GRID_ROWS), 0, game.spawner.BURNOUT_GRID_ROWS - 1)] = true
+		_check(covered_columns.size() >= 3 and covered_rows.size() >= 2, "%s burnout plans span multiple sky rows and columns" % burnout_type)
+	var major_crossing_plan: Dictionary = game.spawner.plan_entry("major")
+	_check(absf(Vector2(major_crossing_plan.start).distance_to(Vector2(major_crossing_plan.burnout)) - float(major_crossing_plan.burn_distance)) < 0.05, "major planning falls back to an exact crossing path")
+
+	var motion_plan: Dictionary = game.spawner.plan_entry("common")
+	var motion_probe = meteor_script.new()
+	game.meteor_layer.add_child(motion_probe)
+	motion_probe.process_mode = Node.PROCESS_MODE_DISABLED
+	motion_probe.configure(
+		balance.meteor_spec("common"), "common", motion_plan.start,
+		motion_plan.velocity, 1.0, {}, motion_plan.burnout
+	)
+	var identity_distance: float = meteor_script.burn_distance_for(
+		motion_probe.initial_velocity.length(), motion_probe.visible_lifetime,
+		motion_probe.burn_terminal_ratio
+	)
+	_check(absf(identity_distance - motion_probe.entry_position.distance_to(motion_probe.burnout_position)) < 0.05, "burn curve preserves the configured entry speed by identity")
+	var sampled_speeds: Array[float] = []
+	for _motion_step in range(5):
+		motion_probe._process(motion_probe.visible_lifetime * 0.2)
+		sampled_speeds.append(motion_probe.velocity.length())
+	var speed_is_monotonic := true
+	for speed_index in range(1, sampled_speeds.size()):
+		if sampled_speeds[speed_index] > sampled_speeds[speed_index - 1] + 0.01:
+			speed_is_monotonic = false
+	_check(speed_is_monotonic, "burn curve speed decreases monotonically")
+	_check(motion_probe.position.distance_to(motion_probe.burnout_position) < 0.05, "burn curve ends at the planned burnout point")
+	motion_probe.free()
+	for visibility_type in ["common", "fast", "fragment", "fragment_piece", "fireball", "major"]:
+		var visibility_spec: Dictionary = balance.meteor_spec(visibility_type)
+		var visibility_probe = meteor_script.new()
+		visibility_probe.configure(
+			visibility_spec, visibility_type, Vector2.ZERO,
+			Vector2(float(visibility_spec.speed), 0.0), 1.0, {}
+		)
+		visibility_probe.age = visibility_probe.visible_lifetime * maxf(0.0, visibility_probe.burn_fade_start - 0.001)
+		_check(visibility_probe.get_burn_visibility() >= 0.78, "%s stays readable before its terminal fade" % visibility_type)
+		visibility_probe.age = visibility_probe.visible_lifetime * 0.999
+		_check(visibility_probe.get_burn_visibility() >= 0.10, "%s remains faintly visible until burnout" % visibility_type)
+		visibility_probe.free()
+
 	# Forecast pre-positioning gives the dish a distinct routine/high-motion job.
-	# Test the real planned fast ceiling (390 * 1.12), not only the nominal spec.
+	# Preserve the verified legacy fast ceiling as a stronger servo invariant than
+	# the current planned ceiling (390 * 1.08).
 	var fastest = game.spawner.spawn_meteor("fast", Vector2(220, 260), Vector2(436.8, 0.0), 3.6)
 	dish = game.sky_contacts.dishes[0]
 	dish.position = fastest.global_position
@@ -667,7 +759,7 @@ func _run() -> void:
 	var early_fragment = game.spawner.spawn_meteor(
 		"fragment", Vector2(-3000, -3000), Vector2(245.0, 0.0), 5.0
 	)
-	var early_split_threshold: float = early_fragment.visible_lifetime * 0.46
+	var early_split_threshold: float = early_fragment.visible_lifetime * early_fragment.split_progress
 	for _step in range(100):
 		if not early_fragment.alive:
 			break
@@ -698,7 +790,7 @@ func _run() -> void:
 	dish.position = splitting.global_position
 	# Keep the parked target at the parent's expected completion point so the
 	# waiting dish can immediately scan the nearby split instead of slewing home.
-	dish.target = splitting.global_position + Vector2(245.0, 0.0) * 2.5
+	dish.target = splitting.get_planned_position(splitting.split_progress)
 	dish.assigned_id = -1
 	dish.locked_id = splitting.get_instance_id()
 	dish.arrived = true

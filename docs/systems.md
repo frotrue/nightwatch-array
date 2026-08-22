@@ -43,8 +43,8 @@ content.
 | `game.gd` | Round lifecycle, save/load orchestration, feedback dispatch (kick/shake/hitstop), debug keys. The only node that knows about all the others. |
 | `progression_controller.gd` | Data balance, purchased nodes, and **every derived upgrade effect**. Single source of truth: consumers ask it, not `game_balance.gd`. |
 | `game_balance.gd` | Static data only: the 21 upgrade definitions and the meteor spec table. `RefCounted`, no state. |
-| `meteor_spawner.gd` | Spawn cadence, type rolls, forecast contact announcements, fragment spawning, shower and finale spawns, support-lane assignment. |
-| `meteor.gd` | One object's motion, trail, observation progress, quality grading, and split behaviour. |
+| `meteor_spawner.gd` | Spawn cadence, type rolls, sky-wide burnout endpoint planning, forecast contact announcements, fragment spawning, shower and finale spawns, support-lane assignment. |
+| `meteor.gd` | One object's burn-progress motion, trail and terminal fade, observation progress, quality grading, and split behaviour. |
 | `observation_controller.gd` | Cursor sampling, manual tracking, swept-path hit detection, tracking and hover rings, the software cursor. |
 | `sky_contacts.gd` | Forecast contact rendering and the steerable dishes (right-click placement, Shift+right-click commitment). |
 | `event_controller.gd` | Meteor showers and the 18-minute finale, including round-boundary deferral. |
