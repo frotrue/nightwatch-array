@@ -1,5 +1,20 @@
 # Nightwatch Array Project Instructions
 
+## Orientation
+
+Read before changing anything:
+
+- [README.md](README.md) — how to run, test, export, and where the Godot binary
+  actually lives. The commands this file requires are written out there.
+- [docs/design.md](docs/design.md) — genre, target length, the three-layer
+  structure, and the principles a change has to satisfy. If a proposal
+  conflicts with this document, raise the conflict with the user and get a
+  decision. Record the approved decision in the document before or alongside
+  the code. Never edit the design document on your own authority to make a
+  change you already want to look compliant.
+- [docs/systems.md](docs/systems.md) — scene tree, signal wiring, ownership.
+- [docs/probes.md](docs/probes.md) — what each test and probe measures.
+
 ## Completion Requirements
 
 - After making project changes, always run the relevant tests and build or refresh the Windows `.exe` before reporting the task as complete.

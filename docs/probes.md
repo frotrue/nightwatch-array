@@ -1,0 +1,193 @@
+# Tests and Probes
+
+Every file in `tests/` is a `SceneTree` script run through `--script`, not a
+GUT/gdUnit suite. There is no test runner to install. Eight files: two pass/fail
+gates and six measurement probes.
+
+Commands are PowerShell, matching the rest of the repo. `$godot` below is the
+console build:
+
+```powershell
+$godot = "C:\Users\user\AppData\Local\Temp\codex-godot-4.7.2\Godot_v4.7.2-stable_win64_console.exe"
+```
+
+See the [README](../README.md) for why that path is fragile.
+
+**What the measurement probes measure.** The six probes measure *productivity
+and performance* — density, price, pacing, frame time. None of them measures
+whether the game is fun, and none of them can. `tests/probe_layer2_test.gd`
+says so in its own header. Fun decisions are made by playing a build. See
+[design.md](design.md).
+
+The two gates below are different: they are mechanical correctness checks, not
+measurements.
+
+## Gates
+
+### Smoke test
+
+`AGENTS.md` requires the *relevant* tests before reporting a task complete.
+This is the main-game gate: run it for any change that can affect the main
+game. The Layer 2 gate below is the relevant one for changes touching that
+testbed.
+
+```powershell
+& $godot --headless --path . --script res://tests/smoke_test.gd
+```
+
+Covers tutorial, saves, localization, phase summary, compact HUD, observation,
+progression, events, performance caps, stale references, and reset.
+
+- Pass: a single `SMOKE_TEST_PASS:` line
+- Fail: `SMOKE:` error lines, then `SMOKE_TEST_FAIL: N failure(s)`
+
+### Layer 2 probe test
+
+Checks that the standalone Layer 2 testbed still holds together mechanically.
+Deterministic at seed `20260821`.
+
+```powershell
+& $godot --headless --path . --script res://tests/probe_layer2_test.gd
+```
+
+- Pass: `PROBE_TEST_PASS: signals, uncertainty, commitment, abandonment, misses, and completion`
+- Fail: `PROBE:` error lines, then `PROBE_TEST_FAIL: N`
+
+## Measurement probes
+
+These print tables. They do not pass or fail, except that they `push_error`
+when a measurement invariant breaks — a cutoff object leaking between rounds,
+or a shower crossing a round boundary. Treat those errors as a broken sample,
+not as a balance result.
+
+Each probe prints an `*_ENV` header line first, recording the engine version
+plus the run parameters that apply to it — seed and step size for the
+simulation probes, renderer and duration for the frame probes. Quote that line
+when you record results, or the numbers are not reproducible.
+
+### Duration ladder — `duration_ladder_probe.gd`
+
+Re-measures the 20 → 30 → 40 → 50 → 60-second ladder. 18 rounds per rung,
+`0.05s` steps, seed `20260821`, pacing denominator 20.
+
+```powershell
+& $godot --headless --path . --script res://tests/duration_ladder_probe.gd
+```
+
+Header: `DURATION_LADDER_PROBE_ENV`. No environment variables.
+
+[duration-ladder-baseline.md](duration-ladder-baseline.md) records the accepted
+baseline. When pacing or spawn logic changes, **compare against that baseline
+first** and report the delta. Replace the document only when a new baseline has
+been approved — silently overwriting it destroys the before/after comparison it
+exists to provide.
+
+### Duration pricing — `duration_pricing_probe.gd`
+
+Measures the marginal Data a duration node buys at its minimum prerequisite
+build, which is where the approved prices came from. 600 simulated seconds per
+cell, `0.05s` steps, base seed `20260821`.
+
+```powershell
+& $godot --headless --path . --script res://tests/duration_pricing_probe.gd
+```
+
+| Variable | Default | Effect |
+|---|---|---|
+| `NIGHTWATCH_PRICING_SEEDS` | `10` | Seed count per cell |
+
+Header: `DURATION_PRICING_ENV`.
+
+### Duration matrix — `duration_matrix_probe.gd`
+
+Sweeps all five durations against a full 1080-second timeline for several
+builds. Slower than the ladder; use it when a change could affect the shape of
+the whole run rather than one rung.
+
+```powershell
+& $godot --headless --path . --script res://tests/duration_matrix_probe.gd
+```
+
+| Variable | Default | Effect |
+|---|---|---|
+| `NIGHTWATCH_MATRIX_SEEDS` | `5` | Seed count per cell |
+
+Header: `DURATION_MATRIX_ENV`.
+
+### Contact density — `contact_density_probe.gd`
+
+Counts what is on screen over a 30-second phase: pending forecast contacts,
+live meteors, and combined workload, per type. Behind
+[legacy-density-be11e42.md](legacy-density-be11e42.md).
+
+```powershell
+& $godot --headless --path . --script res://tests/contact_density_probe.gd
+```
+
+Eleven driver modes:
+
+| Mode | |
+|---|---|
+| `no-input` | does nothing |
+| `scripted-engaged` | scripted manual driver |
+| `baseline-engaged` | manual driver with no hidden research |
+| `fast-manual-placement-one-dish` / `-two-dish` | hand-placed dishes |
+| `fast-predictive-commit-one-dish` / `-two-dish` | dish commitment to forecasts |
+| `all-eligible-two-dish` | every dish-trackable type assigned |
+| `fragment-assigned-one-dish` | fragment handling |
+| `selector-partner-first` / `selector-bank-first` | lane selector ordering |
+
+| Variable | Default | Effect |
+|---|---|---|
+| `NIGHTWATCH_CONTACT_PROBE_SEED` | `20260821` | Spawn seed; invalid values warn and fall back |
+
+Header: `CONTACT_DENSITY_PROBE_ENV`.
+
+### Frame pacing — `frame_pacing_probe.gd`
+
+Frame-time distribution of the main game. Exists because input-driven frame
+spikes were a real regression once.
+
+**This probe is human-driven, not scripted.** It reads the real cursor and
+prints `FRAME_PROBE_READY` with instructions you are expected to follow: hold
+still during seconds 1–7 and 19–24, move rapidly during seconds 8–18. Run it
+windowed and actually do that, or the input-load half of the sample is empty.
+
+```powershell
+& $godot --path . --script res://tests/frame_pacing_probe.gd
+```
+
+A `--headless` run still completes, but it is a CPU fixture with zero draw
+calls. It does not measure the real GL render ceiling —
+[legacy-density-be11e42.md](legacy-density-be11e42.md) notes the same limit.
+Use headless for regression comparison between two headless runs only.
+
+| Variable | Default | Effect |
+|---|---|---|
+| `NIGHTWATCH_PROBE_SECONDS` | `24` | Probe duration |
+
+Header: `FRAME_PROBE_ENV`.
+
+### Layer 2 frame pacing — `probe_frame_pacing_probe.gd`
+
+Same measurement for `scenes/probe_layer2.tscn`, with the same windowed-versus-
+headless caveat.
+
+```powershell
+& $godot --path . --script res://tests/probe_frame_pacing_probe.gd
+```
+
+| Variable | Default | Effect |
+|---|---|---|
+| `NIGHTWATCH_PROBE_SECONDS` | `8` | Probe duration |
+| `NIGHTWATCH_PROBE_FINISHED` | unset | Set to `1` to measure the finished-state probe |
+
+Header: `LAYER2_FRAME_PROBE_ENV`.
+
+## Setting an environment variable
+
+PowerShell has no inline variable prefix:
+
+```powershell
+$env:NIGHTWATCH_PRICING_SEEDS = "20"; & $godot --headless --path . --script res://tests/duration_pricing_probe.gd
+```
