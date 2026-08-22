@@ -240,6 +240,9 @@ func is_major() -> bool:
 func _finish_observation(auto_rate: float) -> void:
 	if not alive:
 		return
+	if type_id == "fragment" and not split_done:
+		split_done = true
+		fragment_requested.emit(global_position, velocity, type_id)
 	alive = false
 	observed_successfully = true
 	linger_time = 0.62 if type_id != "major" else 1.1

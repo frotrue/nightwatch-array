@@ -660,6 +660,33 @@ func _run() -> void:
 	await process_frame
 	game.sky_contacts.reset()
 
+	# Completing a fragment before its timer must release all three pieces at the
+	# completion point. Keep both the timing precondition and piece count
+	# unconditional so a failed setup cannot silently skip the regression.
+	game.spawner.rng.seed = 48612
+	var early_fragment = game.spawner.spawn_meteor(
+		"fragment", Vector2(-3000, -3000), Vector2(245.0, 0.0), 5.0
+	)
+	var early_split_threshold: float = early_fragment.visible_lifetime * 0.46
+	for _step in range(100):
+		if not early_fragment.alive:
+			break
+		early_fragment.apply_manual_observation(
+			0.05, 0.0, game.progression.get_tracking_radius()
+		)
+		early_fragment._process(0.05)
+	_check(early_fragment.observed_successfully, "manual setup completes the fragment observation")
+	_check(early_fragment.age < early_split_threshold, "fragment observation completes strictly before its split timer")
+	var early_piece_count := 0
+	for split_target in game.meteor_layer.get_children():
+		if String(split_target.type_id) == "fragment_piece":
+			early_piece_count += 1
+	_check(early_piece_count == 3, "an early fragment observation releases exactly three child pieces")
+	for split_target in game.meteor_layer.get_children():
+		if String(split_target.type_id) in ["fragment", "fragment_piece"]:
+			split_target.queue_free()
+	await process_frame
+
 	# A forecasted fragment can hand its remaining split to the same parked dish.
 	# This is deterministic and verifies the parent-to-piece synergy, rather than
 	# merely asserting that a standalone piece appears on an allowlist.
