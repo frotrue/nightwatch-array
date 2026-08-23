@@ -268,6 +268,28 @@ func _run() -> void:
 		expected_chart_node_ids.append(String(definition.id))
 	var chart_validation_errors: Array[String] = chart_data.validation_errors(expected_chart_node_ids)
 	_check(chart_validation_errors.is_empty(), "research chart maps every upgrade exactly once with valid constellation segments")
+	var chart_node_stars: Dictionary = chart_data.node_star_map()
+	var adjacent_internal_edges := true
+	for definition in balance.UPGRADE_NODES:
+		var target_node_id := String(definition.id)
+		var target_location: Dictionary = chart_node_stars[target_node_id]
+		for prerequisite_variant in definition.prerequisites:
+			var prerequisite_node_id := String(prerequisite_variant)
+			var prerequisite_location: Dictionary = chart_node_stars[prerequisite_node_id]
+			if String(prerequisite_location.constellation_id) != String(target_location.constellation_id):
+				continue
+			var constellation: Dictionary = chart_data.CONSTELLATIONS[target_location.constellation_id]
+			var prerequisite_star_id := String(prerequisite_location.star.id)
+			var target_star_id := String(target_location.star.id)
+			var edge_matches_segment := false
+			for segment_variant in constellation.segments:
+				var segment: Array = segment_variant
+				if (String(segment[0]) == prerequisite_star_id and String(segment[1]) == target_star_id) or (String(segment[1]) == prerequisite_star_id and String(segment[0]) == target_star_id):
+					edge_matches_segment = true
+					break
+			if not edge_matches_segment:
+				adjacent_internal_edges = false
+	_check(adjacent_internal_edges, "same-constellation prerequisites follow declared figure segments instead of cutting across them")
 	_check(opening_optics.position != opening_detection.position and opening_detection.position != opening_network.position, "opening research nodes occupy distinct constellation positions")
 	var optics_center_before := opening_optics.position + opening_optics.size * 0.5
 	var optics_radius_before := optics_center_before.distance_to(game.upgrade_tree.CHART_ORIGIN)
@@ -280,7 +302,7 @@ func _run() -> void:
 	_check(game.upgrade_tree.node_buttons["long_exposure"].visible and game.upgrade_tree.node_buttons["long_exposure"].get_meta("visual_state") == "teaser", "one upcoming system is previewed as an unresolved signal")
 	_check(opening_optics.size == game.upgrade_tree.STAR_HIT_SIZE, "research stars use compact transparent point hit targets")
 	_check(game.upgrade_tree.detail_panel.visible and game.upgrade_tree.selected_node_id == "better_lens", "fixed inspector defaults to the first actionable system")
-	_check("ε Cas" in game.upgrade_tree.detail_star.text, "research inspector identifies the real star behind the selected system")
+	_check("α Cas" in game.upgrade_tree.detail_star.text, "research inspector identifies the real star behind the selected system")
 	game.upgrade_tree._on_node_hovered("edge_detection")
 	_check(game.upgrade_tree.selected_node_id == "edge_detection", "hovering a node updates the fixed inspector")
 	game.upgrade_tree._on_node_unhovered("better_lens")
