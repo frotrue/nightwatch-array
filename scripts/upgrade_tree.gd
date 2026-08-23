@@ -137,10 +137,7 @@ var legend_label: Label
 var controls_label: Label
 
 var node_buttons: Dictionary = {}
-var node_names: Dictionary = {}
-var node_costs: Dictionary = {}
 var node_hold_bars: Dictionary = {}
-var branch_labels: Dictionary = {}
 var star_positions: Dictionary = {}
 var node_positions: Dictionary = {}
 var node_star_records: Dictionary = {}
@@ -378,33 +375,9 @@ func _layout_chart() -> void:
 		if not node_buttons.has(node_id):
 			continue
 		var button: Button = node_buttons[node_id]
-		var label: Label = node_names[node_id]
-		var cost_label: Label = node_costs[node_id]
 		var center := Vector2(node_positions[node_id])
 		button.position = center - button.size * 0.5
-		var label_direction := 1.0 if center.x < CHART_ORIGIN.x else -1.0
-		label.position = center + Vector2(12.0 * label_direction, -18.0)
-		cost_label.position = label.position + Vector2(0.0, 17.0)
-		if label_direction < 0.0:
-			label.position.x -= label.size.x
-			cost_label.position.x -= cost_label.size.x
-		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if label_direction > 0.0 else HORIZONTAL_ALIGNMENT_RIGHT
-		cost_label.horizontal_alignment = label.horizontal_alignment
-	_layout_branch_labels()
 	tree_canvas.queue_redraw()
-
-
-func _layout_branch_labels() -> void:
-	for constellation_id in ChartData.CONSTELLATIONS:
-		var constellation: Dictionary = ChartData.CONSTELLATIONS[constellation_id]
-		var branch_id := String(constellation.branch)
-		if not branch_labels.has(branch_id):
-			continue
-		var placement: Dictionary = ChartData.PLACEMENTS[constellation_id]
-		var anchor := CHART_ORIGIN + Vector2.RIGHT.rotated(float(placement.anchor_angle)) * float(placement.anchor_radius)
-		var rotated_anchor := CHART_ORIGIN + (anchor - CHART_ORIGIN).rotated(rotation_offset)
-		var label: Label = branch_labels[branch_id]
-		label.position = rotated_anchor + Vector2(-110.0, -118.0)
 
 
 func _on_node_hold_started(node_id: String) -> void:
@@ -465,11 +438,8 @@ func _on_node_unhovered(node_id: String) -> void:
 
 
 func _hide_node_tooltip(clear_hover: bool = true) -> void:
-	var previous_node_id := hovered_node_id
 	if clear_hover:
 		hovered_node_id = ""
-	if progression != null and not previous_node_id.is_empty() and node_names.has(previous_node_id):
-		node_names[previous_node_id].visible = progression.get_node_state(previous_node_id) != "purchased"
 	if tooltip_panel != null:
 		tooltip_panel.visible = false
 	if tree_canvas != null:
@@ -511,11 +481,7 @@ func _refresh() -> void:
 			visual_state = "teaser"
 		var visible := visual_state != "hidden"
 		var button: Button = node_buttons[node_id]
-		var name_label: Label = node_names[node_id]
-		var cost_label: Label = node_costs[node_id]
 		button.visible = visible
-		name_label.visible = visible and visual_state != "teaser" and (visual_state != "purchased" or node_id == hovered_node_id)
-		cost_label.visible = visible and (visual_state == "available" or visual_state == "locked")
 		button.set_meta("visual_state", visual_state)
 		if not visible:
 			continue
@@ -554,53 +520,31 @@ func _apply_node_visual(definition: Dictionary, visual_state: String) -> void:
 	var node_id := String(definition.id)
 	var branch: Dictionary = Balance.BRANCHES[String(definition.branch)]
 	var branch_color: Color = branch.color
-	var name_label: Label = node_names[node_id]
-	var cost_label: Label = node_costs[node_id]
 	var star_visual: StarNodeVisual = node_hold_bars[node_id]
 	var star_record: Dictionary = node_star_records[node_id]
 	var star: Dictionary = star_record.star
-	var name_color := Color("c8d5e1")
-	var cost_color := Color("77879a")
-	name_label.text = _upgrade_name(definition)
-	cost_label.text = tr("TREE_COST") % int(definition.cost)
-	match visual_state:
-		"purchased":
-			name_color = branch_color.lightened(0.28)
-		"available":
-			if progression.can_purchase(node_id):
-				name_color = Color("fff0a8")
-				cost_color = Color("cdbf78")
-			else:
-				name_color = branch_color.lightened(0.06)
-				cost_color = Color(branch_color.lightened(0.08), 0.76)
-		"locked":
-			name_color = Color("747d8d")
-			cost_color = Color("555e6d")
-		"teaser":
-			name_color = Color("5f6373")
-	name_label.add_theme_color_override("font_color", name_color)
-	cost_label.add_theme_color_override("font_color", cost_color)
 	star_visual.configure(visual_state, branch_color, float(star.magnitude), String(star.kind), progression.can_purchase(node_id))
 
 
 func _show_node_tooltip(node_id: String) -> void:
 	if progression == null or not node_buttons.has(node_id) or not node_buttons[node_id].visible:
 		return
-	node_names[node_id].visible = true
 	var definition := Balance.upgrade_definition(node_id)
 	var branch: Dictionary = Balance.BRANCHES[String(definition.branch)]
 	var branch_color: Color = branch.color
 	var visual_state := String(node_buttons[node_id].get_meta("visual_state"))
 	var star_record: Dictionary = node_star_records[node_id]
 	var star: Dictionary = star_record.star
+	var constellation: Dictionary = ChartData.CONSTELLATIONS[String(star_record.constellation_id)]
+	var constellation_label := tr(String(constellation.label_key))
 	tooltip_star.text = "%s  ·  %s" % [tr(String(star.name_key)), String(star.bayer)]
 	if visual_state == "teaser":
-		tooltip_branch.text = "%s  /  %s" % [_branch_name(String(definition.branch)), tr("TREE_UNRESOLVED_SIGNAL")]
+		tooltip_branch.text = "%s  /  %s" % [constellation_label, tr("TREE_UNRESOLVED_SIGNAL")]
 		tooltip_name.text = "???"
 		tooltip_description.text = tr("TREE_TEASER_DESCRIPTION")
 		tooltip_meta.text = tr("TREE_SIGNAL_OBSCURED")
 	else:
-		tooltip_branch.text = "%s  /  %s" % [_branch_name(String(definition.branch)), tr("EFFECT_%s" % String(definition.effect_type).to_upper())]
+		tooltip_branch.text = "%s  /  %s" % [constellation_label, tr("EFFECT_%s" % String(definition.effect_type).to_upper())]
 		tooltip_name.text = _upgrade_name(definition)
 		tooltip_description.text = _upgrade_description(definition)
 		match visual_state:
@@ -619,7 +563,8 @@ func _show_node_tooltip(node_id: String) -> void:
 						continue
 					var prerequisite := Balance.upgrade_definition(prerequisite_id)
 					prerequisite_names.append(_upgrade_name(prerequisite))
-				tooltip_meta.text = tr("TREE_REQUIRES") % ", ".join(prerequisite_names)
+				var prerequisite_text := tr("TREE_REQUIRES") % ", ".join(prerequisite_names)
+				tooltip_meta.text = "%s  •  %s" % [tr("TREE_COST") % int(definition.cost), prerequisite_text]
 	tooltip_branch.add_theme_color_override("font_color", branch_color)
 	tooltip_meta.add_theme_color_override("font_color", Color("ffe078") if visual_state == "available" and progression.can_purchase(node_id) else branch_color.lightened(0.2))
 	tooltip_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.035, 0.045, 0.09, 0.97), branch_color, 10, 2))
@@ -644,9 +589,6 @@ func _apply_locale() -> void:
 	_refresh_phase_context()
 	legend_label.text = tr("TREE_LEGEND")
 	controls_label.text = "    " + tr("TREE_CONTROLS")
-	for constellation_id in ChartData.CONSTELLATIONS:
-		var constellation: Dictionary = ChartData.CONSTELLATIONS[constellation_id]
-		branch_labels[String(constellation.branch)].text = tr(String(constellation.label_key))
 	if progression != null:
 		node_visual_keys.clear()
 		_refresh()
@@ -658,10 +600,6 @@ func _upgrade_name(definition: Dictionary) -> String:
 
 func _upgrade_description(definition: Dictionary) -> String:
 	return tr("UPGRADE_%s_DESC" % String(definition.id).to_upper())
-
-
-func _branch_name(branch_id: String) -> String:
-	return tr("BRANCH_%s" % branch_id.to_upper())
 
 
 func _build_interface() -> void:
@@ -786,28 +724,14 @@ func _build_interface() -> void:
 	tree_canvas.draw.connect(_draw_tree)
 	content_clip.add_child(tree_canvas)
 
-	_build_branch_labels()
 	for definition in Balance.UPGRADE_NODES:
 		_build_node_button(definition)
 	_build_node_tooltip()
 	_layout_chart()
 
 
-func _build_branch_labels() -> void:
-	for constellation_id in ChartData.CONSTELLATIONS:
-		var constellation: Dictionary = ChartData.CONSTELLATIONS[constellation_id]
-		var branch_id := String(constellation.branch)
-		var branch: Dictionary = Balance.BRANCHES[branch_id]
-		var label := _make_label(tr(String(constellation.label_key)), 15, branch.color)
-		label.position = Vector2.ZERO
-		label.size = Vector2(300, 28)
-		tree_canvas.add_child(label)
-		branch_labels[branch_id] = label
-
-
 func _build_node_button(definition: Dictionary) -> void:
 	var node_id := String(definition.id)
-	var major: bool = bool(definition.major)
 	var button := Button.new()
 	button.name = "Node_" + node_id
 	button.position = Vector2.ZERO
@@ -836,23 +760,7 @@ func _build_node_button(definition: Dictionary) -> void:
 	star_visual.configure("hidden", branch_color, float(star.magnitude), String(star.kind), false)
 	button.add_child(star_visual)
 
-	var name_label := _make_label(_upgrade_name(definition), 12 if major else 11, Color("c8d5e1"))
-	name_label.position = Vector2.ZERO
-	name_label.size = Vector2(164, 18)
-	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	name_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
-	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	tree_canvas.add_child(name_label)
-	var cost_label := _make_label(tr("TREE_COST") % int(definition.cost), 9, Color("77879a"))
-	cost_label.position = Vector2.ZERO
-	cost_label.size = Vector2(164, 16)
-	cost_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	cost_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
-	tree_canvas.add_child(cost_label)
-
 	node_buttons[node_id] = button
-	node_names[node_id] = name_label
-	node_costs[node_id] = cost_label
 	node_hold_bars[node_id] = star_visual
 
 
