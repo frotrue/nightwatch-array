@@ -53,9 +53,9 @@ const CONSTELLATIONS := {
 # Placement is deliberately separate from factual star data. Anchors are polar
 # coordinates around the chart's bottom-centre horizon origin.
 const PLACEMENTS := {
-	"cassiopeia": {"anchor_angle": -2.36, "anchor_radius": 340.0, "scale": 100.0, "tilt": -0.08},
-	"big_dipper": {"anchor_angle": -1.57, "anchor_radius": 310.0, "scale": 110.0, "tilt": 0.02},
-	"orion": {"anchor_angle": -0.78, "anchor_radius": 340.0, "scale": 104.0, "tilt": -0.02}
+	"cassiopeia": {"anchor_angle": -2.72, "anchor_radius": 285.0, "scale": 130.0, "tilt": -0.08},
+	"big_dipper": {"anchor_angle": -1.57, "anchor_radius": 430.0, "scale": 145.0, "tilt": 0.02},
+	"orion": {"anchor_angle": -0.55, "anchor_radius": 345.0, "scale": 134.0, "tilt": -0.02}
 }
 
 

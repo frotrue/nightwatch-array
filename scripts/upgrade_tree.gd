@@ -14,6 +14,9 @@ const CHART_ORIGIN := Vector2(TREE_SIZE.x * 0.5, TREE_SIZE.y * 0.91)
 const ROTATION_STEP := deg_to_rad(6.0)
 const DEFAULT_ROTATION := 0.0
 const STAR_HIT_SIZE := Vector2(44.0, 44.0)
+const TOOLTIP_SIZE := Vector2(318.0, 0.0)
+const TOOLTIP_CURSOR_OFFSET := 18.0
+const TOOLTIP_SCREEN_MARGIN := 10.0
 const BACKGROUND_STARS := [
 	Vector2(74, 48), Vector2(184, 238), Vector2(267, 91), Vector2(386, 390),
 	Vector2(488, 215), Vector2(594, 590), Vector2(704, 82), Vector2(812, 414),
@@ -117,13 +120,12 @@ var tree_canvas: Control
 var data_readout: Label
 var systems_readout: Label
 var tree_status: Label
-var detail_panel: PanelContainer
-var detail_branch: Label
-var detail_name: Label
-var detail_star: Label
-var detail_description: Label
-var detail_meta: Label
-var detail_action_button: Button
+var tooltip_panel: PanelContainer
+var tooltip_branch: Label
+var tooltip_name: Label
+var tooltip_star: Label
+var tooltip_description: Label
+var tooltip_meta: Label
 var title_label: Label
 var subtitle_label: Label
 var reset_view_button: Button
@@ -136,13 +138,15 @@ var controls_label: Label
 
 var node_buttons: Dictionary = {}
 var node_names: Dictionary = {}
+var node_costs: Dictionary = {}
 var node_hold_bars: Dictionary = {}
 var branch_labels: Dictionary = {}
 var star_positions: Dictionary = {}
 var node_positions: Dictionary = {}
 var node_star_records: Dictionary = {}
 
-var selected_node_id: String = ""
+var hovered_node_id: String = ""
+var tooltip_suppressed_until_motion: bool = false
 var held_node_id: String = ""
 var hold_elapsed: float = 0.0
 var zoom: float = 0.78
@@ -186,7 +190,7 @@ func open_tree() -> void:
 		return
 	_cancel_node_hold()
 	overlay.visible = true
-	_hide_node_detail()
+	_hide_node_tooltip()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	paused_by_tree = not get_tree().paused
 	get_tree().paused = true
@@ -202,7 +206,7 @@ func close_tree() -> void:
 	overlay.visible = false
 	panning = false
 	pan_mouse_button = 0
-	_hide_node_detail()
+	_hide_node_tooltip()
 	if paused_by_tree:
 		get_tree().paused = false
 	paused_by_tree = false
@@ -242,6 +246,10 @@ func _refresh_phase_context() -> void:
 func _input(event: InputEvent) -> void:
 	if not is_open():
 		return
+	if event is InputEventMouseMotion and not hovered_node_id.is_empty():
+		tooltip_suppressed_until_motion = false
+		_show_node_tooltip(hovered_node_id)
+		_position_node_tooltip(overlay.get_local_mouse_position())
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_ESCAPE or event.keycode == KEY_U:
 			close_tree()
@@ -357,6 +365,8 @@ func _apply_transform() -> void:
 
 
 func _rotate_chart(amount: float) -> void:
+	_hide_node_tooltip(false)
+	tooltip_suppressed_until_motion = true
 	rotation_offset = wrapf(rotation_offset + amount, -PI, PI)
 	if settings_controller != null:
 		settings_controller.set_research_chart_rotation(rotation_offset, false)
@@ -389,13 +399,17 @@ func _layout_chart() -> void:
 			continue
 		var button: Button = node_buttons[node_id]
 		var label: Label = node_names[node_id]
+		var cost_label: Label = node_costs[node_id]
 		var center := Vector2(node_positions[node_id])
 		button.position = center - button.size * 0.5
 		var label_direction := 1.0 if center.x < CHART_ORIGIN.x else -1.0
 		label.position = center + Vector2(12.0 * label_direction, -18.0)
+		cost_label.position = label.position + Vector2(0.0, 17.0)
 		if label_direction < 0.0:
 			label.position.x -= label.size.x
+			cost_label.position.x -= cost_label.size.x
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if label_direction > 0.0 else HORIZONTAL_ALIGNMENT_RIGHT
+		cost_label.horizontal_alignment = label.horizontal_alignment
 	_layout_branch_labels()
 	tree_canvas.queue_redraw()
 
@@ -415,7 +429,8 @@ func _layout_branch_labels() -> void:
 
 func _on_node_hold_started(node_id: String) -> void:
 	_cancel_node_hold()
-	_show_node_detail(node_id)
+	if hovered_node_id == node_id and not tooltip_suppressed_until_motion:
+		_show_node_tooltip(node_id)
 	if progression == null or progression.get_node_state(node_id) != "available" or not progression.can_purchase(node_id):
 		return
 	held_node_id = node_id
@@ -454,7 +469,9 @@ func _on_node_hovered(node_id: String) -> void:
 	if node_hold_bars.has(node_id):
 		var star_visual: StarNodeVisual = node_hold_bars[node_id]
 		star_visual.set_hovered(true)
-	_show_node_detail(node_id)
+	hovered_node_id = node_id
+	tooltip_suppressed_until_motion = false
+	_show_node_tooltip(node_id)
 
 
 func _on_node_unhovered(node_id: String) -> void:
@@ -463,29 +480,23 @@ func _on_node_unhovered(node_id: String) -> void:
 		star_visual.set_hovered(false)
 	if held_node_id == node_id:
 		_cancel_node_hold()
+	if hovered_node_id == node_id:
+		_hide_node_tooltip()
 
 
-func _hide_node_detail() -> void:
-	var previous_node_id := selected_node_id
-	selected_node_id = ""
+func _hide_node_tooltip(clear_hover: bool = true) -> void:
+	var previous_node_id := hovered_node_id
+	if clear_hover:
+		hovered_node_id = ""
 	if progression != null and not previous_node_id.is_empty() and node_names.has(previous_node_id):
 		node_names[previous_node_id].visible = progression.get_node_state(previous_node_id) != "purchased"
-	if detail_panel != null:
-		detail_branch.text = tr("TREE_INSPECTOR_LABEL")
-		detail_name.text = tr("TREE_INSPECTOR_TITLE")
-		detail_star.text = ""
-		detail_description.text = tr("TREE_INSPECTOR_HINT")
-		detail_meta.text = tr("TREE_INSPECTOR_META")
-		detail_action_button.text = tr("TREE_SELECT_NODE")
-		detail_action_button.disabled = true
-		detail_panel.add_theme_stylebox_override("panel", _panel_style(Color("0b1020"), Color("2d4055"), 12, 1))
-		detail_panel.visible = true
+	if tooltip_panel != null:
+		tooltip_panel.visible = false
 	if tree_canvas != null:
 		tree_canvas.queue_redraw()
 
 
 func _on_purchase_rejected(node_id: String, reason_key: String, value) -> void:
-	selected_node_id = node_id
 	match reason_key:
 		"UPGRADE_ERROR_STATE":
 			tree_status.text = tr(reason_key) % tr("STATE_%s" % String(value).to_upper())
@@ -493,7 +504,8 @@ func _on_purchase_rejected(node_id: String, reason_key: String, value) -> void:
 			tree_status.text = tr(reason_key) % int(value)
 		_:
 			tree_status.text = tr(reason_key)
-	_show_node_detail(node_id)
+	if hovered_node_id == node_id and not tooltip_suppressed_until_motion:
+		_show_node_tooltip(node_id)
 
 
 func _on_progression_state_changed() -> void:
@@ -520,8 +532,10 @@ func _refresh() -> void:
 		var visible := visual_state != "hidden"
 		var button: Button = node_buttons[node_id]
 		var name_label: Label = node_names[node_id]
+		var cost_label: Label = node_costs[node_id]
 		button.visible = visible
-		name_label.visible = visible and (visual_state != "purchased" or node_id == selected_node_id)
+		name_label.visible = visible and visual_state != "teaser" and (visual_state != "purchased" or node_id == hovered_node_id)
+		cost_label.visible = visible and (visual_state == "available" or visual_state == "locked")
 		button.set_meta("visual_state", visual_state)
 		if not visible:
 			continue
@@ -540,33 +554,12 @@ func _refresh() -> void:
 		tree_status.text = tr("TREE_STATUS_PATHS") % available_count
 	else:
 		tree_status.text = tr("TREE_STATUS_STABLE")
-	if not selected_node_id.is_empty() and node_buttons.has(selected_node_id) and node_buttons[selected_node_id].visible:
-		_show_node_detail(selected_node_id)
+	if not hovered_node_id.is_empty() and node_buttons.has(hovered_node_id) and node_buttons[hovered_node_id].visible:
+		if not tooltip_suppressed_until_motion:
+			_show_node_tooltip(hovered_node_id)
 	else:
-		var recommended_node_id := _recommended_node_id()
-		if recommended_node_id.is_empty():
-			_hide_node_detail()
-		else:
-			_show_node_detail(recommended_node_id)
+		_hide_node_tooltip()
 	tree_canvas.queue_redraw()
-
-
-func _recommended_node_id() -> String:
-	var first_available := ""
-	var first_visible := ""
-	for definition in Balance.UPGRADE_NODES:
-		var node_id := String(definition.id)
-		var button: Button = node_buttons[node_id]
-		if not button.visible:
-			continue
-		if first_visible.is_empty():
-			first_visible = node_id
-		if progression.get_node_state(node_id) == "available":
-			if progression.can_purchase(node_id):
-				return node_id
-			if first_available.is_empty():
-				first_available = node_id
-	return first_available if not first_available.is_empty() else first_visible
 
 
 func _is_teaser_visible(definition: Dictionary) -> bool:
@@ -582,35 +575,37 @@ func _apply_node_visual(definition: Dictionary, visual_state: String) -> void:
 	var branch: Dictionary = Balance.BRANCHES[String(definition.branch)]
 	var branch_color: Color = branch.color
 	var name_label: Label = node_names[node_id]
+	var cost_label: Label = node_costs[node_id]
 	var star_visual: StarNodeVisual = node_hold_bars[node_id]
 	var star_record: Dictionary = node_star_records[node_id]
 	var star: Dictionary = star_record.star
 	var name_color := Color("c8d5e1")
+	var cost_color := Color("77879a")
 	name_label.text = _upgrade_name(definition)
+	cost_label.text = tr("TREE_COST") % int(definition.cost)
 	match visual_state:
 		"purchased":
 			name_color = branch_color.lightened(0.28)
 		"available":
 			if progression.can_purchase(node_id):
 				name_color = Color("fff0a8")
+				cost_color = Color("cdbf78")
 			else:
 				name_color = branch_color.lightened(0.06)
+				cost_color = Color(branch_color.lightened(0.08), 0.76)
 		"locked":
 			name_color = Color("747d8d")
+			cost_color = Color("555e6d")
 		"teaser":
 			name_color = Color("5f6373")
-			name_label.text = tr("TREE_UNKNOWN_SIGNAL")
 	name_label.add_theme_color_override("font_color", name_color)
+	cost_label.add_theme_color_override("font_color", cost_color)
 	star_visual.configure(visual_state, branch_color, float(star.magnitude), String(star.kind), progression.can_purchase(node_id))
 
 
-func _show_node_detail(node_id: String) -> void:
+func _show_node_tooltip(node_id: String) -> void:
 	if progression == null or not node_buttons.has(node_id) or not node_buttons[node_id].visible:
 		return
-	var previous_node_id := selected_node_id
-	selected_node_id = node_id
-	if not previous_node_id.is_empty() and previous_node_id != node_id and node_names.has(previous_node_id):
-		node_names[previous_node_id].visible = progression.get_node_state(previous_node_id) != "purchased"
 	node_names[node_id].visible = true
 	var definition := Balance.upgrade_definition(node_id)
 	var branch: Dictionary = Balance.BRANCHES[String(definition.branch)]
@@ -618,45 +613,42 @@ func _show_node_detail(node_id: String) -> void:
 	var visual_state := String(node_buttons[node_id].get_meta("visual_state"))
 	var star_record: Dictionary = node_star_records[node_id]
 	var star: Dictionary = star_record.star
-	detail_star.text = "%s  ·  %s" % [tr(String(star.name_key)), String(star.bayer)]
+	tooltip_star.text = "%s  ·  %s" % [tr(String(star.name_key)), String(star.bayer)]
 	if visual_state == "teaser":
-		detail_branch.text = "%s  /  %s" % [_branch_name(String(definition.branch)), tr("TREE_UNRESOLVED_SIGNAL")]
-		detail_name.text = "???"
-		detail_description.text = tr("TREE_TEASER_DESCRIPTION")
-		detail_meta.text = tr("TREE_SIGNAL_OBSCURED")
-		detail_action_button.text = tr("TREE_SIGNAL_BUTTON")
-		detail_action_button.disabled = true
+		tooltip_branch.text = "%s  /  %s" % [_branch_name(String(definition.branch)), tr("TREE_UNRESOLVED_SIGNAL")]
+		tooltip_name.text = "???"
+		tooltip_description.text = tr("TREE_TEASER_DESCRIPTION")
+		tooltip_meta.text = tr("TREE_SIGNAL_OBSCURED")
 	else:
-		detail_branch.text = "%s  /  %s" % [_branch_name(String(definition.branch)), tr("EFFECT_%s" % String(definition.effect_type).to_upper())]
-		detail_name.text = _upgrade_name(definition)
-		detail_description.text = _upgrade_description(definition)
+		tooltip_branch.text = "%s  /  %s" % [_branch_name(String(definition.branch)), tr("EFFECT_%s" % String(definition.effect_type).to_upper())]
+		tooltip_name.text = _upgrade_name(definition)
+		tooltip_description.text = _upgrade_description(definition)
 		match visual_state:
 			"purchased":
-				detail_meta.text = tr("TREE_SYSTEM_ONLINE")
-				detail_action_button.text = tr("TREE_SYSTEM_ONLINE")
-				detail_action_button.disabled = true
+				tooltip_meta.text = tr("TREE_SYSTEM_ONLINE")
 			"available":
 				if progression.can_purchase(node_id):
-					detail_meta.text = tr("TREE_INSTALL") % int(definition.cost)
-					detail_action_button.text = tr("TREE_INSTALL_BUTTON") % int(definition.cost)
-					detail_action_button.disabled = true
+					tooltip_meta.text = tr("TREE_INSTALL") % int(definition.cost)
 				else:
-					var missing := int(ceil(float(definition.cost) - progression.observation_data))
-					detail_meta.text = tr("TREE_NEED_MORE") % [int(floor(progression.observation_data)), int(definition.cost)]
-					detail_action_button.text = tr("TREE_NEED_DATA_BUTTON") % missing
-					detail_action_button.disabled = true
+					tooltip_meta.text = tr("TREE_NEED_MORE") % [int(floor(progression.observation_data)), int(definition.cost)]
 			_:
 				var prerequisite_names: Array[String] = []
 				for prerequisite_variant in definition.prerequisites:
-					var prerequisite := Balance.upgrade_definition(String(prerequisite_variant))
+					var prerequisite_id := String(prerequisite_variant)
+					if progression.get_node_state(prerequisite_id) == "purchased":
+						continue
+					var prerequisite := Balance.upgrade_definition(prerequisite_id)
 					prerequisite_names.append(_upgrade_name(prerequisite))
-					detail_meta.text = tr("TREE_REQUIRES") % ", ".join(prerequisite_names)
-				detail_action_button.text = tr("TREE_LOCKED_BUTTON")
-				detail_action_button.disabled = true
-	detail_branch.add_theme_color_override("font_color", branch_color)
-	detail_meta.add_theme_color_override("font_color", Color("ffe078") if visual_state == "available" and progression.can_purchase(node_id) else branch_color.lightened(0.2))
-	detail_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.035, 0.045, 0.09, 0.97), branch_color, 12, 2))
-	detail_panel.visible = true
+				tooltip_meta.text = tr("TREE_REQUIRES") % ", ".join(prerequisite_names)
+	tooltip_branch.add_theme_color_override("font_color", branch_color)
+	tooltip_meta.add_theme_color_override("font_color", Color("ffe078") if visual_state == "available" and progression.can_purchase(node_id) else branch_color.lightened(0.2))
+	tooltip_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.035, 0.045, 0.09, 0.97), branch_color, 10, 2))
+	tooltip_panel.visible = true
+	_position_node_tooltip(overlay.get_local_mouse_position())
+	# Container minimum sizes settle a frame after the text changes, so the first
+	# measurement above is stale. Re-fit once the new text has been laid out,
+	# otherwise the panel keeps the previous entry's height and covers the sky.
+	_refit_node_tooltip.call_deferred()
 	tree_canvas.queue_redraw()
 
 
@@ -817,7 +809,7 @@ func _build_interface() -> void:
 	_build_branch_labels()
 	for definition in Balance.UPGRADE_NODES:
 		_build_node_button(definition)
-	_build_detail_panel(content_row)
+	_build_node_tooltip()
 	_layout_chart()
 
 
@@ -866,64 +858,101 @@ func _build_node_button(definition: Dictionary) -> void:
 
 	var name_label := _make_label(_upgrade_name(definition), 12 if major else 11, Color("c8d5e1"))
 	name_label.position = Vector2.ZERO
-	name_label.size = Vector2(154, 38)
+	name_label.size = Vector2(164, 18)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	name_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
-	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	tree_canvas.add_child(name_label)
+	var cost_label := _make_label(tr("TREE_COST") % int(definition.cost), 9, Color("77879a"))
+	cost_label.position = Vector2.ZERO
+	cost_label.size = Vector2(164, 16)
+	cost_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	cost_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	tree_canvas.add_child(cost_label)
 
 	node_buttons[node_id] = button
 	node_names[node_id] = name_label
+	node_costs[node_id] = cost_label
 	node_hold_bars[node_id] = star_visual
 
 
-func _build_detail_panel(parent: Control) -> void:
-	detail_panel = PanelContainer.new()
-	detail_panel.name = "SystemInspector"
-	detail_panel.mouse_filter = Control.MOUSE_FILTER_PASS
-	detail_panel.custom_minimum_size = Vector2(306.0, 0.0)
-	detail_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	detail_panel.add_theme_stylebox_override("panel", _panel_style(Color("0b1020"), Color("2d4055"), 12, 1))
-	parent.add_child(detail_panel)
+func _build_node_tooltip() -> void:
+	tooltip_panel = PanelContainer.new()
+	tooltip_panel.name = "NodeTooltip"
+	tooltip_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tooltip_panel.custom_minimum_size = TOOLTIP_SIZE
+	tooltip_panel.z_index = 100
+	tooltip_panel.visible = false
+	tooltip_panel.add_theme_stylebox_override("panel", _panel_style(Color("0b1020"), Color("2d4055"), 10, 1))
+	overlay.add_child(tooltip_panel)
+	# The panel must re-fit exactly when its layout settles. A deferred call is one
+	# frame too early: the container's minimum size is still the previous entry's.
+	tooltip_panel.minimum_size_changed.connect(_refit_node_tooltip)
 	var margin := MarginContainer.new()
-	margin.mouse_filter = Control.MOUSE_FILTER_PASS
+	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	for side in ["margin_left", "margin_top", "margin_right", "margin_bottom"]:
-		margin.add_theme_constant_override(side, 18)
-	detail_panel.add_child(margin)
+		margin.add_theme_constant_override(side, 14)
+	tooltip_panel.add_child(margin)
 	var column := VBoxContainer.new()
-	column.mouse_filter = Control.MOUSE_FILTER_PASS
-	column.add_theme_constant_override("separation", 7)
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_theme_constant_override("separation", 5)
 	margin.add_child(column)
-	detail_branch = _make_label(tr("TREE_INSPECTOR_LABEL"), 10, Color("6f879b"))
-	column.add_child(detail_branch)
-	detail_name = _make_label(tr("TREE_INSPECTOR_TITLE"), 20, Color("f3f8ff"))
-	detail_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	column.add_child(detail_name)
-	detail_star = _make_label("", 11, Color("7692aa"))
-	detail_star.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	column.add_child(detail_star)
+	tooltip_branch = _make_label("", 10, Color("6f879b"))
+	column.add_child(tooltip_branch)
+	tooltip_name = _make_label("", 18, Color("f3f8ff"))
+	tooltip_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	tooltip_name.custom_minimum_size.x = 290.0
+	column.add_child(tooltip_name)
+	tooltip_star = _make_label("", 10, Color("7692aa"))
+	tooltip_star.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(tooltip_star)
 	var divider := HSeparator.new()
 	divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(divider)
-	detail_description = _make_label(tr("TREE_INSPECTOR_HINT"), 12, Color("b4c2d2"))
-	detail_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	detail_description.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	column.add_child(detail_description)
-	detail_meta = _make_label(tr("TREE_INSPECTOR_META"), 12, Color("7f9caf"))
-	detail_meta.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	column.add_child(detail_meta)
-	detail_action_button = Button.new()
-	detail_action_button.text = tr("TREE_SELECT_NODE")
-	detail_action_button.custom_minimum_size = Vector2(0, 44)
-	detail_action_button.disabled = true
-	detail_action_button.add_theme_font_size_override("font_size", 13)
-	detail_action_button.add_theme_color_override("font_color", Color("e8fbff"))
-	detail_action_button.add_theme_color_override("font_disabled_color", Color("bdefff"))
-	detail_action_button.add_theme_stylebox_override("normal", _panel_style(Color("12354b"), Color("4a7c96"), 7, 1))
-	detail_action_button.add_theme_stylebox_override("hover", _panel_style(Color("18536d"), Color("72bdd5"), 7, 1))
-	detail_action_button.add_theme_stylebox_override("pressed", _panel_style(Color("0d2a3b"), Color("8bdff0"), 7, 1))
-	detail_action_button.add_theme_stylebox_override("disabled", _panel_style(Color("101726"), Color("29384a"), 7, 1))
-	column.add_child(detail_action_button)
+	tooltip_description = _make_label("", 11, Color("b4c2d2"))
+	tooltip_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	tooltip_description.custom_minimum_size.x = 290.0
+	column.add_child(tooltip_description)
+	tooltip_meta = _make_label("", 11, Color("7f9caf"))
+	tooltip_meta.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	tooltip_meta.custom_minimum_size.x = 290.0
+	column.add_child(tooltip_meta)
+
+
+func _refit_node_tooltip() -> void:
+	if tooltip_panel == null or not tooltip_panel.visible or overlay == null:
+		return
+	_position_node_tooltip(overlay.get_local_mouse_position())
+
+
+func _position_node_tooltip(cursor_position: Vector2) -> void:
+	if tooltip_panel == null or not tooltip_panel.visible or overlay == null:
+		return
+	# Shrink to the current text before measuring; a stale size leaves the panel
+	# taller than its content and covers the constellation behind it.
+	tooltip_panel.reset_size()
+	var tooltip_size := tooltip_panel.size
+	# Control has no to_local/to_global, so the origin is mapped by hand: the chart
+	# point scales with the canvas, then shifts from global into overlay space.
+	var chart_origin_on_overlay: Vector2 = tree_canvas.global_position + CHART_ORIGIN * tree_canvas.scale - overlay.global_position
+	var away_from_origin: Vector2 = cursor_position - chart_origin_on_overlay
+	if away_from_origin.is_zero_approx():
+		away_from_origin = Vector2(1.0, -1.0)
+	var tooltip_position := Vector2(
+		cursor_position.x + (TOOLTIP_CURSOR_OFFSET if away_from_origin.x >= 0.0 else -tooltip_size.x - TOOLTIP_CURSOR_OFFSET),
+		cursor_position.y + (TOOLTIP_CURSOR_OFFSET if away_from_origin.y >= 0.0 else -tooltip_size.y - TOOLTIP_CURSOR_OFFSET)
+	)
+	if tooltip_position.x < TOOLTIP_SCREEN_MARGIN:
+		tooltip_position.x = cursor_position.x + TOOLTIP_CURSOR_OFFSET
+	elif tooltip_position.x + tooltip_size.x > overlay.size.x - TOOLTIP_SCREEN_MARGIN:
+		tooltip_position.x = cursor_position.x - tooltip_size.x - TOOLTIP_CURSOR_OFFSET
+	if tooltip_position.y < TOOLTIP_SCREEN_MARGIN:
+		tooltip_position.y = cursor_position.y + TOOLTIP_CURSOR_OFFSET
+	elif tooltip_position.y + tooltip_size.y > overlay.size.y - TOOLTIP_SCREEN_MARGIN:
+		tooltip_position.y = cursor_position.y - tooltip_size.y - TOOLTIP_CURSOR_OFFSET
+	tooltip_position.x = clampf(tooltip_position.x, TOOLTIP_SCREEN_MARGIN, maxf(TOOLTIP_SCREEN_MARGIN, overlay.size.x - tooltip_size.x - TOOLTIP_SCREEN_MARGIN))
+	tooltip_position.y = clampf(tooltip_position.y, TOOLTIP_SCREEN_MARGIN, maxf(TOOLTIP_SCREEN_MARGIN, overlay.size.y - tooltip_size.y - TOOLTIP_SCREEN_MARGIN))
+	tooltip_panel.position = tooltip_position
 
 
 func _connection_points(source_id: String, target_id: String) -> PackedVector2Array:
@@ -1005,15 +1034,15 @@ func _draw_tree() -> void:
 		tree_canvas.draw_line(start, finish, Color(0.01, 0.015, 0.035, 0.90), 7.0, true)
 		tree_canvas.draw_line(start, finish, Color(branch_color.lightened(0.18), 0.88), 2.8, true)
 		tree_canvas.draw_circle(start.lerp(finish, 0.5), 2.4, branch_color.lightened(0.28))
-	if not selected_node_id.is_empty() and node_positions.has(selected_node_id):
-		var selected_state: String = progression.get_node_state(selected_node_id)
-		if selected_state == "locked" or selected_state == "hidden":
-			var selected_definition := Balance.upgrade_definition(selected_node_id)
-			for prerequisite_variant in selected_definition.prerequisites:
+	if not hovered_node_id.is_empty() and node_positions.has(hovered_node_id):
+		var hovered_state: String = progression.get_node_state(hovered_node_id)
+		if hovered_state == "locked" or hovered_state == "hidden":
+			var hovered_definition := Balance.upgrade_definition(hovered_node_id)
+			for prerequisite_variant in hovered_definition.prerequisites:
 				var source_id := String(prerequisite_variant)
 				if progression.get_node_state(source_id) == "purchased":
 					continue
-				var connection := _connection_points(source_id, selected_node_id)
+				var connection := _connection_points(source_id, hovered_node_id)
 				_draw_dashed_connection(connection[0], connection[1], Color("79859b"))
 
 

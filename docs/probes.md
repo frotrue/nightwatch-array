@@ -222,3 +222,16 @@ PowerShell has no inline variable prefix:
 ```powershell
 $env:NIGHTWATCH_PRICING_SEEDS = "20"; & $godot --headless --path . --script res://tests/duration_pricing_probe.gd
 ```
+
+## 연구 성도 캡처
+
+`tests/research_chart_preview.gd`는 설계 검토용으로 연구 화면을 캡처해
+`build/research_chart_preview.png`로 저장한다. 렌더된 프레임이 필요하므로
+`--headless` 없이 창 모드로 실행한다.
+
+```powershell
+& "C:\Users\user\AppData\Local\Temp\codex-godot-4.7.2\Godot_v4.7.2-stable_win64_console.exe" --path . --script res://tests/research_chart_preview.gd
+```
+
+성공하면 `PREVIEW_SAVED:` 한 줄이 나온다. 이것은 통과/실패 게이트가 아니라
+그림을 보고 판단하기 위한 도구다.
