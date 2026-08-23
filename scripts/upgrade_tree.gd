@@ -4,6 +4,7 @@ signal tree_opened
 signal tree_closed
 
 const Balance = preload("res://scripts/game_balance.gd")
+const ChartData = preload("res://scripts/research_chart_data.gd")
 
 const TREE_SIZE := Vector2(1460, 780)
 const NODE_SIZE := Vector2(92, 72)
@@ -11,6 +12,9 @@ const MAJOR_NODE_SIZE := Vector2(104, 82)
 const MIN_ZOOM := 0.55
 const MAX_ZOOM := 1.28
 const HOLD_PURCHASE_SECONDS := 0.75
+const CHART_ORIGIN := Vector2(TREE_SIZE.x * 0.5, TREE_SIZE.y * 0.93)
+const ROTATION_STEP := deg_to_rad(6.0)
+const DEFAULT_ROTATION := 0.0
 const BACKGROUND_STARS := [
 	Vector2(74, 48), Vector2(184, 238), Vector2(267, 91), Vector2(386, 390),
 	Vector2(488, 215), Vector2(594, 590), Vector2(704, 82), Vector2(812, 414),
@@ -110,12 +114,15 @@ var node_names: Dictionary = {}
 var node_major_badges: Dictionary = {}
 var node_hold_bars: Dictionary = {}
 var branch_labels: Dictionary = {}
+var star_positions: Dictionary = {}
+var node_positions: Dictionary = {}
 
 var selected_node_id: String = ""
 var held_node_id: String = ""
 var hold_elapsed: float = 0.0
 var zoom: float = 0.78
 var pan_position := Vector2.ZERO
+var rotation_offset: float = DEFAULT_ROTATION
 var panning: bool = false
 var pan_mouse_button: int = 0
 var paused_by_tree: bool = false
@@ -143,6 +150,8 @@ func bind_settings(controller: Node) -> void:
 	settings_controller = controller
 	if not settings_controller.language_changed.is_connected(_on_language_changed):
 		settings_controller.language_changed.connect(_on_language_changed)
+	rotation_offset = settings_controller.get_research_chart_rotation()
+	_layout_chart()
 	_apply_locale()
 
 
@@ -156,7 +165,7 @@ func open_tree() -> void:
 	paused_by_tree = not get_tree().paused
 	get_tree().paused = true
 	_refresh()
-	call_deferred("_reset_view")
+	call_deferred("_frame_frontier")
 	tree_opened.emit()
 
 
@@ -171,6 +180,8 @@ func close_tree() -> void:
 	if paused_by_tree:
 		get_tree().paused = false
 	paused_by_tree = false
+	if settings_controller != null:
+		settings_controller.set_research_chart_rotation(rotation_offset)
 	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
 	tree_closed.emit()
 
@@ -245,11 +256,17 @@ func _on_tree_viewport_gui_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 			return
 		if event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_UP:
-			_zoom_at(event.position, 1.10)
+			if event.ctrl_pressed:
+				_zoom_at(event.position, 1.10)
+			else:
+				_rotate_chart(-ROTATION_STEP)
 			get_viewport().set_input_as_handled()
 			return
 		if event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			_zoom_at(event.position, 1.0 / 1.10)
+			if event.ctrl_pressed:
+				_zoom_at(event.position, 1.0 / 1.10)
+			else:
+				_rotate_chart(ROTATION_STEP)
 			get_viewport().set_input_as_handled()
 			return
 	if event is InputEventMouseMotion and panning:
@@ -275,33 +292,35 @@ func _zoom_from_center(factor: float) -> void:
 
 
 func _reset_view() -> void:
+	rotation_offset = DEFAULT_ROTATION
+	_layout_chart()
+	if settings_controller != null:
+		settings_controller.set_research_chart_rotation(rotation_offset)
+	_frame_frontier()
+
+
+func _frame_frontier() -> void:
 	if content_clip == null or content_clip.size.x <= 1.0 or content_clip.size.y <= 1.0:
 		return
-	var visible_bounds := Rect2()
-	var has_visible_node := false
-	for button_variant in node_buttons.values():
-		var button: Button = button_variant
-		if not button.visible:
-			continue
-		var label: Label = node_names[String(button.get_meta("node_id"))]
-		var button_rect := Rect2(button.position, Vector2(maxf(button.size.x, label.size.x), button.size.y + 34.0))
-		visible_bounds = button_rect if not has_visible_node else visible_bounds.merge(button_rect)
-		has_visible_node = true
-	if not has_visible_node:
-		visible_bounds = Rect2(Vector2.ZERO, TREE_SIZE)
-	visible_bounds = visible_bounds.grow(44.0)
+	var visible_bounds := Rect2(CHART_ORIGIN, Vector2.ZERO)
+	for point_variant in star_positions.values():
+		var point := Vector2(point_variant)
+		visible_bounds = visible_bounds.expand(point)
+	visible_bounds = visible_bounds.grow(72.0)
+	var horizontal_extent := maxf(absf(visible_bounds.position.x - CHART_ORIGIN.x), absf(visible_bounds.end.x - CHART_ORIGIN.x))
+	var upward_extent := maxf(1.0, CHART_ORIGIN.y - visible_bounds.position.y)
 	zoom = clampf(
-		minf(content_clip.size.x / visible_bounds.size.x, content_clip.size.y / visible_bounds.size.y) * 0.94,
+		minf((content_clip.size.x - 36.0) / maxf(horizontal_extent * 2.0, 1.0), (content_clip.size.y - 28.0) / upward_extent) * 0.94,
 		MIN_ZOOM,
 		1.0
 	)
-	pan_position = (content_clip.size - visible_bounds.size * zoom) * 0.5 - visible_bounds.position * zoom
+	pan_position = Vector2(content_clip.size.x * 0.5, content_clip.size.y - 18.0) - CHART_ORIGIN * zoom
 	_apply_transform()
 
 
 func _on_content_resized() -> void:
 	if is_open() and content_clip.size.x > 1.0 and content_clip.size.y > 1.0:
-		call_deferred("_reset_view")
+		call_deferred("_frame_frontier")
 
 
 func _apply_transform() -> void:
@@ -309,6 +328,65 @@ func _apply_transform() -> void:
 	tree_canvas.scale = Vector2.ONE * zoom
 	if zoom_label != null:
 		zoom_label.text = "%d%%" % int(round(zoom * 100.0))
+
+
+func _rotate_chart(amount: float) -> void:
+	rotation_offset = wrapf(rotation_offset + amount, -PI, PI)
+	if settings_controller != null:
+		settings_controller.set_research_chart_rotation(rotation_offset, false)
+	_layout_chart()
+
+
+func _layout_chart() -> void:
+	if tree_canvas == null:
+		return
+	star_positions.clear()
+	node_positions.clear()
+	for constellation_id in ChartData.CONSTELLATIONS:
+		var constellation: Dictionary = ChartData.CONSTELLATIONS[constellation_id]
+		var placement: Dictionary = ChartData.PLACEMENTS[constellation_id]
+		var anchor := CHART_ORIGIN + Vector2.RIGHT.rotated(float(placement.anchor_angle)) * float(placement.anchor_radius)
+		var tilt := float(placement.tilt)
+		var scale_amount := float(placement.scale)
+		for star_variant in constellation.stars:
+			var star: Dictionary = star_variant
+			var local_offset := Vector2(star.local_position).rotated(tilt) * scale_amount
+			var base_position := anchor + local_offset
+			var chart_position := CHART_ORIGIN + (base_position - CHART_ORIGIN).rotated(rotation_offset)
+			var star_key := "%s/%s" % [constellation_id, String(star.id)]
+			star_positions[star_key] = chart_position
+			var node_id := String(star.get("node_id", ""))
+			if not node_id.is_empty():
+				node_positions[node_id] = chart_position
+	for node_id in node_positions:
+		if not node_buttons.has(node_id):
+			continue
+		var button: Button = node_buttons[node_id]
+		var shadow: PanelContainer = node_shadows[node_id]
+		var label: Label = node_names[node_id]
+		var center := Vector2(node_positions[node_id])
+		button.position = center - button.size * 0.5
+		shadow.position = button.position + Vector2(0, 5)
+		var label_direction := 1.0 if center.x < CHART_ORIGIN.x else -1.0
+		label.position = center + Vector2(12.0 * label_direction, -18.0)
+		if label_direction < 0.0:
+			label.position.x -= label.size.x
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if label_direction > 0.0 else HORIZONTAL_ALIGNMENT_RIGHT
+	_layout_branch_labels()
+	tree_canvas.queue_redraw()
+
+
+func _layout_branch_labels() -> void:
+	for constellation_id in ChartData.CONSTELLATIONS:
+		var constellation: Dictionary = ChartData.CONSTELLATIONS[constellation_id]
+		var branch_id := String(constellation.branch)
+		if not branch_labels.has(branch_id):
+			continue
+		var placement: Dictionary = ChartData.PLACEMENTS[constellation_id]
+		var anchor := CHART_ORIGIN + Vector2.RIGHT.rotated(float(placement.anchor_angle)) * float(placement.anchor_radius)
+		var rotated_anchor := CHART_ORIGIN + (anchor - CHART_ORIGIN).rotated(rotation_offset)
+		var label: Label = branch_labels[branch_id]
+		label.position = rotated_anchor + Vector2(-110.0, -118.0)
 
 
 func _on_node_hold_started(node_id: String) -> void:
@@ -600,8 +678,9 @@ func _apply_locale() -> void:
 	_refresh_phase_context()
 	legend_label.text = tr("TREE_LEGEND")
 	controls_label.text = "    " + tr("TREE_CONTROLS")
-	for branch_id in branch_labels:
-		branch_labels[branch_id].text = _branch_name(branch_id)
+	for constellation_id in ChartData.CONSTELLATIONS:
+		var constellation: Dictionary = ChartData.CONSTELLATIONS[constellation_id]
+		branch_labels[String(constellation.branch)].text = tr(String(constellation.label_key))
 	if progression != null:
 		node_visual_keys.clear()
 		_refresh()
@@ -745,14 +824,16 @@ func _build_interface() -> void:
 	for definition in Balance.UPGRADE_NODES:
 		_build_node_button(definition)
 	_build_detail_panel(content_row)
+	_layout_chart()
 
 
 func _build_branch_labels() -> void:
-	var rows := {"optics": 34.0, "detection": 245.0, "network": 444.0}
-	for branch_id in ["optics", "detection", "network"]:
+	for constellation_id in ChartData.CONSTELLATIONS:
+		var constellation: Dictionary = ChartData.CONSTELLATIONS[constellation_id]
+		var branch_id := String(constellation.branch)
 		var branch: Dictionary = Balance.BRANCHES[branch_id]
-		var label := _make_label(_branch_name(branch_id), 15, branch.color)
-		label.position = Vector2(24.0, float(rows[branch_id]))
+		var label := _make_label(tr(String(constellation.label_key)), 15, branch.color)
+		label.position = Vector2.ZERO
 		label.size = Vector2(300, 28)
 		tree_canvas.add_child(label)
 		branch_labels[branch_id] = label

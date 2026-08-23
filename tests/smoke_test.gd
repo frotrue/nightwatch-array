@@ -260,8 +260,21 @@ func _run() -> void:
 		"edge_detection": opening_detection.position,
 		"array_planning": opening_network.position
 	}
-	_check(is_equal_approx(opening_optics.position.x, opening_detection.position.x) and is_equal_approx(opening_detection.position.x, opening_network.position.x), "opening branch cards use the permanent branch-aligned layout")
-	_check(opening_optics.position.y < opening_detection.position.y and opening_detection.position.y < opening_network.position.y, "opening branches are stacked like the full research tree")
+	var chart_data = load("res://scripts/research_chart_data.gd")
+	var expected_chart_node_ids: Array[String] = []
+	for definition in balance.UPGRADE_NODES:
+		expected_chart_node_ids.append(String(definition.id))
+	var chart_validation_errors: Array[String] = chart_data.validation_errors(expected_chart_node_ids)
+	_check(chart_validation_errors.is_empty(), "research chart maps every upgrade exactly once with valid constellation segments")
+	_check(opening_optics.position != opening_detection.position and opening_detection.position != opening_network.position, "opening research nodes occupy distinct constellation positions")
+	var optics_center_before := opening_optics.position + opening_optics.size * 0.5
+	var optics_radius_before := optics_center_before.distance_to(game.upgrade_tree.CHART_ORIGIN)
+	game.upgrade_tree._rotate_chart(game.upgrade_tree.ROTATION_STEP)
+	var optics_center_after := opening_optics.position + opening_optics.size * 0.5
+	_check(is_equal_approx(optics_radius_before, optics_center_after.distance_to(game.upgrade_tree.CHART_ORIGIN)), "mouse-wheel chart rotation preserves each star's polar radius")
+	_check(absf((optics_center_before - game.upgrade_tree.CHART_ORIGIN).angle_to(optics_center_after - game.upgrade_tree.CHART_ORIGIN) - game.upgrade_tree.ROTATION_STEP) < 0.001, "research chart rotation changes only the global polar angle")
+	game.upgrade_tree._reset_view()
+	_check(is_zero_approx(game.upgrade_tree.rotation_offset), "research chart reset returns to north")
 	_check(game.upgrade_tree.node_buttons["long_exposure"].visible and game.upgrade_tree.node_buttons["long_exposure"].get_meta("visual_state") == "teaser", "one upcoming system is previewed as an unresolved signal")
 	_check(opening_optics.size.x <= 104.0 and opening_optics.size.y <= 82.0, "research nodes use compact icon-first tiles")
 	_check(game.upgrade_tree.detail_panel.visible and game.upgrade_tree.selected_node_id == "better_lens", "fixed inspector defaults to the first actionable system")
