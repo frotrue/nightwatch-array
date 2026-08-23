@@ -357,7 +357,7 @@ func _run() -> void:
 	left_up.button_index = MOUSE_BUTTON_LEFT
 	left_up.pressed = false
 	game.upgrade_tree._on_tree_viewport_gui_input(left_up)
-	_check(game.upgrade_tree.pan_position == pan_before_left_drag + left_drag.relative and not game.upgrade_tree.panning, "left-dragging empty space pans the research tree and releases cleanly")
+	_check(game.upgrade_tree.pan_position == pan_before_left_drag, "left-dragging empty sky does not move the framed research chart")
 	game.upgrade_tree.close_tree()
 	_check(not paused, "closing the upgrade tree resumes gameplay")
 

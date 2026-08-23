@@ -152,8 +152,6 @@ var hold_elapsed: float = 0.0
 var zoom: float = 0.78
 var pan_position := Vector2.ZERO
 var rotation_offset: float = DEFAULT_ROTATION
-var panning: bool = false
-var pan_mouse_button: int = 0
 var paused_by_tree: bool = false
 var refresh_pending: bool = false
 var node_visual_keys: Dictionary = {}
@@ -204,8 +202,6 @@ func close_tree() -> void:
 		return
 	_cancel_node_hold()
 	overlay.visible = false
-	panning = false
-	pan_mouse_button = 0
 	_hide_node_tooltip()
 	if paused_by_tree:
 		get_tree().paused = false
@@ -255,9 +251,6 @@ func _input(event: InputEvent) -> void:
 			close_tree()
 			get_viewport().set_input_as_handled()
 			return
-	if event is InputEventMouseButton and not event.pressed and event.button_index == pan_mouse_button:
-		panning = false
-		pan_mouse_button = 0
 
 
 func _process(delta: float) -> void:
@@ -280,15 +273,6 @@ func _on_tree_viewport_gui_input(event: InputEvent) -> void:
 	if not is_open():
 		return
 	if event is InputEventMouseButton:
-		if event.button_index == MOUSE_BUTTON_LEFT or event.button_index == MOUSE_BUTTON_RIGHT:
-			if event.pressed:
-				panning = true
-				pan_mouse_button = event.button_index
-			elif pan_mouse_button == event.button_index:
-				panning = false
-				pan_mouse_button = 0
-			get_viewport().set_input_as_handled()
-			return
 		if event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_UP:
 			if event.ctrl_pressed:
 				_zoom_at(event.position, 1.10)
@@ -303,10 +287,6 @@ func _on_tree_viewport_gui_input(event: InputEvent) -> void:
 				_rotate_chart(ROTATION_STEP)
 			get_viewport().set_input_as_handled()
 			return
-	if event is InputEventMouseMotion and panning:
-		pan_position += event.relative
-		_apply_transform()
-		get_viewport().set_input_as_handled()
 
 
 func _zoom_at(screen_position: Vector2, factor: float) -> void:
