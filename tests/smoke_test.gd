@@ -133,6 +133,8 @@ func _run() -> void:
 	_check(TranslationServer.get_locale().left(2) == "ko", "Korean locale activates through game settings")
 	_check("설정" in game.hud.settings_button.text, "HUD refreshes with Korean text")
 	_check(game.upgrade_tree.title_label.text == "관측망", "upgrade tree refreshes with Korean text")
+	_check(TranslationServer.translate("CONSTELLATION_CASSIOPEIA") == "카시오페이아자리  /  광학", "research chart localizes constellation branch labels")
+	_check(TranslationServer.translate("STAR_TSIH") == "감마 카시오페이아", "research inspector uses the factual Tsih star name in Korean")
 	_check(TranslationServer.translate("HUD_AUTOSAVED") == "자동 저장됨", "Korean autosave status stays concise")
 	_check(TranslationServer.translate("HUD_OBSERVATION_TIME") % [1, 1, 0] == "1차 관측  •  01:00", "Korean round countdown reads naturally")
 	_check(TranslationServer.translate("TREE_INTERMISSION_SUBTITLE") % [2, 30] == "업그레이드 시간  /  2차 관측은 30초", "Korean upgrade-break guidance explains the next round and duration")
@@ -276,8 +278,9 @@ func _run() -> void:
 	game.upgrade_tree._reset_view()
 	_check(is_zero_approx(game.upgrade_tree.rotation_offset), "research chart reset returns to north")
 	_check(game.upgrade_tree.node_buttons["long_exposure"].visible and game.upgrade_tree.node_buttons["long_exposure"].get_meta("visual_state") == "teaser", "one upcoming system is previewed as an unresolved signal")
-	_check(opening_optics.size.x <= 104.0 and opening_optics.size.y <= 82.0, "research nodes use compact icon-first tiles")
+	_check(opening_optics.size == game.upgrade_tree.STAR_HIT_SIZE, "research stars use compact transparent point hit targets")
 	_check(game.upgrade_tree.detail_panel.visible and game.upgrade_tree.selected_node_id == "better_lens", "fixed inspector defaults to the first actionable system")
+	_check("ε Cas" in game.upgrade_tree.detail_star.text, "research inspector identifies the real star behind the selected system")
 	game.upgrade_tree._on_node_hovered("edge_detection")
 	_check(game.upgrade_tree.selected_node_id == "edge_detection", "hovering a node updates the fixed inspector")
 	game.upgrade_tree._on_node_unhovered("better_lens")
@@ -287,17 +290,30 @@ func _run() -> void:
 	game.upgrade_tree._on_node_hold_started("better_lens")
 	game.upgrade_tree._process(game.upgrade_tree.HOLD_PURCHASE_SECONDS * 0.45)
 	var partial_hold_bar = game.upgrade_tree.node_hold_bars["better_lens"]
-	_check(partial_hold_bar.size.y >= opening_optics.size.y - 1.0 and partial_hold_bar.fill_ratio > 0.0 and partial_hold_bar.fill_ratio < 1.0, "node installation draws a partial liquid fill across the full tile")
-	_check(game.progression.upgrade_level == upgrades_before_selection and partial_hold_bar.visible, "holding an affordable node fills it without purchasing early")
+	_check(partial_hold_bar.size == opening_optics.size and partial_hold_bar.hold_ratio > 0.0 and partial_hold_bar.hold_ratio < 1.0, "node installation draws a partial radial arc around the star")
+	_check(game.progression.upgrade_level == upgrades_before_selection, "holding an affordable star advances its arc without purchasing early")
 	game.upgrade_tree._on_node_hold_released("better_lens")
-	_check(game.progression.upgrade_level == upgrades_before_selection and not partial_hold_bar.visible, "releasing a node before the meter fills cancels installation")
+	_check(game.progression.upgrade_level == upgrades_before_selection and is_zero_approx(partial_hold_bar.hold_ratio), "releasing a star before the arc completes cancels installation")
 	game.upgrade_tree._on_node_hold_started("better_lens")
 	game.upgrade_tree._process(game.upgrade_tree.HOLD_PURCHASE_SECONDS + 0.01)
 	_check(game.progression.has_upgrade("better_lens") and game.upgrade_tree.held_node_id.is_empty(), "a full node hold purchases the system exactly once")
+	_check(partial_hold_bar.visual_state == "purchased", "purchasing research turns its mapped star fully bright")
+	var first_frontier: Array[PackedStringArray] = game.upgrade_tree._frontier_connections()
+	_check(PackedStringArray(["better_lens", "long_exposure"]) in first_frontier and PackedStringArray(["better_lens", "observation_streak"]) in first_frontier, "a purchased star lights connections to its newly available frontier")
 	game.progression.reset()
 	var zoom_before_button: float = float(game.upgrade_tree.zoom)
 	game.upgrade_tree._zoom_from_center(1.10)
 	_check(game.upgrade_tree.zoom > zoom_before_button, "explicit zoom controls change the research-tree scale")
+	game.upgrade_tree._reset_view()
+	var rotation_before_ctrl_wheel: float = game.upgrade_tree.rotation_offset
+	var zoom_before_ctrl_wheel: float = game.upgrade_tree.zoom
+	var ctrl_wheel := InputEventMouseButton.new()
+	ctrl_wheel.button_index = MOUSE_BUTTON_WHEEL_UP
+	ctrl_wheel.pressed = true
+	ctrl_wheel.ctrl_pressed = true
+	ctrl_wheel.position = game.upgrade_tree.content_clip.global_position + game.upgrade_tree.content_clip.size * 0.5
+	game.upgrade_tree._on_tree_viewport_gui_input(ctrl_wheel)
+	_check(is_equal_approx(game.upgrade_tree.rotation_offset, rotation_before_ctrl_wheel) and game.upgrade_tree.zoom > zoom_before_ctrl_wheel, "Ctrl+wheel zooms the research chart without rotating it")
 	game.upgrade_tree._reset_view()
 	var pan_before_left_drag: Vector2 = game.upgrade_tree.pan_position
 	var left_down := InputEventMouseButton.new()

@@ -7,14 +7,13 @@ const Balance = preload("res://scripts/game_balance.gd")
 const ChartData = preload("res://scripts/research_chart_data.gd")
 
 const TREE_SIZE := Vector2(1460, 780)
-const NODE_SIZE := Vector2(92, 72)
-const MAJOR_NODE_SIZE := Vector2(104, 82)
 const MIN_ZOOM := 0.55
 const MAX_ZOOM := 1.28
 const HOLD_PURCHASE_SECONDS := 0.75
-const CHART_ORIGIN := Vector2(TREE_SIZE.x * 0.5, TREE_SIZE.y * 0.93)
+const CHART_ORIGIN := Vector2(TREE_SIZE.x * 0.5, TREE_SIZE.y * 0.91)
 const ROTATION_STEP := deg_to_rad(6.0)
 const DEFAULT_ROTATION := 0.0
+const STAR_HIT_SIZE := Vector2(44.0, 44.0)
 const BACKGROUND_STARS := [
 	Vector2(74, 48), Vector2(184, 238), Vector2(267, 91), Vector2(386, 390),
 	Vector2(488, 215), Vector2(594, 590), Vector2(704, 82), Vector2(812, 414),
@@ -25,62 +24,90 @@ const BACKGROUND_STARS := [
 ]
 
 
-class LiquidNodeFill:
+class StarNodeVisual:
 	extends Control
 
-	var fill_ratio: float = 0.0
-	var fill_color := Color(0.2, 0.8, 1.0, 0.46)
-	var surface_color := Color(0.75, 0.96, 1.0, 0.92)
-	var wave_phase: float = 0.0
+	var hold_ratio: float = 0.0
+	var branch_color := Color("7f9caf")
+	var visual_state := "hidden"
+	var magnitude: float = 3.0
+	var star_kind := "star"
+	var affordable := false
+	var hovered := false
+	var pulse_phase := 0.0
 
 
 	func set_fill_progress(ratio: float, elapsed: float) -> void:
-		fill_ratio = clampf(ratio, 0.0, 1.0)
-		wave_phase = elapsed * 8.0
+		hold_ratio = clampf(ratio, 0.0, 1.0)
+		pulse_phase = elapsed * 8.0
 		queue_redraw()
 
 
 	func clear_fill() -> void:
-		fill_ratio = 0.0
-		wave_phase = 0.0
+		hold_ratio = 0.0
+		queue_redraw()
+
+
+	func configure(state: String, color: Color, apparent_magnitude: float, kind: String, can_afford: bool) -> void:
+		visual_state = state
+		branch_color = color
+		magnitude = apparent_magnitude
+		star_kind = kind
+		affordable = can_afford
+		set_process(visual_state == "available" and affordable)
+		queue_redraw()
+
+
+	func set_hovered(value: bool) -> void:
+		hovered = value
+		queue_redraw()
+
+
+	func visual_radius() -> float:
+		return clampf(7.4 - magnitude * 0.82, 3.4, 7.4)
+
+
+	func _process(delta: float) -> void:
+		pulse_phase = fmod(pulse_phase + delta * 3.2, TAU)
 		queue_redraw()
 
 
 	func _draw() -> void:
-		if fill_ratio <= 0.0 or size.x <= 8.0 or size.y <= 8.0:
-			return
-		var inset := 4.0
-		var left := inset
-		var right := size.x - inset
-		var top := inset
-		var bottom := size.y - inset
-		var surface_y := lerpf(bottom, top, fill_ratio)
-		var filled_height := bottom - surface_y
-		var top_clearance := surface_y - top
-		var wave_amplitude := minf(minf(2.3, filled_height * 0.22), top_clearance * 0.45)
-		var surface := PackedVector2Array()
-		for step in range(17):
-			var amount := float(step) / 16.0
-			var x := lerpf(left, right, amount)
-			var y := surface_y + sin(amount * TAU * 1.35 + wave_phase) * wave_amplitude
-			surface.append(Vector2(x, y))
-
-		var shape := PackedVector2Array()
-		for point in surface:
-			shape.append(point)
-		var corner_radius := minf(minf(8.0, filled_height * 0.45), (right - left) * 0.25)
-		shape.append(Vector2(right, bottom - corner_radius))
-		var bottom_right_center := Vector2(right - corner_radius, bottom - corner_radius)
-		for step in range(1, 6):
-			var angle := lerpf(0.0, PI * 0.5, float(step) / 5.0)
-			shape.append(bottom_right_center + Vector2(cos(angle), sin(angle)) * corner_radius)
-		var bottom_left_center := Vector2(left + corner_radius, bottom - corner_radius)
-		for step in range(1, 6):
-			var angle := lerpf(PI * 0.5, PI, float(step) / 5.0)
-			shape.append(bottom_left_center + Vector2(cos(angle), sin(angle)) * corner_radius)
-
-		draw_colored_polygon(shape, fill_color)
-		draw_polyline(surface, surface_color, 1.6, true)
+		var center := size * 0.5
+		var radius := visual_radius()
+		var state_alpha := 0.42
+		var core_color := Color("758296")
+		match visual_state:
+			"purchased":
+				state_alpha = 1.0
+				core_color = branch_color.lightened(0.46)
+			"available":
+				state_alpha = 0.92 if affordable else 0.68
+				core_color = Color("fff4ba") if affordable else branch_color.lightened(0.18)
+			"locked":
+				state_alpha = 0.46
+				core_color = Color("667083")
+			"teaser":
+				state_alpha = 0.34
+				core_color = Color("777b8a")
+		var pulse := 1.0 + (sin(pulse_phase) * 0.12 if visual_state == "available" and affordable else 0.0)
+		if star_kind == "nebula":
+			draw_circle(center + Vector2(-3.0, 1.0), radius * 2.5 * pulse, Color(branch_color, 0.08 * state_alpha))
+			draw_circle(center + Vector2(3.0, -2.0), radius * 1.8 * pulse, Color(core_color, 0.12 * state_alpha))
+		else:
+			draw_circle(center, radius * 2.7 * pulse, Color(branch_color, 0.08 * state_alpha))
+		if visual_state == "available" or visual_state == "purchased" or hovered:
+			draw_circle(center, radius * 1.65 * pulse, Color(branch_color, (0.20 if hovered else 0.13) * state_alpha), false, 1.4, true)
+		draw_circle(center, radius * pulse, Color(core_color, state_alpha))
+		draw_circle(center, maxf(1.2, radius * 0.33), Color(1.0, 1.0, 1.0, state_alpha))
+		if visual_state == "purchased" or (visual_state == "available" and affordable):
+			var glint := radius * (2.3 if visual_state == "purchased" else 1.9)
+			draw_line(center - Vector2(glint, 0), center + Vector2(glint, 0), Color(core_color, 0.42 * state_alpha), 1.0, true)
+			draw_line(center - Vector2(0, glint), center + Vector2(0, glint), Color(core_color, 0.32 * state_alpha), 1.0, true)
+		if visual_state == "teaser":
+			draw_string(ThemeDB.fallback_font, center + Vector2(-3.5, 4.0), "?", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("a8adbd"))
+		if hold_ratio > 0.0:
+			draw_arc(center, radius + 7.0, -PI * 0.5, -PI * 0.5 + TAU * hold_ratio, 32, Color("fff3a3"), 2.4, true)
 
 var progression: Node
 var settings_controller: Node
@@ -93,6 +120,7 @@ var tree_status: Label
 var detail_panel: PanelContainer
 var detail_branch: Label
 var detail_name: Label
+var detail_star: Label
 var detail_description: Label
 var detail_meta: Label
 var detail_action_button: Button
@@ -107,15 +135,12 @@ var legend_label: Label
 var controls_label: Label
 
 var node_buttons: Dictionary = {}
-var node_shadows: Dictionary = {}
-var node_icons: Dictionary = {}
-var node_costs: Dictionary = {}
 var node_names: Dictionary = {}
-var node_major_badges: Dictionary = {}
 var node_hold_bars: Dictionary = {}
 var branch_labels: Dictionary = {}
 var star_positions: Dictionary = {}
 var node_positions: Dictionary = {}
+var node_star_records: Dictionary = {}
 
 var selected_node_id: String = ""
 var held_node_id: String = ""
@@ -135,6 +160,7 @@ var intermission_next_duration: int = 20
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	node_star_records = ChartData.node_star_map()
 	_build_interface()
 	set_process_input(true)
 
@@ -236,7 +262,7 @@ func _process(delta: float) -> void:
 		_cancel_node_hold()
 		return
 	hold_elapsed = minf(HOLD_PURCHASE_SECONDS, hold_elapsed + delta)
-	var hold_bar: LiquidNodeFill = node_hold_bars[held_node_id]
+	var hold_bar: StarNodeVisual = node_hold_bars[held_node_id]
 	hold_bar.set_fill_progress(hold_elapsed / HOLD_PURCHASE_SECONDS, hold_elapsed)
 	if hold_elapsed >= HOLD_PURCHASE_SECONDS:
 		_complete_node_hold()
@@ -362,11 +388,9 @@ func _layout_chart() -> void:
 		if not node_buttons.has(node_id):
 			continue
 		var button: Button = node_buttons[node_id]
-		var shadow: PanelContainer = node_shadows[node_id]
 		var label: Label = node_names[node_id]
 		var center := Vector2(node_positions[node_id])
 		button.position = center - button.size * 0.5
-		shadow.position = button.position + Vector2(0, 5)
 		var label_direction := 1.0 if center.x < CHART_ORIGIN.x else -1.0
 		label.position = center + Vector2(12.0 * label_direction, -18.0)
 		if label_direction < 0.0:
@@ -396,9 +420,8 @@ func _on_node_hold_started(node_id: String) -> void:
 		return
 	held_node_id = node_id
 	hold_elapsed = 0.0
-	var hold_bar: LiquidNodeFill = node_hold_bars[node_id]
+	var hold_bar: StarNodeVisual = node_hold_bars[node_id]
 	hold_bar.clear_fill()
-	hold_bar.visible = true
 
 
 func _on_node_hold_released(node_id: String) -> void:
@@ -410,45 +433,55 @@ func _complete_node_hold() -> void:
 	if held_node_id.is_empty():
 		return
 	var completed_node_id := held_node_id
-	var hold_bar: LiquidNodeFill = node_hold_bars[completed_node_id]
+	var hold_bar: StarNodeVisual = node_hold_bars[completed_node_id]
 	held_node_id = ""
 	hold_elapsed = 0.0
 	if progression.request_purchase(completed_node_id):
 		var definition := Balance.upgrade_definition(completed_node_id)
 		tree_status.text = tr("TREE_STATUS_ONLINE") % _upgrade_name(definition)
-	hold_bar.visible = false
 	hold_bar.clear_fill()
 
 
 func _cancel_node_hold() -> void:
 	if not held_node_id.is_empty() and node_hold_bars.has(held_node_id):
-		var hold_bar: LiquidNodeFill = node_hold_bars[held_node_id]
-		hold_bar.visible = false
+		var hold_bar: StarNodeVisual = node_hold_bars[held_node_id]
 		hold_bar.clear_fill()
 	held_node_id = ""
 	hold_elapsed = 0.0
 
 
 func _on_node_hovered(node_id: String) -> void:
+	if node_hold_bars.has(node_id):
+		var star_visual: StarNodeVisual = node_hold_bars[node_id]
+		star_visual.set_hovered(true)
 	_show_node_detail(node_id)
 
 
 func _on_node_unhovered(node_id: String) -> void:
+	if node_hold_bars.has(node_id):
+		var star_visual: StarNodeVisual = node_hold_bars[node_id]
+		star_visual.set_hovered(false)
 	if held_node_id == node_id:
 		_cancel_node_hold()
 
 
 func _hide_node_detail() -> void:
+	var previous_node_id := selected_node_id
 	selected_node_id = ""
+	if progression != null and not previous_node_id.is_empty() and node_names.has(previous_node_id):
+		node_names[previous_node_id].visible = progression.get_node_state(previous_node_id) != "purchased"
 	if detail_panel != null:
 		detail_branch.text = tr("TREE_INSPECTOR_LABEL")
 		detail_name.text = tr("TREE_INSPECTOR_TITLE")
+		detail_star.text = ""
 		detail_description.text = tr("TREE_INSPECTOR_HINT")
 		detail_meta.text = tr("TREE_INSPECTOR_META")
 		detail_action_button.text = tr("TREE_SELECT_NODE")
 		detail_action_button.disabled = true
 		detail_panel.add_theme_stylebox_override("panel", _panel_style(Color("0b1020"), Color("2d4055"), 12, 1))
 		detail_panel.visible = true
+	if tree_canvas != null:
+		tree_canvas.queue_redraw()
 
 
 func _on_purchase_rejected(node_id: String, reason_key: String, value) -> void:
@@ -486,11 +519,9 @@ func _refresh() -> void:
 			visual_state = "teaser"
 		var visible := visual_state != "hidden"
 		var button: Button = node_buttons[node_id]
-		var shadow: PanelContainer = node_shadows[node_id]
 		var name_label: Label = node_names[node_id]
 		button.visible = visible
-		shadow.visible = visible
-		name_label.visible = visible
+		name_label.visible = visible and (visual_state != "purchased" or node_id == selected_node_id)
 		button.set_meta("visual_state", visual_state)
 		if not visible:
 			continue
@@ -550,82 +581,44 @@ func _apply_node_visual(definition: Dictionary, visual_state: String) -> void:
 	var node_id := String(definition.id)
 	var branch: Dictionary = Balance.BRANCHES[String(definition.branch)]
 	var branch_color: Color = branch.color
-	var button: Button = node_buttons[node_id]
-	var shadow: PanelContainer = node_shadows[node_id]
-	var icon_label: Label = node_icons[node_id]
-	var cost_label: Label = node_costs[node_id]
 	var name_label: Label = node_names[node_id]
-	var major_badge: Label = node_major_badges[node_id]
-	var major: bool = bool(definition.major)
-	var background := Color("10182a")
-	var border := Color(branch_color, 0.62)
-	var icon_color := branch_color.lightened(0.18)
-	var cost_color := Color("93a8ba")
+	var star_visual: StarNodeVisual = node_hold_bars[node_id]
+	var star_record: Dictionary = node_star_records[node_id]
+	var star: Dictionary = star_record.star
 	var name_color := Color("c8d5e1")
-	var opacity := 1.0
-	var border_width := 3 if major else 2
-	icon_label.text = String(definition.icon)
-	cost_label.text = tr("TREE_COST") % int(definition.cost)
 	name_label.text = _upgrade_name(definition)
-	major_badge.visible = major
 	match visual_state:
 		"purchased":
-			background = branch_color.darkened(0.58)
-			border = branch_color.lightened(0.22)
-			icon_color = Color("f1fbff")
-			cost_color = branch_color.lightened(0.28)
 			name_color = branch_color.lightened(0.28)
-			cost_label.text = tr("TREE_ONLINE")
 		"available":
 			if progression.can_purchase(node_id):
-				background = branch_color.darkened(0.68)
-				border = branch_color.lightened(0.34)
-				icon_color = Color("ffffff")
-				cost_color = Color("ffe078")
-				border_width += 1
+				name_color = Color("fff0a8")
 			else:
-				background = branch_color.darkened(0.76)
-				border = Color(branch_color, 0.72)
+				name_color = branch_color.lightened(0.06)
 		"locked":
-			background = Color("111421")
-			border = Color("495064")
-			icon_color = Color("747b8d")
-			cost_color = Color("646b7d")
 			name_color = Color("747d8d")
-			cost_label.text = tr("TREE_LOCKED")
-			opacity = 0.78
 		"teaser":
-			background = Color("0b0d17")
-			border = Color("343746")
-			icon_color = Color("686b7d")
-			cost_color = Color("555868")
 			name_color = Color("5f6373")
-			icon_label.text = "?"
-			cost_label.text = tr("TREE_SIGNAL")
 			name_label.text = tr("TREE_UNKNOWN_SIGNAL")
-			major_badge.visible = false
-			opacity = 0.56
-	icon_label.add_theme_color_override("font_color", icon_color)
-	cost_label.add_theme_color_override("font_color", cost_color)
 	name_label.add_theme_color_override("font_color", name_color)
-	major_badge.add_theme_color_override("font_color", branch_color.lightened(0.24))
-	button.modulate.a = opacity
-	shadow.modulate.a = opacity
-	button.add_theme_stylebox_override("normal", _panel_style(background, border, 18 if major else 16, border_width))
-	button.add_theme_stylebox_override("hover", _panel_style(background.lightened(0.08), border.lightened(0.18), 18 if major else 16, border_width))
-	button.add_theme_stylebox_override("pressed", _panel_style(background.darkened(0.08), border, 18 if major else 16, border_width))
-	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
-	shadow.add_theme_stylebox_override("panel", _panel_style(background.darkened(0.45), Color.TRANSPARENT, 18 if major else 16, 0))
+	star_visual.configure(visual_state, branch_color, float(star.magnitude), String(star.kind), progression.can_purchase(node_id))
 
 
 func _show_node_detail(node_id: String) -> void:
 	if progression == null or not node_buttons.has(node_id) or not node_buttons[node_id].visible:
 		return
+	var previous_node_id := selected_node_id
 	selected_node_id = node_id
+	if not previous_node_id.is_empty() and previous_node_id != node_id and node_names.has(previous_node_id):
+		node_names[previous_node_id].visible = progression.get_node_state(previous_node_id) != "purchased"
+	node_names[node_id].visible = true
 	var definition := Balance.upgrade_definition(node_id)
 	var branch: Dictionary = Balance.BRANCHES[String(definition.branch)]
 	var branch_color: Color = branch.color
 	var visual_state := String(node_buttons[node_id].get_meta("visual_state"))
+	var star_record: Dictionary = node_star_records[node_id]
+	var star: Dictionary = star_record.star
+	detail_star.text = "%s  ·  %s" % [tr(String(star.name_key)), String(star.bayer)]
 	if visual_state == "teaser":
 		detail_branch.text = "%s  /  %s" % [_branch_name(String(definition.branch)), tr("TREE_UNRESOLVED_SIGNAL")]
 		detail_name.text = "???"
@@ -664,6 +657,7 @@ func _show_node_detail(node_id: String) -> void:
 	detail_meta.add_theme_color_override("font_color", Color("ffe078") if visual_state == "available" and progression.can_purchase(node_id) else branch_color.lightened(0.2))
 	detail_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.035, 0.045, 0.09, 0.97), branch_color, 12, 2))
 	detail_panel.visible = true
+	tree_canvas.queue_redraw()
 
 
 func _on_language_changed(_locale: String) -> void:
@@ -842,78 +836,45 @@ func _build_branch_labels() -> void:
 func _build_node_button(definition: Dictionary) -> void:
 	var node_id := String(definition.id)
 	var major: bool = bool(definition.major)
-	var node_size := MAJOR_NODE_SIZE if major else NODE_SIZE
-	var position := Vector2(definition.position)
-	var shadow := PanelContainer.new()
-	shadow.name = "Shadow_" + node_id
-	shadow.position = position + Vector2(0, 5)
-	shadow.size = node_size
-	shadow.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	tree_canvas.add_child(shadow)
-
 	var button := Button.new()
 	button.name = "Node_" + node_id
-	button.position = position
-	button.size = node_size
-	button.custom_minimum_size = node_size
-	button.clip_contents = true
+	button.position = Vector2.ZERO
+	button.size = STAR_HIT_SIZE
+	button.custom_minimum_size = STAR_HIT_SIZE
+	button.clip_contents = false
 	button.mouse_filter = Control.MOUSE_FILTER_STOP
 	button.focus_mode = Control.FOCUS_NONE
 	button.set_meta("node_id", node_id)
 	button.set_meta("visual_state", "hidden")
+	for style_name in ["normal", "hover", "pressed", "focus", "disabled"]:
+		button.add_theme_stylebox_override(style_name, StyleBoxEmpty.new())
 	button.button_down.connect(_on_node_hold_started.bind(node_id))
 	button.button_up.connect(_on_node_hold_released.bind(node_id))
 	button.mouse_entered.connect(_on_node_hovered.bind(node_id))
 	button.mouse_exited.connect(_on_node_unhovered.bind(node_id))
 	tree_canvas.add_child(button)
 
-	var hold_bar := LiquidNodeFill.new()
-	hold_bar.name = "HoldProgress"
-	hold_bar.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	hold_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hold_bar.visible = false
+	var star_visual := StarNodeVisual.new()
+	star_visual.name = "StarVisual"
+	star_visual.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	star_visual.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var branch_color: Color = Balance.BRANCHES[String(definition.branch)].color
-	hold_bar.fill_color = Color(branch_color, 0.46)
-	hold_bar.surface_color = Color(branch_color.lightened(0.42), 0.92)
-	button.add_child(hold_bar)
-
-	var icon_label := _make_label(String(definition.icon), 33 if major else 29, Color.WHITE)
-	icon_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	icon_label.offset_bottom = -14.0
-	icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	icon_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	button.add_child(icon_label)
-	var cost_label := _make_label(tr("TREE_COST") % int(definition.cost), 11, Color("93a8ba"))
-	cost_label.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	cost_label.offset_top = -22.0
-	cost_label.offset_bottom = -4.0
-	cost_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	cost_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	button.add_child(cost_label)
-	var major_badge := _make_label("✦", 12, Color.WHITE)
-	major_badge.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	major_badge.offset_left = -22.0
-	major_badge.offset_top = 4.0
-	major_badge.offset_right = -5.0
-	major_badge.offset_bottom = 22.0
-	major_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	button.add_child(major_badge)
+	var star_record: Dictionary = node_star_records[node_id]
+	var star: Dictionary = star_record.star
+	star_visual.configure("hidden", branch_color, float(star.magnitude), String(star.kind), false)
+	button.add_child(star_visual)
 
 	var name_label := _make_label(_upgrade_name(definition), 12 if major else 11, Color("c8d5e1"))
-	name_label.position = Vector2(position.x + node_size.x * 0.5 - 84.0, position.y + node_size.y + 6.0)
-	name_label.size = Vector2(168, 36)
-	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_label.position = Vector2.ZERO
+	name_label.size = Vector2(154, 38)
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	name_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	tree_canvas.add_child(name_label)
 
 	node_buttons[node_id] = button
-	node_shadows[node_id] = shadow
-	node_icons[node_id] = icon_label
-	node_costs[node_id] = cost_label
 	node_names[node_id] = name_label
-	node_major_badges[node_id] = major_badge
-	node_hold_bars[node_id] = hold_bar
+	node_hold_bars[node_id] = star_visual
 
 
 func _build_detail_panel(parent: Control) -> void:
@@ -938,6 +899,9 @@ func _build_detail_panel(parent: Control) -> void:
 	detail_name = _make_label(tr("TREE_INSPECTOR_TITLE"), 20, Color("f3f8ff"))
 	detail_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(detail_name)
+	detail_star = _make_label("", 11, Color("7692aa"))
+	detail_star.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(detail_star)
 	var divider := HSeparator.new()
 	divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(divider)
@@ -962,77 +926,123 @@ func _build_detail_panel(parent: Control) -> void:
 	column.add_child(detail_action_button)
 
 
-func _connection_points(source_button: Button, target_button: Button) -> PackedVector2Array:
-	var start := source_button.position + source_button.size * 0.5
-	var finish := target_button.position + target_button.size * 0.5
-	var direction := finish - start
-	if absf(direction.x) >= absf(direction.y):
-		var horizontal_sign := signf(direction.x)
-		start.x += source_button.size.x * 0.5 * horizontal_sign
-		finish.x -= target_button.size.x * 0.5 * horizontal_sign
-	else:
-		var vertical_sign := signf(direction.y)
-		start.y += source_button.size.y * 0.5 * vertical_sign
-		finish.y -= target_button.size.y * 0.5 * vertical_sign
+func _connection_points(source_id: String, target_id: String) -> PackedVector2Array:
+	var start := Vector2(node_positions[source_id])
+	var finish := Vector2(node_positions[target_id])
+	var direction := start.direction_to(finish)
+	if direction.is_zero_approx():
+		return PackedVector2Array([start, finish])
+	start += direction * (_node_visual_radius(source_id) + 2.0)
+	finish -= direction * (_node_visual_radius(target_id) + 2.0)
 	return PackedVector2Array([start, finish])
 
 
-func _draw_tree() -> void:
-	for x in range(-240, int(TREE_SIZE.x) + 240, 180):
-		tree_canvas.draw_line(Vector2(x, 0), Vector2(x + 320, TREE_SIZE.y), Color(0.20, 0.28, 0.42, 0.055), 1.0, true)
-	for index in range(BACKGROUND_STARS.size()):
-		var radius := 1.7 if index % 5 == 0 else 1.0
-		var alpha := 0.28 if index % 5 == 0 else 0.16
-		tree_canvas.draw_circle(BACKGROUND_STARS[index], radius, Color(0.65, 0.82, 1.0, alpha))
-	var branch_lanes := {
-		"optics": [Vector2(55, 145), Vector2(1395, 115)],
-		"detection": [Vector2(55, 350), Vector2(1395, 305)],
-		"network": [Vector2(55, 555), Vector2(1395, 645)]
-	}
-	for branch_id in branch_lanes:
-		var branch_color: Color = Balance.BRANCHES[branch_id].color
-		var lane: Array = branch_lanes[branch_id]
-		tree_canvas.draw_line(lane[0], lane[1], Color(branch_color, 0.035), 36.0, true)
-		tree_canvas.draw_line(lane[0], lane[1], Color(branch_color, 0.18), 1.4, true)
+func _node_visual_radius(node_id: String) -> float:
+	if node_hold_bars.has(node_id):
+		var star_visual: StarNodeVisual = node_hold_bars[node_id]
+		return star_visual.visual_radius()
+	var star_record: Dictionary = node_star_records[node_id]
+	return _magnitude_radius(float(star_record.star.magnitude))
+
+
+func _magnitude_radius(magnitude: float) -> float:
+	return clampf(7.4 - magnitude * 0.82, 3.4, 7.4)
+
+
+func _frontier_connections() -> Array[PackedStringArray]:
+	var result: Array[PackedStringArray] = []
 	if progression == null:
-		return
+		return result
 	for definition in Balance.UPGRADE_NODES:
 		var target_id := String(definition.id)
-		var target_button: Button = node_buttons[target_id]
-		if not target_button.visible:
+		if progression.get_node_state(target_id) != "available":
 			continue
 		for prerequisite_variant in definition.prerequisites:
 			var source_id := String(prerequisite_variant)
-			var source_button: Button = node_buttons[source_id]
-			if not source_button.visible:
-				continue
-			var connection := _connection_points(source_button, target_button)
-			var start := connection[0]
-			var finish := connection[1]
-			var visual_state := String(target_button.get_meta("visual_state"))
-			var branch_color: Color = Balance.BRANCHES[String(definition.branch)].color
-			var underlay_width := 4.0
-			var line_width := 1.5
-			var line_color := Color("3d4354")
-			match visual_state:
-				"purchased":
-					underlay_width = 8.0
-					line_width = 4.0
-					line_color = Color(branch_color, 0.92)
-				"available":
-					underlay_width = 6.0
-					line_width = 2.6
-					line_color = Color(branch_color, 0.72)
-				"locked":
-					line_color = Color(0.36, 0.39, 0.47, 0.36)
-				"teaser":
-					underlay_width = 3.0
-					line_width = 1.2
-					line_color = Color(0.34, 0.36, 0.43, 0.22)
-			tree_canvas.draw_line(start, finish, Color(0.01, 0.015, 0.035, 0.82), underlay_width, true)
-			tree_canvas.draw_line(start, finish, line_color, line_width, true)
-			if visual_state == "purchased":
-				tree_canvas.draw_circle(start.lerp(finish, 0.5), 3.0, branch_color.lightened(0.2))
+			if progression.get_node_state(source_id) == "purchased":
+				result.append(PackedStringArray([source_id, target_id]))
+	return result
+
+
+func _draw_tree() -> void:
+	for index in range(BACKGROUND_STARS.size()):
+		var background_position := CHART_ORIGIN + (Vector2(BACKGROUND_STARS[index]) - CHART_ORIGIN).rotated(rotation_offset)
+		var radius := 1.7 if index % 5 == 0 else 1.0
+		var alpha := 0.28 if index % 5 == 0 else 0.16
+		tree_canvas.draw_circle(background_position, radius, Color(0.65, 0.82, 1.0, alpha))
+	_draw_chart_horizon()
+	for constellation_id in ChartData.CONSTELLATIONS:
+		var constellation: Dictionary = ChartData.CONSTELLATIONS[constellation_id]
+		var branch_color: Color = Balance.BRANCHES[String(constellation.branch)].color
+		for segment_variant in constellation.segments:
+			var segment: Array = segment_variant
+			var start := Vector2(star_positions["%s/%s" % [constellation_id, String(segment[0])]])
+			var finish := Vector2(star_positions["%s/%s" % [constellation_id, String(segment[1])]])
+			tree_canvas.draw_line(start, finish, Color("02050c"), 4.2, true)
+			tree_canvas.draw_line(start, finish, Color(branch_color, 0.25), 1.45, true)
+		for star_variant in constellation.stars:
+			var star: Dictionary = star_variant
+			var point := Vector2(star_positions["%s/%s" % [constellation_id, String(star.id)]])
+			var star_radius := _magnitude_radius(float(star.magnitude))
+			var node_id := String(star.get("node_id", ""))
+			var alpha := 0.23 if node_id.is_empty() else 0.12
+			if String(star.kind) == "nebula":
+				tree_canvas.draw_circle(point, star_radius * 2.2, Color(branch_color, alpha * 0.42))
+			tree_canvas.draw_circle(point, maxf(1.2, star_radius * 0.55), Color(branch_color.lightened(0.26), alpha))
+	if progression == null:
+		return
+	# Only the current purchasable frontier stays lit. Purchased history is
+	# already encoded by stable bright stars, so late-game DAG clutter never grows.
+	for frontier_variant in _frontier_connections():
+		var frontier: PackedStringArray = frontier_variant
+		var source_id := String(frontier[0])
+		var target_id := String(frontier[1])
+		var connection := _connection_points(source_id, target_id)
+		var start := connection[0]
+		var finish := connection[1]
+		var definition := Balance.upgrade_definition(target_id)
+		var branch_color: Color = Balance.BRANCHES[String(definition.branch)].color
+		tree_canvas.draw_line(start, finish, Color(0.01, 0.015, 0.035, 0.90), 7.0, true)
+		tree_canvas.draw_line(start, finish, Color(branch_color.lightened(0.18), 0.88), 2.8, true)
+		tree_canvas.draw_circle(start.lerp(finish, 0.5), 2.4, branch_color.lightened(0.28))
+	if not selected_node_id.is_empty() and node_positions.has(selected_node_id):
+		var selected_state: String = progression.get_node_state(selected_node_id)
+		if selected_state == "locked" or selected_state == "hidden":
+			var selected_definition := Balance.upgrade_definition(selected_node_id)
+			for prerequisite_variant in selected_definition.prerequisites:
+				var source_id := String(prerequisite_variant)
+				if progression.get_node_state(source_id) == "purchased":
+					continue
+				var connection := _connection_points(source_id, selected_node_id)
+				_draw_dashed_connection(connection[0], connection[1], Color("79859b"))
+
+
+func _draw_chart_horizon() -> void:
+	var horizon_y := CHART_ORIGIN.y
+	var ridge := PackedVector2Array([
+		Vector2(0, horizon_y + 9.0), Vector2(TREE_SIZE.x * 0.18, horizon_y - 4.0),
+		Vector2(TREE_SIZE.x * 0.36, horizon_y + 2.0), Vector2(TREE_SIZE.x * 0.54, horizon_y - 8.0),
+		Vector2(TREE_SIZE.x * 0.76, horizon_y + 1.0), Vector2(TREE_SIZE.x, horizon_y - 5.0),
+		Vector2(TREE_SIZE.x, TREE_SIZE.y), Vector2(0, TREE_SIZE.y)
+	])
+	tree_canvas.draw_colored_polygon(ridge, Color("030611"))
+	var dome_center := CHART_ORIGIN + Vector2(0, -2.0)
+	tree_canvas.draw_circle(dome_center, 24.0, Color("050a16"))
+	tree_canvas.draw_rect(Rect2(dome_center.x - 26.0, dome_center.y, 52.0, 28.0), Color("050a16"))
+	tree_canvas.draw_line(dome_center + Vector2(0, -22), dome_center + Vector2(15, -38), Color("14243a"), 3.0, true)
+	tree_canvas.draw_circle(dome_center + Vector2(16, -39), 2.2, Color("74a1c7"))
+
+
+func _draw_dashed_connection(start: Vector2, finish: Vector2, color: Color) -> void:
+	var distance := start.distance_to(finish)
+	if distance <= 0.01:
+		return
+	var direction := start.direction_to(finish)
+	var cursor := 0.0
+	while cursor < distance:
+		var dash_end := minf(cursor + 8.0, distance)
+		tree_canvas.draw_line(start + direction * cursor, start + direction * dash_end, Color(color, 0.58), 1.4, true)
+		cursor += 14.0
 
 
 func _style_header_button(button: Button) -> void:
