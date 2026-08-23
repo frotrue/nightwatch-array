@@ -18,98 +18,97 @@ const BRANCHES := {
 	"network": {"name": "OBSERVATION NETWORK", "color": Color("52e0b1")}
 }
 
-# Positions are deliberate prototype layout coordinates, not a generic graph schema.
 # Existing upgrade ids are preserved so every gameplay consumer migrates without
-# losing its original effect.
+# losing its original effect. Presentation coordinates live in research_chart_data.gd.
 const UPGRADE_NODES: Array[Dictionary] = [
 	{
 		"id": "better_lens", "name": "Better Lens", "icon": "◉", "cost": 12,
 		"description": "A wider focus ring makes manual tracking more forgiving.",
-		"branch": "optics", "position": Vector2(90, 110), "prerequisites": [],
+		"branch": "optics", "prerequisites": [],
 		"hidden_until": [], "effect_type": "passive", "effect_parameters": {"tracking_radius": 52.0},
 		"major": false
 	},
 	{
 		"id": "long_exposure", "name": "Long Exposure", "icon": "◐", "cost": 28,
 		"description": "Meteors stay visible 35% longer and leave denser trails.",
-		"branch": "optics", "position": Vector2(320, 55), "prerequisites": ["better_lens"],
+		"branch": "optics", "prerequisites": ["better_lens"],
 		"hidden_until": ["better_lens"], "effect_type": "transformation", "effect_parameters": {"lifetime_multiplier": 1.35},
 		"major": false
 	},
 	{
 		"id": "observation_streak", "name": "Observation Streak", "icon": "×3", "cost": 64,
 		"description": "Consecutive manual observations build a modest reward chain; automation breaks it.",
-		"branch": "optics", "position": Vector2(320, 165), "prerequisites": ["better_lens"],
+		"branch": "optics", "prerequisites": ["better_lens"],
 		"hidden_until": ["better_lens"], "effect_type": "transformation", "effect_parameters": {"step": 0.08, "maximum": 0.5},
 		"major": false
 	},
 	{
 		"id": "precision_multiplier", "name": "Precision Spectrometer", "icon": "⌾", "cost": 150,
 		"description": "Centered manual tracking builds a reward multiplier.",
-		"branch": "optics", "position": Vector2(550, 55), "prerequisites": ["long_exposure"],
+		"branch": "optics", "prerequisites": ["long_exposure"],
 		"hidden_until": ["long_exposure"], "effect_type": "transformation", "effect_parameters": {"precision_gain": 0.58},
 		"major": false
 	},
 	{
 		"id": "perfect_observation", "name": "Perfect Observation", "icon": "✦", "cost": 260,
 		"description": "Grades manual tracking. Excellent and Perfect runs earn a decisive quality bonus.",
-		"branch": "optics", "position": Vector2(800, 125), "prerequisites": ["precision_multiplier", "trajectory"],
+		"branch": "optics", "prerequisites": ["precision_multiplier", "trajectory"],
 		"hidden_until": ["precision_multiplier"], "effect_type": "transformation", "effect_parameters": {"excellent_bonus": 1.25, "perfect_bonus": 1.55},
 		"major": true
 	},
 	{
 		"id": "edge_detection", "name": "Edge Detection", "icon": "≋", "cost": 16,
 		"description": "Classifies high-speed entry signatures and introduces fast meteors.",
-		"branch": "detection", "position": Vector2(90, 310), "prerequisites": [],
+		"branch": "detection", "prerequisites": [],
 		"hidden_until": [], "effect_type": "discovery", "effect_parameters": {"meteor_type": "fast"},
 		"major": false
 	},
 	{
 		"id": "wide_field", "name": "Wide Field Sensor", "icon": "⌗", "cost": 55,
 		"description": "Reveals incoming contacts before they enter the sky so you can pre-position.",
-		"branch": "detection", "position": Vector2(320, 310), "prerequisites": ["edge_detection", "observation_scheduling"],
+		"branch": "detection", "prerequisites": ["edge_detection", "observation_scheduling"],
 		"hidden_until": ["edge_detection"], "effect_type": "unlock", "effect_parameters": {"entry_warning": true},
 		"major": false
 	},
 	{
 		"id": "trajectory", "name": "Trajectory Prediction", "icon": "➤", "cost": 95,
 		"description": "Tightens forecast uncertainty and reveals each contact's approach.",
-		"branch": "detection", "position": Vector2(550, 300), "prerequisites": ["wide_field"],
+		"branch": "detection", "prerequisites": ["wide_field"],
 		"hidden_until": ["wide_field"], "effect_type": "unlock", "effect_parameters": {"trajectory_line": true},
 		"major": true
 	},
 	{
 		"id": "rare_detection", "name": "Rare Meteor Detection", "icon": "★", "cost": 155,
 		"description": "Reveals rare fireballs and identifies every forecast contact before entry.",
-		"branch": "detection", "position": Vector2(800, 255), "prerequisites": ["trajectory"],
+		"branch": "detection", "prerequisites": ["trajectory"],
 		"hidden_until": ["trajectory"], "effect_type": "discovery", "effect_parameters": {"meteor_type": "fireball"},
 		"major": true
 	},
 	{
 		"id": "fragment_analysis", "name": "Fragment Analysis", "icon": "◆", "cost": 240,
 		"description": "Discovers splitting meteors; network analysis can assist with their fragments.",
-		"branch": "detection", "position": Vector2(1030, 300), "prerequisites": ["rare_detection"],
+		"branch": "detection", "prerequisites": ["rare_detection"],
 		"hidden_until": ["rare_detection"], "effect_type": "discovery", "effect_parameters": {"meteor_type": "fragment"},
 		"major": true
 	},
 	{
 		"id": "shower_detector", "name": "Meteor Shower Forecast", "icon": "☄", "cost": 370,
 		"description": "Unlocks warned meteor-shower events across the whole sky.",
-		"branch": "detection", "position": Vector2(1280, 245), "prerequisites": ["fragment_analysis"],
+		"branch": "detection", "prerequisites": ["fragment_analysis"],
 		"hidden_until": ["fragment_analysis"], "effect_type": "discovery", "effect_parameters": {"event": "meteor_shower"},
 		"major": true
 	},
 	{
 		"id": "array_planning", "name": "Array Planning", "icon": "⬡", "cost": 20,
 		"description": "Adds another observation channel for a crowded sky.",
-		"branch": "network", "position": Vector2(90, 510), "prerequisites": [],
+		"branch": "network", "prerequisites": [],
 		"hidden_until": [], "effect_type": "unlock", "effect_parameters": {"max_active": 1},
 		"major": false
 	},
 	{
 		"id": "observation_scheduling", "name": "Observation Scheduling", "icon": "◷", "cost": 60,
 		"description": "Plans longer shifts and extends each future observation window by 10 seconds.",
-		"branch": "network", "position": Vector2(300, 450), "prerequisites": ["array_planning"],
+		"branch": "network", "prerequisites": ["array_planning"],
 		"hidden_until": ["array_planning"], "effect_type": "passive", "effect_parameters": {"observation_duration_bonus": 10.0},
 		"major": false
 	},
@@ -118,28 +117,28 @@ const UPGRADE_NODES: Array[Dictionary] = [
 		# do not add the implied edge here because the tree renders every edge.
 		"id": "thermal_management", "name": "Equipment Thermal Control", "icon": "❄", "cost": 180,
 		"description": "Controls sensor heat during longer shifts and adds another 10 seconds to future observation windows.",
-		"branch": "network", "position": Vector2(520, 450), "prerequisites": ["wide_field"],
+		"branch": "network", "prerequisites": ["wide_field"],
 		"hidden_until": ["wide_field"], "effect_type": "passive", "effect_parameters": {"observation_duration_bonus": 10.0},
 		"major": false
 	},
 	{
 		"id": "extended_watch_protocol", "name": "Extended Watch Protocol", "icon": "◴", "cost": 280,
 		"description": "Coordinates a long-watch protocol and extends each future observation window by 10 seconds.",
-		"branch": "network", "position": Vector2(750, 450), "prerequisites": ["thermal_management", "trajectory"],
+		"branch": "network", "prerequisites": ["thermal_management", "trajectory"],
 		"hidden_until": ["thermal_management"], "effect_type": "transformation", "effect_parameters": {"observation_duration_bonus": 10.0},
 		"major": true
 	},
 	{
 		"id": "continuous_watch_rotation", "name": "Continuous Watch Rotation", "icon": "↻", "cost": 380,
 		"description": "Coordinates uninterrupted handoffs and extends future observation windows to their 60-second maximum.",
-		"branch": "network", "position": Vector2(1050, 150), "prerequisites": ["extended_watch_protocol", "rare_detection"],
+		"branch": "network", "prerequisites": ["extended_watch_protocol", "rare_detection"],
 		"hidden_until": ["extended_watch_protocol"], "effect_type": "transformation", "effect_parameters": {"observation_duration_bonus": 10.0},
 		"major": true
 	},
 	{
 		"id": "secondary_camera", "name": "Secondary Camera", "icon": "▣", "cost": 240,
 		"description": "Forecasts incoming objects and gives you a dish. Right-click anywhere to move the nearest dish.",
-		"branch": "network", "position": Vector2(320, 620), "prerequisites": ["array_planning"],
+		"branch": "network", "prerequisites": ["array_planning"],
 		"hidden_until": ["array_planning"], "effect_type": "automation", "effect_parameters": {"assist_slots": 1},
 		"major": true
 	},
@@ -149,28 +148,28 @@ const UPGRADE_NODES: Array[Dictionary] = [
 		# safe center placement. Its direction line still enables downstream catches.
 		"id": "predictive_dish_control", "name": "Predictive Dish Control", "icon": "⌁", "cost": 285,
 		"description": "Shift-right-click a forecast contact to reserve a dish and hand it directly to the object on entry.",
-		"branch": "network", "position": Vector2(1000, 450), "prerequisites": ["secondary_camera", "trajectory"],
+		"branch": "network", "prerequisites": ["secondary_camera", "trajectory"],
 		"hidden_until": ["secondary_camera"], "effect_type": "automation", "effect_parameters": {"dish_commitment": true},
 		"major": true
 	},
 	{
 		"id": "multi_target_analysis", "name": "Multi-Target Analysis", "icon": "⊕", "cost": 330,
 		"description": "All meteors inside the manual tracking field advance together; also adds one support camera lane that accelerates active analysis and fragment assistance.",
-		"branch": "network", "position": Vector2(610, 610), "prerequisites": ["secondary_camera", "fragment_analysis"],
+		"branch": "network", "prerequisites": ["secondary_camera", "fragment_analysis"],
 		"hidden_until": ["secondary_camera"], "effect_type": "transformation", "effect_parameters": {"assist_slots": 2, "manual_group_tracking": true},
 		"major": true
 	},
 	{
 		"id": "automated_tracking", "name": "Automated Common Tracking", "icon": "⚙", "cost": 550,
 		"description": "Common targets are analyzed automatically; rare and high-value targets still need you.",
-		"branch": "network", "position": Vector2(900, 620), "prerequisites": ["multi_target_analysis"],
+		"branch": "network", "prerequisites": ["multi_target_analysis"],
 		"hidden_until": ["multi_target_analysis"], "effect_type": "automation", "effect_parameters": {"common_rate": 0.29},
 		"major": true
 	},
 	{
 		"id": "observatory_network", "name": "Observatory Network", "icon": "✧", "cost": 720,
 		"description": "Links the whole array; previews shower entry sectors; adds a second steerable dish; and keeps two support camera lanes that accelerate active analysis.",
-		"branch": "network", "position": Vector2(1200, 575), "prerequisites": ["automated_tracking", "shower_detector"],
+		"branch": "network", "prerequisites": ["automated_tracking", "shower_detector"],
 		"hidden_until": ["automated_tracking"], "effect_type": "transformation", "effect_parameters": {"assist_slots": 3, "shower_preview": true},
 		"major": true
 	}

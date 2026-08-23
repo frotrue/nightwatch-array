@@ -7,12 +7,14 @@ const SUPPORTED_LOCALES := ["en", "ko"]
 
 var locale: String = "en"
 var tutorial_completed: bool = false
+var research_chart_rotation: float = 0.0
 
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	locale = _load_locale()
 	tutorial_completed = _load_tutorial_completed()
+	research_chart_rotation = _load_research_chart_rotation()
 	TranslationServer.set_locale(locale)
 
 
@@ -50,6 +52,22 @@ func set_tutorial_completed(completed: bool) -> void:
 		push_warning("Could not save tutorial setting: %s" % error_string(error))
 
 
+func get_research_chart_rotation() -> float:
+	return research_chart_rotation
+
+
+func set_research_chart_rotation(value: float, persist: bool = true) -> void:
+	research_chart_rotation = wrapf(value, -PI, PI)
+	if not persist:
+		return
+	var config := ConfigFile.new()
+	config.load(SETTINGS_PATH)
+	config.set_value("research_chart", "rotation", research_chart_rotation)
+	var error := config.save(SETTINGS_PATH)
+	if error != OK:
+		push_warning("Could not save research chart rotation: %s" % error_string(error))
+
+
 func _load_locale() -> String:
 	var fallback := OS.get_locale_language().to_lower().left(2)
 	if fallback not in SUPPORTED_LOCALES:
@@ -66,6 +84,13 @@ func _load_tutorial_completed() -> bool:
 	if config.load(SETTINGS_PATH) != OK:
 		return false
 	return bool(config.get_value("onboarding", "tutorial_completed", false))
+
+
+func _load_research_chart_rotation() -> float:
+	var config := ConfigFile.new()
+	if config.load(SETTINGS_PATH) != OK:
+		return 0.0
+	return wrapf(float(config.get_value("research_chart", "rotation", 0.0)), -PI, PI)
 
 
 func _save_locale() -> void:

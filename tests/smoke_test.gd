@@ -133,6 +133,8 @@ func _run() -> void:
 	_check(TranslationServer.get_locale().left(2) == "ko", "Korean locale activates through game settings")
 	_check("설정" in game.hud.settings_button.text, "HUD refreshes with Korean text")
 	_check(game.upgrade_tree.title_label.text == "관측망", "upgrade tree refreshes with Korean text")
+	_check(TranslationServer.translate("CONSTELLATION_CASSIOPEIA") == "카시오페이아자리  /  광학", "research chart localizes constellation branch labels")
+	_check(TranslationServer.translate("STAR_TSIH") == "감마 카시오페이아", "research inspector uses the factual Tsih star name in Korean")
 	_check(TranslationServer.translate("HUD_AUTOSAVED") == "자동 저장됨", "Korean autosave status stays concise")
 	_check(TranslationServer.translate("HUD_OBSERVATION_TIME") % [1, 1, 0] == "1차 관측  •  01:00", "Korean round countdown reads naturally")
 	_check(TranslationServer.translate("TREE_INTERMISSION_SUBTITLE") % [2, 30] == "업그레이드 시간  /  2차 관측은 30초", "Korean upgrade-break guidance explains the next round and duration")
@@ -260,31 +262,88 @@ func _run() -> void:
 		"edge_detection": opening_detection.position,
 		"array_planning": opening_network.position
 	}
-	_check(is_equal_approx(opening_optics.position.x, opening_detection.position.x) and is_equal_approx(opening_detection.position.x, opening_network.position.x), "opening branch cards use the permanent branch-aligned layout")
-	_check(opening_optics.position.y < opening_detection.position.y and opening_detection.position.y < opening_network.position.y, "opening branches are stacked like the full research tree")
+	var chart_data = load("res://scripts/research_chart_data.gd")
+	var expected_chart_node_ids: Array[String] = []
+	for definition in balance.UPGRADE_NODES:
+		expected_chart_node_ids.append(String(definition.id))
+	var chart_validation_errors: Array[String] = chart_data.validation_errors(expected_chart_node_ids)
+	_check(chart_validation_errors.is_empty(), "research chart maps every upgrade exactly once with valid constellation segments")
+	var chart_node_stars: Dictionary = chart_data.node_star_map()
+	var adjacent_internal_edges := true
+	for definition in balance.UPGRADE_NODES:
+		var target_node_id := String(definition.id)
+		var target_location: Dictionary = chart_node_stars[target_node_id]
+		for prerequisite_variant in definition.prerequisites:
+			var prerequisite_node_id := String(prerequisite_variant)
+			var prerequisite_location: Dictionary = chart_node_stars[prerequisite_node_id]
+			if String(prerequisite_location.constellation_id) != String(target_location.constellation_id):
+				continue
+			var constellation: Dictionary = chart_data.CONSTELLATIONS[target_location.constellation_id]
+			var prerequisite_star_id := String(prerequisite_location.star.id)
+			var target_star_id := String(target_location.star.id)
+			var edge_matches_segment := false
+			for segment_variant in constellation.segments:
+				var segment: Array = segment_variant
+				if (String(segment[0]) == prerequisite_star_id and String(segment[1]) == target_star_id) or (String(segment[1]) == prerequisite_star_id and String(segment[0]) == target_star_id):
+					edge_matches_segment = true
+					break
+			if not edge_matches_segment:
+				adjacent_internal_edges = false
+	_check(adjacent_internal_edges, "same-constellation prerequisites follow declared figure segments instead of cutting across them")
+	_check(opening_optics.position != opening_detection.position and opening_detection.position != opening_network.position, "opening research nodes occupy distinct constellation positions")
+	var optics_center_before := opening_optics.position + opening_optics.size * 0.5
+	var optics_radius_before := optics_center_before.distance_to(game.upgrade_tree.CHART_ORIGIN)
+	game.upgrade_tree._rotate_chart(game.upgrade_tree.ROTATION_STEP)
+	var optics_center_after := opening_optics.position + opening_optics.size * 0.5
+	_check(is_equal_approx(optics_radius_before, optics_center_after.distance_to(game.upgrade_tree.CHART_ORIGIN)), "mouse-wheel chart rotation preserves each star's polar radius")
+	_check(absf((optics_center_before - game.upgrade_tree.CHART_ORIGIN).angle_to(optics_center_after - game.upgrade_tree.CHART_ORIGIN) - game.upgrade_tree.ROTATION_STEP) < 0.001, "research chart rotation changes only the global polar angle")
+	game.upgrade_tree._reset_view()
+	_check(is_zero_approx(game.upgrade_tree.rotation_offset), "research chart reset returns to north")
 	_check(game.upgrade_tree.node_buttons["long_exposure"].visible and game.upgrade_tree.node_buttons["long_exposure"].get_meta("visual_state") == "teaser", "one upcoming system is previewed as an unresolved signal")
-	_check(opening_optics.size.x <= 104.0 and opening_optics.size.y <= 82.0, "research nodes use compact icon-first tiles")
-	_check(game.upgrade_tree.detail_panel.visible and game.upgrade_tree.selected_node_id == "better_lens", "fixed inspector defaults to the first actionable system")
+	_check(opening_optics.size == game.upgrade_tree.STAR_HIT_SIZE, "research stars use compact transparent point hit targets")
+	_check(not game.upgrade_tree.tooltip_panel.visible and game.upgrade_tree.hovered_node_id.is_empty(), "research chart opens without a persistent inspector selection")
+	_check(game.upgrade_tree.node_names["better_lens"].visible and "12" in game.upgrade_tree.node_costs["better_lens"].text, "an actionable node label shows its cost without hover")
 	game.upgrade_tree._on_node_hovered("edge_detection")
-	_check(game.upgrade_tree.selected_node_id == "edge_detection", "hovering a node updates the fixed inspector")
+	_check(game.upgrade_tree.tooltip_panel.visible and game.upgrade_tree.hovered_node_id == "edge_detection", "hovering a node opens its cursor tooltip")
+	_check("β UMa" in game.upgrade_tree.tooltip_star.text, "research tooltip identifies the real star and Bayer designation")
+	_check(game.upgrade_tree.tooltip_panel.mouse_filter == Control.MOUSE_FILTER_IGNORE, "research tooltip never intercepts the star hit target")
+	game.upgrade_tree._on_node_unhovered("edge_detection")
+	_check(not game.upgrade_tree.tooltip_panel.visible and game.upgrade_tree.hovered_node_id.is_empty(), "leaving a node hides its research tooltip")
+	game.upgrade_tree._on_node_hovered("better_lens")
+	_check(game.upgrade_tree.tooltip_panel.visible, "research tooltip is visible before chart rotation")
+	game.upgrade_tree._rotate_chart(game.upgrade_tree.ROTATION_STEP)
+	_check(not game.upgrade_tree.tooltip_panel.visible and game.upgrade_tree.tooltip_suppressed_until_motion, "rotating the chart hides the research tooltip until pointer movement")
 	game.upgrade_tree._on_node_unhovered("better_lens")
-	_check(game.upgrade_tree.detail_panel.visible and game.upgrade_tree.selected_node_id == "edge_detection", "fixed inspector remains readable after the pointer leaves a node")
+	game.upgrade_tree._reset_view()
 	game.progression.add_debug_data(12.0)
 	var upgrades_before_selection: int = int(game.progression.upgrade_level)
 	game.upgrade_tree._on_node_hold_started("better_lens")
 	game.upgrade_tree._process(game.upgrade_tree.HOLD_PURCHASE_SECONDS * 0.45)
 	var partial_hold_bar = game.upgrade_tree.node_hold_bars["better_lens"]
-	_check(partial_hold_bar.size.y >= opening_optics.size.y - 1.0 and partial_hold_bar.fill_ratio > 0.0 and partial_hold_bar.fill_ratio < 1.0, "node installation draws a partial liquid fill across the full tile")
-	_check(game.progression.upgrade_level == upgrades_before_selection and partial_hold_bar.visible, "holding an affordable node fills it without purchasing early")
+	_check(partial_hold_bar.size == opening_optics.size and partial_hold_bar.hold_ratio > 0.0 and partial_hold_bar.hold_ratio < 1.0, "node installation draws a partial radial arc around the star")
+	_check(game.progression.upgrade_level == upgrades_before_selection, "holding an affordable star advances its arc without purchasing early")
 	game.upgrade_tree._on_node_hold_released("better_lens")
-	_check(game.progression.upgrade_level == upgrades_before_selection and not partial_hold_bar.visible, "releasing a node before the meter fills cancels installation")
+	_check(game.progression.upgrade_level == upgrades_before_selection and is_zero_approx(partial_hold_bar.hold_ratio), "releasing a star before the arc completes cancels installation")
 	game.upgrade_tree._on_node_hold_started("better_lens")
 	game.upgrade_tree._process(game.upgrade_tree.HOLD_PURCHASE_SECONDS + 0.01)
 	_check(game.progression.has_upgrade("better_lens") and game.upgrade_tree.held_node_id.is_empty(), "a full node hold purchases the system exactly once")
+	_check(partial_hold_bar.visual_state == "purchased", "purchasing research turns its mapped star fully bright")
+	var first_frontier: Array[PackedStringArray] = game.upgrade_tree._frontier_connections()
+	_check(PackedStringArray(["better_lens", "long_exposure"]) in first_frontier and PackedStringArray(["better_lens", "observation_streak"]) in first_frontier, "a purchased star lights connections to its newly available frontier")
 	game.progression.reset()
 	var zoom_before_button: float = float(game.upgrade_tree.zoom)
 	game.upgrade_tree._zoom_from_center(1.10)
 	_check(game.upgrade_tree.zoom > zoom_before_button, "explicit zoom controls change the research-tree scale")
+	game.upgrade_tree._reset_view()
+	var rotation_before_ctrl_wheel: float = game.upgrade_tree.rotation_offset
+	var zoom_before_ctrl_wheel: float = game.upgrade_tree.zoom
+	var ctrl_wheel := InputEventMouseButton.new()
+	ctrl_wheel.button_index = MOUSE_BUTTON_WHEEL_UP
+	ctrl_wheel.pressed = true
+	ctrl_wheel.ctrl_pressed = true
+	ctrl_wheel.position = game.upgrade_tree.content_clip.global_position + game.upgrade_tree.content_clip.size * 0.5
+	game.upgrade_tree._on_tree_viewport_gui_input(ctrl_wheel)
+	_check(is_equal_approx(game.upgrade_tree.rotation_offset, rotation_before_ctrl_wheel) and game.upgrade_tree.zoom > zoom_before_ctrl_wheel, "Ctrl+wheel zooms the research chart without rotating it")
 	game.upgrade_tree._reset_view()
 	var pan_before_left_drag: Vector2 = game.upgrade_tree.pan_position
 	var left_down := InputEventMouseButton.new()
@@ -298,7 +357,7 @@ func _run() -> void:
 	left_up.button_index = MOUSE_BUTTON_LEFT
 	left_up.pressed = false
 	game.upgrade_tree._on_tree_viewport_gui_input(left_up)
-	_check(game.upgrade_tree.pan_position == pan_before_left_drag + left_drag.relative and not game.upgrade_tree.panning, "left-dragging empty space pans the research tree and releases cleanly")
+	_check(game.upgrade_tree.pan_position == pan_before_left_drag, "left-dragging empty sky does not move the framed research chart")
 	game.upgrade_tree.close_tree()
 	_check(not paused, "closing the upgrade tree resumes gameplay")
 
