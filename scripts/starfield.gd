@@ -41,19 +41,28 @@ func _rebuild_stars() -> void:
 func _draw() -> void:
 	var size := get_viewport_rect().size
 	# Layered bands give a restrained vertical night-sky gradient without textures.
-	var bands := 36
+	# A radial well centred just below the frame, so the sky is darkest overhead
+	# and the red-light information layer never competes with a blue field.
+	var bands := 120
+	var origin := Vector2(size.x * 0.5, size.y * 1.08)
+	var reach := Vector2(size.x * 1.2, size.y * 0.9).length() * 0.5
 	for index in range(bands):
 		var t := float(index) / float(bands - 1)
-		var top := Color("050a1c").lerp(Color("102747"), t)
-		var storm_tint := Color("291e45")
-		top = top.lerp(storm_tint, activity * (0.08 + t * 0.12))
-		draw_rect(Rect2(0.0, t * size.y, size.x, size.y / bands + 2.0), top)
+		var band_y := (1.0 - t) * size.y
+		var distance := clampf(absf(band_y - origin.y) / maxf(reach, 1.0), 0.0, 1.0)
+		var sky := Color("05070C")
+		if distance <= 0.34:
+			sky = Color("14202D").lerp(Color("050911"), smoothstep(0.0, 1.0, distance / 0.34))
+		elif distance <= 0.72:
+			sky = Color("050911").lerp(Color("05070C"), smoothstep(0.0, 1.0, (distance - 0.34) / 0.38))
+		sky = sky.lerp(Color("2A1A1E"), activity * (0.06 + (1.0 - t) * 0.10))
+		draw_rect(Rect2(0.0, band_y - size.y / bands, size.x, size.y / bands + 2.0), sky)
 
 	for star in stars:
 		var p: Vector2 = star.p * size
 		var pulse := 0.62 + sin(float(star.phase)) * 0.16
 		pulse += activity * 0.12
-		var star_color := Color("c8ddff").lerp(Color("ffffff"), float(star.blue))
+		var star_color := Color("d9dee6").lerp(Color("ffffff"), float(star.blue))
 		star_color.a = clampf(pulse, 0.22, 1.0)
 		var radius := float(star.size)
 		draw_circle(p, radius, star_color)
@@ -68,9 +77,9 @@ func _draw() -> void:
 		Vector2(size.x * 0.62, horizon_y + 3), Vector2(size.x * 0.81, horizon_y - 7),
 		Vector2(size.x, horizon_y + 4), Vector2(size.x, size.y), Vector2(0, size.y)
 	])
-	draw_colored_polygon(ridge, Color("030713"))
+	draw_colored_polygon(ridge, Color("03050A"))
 	var dome_center := Vector2(size.x * 0.16, horizon_y - 3)
-	draw_circle(dome_center, 23.0, Color("060b19"))
-	draw_rect(Rect2(dome_center.x - 25.0, dome_center.y, 50.0, 25.0), Color("060b19"))
-	draw_line(dome_center + Vector2(0, -22), dome_center + Vector2(14, -36), Color("111e30"), 3.0)
-	draw_circle(dome_center + Vector2(15, -37), 2.0, Color("6b8cae"))
+	draw_circle(dome_center, 23.0, Color("06080F"))
+	draw_rect(Rect2(dome_center.x - 25.0, dome_center.y, 50.0, 25.0), Color("06080F"))
+	draw_line(dome_center + Vector2(0, -22), dome_center + Vector2(14, -36), Color("1A1712"), 3.0)
+	draw_circle(dome_center + Vector2(15, -37), 2.0, Color("A15D3E"))

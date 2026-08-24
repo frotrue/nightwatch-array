@@ -5,6 +5,7 @@ signal tree_closed
 
 const Balance = preload("res://scripts/game_balance.gd")
 const ChartData = preload("res://scripts/research_chart_data.gd")
+const UITheme = preload("res://scripts/ui_theme.gd")
 
 const TREE_SIZE := Vector2(1460, 780)
 const MIN_ZOOM := 0.55
@@ -78,39 +79,40 @@ class StarNodeVisual:
 	func _draw() -> void:
 		var center := size * 0.5
 		var radius := visual_radius()
-		var state_alpha := 0.42
-		var core_color := Color("758296")
+		var pulse := 1.0 + (sin(pulse_phase) * 0.12 if visual_state == "available" and affordable else 0.0)
+		if star_kind == "nebula" and visual_state != "hidden":
+			draw_circle(center, radius * 7.0, Color(UITheme.STAR_INSTALLED_GLOW, 0.30))
 		match visual_state:
 			"purchased":
-				state_alpha = 1.0
-				core_color = branch_color.lightened(0.46)
+				draw_circle(center, radius * 3.4, Color(UITheme.STAR_INSTALLED_GLOW, 0.70))
+				draw_circle(center, radius, UITheme.STAR_INSTALLED)
 			"available":
-				state_alpha = 0.92 if affordable else 0.68
-				core_color = Color("fff4ba") if affordable else branch_color.lightened(0.18)
-			"locked":
-				state_alpha = 0.46
-				core_color = Color("667083")
-			"teaser":
-				state_alpha = 0.34
-				core_color = Color("777b8a")
-		var pulse := 1.0 + (sin(pulse_phase) * 0.12 if visual_state == "available" and affordable else 0.0)
-		if star_kind == "nebula":
-			draw_circle(center + Vector2(-3.0, 1.0), radius * 2.5 * pulse, Color(branch_color, 0.08 * state_alpha))
-			draw_circle(center + Vector2(3.0, -2.0), radius * 1.8 * pulse, Color(core_color, 0.12 * state_alpha))
-		else:
-			draw_circle(center, radius * 2.7 * pulse, Color(branch_color, 0.08 * state_alpha))
-		if visual_state == "available" or visual_state == "purchased" or hovered:
-			draw_circle(center, radius * 1.65 * pulse, Color(branch_color, (0.20 if hovered else 0.13) * state_alpha), false, 1.4, true)
-		draw_circle(center, radius * pulse, Color(core_color, state_alpha))
-		draw_circle(center, maxf(1.2, radius * 0.33), Color(1.0, 1.0, 1.0, state_alpha))
-		if visual_state == "purchased" or (visual_state == "available" and affordable):
-			var glint := radius * (2.3 if visual_state == "purchased" else 1.9)
-			draw_line(center - Vector2(glint, 0), center + Vector2(glint, 0), Color(core_color, 0.42 * state_alpha), 1.0, true)
-			draw_line(center - Vector2(0, glint), center + Vector2(0, glint), Color(core_color, 0.32 * state_alpha), 1.0, true)
-		if visual_state == "teaser":
-			draw_string(ThemeDB.fallback_font, center + Vector2(-3.5, 4.0), "?", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("a8adbd"))
+				if affordable:
+					draw_circle(center, radius * 5.2 * pulse, Color(UITheme.STAR_READY_RING, 0.50), false, 1.0, true)
+					draw_circle(center, radius, UITheme.STAR_READY_FILL)
+					draw_circle(center, radius, UITheme.STAR_READY_BORDER, false, 1.0, true)
+				else:
+					draw_circle(center, radius, UITheme.STAR_SHORT_BORDER, false, 1.0, true)
+			"locked", "teaser":
+				draw_circle(center, maxf(1.5, radius * 0.6), Color(UITheme.STAR_LOCKED, 0.24))
+			_:
+				draw_circle(center, maxf(1.25, radius * 0.5), Color(UITheme.STAR_BACKGROUND, 0.30))
+		if hovered and visual_state != "hidden":
+			draw_circle(center, radius * 2.6, Color(UITheme.STAR_READY_RING, 0.28), false, 1.0, true)
 		if hold_ratio > 0.0:
-			draw_arc(center, radius + 7.0, -PI * 0.5, -PI * 0.5 + TAU * hold_ratio, 32, Color("fff3a3"), 2.4, true)
+			# The gauge wraps the star so hand and eye watch the same place.
+			draw_arc(center, radius + UITheme.px(11.0), 0.0, TAU, 48, Color(UITheme.HORIZON_TICK, 0.40), 1.0, true)
+			draw_arc(
+				center,
+				radius + UITheme.px(11.0),
+				-PI * 0.5,
+				-PI * 0.5 + TAU * hold_ratio,
+				48,
+				UITheme.STAR_READY_RING,
+				UITheme.px(2.6),
+				true
+			)
+
 
 var progression: Node
 var settings_controller: Node
@@ -127,13 +129,13 @@ var tooltip_star: Label
 var tooltip_description: Label
 var tooltip_meta: Label
 var title_label: Label
+var installed_caption: Label
+var progress_track: ColorRect
+var progress_fill: ColorRect
+var close_underline: ColorRect
+var north_label: Label
 var subtitle_label: Label
-var reset_view_button: Button
-var zoom_out_button: Button
-var zoom_in_button: Button
-var zoom_label: Label
 var close_button: Button
-var legend_label: Label
 var controls_label: Label
 
 var node_buttons: Dictionary = {}
@@ -229,7 +231,7 @@ func _refresh_phase_context() -> void:
 	if subtitle_label == null or close_button == null:
 		return
 	if intermission_active:
-		subtitle_label.text = tr("TREE_INTERMISSION_SUBTITLE") % [intermission_next_round, intermission_next_duration]
+		subtitle_label.text = tr("TREE_NEXT_OBSERVATION") % [intermission_next_round, intermission_next_duration]
 		close_button.text = tr("TREE_START_OBSERVATION")
 	else:
 		subtitle_label.text = tr("TREE_SUBTITLE")
@@ -337,8 +339,8 @@ func _on_content_resized() -> void:
 func _apply_transform() -> void:
 	tree_canvas.position = pan_position
 	tree_canvas.scale = Vector2.ONE * zoom
-	if zoom_label != null:
-		zoom_label.text = "%d%%" % int(round(zoom * 100.0))
+	if north_label != null:
+		north_label.position.y = minf(_north_label_y(), controls_label.position.y - north_label.get_combined_minimum_size().y - UITheme.px(6.0))
 
 
 func _rotate_chart(amount: float) -> void:
@@ -348,6 +350,77 @@ func _rotate_chart(amount: float) -> void:
 	if settings_controller != null:
 		settings_controller.set_research_chart_rotation(rotation_offset, false)
 	_layout_chart()
+
+
+func _grouped(value: int) -> String:
+	var digits := str(absi(value))
+	var grouped := ""
+	for index in range(digits.length()):
+		if index > 0 and (digits.length() - index) % 3 == 0:
+			grouped += ","
+		grouped += digits[index]
+	return ("-" if value < 0 else "") + grouped
+
+
+func _layout_chart_header() -> void:
+	if overlay == null or data_readout == null:
+		return
+	var frame := overlay.size
+	var value_size := data_readout.get_combined_minimum_size()
+	data_readout.size = value_size
+	title_label.position = Vector2(UITheme.px(56.0), UITheme.px(46.0) + value_size.y * 0.86 + UITheme.px(12.0))
+
+	var line_width := UITheme.px(360.0)
+	var centre := frame.x * 0.5
+	for label in [installed_caption, systems_readout]:
+		label.size.x = line_width
+		label.position.x = centre - line_width * 0.5
+	installed_caption.position.y = UITheme.px(52.0)
+	var caption_height := installed_caption.get_combined_minimum_size().y
+	systems_readout.position.y = installed_caption.position.y + caption_height + UITheme.px(9.0)
+	var count_height := systems_readout.get_combined_minimum_size().y
+	var line_y := systems_readout.position.y + count_height + UITheme.px(14.0)
+	progress_track.position = Vector2(centre - line_width * 0.5, line_y)
+	progress_track.size = Vector2(line_width, 1.0)
+	progress_fill.position = progress_track.position
+	var ratio := 0.0
+	if progression != null:
+		ratio = float(progression.upgrade_level) / maxf(1.0, float(Balance.UPGRADE_NODES.size()))
+	progress_fill.size = Vector2(line_width * clampf(ratio, 0.0, 1.0), 1.0)
+
+	var action_width := UITheme.px(360.0)
+	close_button.size = Vector2(action_width, UITheme.px(30.0))
+	close_button.position = Vector2(frame.x - UITheme.px(56.0) - action_width, UITheme.px(50.0))
+	var underline_width := close_button.get_theme_font("font").get_string_size(
+		close_button.text,
+		HORIZONTAL_ALIGNMENT_LEFT,
+		-1,
+		UITheme.size_px(20.0)
+	).x + UITheme.px(12.0)
+	close_underline.size = Vector2(underline_width, 1.0)
+	close_underline.position = Vector2(
+		frame.x - UITheme.px(56.0) - underline_width,
+		close_button.position.y + close_button.size.y + UITheme.px(7.0)
+	)
+	subtitle_label.size.x = action_width
+	subtitle_label.position = Vector2(
+		frame.x - UITheme.px(56.0) - action_width,
+		close_underline.position.y + UITheme.px(16.0)
+	)
+
+	var wide := frame.x
+	for label in [tree_status, controls_label, north_label]:
+		label.size.x = wide
+		label.position.x = 0.0
+	tree_status.position.y = progress_track.position.y + UITheme.px(26.0)
+	controls_label.position.y = frame.y - UITheme.px(12.0) - controls_label.get_combined_minimum_size().y
+	north_label.position.y = minf(_north_label_y(), controls_label.position.y - north_label.get_combined_minimum_size().y - UITheme.px(6.0))
+
+
+func _north_label_y() -> float:
+	# The label rides with the horizon so the pivot stays legible at any zoom.
+	var origin_y := tree_canvas.global_position.y + CHART_ORIGIN.y * zoom - overlay.global_position.y
+	return origin_y + UITheme.px(16.0)
 
 
 func _layout_chart() -> void:
@@ -469,8 +542,9 @@ func _refresh() -> void:
 	if progression == null or data_readout == null:
 		return
 	refresh_pending = false
-	data_readout.text = tr("TREE_DATA") % int(floor(progression.observation_data))
-	systems_readout.text = tr("TREE_SYSTEMS") % [progression.upgrade_level, Balance.UPGRADE_NODES.size()]
+	data_readout.text = _grouped(int(floor(progression.observation_data)))
+	_layout_chart_header()
+	systems_readout.text = tr("TREE_PROGRESS_COUNT") % [progression.upgrade_level, Balance.UPGRADE_NODES.size()]
 	var available_count := 0
 	var affordable_count := 0
 	for definition in Balance.UPGRADE_NODES:
@@ -518,20 +592,16 @@ func _is_teaser_visible(definition: Dictionary) -> bool:
 
 func _apply_node_visual(definition: Dictionary, visual_state: String) -> void:
 	var node_id := String(definition.id)
-	var branch: Dictionary = Balance.BRANCHES[String(definition.branch)]
-	var branch_color: Color = branch.color
 	var star_visual: StarNodeVisual = node_hold_bars[node_id]
 	var star_record: Dictionary = node_star_records[node_id]
 	var star: Dictionary = star_record.star
-	star_visual.configure(visual_state, branch_color, float(star.magnitude), String(star.kind), progression.can_purchase(node_id))
+	star_visual.configure(visual_state, Color.WHITE, float(star.magnitude), String(star.kind), progression.can_purchase(node_id))
 
 
 func _show_node_tooltip(node_id: String) -> void:
 	if progression == null or not node_buttons.has(node_id) or not node_buttons[node_id].visible:
 		return
 	var definition := Balance.upgrade_definition(node_id)
-	var branch: Dictionary = Balance.BRANCHES[String(definition.branch)]
-	var branch_color: Color = branch.color
 	var visual_state := String(node_buttons[node_id].get_meta("visual_state"))
 	var star_record: Dictionary = node_star_records[node_id]
 	var star: Dictionary = star_record.star
@@ -565,9 +635,9 @@ func _show_node_tooltip(node_id: String) -> void:
 					prerequisite_names.append(_upgrade_name(prerequisite))
 				var prerequisite_text := tr("TREE_REQUIRES") % ", ".join(prerequisite_names)
 				tooltip_meta.text = "%s  •  %s" % [tr("TREE_COST") % int(definition.cost), prerequisite_text]
-	tooltip_branch.add_theme_color_override("font_color", branch_color)
-	tooltip_meta.add_theme_color_override("font_color", Color("ffe078") if visual_state == "available" and progression.can_purchase(node_id) else branch_color.lightened(0.2))
-	tooltip_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.035, 0.045, 0.09, 0.97), branch_color, 10, 2))
+	tooltip_branch.add_theme_color_override("font_color", UITheme.TOOLTIP_LABEL)
+	tooltip_meta.add_theme_color_override("font_color", UITheme.TOOLTIP_ACTION if visual_state == "available" and progression.can_purchase(node_id) else UITheme.TOOLTIP_VALUE)
+	tooltip_panel.add_theme_stylebox_override("panel", _panel_style(UITheme.TOOLTIP_BACKGROUND, UITheme.TOOLTIP_BORDER, 0, 1))
 	tooltip_panel.visible = true
 	_position_node_tooltip(overlay.get_local_mouse_position())
 	# Container minimum sizes settle a frame after the text changes, so the first
@@ -584,11 +654,11 @@ func _on_language_changed(_locale: String) -> void:
 func _apply_locale() -> void:
 	if overlay == null:
 		return
-	title_label.text = tr("TREE_TITLE")
-	reset_view_button.text = tr("TREE_CENTER")
+	title_label.text = tr("HUD_DATA_CAPTION")
+	installed_caption.text = tr("TREE_INSTALLED_CAPTION")
+	north_label.text = tr("TREE_NORTH")
 	_refresh_phase_context()
-	legend_label.text = tr("TREE_LEGEND")
-	controls_label.text = "    " + tr("TREE_CONTROLS")
+	controls_label.text = tr("TREE_CONTROLS_FULL")
 	if progression != null:
 		node_visual_keys.clear()
 		_refresh()
@@ -609,112 +679,23 @@ func _build_interface() -> void:
 	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	overlay.visible = false
 	add_child(overlay)
-	var interface_font := SystemFont.new()
-	interface_font.font_names = PackedStringArray(["Pretendard", "Noto Sans CJK KR", "Malgun Gothic", "Segoe UI"])
-	overlay.add_theme_font_override("font", interface_font)
+	overlay.add_theme_font_override("font", UITheme.sans())
 
 	var background := ColorRect.new()
-	background.color = Color("050615")
+	background.color = Color("04060A")
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	background.mouse_filter = Control.MOUSE_FILTER_STOP
 	overlay.add_child(background)
 
-	var frame := PanelContainer.new()
-	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	frame.offset_left = 18.0
-	frame.offset_top = 16.0
-	frame.offset_right = -18.0
-	frame.offset_bottom = -16.0
-	frame.add_theme_stylebox_override("panel", _panel_style(Color("0a0e20"), Color("354d69"), 14, 1))
-	overlay.add_child(frame)
-
-	var margin := MarginContainer.new()
-	for side in ["margin_left", "margin_top", "margin_right", "margin_bottom"]:
-		margin.add_theme_constant_override(side, 14)
-	frame.add_child(margin)
-
-	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 8)
-	margin.add_child(column)
-
-	var top_row := HBoxContainer.new()
-	top_row.custom_minimum_size.y = 46.0
-	top_row.add_theme_constant_override("separation", 12)
-	column.add_child(top_row)
-	var title_stack := VBoxContainer.new()
-	title_stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title_stack.add_theme_constant_override("separation", -2)
-	top_row.add_child(title_stack)
-	title_label = _make_label(tr("TREE_TITLE"), 22, Color("e8f6ff"))
-	title_stack.add_child(title_label)
-	subtitle_label = _make_label(tr("TREE_SUBTITLE"), 10, Color("647d96"))
-	title_stack.add_child(subtitle_label)
-	data_readout = _make_label(tr("TREE_DATA") % 0, 16, Color("9fe8ff"))
-	data_readout.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	top_row.add_child(data_readout)
-	systems_readout = _make_label(tr("TREE_SYSTEMS") % [0, Balance.UPGRADE_NODES.size()], 13, Color("67e2bd"))
-	systems_readout.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	top_row.add_child(systems_readout)
-	var zoom_controls := HBoxContainer.new()
-	zoom_controls.add_theme_constant_override("separation", 3)
-	top_row.add_child(zoom_controls)
-	zoom_out_button = Button.new()
-	zoom_out_button.text = "−"
-	zoom_out_button.custom_minimum_size = Vector2(34, 34)
-	_style_header_button(zoom_out_button)
-	zoom_out_button.pressed.connect(_zoom_from_center.bind(1.0 / 1.10))
-	zoom_controls.add_child(zoom_out_button)
-	zoom_label = _make_label("78%", 10, Color("8297aa"))
-	zoom_label.custom_minimum_size = Vector2(46, 34)
-	zoom_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	zoom_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	zoom_controls.add_child(zoom_label)
-	zoom_in_button = Button.new()
-	zoom_in_button.text = "+"
-	zoom_in_button.custom_minimum_size = Vector2(34, 34)
-	_style_header_button(zoom_in_button)
-	zoom_in_button.pressed.connect(_zoom_from_center.bind(1.10))
-	zoom_controls.add_child(zoom_in_button)
-	reset_view_button = Button.new()
-	reset_view_button.text = tr("TREE_CENTER")
-	reset_view_button.custom_minimum_size = Vector2(104, 34)
-	_style_header_button(reset_view_button)
-	reset_view_button.pressed.connect(_reset_view)
-	top_row.add_child(reset_view_button)
-	close_button = Button.new()
-	close_button.text = tr("TREE_CLOSE")
-	close_button.custom_minimum_size = Vector2(108, 34)
-	_style_header_button(close_button)
-	close_button.pressed.connect(close_tree)
-	top_row.add_child(close_button)
-
-	var sub_row := HBoxContainer.new()
-	sub_row.custom_minimum_size.y = 22.0
-	column.add_child(sub_row)
-	tree_status = _make_label("", 12, Color("80e6d2"))
-	tree_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	sub_row.add_child(tree_status)
-	legend_label = _make_label(tr("TREE_LEGEND"), 10, Color("6e7890"))
-	sub_row.add_child(legend_label)
-	controls_label = _make_label("    " + tr("TREE_CONTROLS"), 10, Color("5e6b7f"))
-	sub_row.add_child(controls_label)
-
-	var content_row := HBoxContainer.new()
-	content_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	content_row.add_theme_constant_override("separation", 10)
-	column.add_child(content_row)
-	var content_frame := PanelContainer.new()
-	content_frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	content_frame.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	content_frame.add_theme_stylebox_override("panel", _panel_style(Color("060817"), Color("202d43"), 10, 1))
-	content_row.add_child(content_frame)
+	# The chart fills the frame. Information is set on the sky, not inside plates.
 	content_clip = Control.new()
 	content_clip.name = "TreeViewport"
+	content_clip.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	content_clip.clip_contents = true
 	content_clip.mouse_filter = Control.MOUSE_FILTER_PASS
 	content_clip.resized.connect(_on_content_resized)
 	content_clip.gui_input.connect(_on_tree_viewport_gui_input)
-	content_frame.add_child(content_clip)
+	overlay.add_child(content_clip)
 
 	tree_canvas = Control.new()
 	tree_canvas.name = "TreeCanvas"
@@ -723,6 +704,77 @@ func _build_interface() -> void:
 	tree_canvas.mouse_filter = Control.MOUSE_FILTER_PASS
 	tree_canvas.draw.connect(_draw_tree)
 	content_clip.add_child(tree_canvas)
+
+	var header := Control.new()
+	header.name = "ChartHeader"
+	header.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	header.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay.add_child(header)
+
+	data_readout = _spec_label("0", UITheme.mono_tabular(), 76.0, UITheme.INK_MAX, -0.03)
+	data_readout.position = Vector2(UITheme.px(56.0), UITheme.px(46.0))
+	header.add_child(data_readout)
+	title_label = _spec_label(tr("HUD_DATA_CAPTION"), UITheme.mono(), 12.0, UITheme.INK_MID, 0.28)
+	header.add_child(title_label)
+
+	installed_caption = _spec_label(tr("TREE_INSTALLED_CAPTION"), UITheme.mono(), 12.0, Color("937260"), 0.30)
+	installed_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	header.add_child(installed_caption)
+	systems_readout = _spec_label(
+		tr("TREE_PROGRESS_COUNT") % [0, Balance.UPGRADE_NODES.size()],
+		UITheme.mono_tabular(),
+		34.0,
+		UITheme.INK_HIGH
+	)
+	systems_readout.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	header.add_child(systems_readout)
+	progress_track = ColorRect.new()
+	progress_track.color = UITheme.ACCENT_DEEP
+	progress_track.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	header.add_child(progress_track)
+	progress_fill = ColorRect.new()
+	progress_fill.color = UITheme.ACCENT_LINE
+	progress_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	header.add_child(progress_fill)
+
+	close_button = Button.new()
+	close_button.text = tr("TREE_CLOSE")
+	close_button.flat = true
+	close_button.focus_mode = Control.FOCUS_NONE
+	close_button.alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	close_button.add_theme_font_override("font", UITheme.sans())
+	close_button.add_theme_font_size_override("font_size", UITheme.size_px(20.0))
+	close_button.add_theme_constant_override("spacing_glyph", UITheme.tracking(UITheme.size_px(20.0), 0.06))
+	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		close_button.add_theme_color_override(state, UITheme.BANNER_TITLE)
+	close_button.pressed.connect(close_tree)
+	header.add_child(close_button)
+	close_underline = ColorRect.new()
+	close_underline.color = UITheme.ACCENT_TEXT
+	close_underline.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	header.add_child(close_underline)
+	subtitle_label = _spec_label(
+		tr("TREE_NEXT_OBSERVATION") % [1, 20],
+		UITheme.mono(),
+		12.0,
+		UITheme.HORIZON_LABEL,
+		0.18
+	)
+	header.add_child(subtitle_label)
+	subtitle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+
+	tree_status = _spec_label("", UITheme.mono(), 12.0, UITheme.ACCENT_TEXT, 0.10)
+	tree_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	header.add_child(tree_status)
+	controls_label = _spec_label(tr("TREE_CONTROLS_FULL"), UITheme.mono(), 12.0, UITheme.INK_LOW, 0.18)
+	controls_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	header.add_child(controls_label)
+	north_label = _spec_label(tr("TREE_NORTH"), UITheme.mono(), 11.0, UITheme.HORIZON_LABEL, 0.24)
+	north_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	header.add_child(north_label)
+
+	header.resized.connect(_layout_chart_header)
+	_layout_chart_header()
 
 	for definition in Balance.UPGRADE_NODES:
 		_build_node_button(definition)
@@ -771,7 +823,7 @@ func _build_node_tooltip() -> void:
 	tooltip_panel.custom_minimum_size = TOOLTIP_SIZE
 	tooltip_panel.z_index = 100
 	tooltip_panel.visible = false
-	tooltip_panel.add_theme_stylebox_override("panel", _panel_style(Color("0b1020"), Color("2d4055"), 10, 1))
+	tooltip_panel.add_theme_stylebox_override("panel", _panel_style(UITheme.TOOLTIP_BACKGROUND, UITheme.TOOLTIP_BORDER, 0, 1))
 	overlay.add_child(tooltip_panel)
 	# The panel must re-fit exactly when its layout settles. A deferred call is one
 	# frame too early: the container's minimum size is still the previous entry's.
@@ -886,17 +938,15 @@ func _draw_tree() -> void:
 		var background_position := CHART_ORIGIN + (Vector2(BACKGROUND_STARS[index]) - CHART_ORIGIN).rotated(rotation_offset)
 		var radius := 1.7 if index % 5 == 0 else 1.0
 		var alpha := 0.28 if index % 5 == 0 else 0.16
-		tree_canvas.draw_circle(background_position, radius, Color(0.65, 0.82, 1.0, alpha))
+		tree_canvas.draw_circle(background_position, radius, Color(UITheme.STAR_BACKGROUND, alpha))
 	_draw_chart_horizon()
 	for constellation_id in ChartData.CONSTELLATIONS:
 		var constellation: Dictionary = ChartData.CONSTELLATIONS[constellation_id]
-		var branch_color: Color = Balance.BRANCHES[String(constellation.branch)].color
 		for segment_variant in constellation.segments:
 			var segment: Array = segment_variant
 			var start := Vector2(star_positions["%s/%s" % [constellation_id, String(segment[0])]])
 			var finish := Vector2(star_positions["%s/%s" % [constellation_id, String(segment[1])]])
-			tree_canvas.draw_line(start, finish, Color("02050c"), 4.2, true)
-			tree_canvas.draw_line(start, finish, Color(branch_color, 0.25), 1.45, true)
+			tree_canvas.draw_line(start, finish, _segment_color(constellation_id, segment), _segment_width(constellation_id, segment), true)
 		for star_variant in constellation.stars:
 			var star: Dictionary = star_variant
 			var point := Vector2(star_positions["%s/%s" % [constellation_id, String(star.id)]])
@@ -904,8 +954,8 @@ func _draw_tree() -> void:
 			var node_id := String(star.get("node_id", ""))
 			var alpha := 0.23 if node_id.is_empty() else 0.12
 			if String(star.kind) == "nebula":
-				tree_canvas.draw_circle(point, star_radius * 2.2, Color(branch_color, alpha * 0.42))
-			tree_canvas.draw_circle(point, maxf(1.2, star_radius * 0.55), Color(branch_color.lightened(0.26), alpha))
+				tree_canvas.draw_circle(point, star_radius * 2.2, Color(UITheme.STAR_INSTALLED_GLOW, alpha * 0.42))
+			tree_canvas.draw_circle(point, maxf(1.2, star_radius * 0.55), Color(UITheme.STAR_BACKGROUND, alpha))
 	if progression == null:
 		return
 	# Only the current purchasable frontier stays lit. Purchased history is
@@ -917,11 +967,7 @@ func _draw_tree() -> void:
 		var connection := _connection_points(source_id, target_id)
 		var start := connection[0]
 		var finish := connection[1]
-		var definition := Balance.upgrade_definition(target_id)
-		var branch_color: Color = Balance.BRANCHES[String(definition.branch)].color
-		tree_canvas.draw_line(start, finish, Color(0.01, 0.015, 0.035, 0.90), 7.0, true)
-		tree_canvas.draw_line(start, finish, Color(branch_color.lightened(0.18), 0.88), 2.8, true)
-		tree_canvas.draw_circle(start.lerp(finish, 0.5), 2.4, branch_color.lightened(0.28))
+		tree_canvas.draw_line(start, finish, Color(UITheme.LINE_FRONTIER, 0.60), 1.5, true)
 	if not hovered_node_id.is_empty() and node_positions.has(hovered_node_id):
 		var hovered_state: String = progression.get_node_state(hovered_node_id)
 		if hovered_state == "locked" or hovered_state == "hidden":
@@ -934,7 +980,61 @@ func _draw_tree() -> void:
 				_draw_dashed_connection(connection[0], connection[1], Color("79859b"))
 
 
+func _segment_color(constellation_id: String, segment: Array) -> Color:
+	var states := _segment_states(constellation_id, segment)
+	if states[0] == "purchased" and states[1] == "purchased":
+		return Color(UITheme.LINE_INSTALLED, 0.42)
+	if (states[0] == "purchased" and states[1] == "available") or (states[1] == "purchased" and states[0] == "available"):
+		return Color(UITheme.LINE_FRONTIER, 0.60)
+	return Color(UITheme.LINE_IDLE, 0.13)
+
+
+func _segment_width(constellation_id: String, segment: Array) -> float:
+	var states := _segment_states(constellation_id, segment)
+	var frontier := (states[0] == "purchased" and states[1] == "available") or (states[1] == "purchased" and states[0] == "available")
+	return 1.5 if frontier else 1.0
+
+
+func _segment_states(constellation_id: String, segment: Array) -> PackedStringArray:
+	var states := PackedStringArray(["", ""])
+	if progression == null:
+		return states
+	var constellation: Dictionary = ChartData.CONSTELLATIONS[constellation_id]
+	for index in range(2):
+		for star_variant in constellation.stars:
+			var star: Dictionary = star_variant
+			if String(star.id) != String(segment[index]):
+				continue
+			var node_id := String(star.get("node_id", ""))
+			states[index] = "" if node_id.is_empty() else String(progression.get_node_state(node_id))
+			break
+	return states
+
+
 func _draw_chart_horizon() -> void:
+	# The wheel turns about this point; without a mark the rotation reads as
+	# arbitrary rather than as a sky pivoting on due north.
+	var tick_height := UITheme.px(13.0)
+	tree_canvas.draw_line(
+		Vector2(CHART_ORIGIN.x, CHART_ORIGIN.y - tick_height),
+		Vector2(CHART_ORIGIN.x, CHART_ORIGIN.y),
+		UITheme.HORIZON_TICK,
+		1.0,
+		true
+	)
+	var span := TREE_SIZE.x * 0.375
+	var steps := 24
+	for index in range(steps):
+		var a := float(index) / float(steps)
+		var b := float(index + 1) / float(steps)
+		for side in [-1.0, 1.0]:
+			tree_canvas.draw_line(
+				Vector2(CHART_ORIGIN.x + side * span * a, CHART_ORIGIN.y),
+				Vector2(CHART_ORIGIN.x + side * span * b, CHART_ORIGIN.y),
+				Color(UITheme.HORIZON, 1.0 - (a + b) * 0.5),
+				1.0,
+				true
+			)
 	var horizon_y := CHART_ORIGIN.y
 	var ridge := PackedVector2Array([
 		Vector2(0, horizon_y + 9.0), Vector2(TREE_SIZE.x * 0.18, horizon_y - 4.0),
@@ -969,6 +1069,19 @@ func _style_header_button(button: Button) -> void:
 	button.add_theme_stylebox_override("normal", _panel_style(Color("11192b"), Color("344a60"), 7, 1))
 	button.add_theme_stylebox_override("hover", _panel_style(Color("17243a"), Color("5a88a6"), 7, 1))
 	button.add_theme_stylebox_override("pressed", _panel_style(Color("0b1220"), Color("72bedb"), 7, 1))
+
+
+func _spec_label(text: String, font: Font, spec_size: float, color: Color, em: float = 0.0) -> Label:
+	var label := Label.new()
+	label.text = text
+	var font_size := UITheme.size_px(spec_size)
+	label.add_theme_font_override("font", font)
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", color)
+	if not is_zero_approx(em):
+		label.add_theme_constant_override("spacing_glyph", UITheme.tracking(font_size, em))
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return label
 
 
 func _make_label(text: String, font_size: int, color: Color) -> Label:
