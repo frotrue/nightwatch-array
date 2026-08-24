@@ -256,24 +256,20 @@ func _run() -> void:
 		var deep_spec: Dictionary = balance.meteor_spec(deep_type)
 		_check(float(deep_spec.lifetime) >= 20.0 and float(deep_spec.lifetime) <= 40.0, "deep target stays within one round: " + deep_type)
 		_check(float(deep_spec.track_time) / 1.42 < float(deep_spec.lifetime), "deep target has a payable same-round analysis window: " + deep_type)
-	var filter_meteor_script = load("res://scripts/meteor.gd")
-	var unfiltered_probe = filter_meteor_script.new()
+	var spectral_meteor_script = load("res://scripts/meteor.gd")
+	var unfiltered_probe = spectral_meteor_script.new()
 	unfiltered_probe.configure(balance.meteor_spec("common"), "common", Vector2.ZERO, Vector2.RIGHT * 10.0, 1.0, {}, Vector2.RIGHT * 100.0)
-	_check(unfiltered_probe.get_filter_fit() == "inactive" and is_equal_approx(unfiltered_probe.get_filter_speed_multiplier(), 1.0), "Lyra filters are inert before Filter Wheel")
-	var filtered_probe = filter_meteor_script.new()
-	filtered_probe.configure(balance.meteor_spec("common"), "common", Vector2.ZERO, Vector2.RIGHT * 10.0, 1.0, {"spectral_identity": true}, Vector2.RIGHT * 100.0)
-	filtered_probe.lock_filter("blue")
-	filtered_probe.lock_filter("amber")
-	_check(filtered_probe.get_filter_fit() == "match", "a prepared Lyra filter locks at first target acquisition")
-	_check(filtered_probe.get_filter_speed_multiplier() == 1.25 and filtered_probe.get_filter_value_multiplier() == 1.15, "matched Lyra filters improve one contact without reflex switching")
-	var capstone_filter_probe = filter_meteor_script.new()
-	capstone_filter_probe.configure(balance.meteor_spec("common"), "common", Vector2.ZERO, Vector2.RIGHT * 10.0, 1.0, {"spectral_identity": true, "spectral_capstone": true}, Vector2.RIGHT * 100.0)
-	capstone_filter_probe.lock_filter("blue")
-	_check(capstone_filter_probe.get_filter_speed_multiplier() == 1.45 and capstone_filter_probe.get_filter_value_multiplier() == 1.35, "Lyrid Spectrograph strengthens a correctly prepared filter")
+	_check(is_equal_approx(unfiltered_probe.get_spectral_speed_multiplier(), 1.0) and is_equal_approx(unfiltered_probe.get_spectral_value_multiplier(), 1.0), "Lyra calibration is inert before its band research")
+	var calibrated_probe = spectral_meteor_script.new()
+	calibrated_probe.configure(balance.meteor_spec("common"), "common", Vector2.ZERO, Vector2.RIGHT * 10.0, 1.0, {"spectral_calibrated": true}, Vector2.RIGHT * 100.0)
+	_check(calibrated_probe.get_spectral_speed_multiplier() == 1.25 and calibrated_probe.get_spectral_value_multiplier() == 1.15, "purchased Lyra bands passively calibrate matching targets")
+	var capstone_spectral_probe = spectral_meteor_script.new()
+	capstone_spectral_probe.configure(balance.meteor_spec("common"), "common", Vector2.ZERO, Vector2.RIGHT * 10.0, 1.0, {"spectral_calibrated": true, "spectral_capstone": true}, Vector2.RIGHT * 100.0)
+	_check(capstone_spectral_probe.get_spectral_speed_multiplier() == 1.45 and capstone_spectral_probe.get_spectral_value_multiplier() == 1.35, "Lyrid Spectrograph strengthens automatic spectral calibration")
 	research_probe.free()
 	unfiltered_probe.free()
-	filtered_probe.free()
-	capstone_filter_probe.free()
+	calibrated_probe.free()
+	capstone_spectral_probe.free()
 	_check(not balance.upgrade_definition("observation_scheduling").is_empty(), "duration research is present in the tree")
 	_check(int(balance.upgrade_definition("observation_scheduling").cost) == 60, "the mandatory first duration gate stays inexpensive")
 	_check(int(balance.upgrade_definition("thermal_management").cost) == 180, "the second duration step uses its measured price")
@@ -602,9 +598,12 @@ func _run() -> void:
 	_check(not bool(wide_contact.trajectory_known), "Wide Field Sensor alone does not reveal the approach vector")
 
 	_check(game.progression.debug_purchase_node("contact_ledger"), "Contact Ledger completes the Big Dipper approach to Trajectory Prediction")
+	game.spawner._announce_regular_spawn()
+	var ledger_contact: Dictionary = game.spawner.pending_contacts[1]
+	_check(float(ledger_contact.max_error) == 58.0, "Contact Ledger narrows uncertainty without adding per-contact metrics text")
 	game.progression.debug_purchase_node("trajectory")
 	game.spawner._announce_regular_spawn()
-	var trajectory_contact: Dictionary = game.spawner.pending_contacts[1]
+	var trajectory_contact: Dictionary = game.spawner.pending_contacts[2]
 	_check(float(trajectory_contact.max_error) < float(wide_contact.max_error), "Trajectory Prediction strictly shrinks forecast error")
 	_check(float(trajectory_contact.max_error) == 40.0, "Trajectory Prediction caps the uncertainty envelope at forty pixels")
 	_check(trajectory_contact.error_offset.length() >= 14.0 and trajectory_contact.error_offset.length() <= 40.0, "Trajectory Prediction samples offsets inside its upgraded envelope")
@@ -613,7 +612,7 @@ func _run() -> void:
 
 	game.progression.debug_purchase_node("rare_detection")
 	game.spawner._announce_regular_spawn()
-	var classified_contact: Dictionary = game.spawner.pending_contacts[2]
+	var classified_contact: Dictionary = game.spawner.pending_contacts[3]
 	_check(bool(classified_contact.classified), "Rare Meteor Detection classifies every forecast deterministically")
 
 	# Secondary Camera remains independently useful through the network branch:

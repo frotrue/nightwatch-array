@@ -39,10 +39,8 @@ var wide_field_enabled: bool = false
 var precision_enabled: bool = false
 var perfect_enabled: bool = false
 var analysis_speed_multiplier: float = 1.0
-var spectral_band: String = "blue"
-var spectral_identity_enabled: bool = false
+var spectral_calibrated: bool = false
 var spectral_capstone_enabled: bool = false
-var locked_filter: String = ""
 var manual_touched: bool = false
 var manual_tracking_time: float = 0.0
 var quality_integral: float = 0.0
@@ -99,8 +97,7 @@ func configure(spec: Dictionary, meteor_type: String, start_position: Vector2, m
 	perfect_enabled = bool(features.get("perfect", false))
 	base_automatic_rate = float(features.get("automation", 0.0))
 	analysis_speed_multiplier = maxf(0.1, float(features.get("analysis_speed", 1.0)))
-	spectral_band = String(spec.get("spectral_band", "blue"))
-	spectral_identity_enabled = bool(features.get("spectral_identity", false))
+	spectral_calibrated = bool(features.get("spectral_calibrated", false))
 	spectral_capstone_enabled = bool(features.get("spectral_capstone", false))
 	rng.seed = int(start_position.x * 193.0 + start_position.y * 877.0 + velocity.length() * 31.0) & 0x7fffffff
 	wobble_phase = rng.randf_range(0.0, TAU)
@@ -221,7 +218,7 @@ func apply_manual_observation(delta: float, cursor_distance: float, tracking_rad
 	manual_tracking_time += delta
 	quality_integral += quality * delta
 	var tracking_speed := lerpf(0.72, 1.42, quality)
-	tracking_speed *= analysis_speed_multiplier * get_filter_speed_multiplier()
+	tracking_speed *= analysis_speed_multiplier * get_spectral_speed_multiplier()
 	observation_progress += delta * tracking_speed / required_track_time
 	precision_focus += delta * quality
 	queue_redraw()
@@ -234,44 +231,20 @@ func set_features(features: Dictionary) -> void:
 	perfect_enabled = bool(features.get("perfect", perfect_enabled))
 	base_automatic_rate = float(features.get("automation", base_automatic_rate))
 	analysis_speed_multiplier = maxf(0.1, float(features.get("analysis_speed", analysis_speed_multiplier)))
-	spectral_identity_enabled = bool(features.get("spectral_identity", spectral_identity_enabled))
+	spectral_calibrated = bool(features.get("spectral_calibrated", spectral_calibrated))
 	spectral_capstone_enabled = bool(features.get("spectral_capstone", spectral_capstone_enabled))
 
 
-func lock_filter(filter_id: String) -> void:
-	if spectral_identity_enabled and locked_filter.is_empty():
-		locked_filter = filter_id
+func get_spectral_speed_multiplier() -> float:
+	if not spectral_calibrated:
+		return 1.0
+	return 1.45 if spectral_capstone_enabled else 1.25
 
 
-func get_filter_fit() -> String:
-	if not spectral_identity_enabled:
-		return "inactive"
-	if locked_filter.is_empty() or locked_filter == "broadband":
-		return "broadband"
-	return "match" if locked_filter == spectral_band else "mismatch"
-
-
-func get_filter_speed_multiplier() -> float:
-	match get_filter_fit():
-		"match":
-			return 1.45 if spectral_capstone_enabled else 1.25
-		"mismatch":
-			return 0.82
-		_:
-			return 1.0
-
-
-func get_filter_value_multiplier() -> float:
-	if get_filter_fit() != "match":
+func get_spectral_value_multiplier() -> float:
+	if not spectral_calibrated:
 		return 1.0
 	return 1.35 if spectral_capstone_enabled else 1.15
-
-
-func get_spectral_color() -> Color:
-	match spectral_band:
-		"amber": return Color("ffbf66")
-		"violet": return Color("b78cff")
-		_: return Color("66bfff")
 
 
 func set_dish_assist_rate(value: float) -> void:
@@ -366,7 +339,7 @@ func get_visual_color() -> Color:
 
 
 func get_predicted_multiplier() -> float:
-	var multiplier := get_filter_value_multiplier()
+	var multiplier := get_spectral_value_multiplier()
 	if precision_enabled and manual_touched:
 		multiplier *= 1.0 + minf(2.0, precision_focus * 0.58)
 		if perfect_enabled:

@@ -103,8 +103,8 @@ Header: `DURATION_PRICING_ENV`.
 
 Pass/fail gate for the expanded 41-system graph. It runs three deterministic
 18-minute scripted-engaged watches at `0.05s` steps, buys the cheapest currently
-available research at each intermission, prepares matching Lyra filters between
-contacts, and uses predictive dishes when installed. Every seed must reach
+available research at each intermission, applies purchased Lyra calibration
+automatically, and uses predictive dishes when installed. Every seed must reach
 41/41 before the final-event clock. It also reports the 270/540/810-second
 success curve, each constellation's discovery time, and the longest interval
 without a newly available node.

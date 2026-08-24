@@ -177,7 +177,6 @@ func _process_targets(delta: float) -> void:
 		if not is_instance_valid(target):
 			continue
 		if target == manual_target:
-			_prepare_matching_filter(target)
 			target.apply_manual_observation(delta, 0.0, game.progression.get_tracking_radius())
 		target._process(delta)
 		if not target.alive:
@@ -194,16 +193,6 @@ func _first_uncovered_target():
 		if target.can_be_tracked() and not dish_locked_ids.has(target.get_instance_id()):
 			return target
 	return null
-
-
-func _prepare_matching_filter(target) -> void:
-	if not game.progression.has_upgrade("filter_wheel"):
-		return
-	var band := String(target.spectral_band)
-	if game.progression.has_upgrade("%s_band" % band):
-		target.lock_filter(band)
-	else:
-		target.lock_filter("broadband")
 
 
 func _on_contact_announced(contact: Dictionary) -> void:

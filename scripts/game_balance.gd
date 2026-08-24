@@ -179,9 +179,9 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "contact_ledger", "name": "Contact Ledger", "icon": "≣", "cost": 70,
-		"description": "Adds expected value and tracking demand to every classified forecast contact.",
+		"description": "Cross-references incoming contacts to narrow their forecast uncertainty without adding another sky label.",
 		"branch": "detection", "prerequisites": ["edge_detection"],
-		"hidden_until": ["edge_detection"], "effect_type": "unlock", "effect_parameters": {"contact_metrics": true},
+		"hidden_until": ["edge_detection"], "effect_type": "transformation", "effect_parameters": {"forecast_error_scale": 0.82},
 		"major": false
 	},
 	{
@@ -241,38 +241,38 @@ const UPGRADE_NODES: Array[Dictionary] = [
 		"major": true
 	},
 	{
-		"id": "filter_wheel", "name": "Filter Wheel", "icon": "◒", "cost": 24,
-		"description": "Identifies each target's spectral family after the mid-run survey milestone and prepares the filter wheel.",
+		"id": "filter_wheel", "name": "Spectral Classifier", "icon": "◒", "cost": 24,
+		"description": "Installs automatic spectral classification and opens passive band calibration research.",
 		"branch": "lyra", "prerequisites": [],
-		"hidden_until": [{"type": "success_count", "minimum": LYRA_DISCOVERY_SUCCESSES}], "effect_type": "unlock", "effect_parameters": {"spectral_identity": true},
+		"hidden_until": [{"type": "success_count", "minimum": LYRA_DISCOVERY_SUCCESSES}], "effect_type": "unlock", "effect_parameters": {"automatic_spectral_analysis": true},
 		"major": false
 	},
 	{
 		"id": "blue_band", "name": "Blue Band", "icon": "B", "cost": 58,
-		"description": "Adds a blue spectral filter. Press Q between contacts to prepare it.",
+		"description": "Automatically calibrates analysis for blue-band targets, improving their speed and value.",
 		"branch": "lyra", "prerequisites": ["filter_wheel"],
-		"hidden_until": ["filter_wheel"], "effect_type": "unlock", "effect_parameters": {"filter": "blue"},
+		"hidden_until": ["filter_wheel"], "effect_type": "passive", "effect_parameters": {"calibration": "blue"},
 		"major": false
 	},
 	{
 		"id": "amber_band", "name": "Amber Band", "icon": "A", "cost": 96,
-		"description": "Adds an amber spectral filter to the between-contact Q cycle.",
+		"description": "Automatically calibrates analysis for amber-band targets, improving their speed and value.",
 		"branch": "lyra", "prerequisites": ["blue_band"],
-		"hidden_until": ["blue_band"], "effect_type": "unlock", "effect_parameters": {"filter": "amber"},
+		"hidden_until": ["blue_band"], "effect_type": "passive", "effect_parameters": {"calibration": "amber"},
 		"major": false
 	},
 	{
 		"id": "violet_band", "name": "Violet Band", "icon": "V", "cost": 145,
-		"description": "Adds a violet spectral filter to the between-contact Q cycle.",
+		"description": "Automatically calibrates analysis for violet-band targets, improving their speed and value.",
 		"branch": "lyra", "prerequisites": ["amber_band"],
-		"hidden_until": ["amber_band"], "effect_type": "unlock", "effect_parameters": {"filter": "violet"},
+		"hidden_until": ["amber_band"], "effect_type": "passive", "effect_parameters": {"calibration": "violet"},
 		"major": true
 	},
 	{
 		"id": "lyrid_spectrograph", "name": "Lyrid Spectrograph", "icon": "≋", "cost": 245,
-		"description": "Turns a correctly prepared filter into faster analysis and a decisive spectral data bonus.",
+		"description": "Strengthens every calibrated spectral band for faster analysis and a decisive data bonus.",
 		"branch": "lyra", "prerequisites": ["violet_band"],
-		"hidden_until": ["violet_band"], "effect_type": "transformation", "effect_parameters": {"matched_speed": 1.45, "matched_value": 1.35},
+		"hidden_until": ["violet_band"], "effect_type": "transformation", "effect_parameters": {"calibrated_speed": 1.45, "calibrated_value": 1.35},
 		"major": true
 	},
 	{
