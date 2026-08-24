@@ -57,7 +57,7 @@ Layer 2 프로브 테스트도 통과/실패 게이트다.
 & "C:\Users\user\AppData\Local\Temp\codex-godot-4.7.2\Godot_v4.7.2-stable_win64_console.exe" --headless --path . --script res://tests/probe_layer2_test.gd
 ```
 
-계측 프로브 6개는 [docs/probes.md](docs/probes.md) 참고.
+계측 프로브 7개는 [docs/probes.md](docs/probes.md) 참고.
 
 ## 빌드
 
@@ -99,7 +99,7 @@ Windows `.exe` 내보내기. `build/`는 `.gitignore`에 있으므로 산출물�
 ```
 scenes/          main.tscn (게임 본편), probe_layer2.tscn (2층 실험용 테스트베드)
 scripts/         게임 로직. scripts/probe/ 는 probe_layer2 전용
-tests/           통과/실패 테스트 2개 + 계측 프로브 6개, 총 8개 (모두 SceneTree 스크립트)
+tests/           통과/실패 2개 + 계측 7개 + 시각 캡처 2개, 총 11개 (모두 SceneTree 스크립트)
 localization/    ui.csv 에서 생성된 en/ko 번역
 docs/            설계와 계측 문서
 build/           내보낸 exe (gitignore)

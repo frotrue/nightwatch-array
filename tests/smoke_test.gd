@@ -25,6 +25,7 @@ func _run() -> void:
 	root.add_child(game)
 	await process_frame
 	await process_frame
+	var original_research_rotation: float = game.settings.get_research_chart_rotation()
 	var startup_save_directory := "user://nightwatch_startup_smoke_saves"
 	_cleanup_smoke_saves(startup_save_directory)
 	game.save_games.set_save_directory(startup_save_directory)
@@ -225,6 +226,7 @@ func _run() -> void:
 	_check(game.progression.get_available_nodes().size() == 3, "only three opening choices are revealed")
 	_check(game.upgrade_tree.systems_readout != null, "the research chart owns the 0..21 completion readout")
 	_check(not game.hud.root_control.has_node("ArrayCompletionBar"), "the HUD no longer duplicates completion as a bar")
+	_check(not game.hud.tracking_cluster.is_processing(), "the hidden tracking instrument does no frame work before first use")
 	_check(game.progression.get_node_state("long_exposure") == "hidden", "adjacent optics node begins hidden")
 	_check(not balance.upgrade_definition("observation_scheduling").is_empty(), "duration research is present in the tree")
 	_check(int(balance.upgrade_definition("observation_scheduling").cost) == 60, "the mandatory first duration gate stays inexpensive")
@@ -252,6 +254,7 @@ func _run() -> void:
 	game.progression.reset()
 	game.upgrade_tree.open_tree()
 	await process_frame
+	game.upgrade_tree._reset_view(false)
 	_check(game.upgrade_tree.is_open(), "upgrade tree opens")
 	_check(not game.upgrade_tree.refresh_pending, "opening the upgrade tree applies one deferred refresh")
 	_check(paused, "opening the upgrade tree pauses gameplay")
@@ -298,7 +301,7 @@ func _run() -> void:
 	var optics_center_after := opening_optics.position + opening_optics.size * 0.5
 	_check(is_equal_approx(optics_radius_before, optics_center_after.distance_to(game.upgrade_tree.CHART_ORIGIN)), "mouse-wheel chart rotation preserves each star's polar radius")
 	_check(absf((optics_center_before - game.upgrade_tree.CHART_ORIGIN).angle_to(optics_center_after - game.upgrade_tree.CHART_ORIGIN) - game.upgrade_tree.ROTATION_STEP) < 0.001, "research chart rotation changes only the global polar angle")
-	game.upgrade_tree._reset_view()
+	game.upgrade_tree._reset_view(false)
 	_check(is_zero_approx(game.upgrade_tree.rotation_offset), "research chart reset returns to north")
 	_check(game.upgrade_tree.node_buttons["long_exposure"].visible and game.upgrade_tree.node_buttons["long_exposure"].get_meta("visual_state") == "teaser", "one upcoming system is previewed as an unresolved signal")
 	_check(opening_optics.size == game.upgrade_tree.STAR_HIT_SIZE, "research stars use compact transparent point hit targets")
@@ -309,14 +312,31 @@ func _run() -> void:
 	_check("북두칠성" in game.upgrade_tree.tooltip_branch.text, "research tooltip localizes the constellation name instead of showing a permanent label")
 	_check("β UMa" in game.upgrade_tree.tooltip_star.text, "research tooltip identifies the real star and Bayer designation")
 	_check(game.upgrade_tree.tooltip_panel.mouse_filter == Control.MOUSE_FILTER_IGNORE, "research tooltip never intercepts the star hit target")
+	var tooltip_refreshes_before_motion: int = game.upgrade_tree.tooltip_content_refreshes
+	var tooltip_style_id: int = game.upgrade_tree.tooltip_panel.get_theme_stylebox("panel").get_instance_id()
+	var tooltip_motion := InputEventMouseMotion.new()
+	tooltip_motion.relative = Vector2.ONE
+	for _index in range(64):
+		game.upgrade_tree._input(tooltip_motion)
+	_check(game.upgrade_tree.tooltip_content_refreshes == tooltip_refreshes_before_motion, "cursor motion repositions the research tooltip without rebuilding its content")
+	_check(game.upgrade_tree.tooltip_panel.get_theme_stylebox("panel").get_instance_id() == tooltip_style_id, "cursor motion reuses the research tooltip style")
 	game.upgrade_tree._on_node_unhovered("edge_detection")
 	_check(not game.upgrade_tree.tooltip_panel.visible and game.upgrade_tree.hovered_node_id.is_empty(), "leaving a node hides its research tooltip")
+	await process_frame
+	game.upgrade_tree._on_node_hovered("edge_detection")
+	_check(game.upgrade_tree.tooltip_refit_pending, "re-entering a cached research tooltip schedules a fresh size fit")
+	game.upgrade_tree._on_node_unhovered("edge_detection")
 	game.upgrade_tree._on_node_hovered("better_lens")
 	_check(game.upgrade_tree.tooltip_panel.visible, "research tooltip is visible before chart rotation")
 	game.upgrade_tree._rotate_chart(game.upgrade_tree.ROTATION_STEP)
 	_check(not game.upgrade_tree.tooltip_panel.visible and game.upgrade_tree.tooltip_suppressed_until_motion, "rotating the chart hides the research tooltip until pointer movement")
 	game.upgrade_tree._on_node_unhovered("better_lens")
-	game.upgrade_tree._reset_view()
+	game.upgrade_tree._on_node_hovered("edge_detection")
+	_check(not game.upgrade_tree.tooltip_panel.visible and game.upgrade_tree.tooltip_suppressed_until_motion, "stars moving under a stationary pointer do not rebuild the hidden tooltip")
+	game.upgrade_tree._input(tooltip_motion)
+	_check(game.upgrade_tree.tooltip_panel.visible and not game.upgrade_tree.tooltip_suppressed_until_motion, "real pointer motion restores the research tooltip after rotation")
+	game.upgrade_tree._on_node_unhovered("edge_detection")
+	game.upgrade_tree._reset_view(false)
 	game.progression.add_debug_data(12.0)
 	var upgrades_before_selection: int = int(game.progression.upgrade_level)
 	game.upgrade_tree._on_node_hold_started("better_lens")
@@ -336,7 +356,7 @@ func _run() -> void:
 	var zoom_before_button: float = float(game.upgrade_tree.zoom)
 	game.upgrade_tree._zoom_from_center(1.10)
 	_check(game.upgrade_tree.zoom > zoom_before_button, "explicit zoom controls change the research-tree scale")
-	game.upgrade_tree._reset_view()
+	game.upgrade_tree._reset_view(false)
 	var rotation_before_ctrl_wheel: float = game.upgrade_tree.rotation_offset
 	var zoom_before_ctrl_wheel: float = game.upgrade_tree.zoom
 	var ctrl_wheel := InputEventMouseButton.new()
@@ -346,7 +366,20 @@ func _run() -> void:
 	ctrl_wheel.position = game.upgrade_tree.content_clip.global_position + game.upgrade_tree.content_clip.size * 0.5
 	game.upgrade_tree._on_tree_viewport_gui_input(ctrl_wheel)
 	_check(is_equal_approx(game.upgrade_tree.rotation_offset, rotation_before_ctrl_wheel) and game.upgrade_tree.zoom > zoom_before_ctrl_wheel, "Ctrl+wheel zooms the research chart without rotating it")
-	game.upgrade_tree._reset_view()
+	game.upgrade_tree._reset_view(false)
+	var burst_rotation_before: float = game.upgrade_tree.rotation_offset
+	var burst_layouts_before: int = game.upgrade_tree.chart_layout_passes
+	var wheel_down := InputEventMouseButton.new()
+	wheel_down.button_index = MOUSE_BUTTON_WHEEL_DOWN
+	wheel_down.pressed = true
+	for _index in range(32):
+		game.upgrade_tree._on_tree_viewport_gui_input(wheel_down)
+	_check(game.upgrade_tree.chart_layout_passes == burst_layouts_before and is_equal_approx(game.upgrade_tree.rotation_offset, burst_rotation_before), "same-frame wheel events defer research layout work")
+	game.upgrade_tree._process(0.0)
+	var expected_burst_rotation := wrapf(burst_rotation_before + game.upgrade_tree.ROTATION_STEP * 32.0, -PI, PI)
+	_check(game.upgrade_tree.chart_layout_passes == burst_layouts_before + 1, "same-frame wheel events coalesce into one research layout pass")
+	_check(is_equal_approx(game.upgrade_tree.rotation_offset, expected_burst_rotation), "coalesced wheel input preserves the full final research rotation")
+	game.upgrade_tree._reset_view(false)
 	var pan_before_left_drag: Vector2 = game.upgrade_tree.pan_position
 	var left_down := InputEventMouseButton.new()
 	left_down.button_index = MOUSE_BUTTON_LEFT
@@ -362,6 +395,12 @@ func _run() -> void:
 	_check(game.upgrade_tree.pan_position == pan_before_left_drag, "left-dragging empty sky does not move the framed research chart")
 	game.upgrade_tree.close_tree()
 	_check(not paused, "closing the upgrade tree resumes gameplay")
+	var hidden_star_animation_stopped := true
+	for star_visual_variant in game.upgrade_tree.node_hold_bars.values():
+		var star_visual: Control = star_visual_variant
+		if star_visual.is_processing():
+			hidden_star_animation_stopped = false
+	_check(hidden_star_animation_stopped, "closing research stops hidden star animation processing")
 
 	# A cursor that crosses a meteor entirely between two rendered frames must
 	# still acquire it instead of tunnelling through the point-sampled hit area.
@@ -400,6 +439,11 @@ func _run() -> void:
 	game.hud.set_tracking(0.4, "common", 1.0, game.observer._valid_tracked_count(), Vector2(400.0, 300.0))
 	_check(game.hud.tracking_cluster.visible and game.hud.tracking_cluster.cursor == Vector2(400.0, 300.0), "the tracking cluster follows the cursor")
 	_check("40%" in game.hud.tracking_percent.text, "the cursor cluster reports tracking progress")
+	var tracking_layouts_after_first_update: int = game.hud.tracking_layout_passes
+	game.hud.set_tracking(0.4, "common", 1.0, game.observer._valid_tracked_count(), Vector2(400.0, 300.0))
+	_check(game.hud.tracking_layout_passes == tracking_layouts_after_first_update, "unchanged tracking data skips cursor text layout")
+	game.hud.set_tracking(0.4, "common", 1.0, game.observer._valid_tracked_count(), Vector2(401.0, 300.0))
+	_check(game.hud.tracking_layout_passes == tracking_layouts_after_first_update + 1, "moving the tracking cursor updates layout once")
 	game.progression.purchased_nodes.erase("multi_target_analysis")
 	game.observer.reset()
 	group_target_a.queue_free()
@@ -1219,6 +1263,7 @@ func _run() -> void:
 	# Let short procedural audio voices and delayed chord tones release cleanly.
 	await create_timer(0.85).timeout
 	_cleanup_smoke_saves(smoke_save_directory)
+	game.settings.set_research_chart_rotation(original_research_rotation)
 	game.queue_free()
 	await process_frame
 	await process_frame

@@ -1,8 +1,8 @@
 # Tests and Probes
 
 Every file in `tests/` is a `SceneTree` script run through `--script`, not a
-GUT/gdUnit suite. There is no test runner to install. Eight files: two pass/fail
-gates and six measurement probes.
+GUT/gdUnit suite. There is no test runner to install. Eleven files: two
+pass/fail gates, seven measurement probes, and two visual capture utilities.
 
 Commands are PowerShell, matching the rest of the repo. `$godot` below is the
 console build:
@@ -13,7 +13,7 @@ $godot = "C:\Users\user\AppData\Local\Temp\codex-godot-4.7.2\Godot_v4.7.2-stable
 
 See the [README](../README.md) for why that path is fragile.
 
-**What the measurement probes measure.** The six probes measure *productivity
+**What the measurement probes measure.** The seven probes measure *productivity
 and performance* — density, price, pacing, frame time. None of them measures
 whether the game is fun, and none of them can. `tests/probe_layer2_test.gd`
 says so in its own header. Fun decisions are made by playing a build. See
@@ -214,6 +214,24 @@ headless caveat.
 | `NIGHTWATCH_PROBE_FINISHED` | unset | Set to `1` to measure the finished-state probe |
 
 Header: `LAYER2_FRAME_PROBE_ENV`.
+
+### Research UI frame pacing — `research_ui_frame_probe.gd`
+
+Measures the research chart in three automated three-second phases: open idle,
+an eight-wheel-event burst on every rendered frame, and cursor motion over a
+tooltip. It reports frame-time percentiles, the synchronous workload time, and
+the number of chart layout passes. The burst deliberately sends more wheel
+events than a frame should commit; `layout_passes` should stay at roughly one
+per rendered frame rather than eight.
+
+Run it windowed so the draw-call and primitive counts represent the shipped
+renderer:
+
+```powershell
+& $godot --path . --script res://tests/research_ui_frame_probe.gd
+```
+
+Header: `RESEARCH_UI_PROBE_ENV`.
 
 ## Setting an environment variable
 

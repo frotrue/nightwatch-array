@@ -81,7 +81,7 @@ func _process(delta: float) -> void:
 			String(selected_meteor.type_id),
 			predicted_multiplier,
 			maxi(1, _valid_tracked_count()),
-			get_viewport().get_mouse_position()
+			cursor_position
 		)
 	else:
 		hud.hide_tracking()

@@ -18,14 +18,14 @@ const STAR_HIT_SIZE := Vector2(44.0, 44.0)
 const TOOLTIP_SIZE := Vector2(318.0, 0.0)
 const TOOLTIP_CURSOR_OFFSET := 18.0
 const TOOLTIP_SCREEN_MARGIN := 10.0
-const BACKGROUND_STARS := [
-	Vector2(74, 48), Vector2(184, 238), Vector2(267, 91), Vector2(386, 390),
-	Vector2(488, 215), Vector2(594, 590), Vector2(704, 82), Vector2(812, 414),
-	Vector2(916, 177), Vector2(1018, 568), Vector2(1119, 88), Vector2(1230, 408),
-	Vector2(1342, 155), Vector2(1410, 544), Vector2(154, 612), Vector2(670, 332),
-	Vector2(1072, 357), Vector2(1288, 604), Vector2(437, 511), Vector2(947, 46),
-	Vector2(214, 704), Vector2(742, 746), Vector2(1088, 682), Vector2(1380, 735)
-]
+# The field is a disc around the horizon pivot rather than a rectangle over the
+# canvas. The chart's sky is wider than the canvas now, so a rectangular field
+# left a black quarter on screen at some rotations. Seeded, so the sky is the
+# same sky every session.
+const BACKGROUND_STAR_COUNT := 150
+const BACKGROUND_STAR_MIN_RADIUS := 90.0
+const BACKGROUND_STAR_MAX_RADIUS := 1180.0
+const BACKGROUND_STAR_SEED := 20260824
 
 
 class StarNodeVisual:
@@ -143,25 +143,37 @@ var node_hold_bars: Dictionary = {}
 var star_positions: Dictionary = {}
 var node_positions: Dictionary = {}
 var node_star_records: Dictionary = {}
+var base_star_positions: Dictionary = {}
+var star_node_ids: Dictionary = {}
 
 var hovered_node_id: String = ""
 var tooltip_suppressed_until_motion: bool = false
+var tooltip_content_key: String = ""
+var tooltip_refit_pending: bool = false
 var held_node_id: String = ""
 var hold_elapsed: float = 0.0
 var zoom: float = 0.78
 var pan_position := Vector2.ZERO
 var rotation_offset: float = DEFAULT_ROTATION
+var pending_rotation_delta: float = 0.0
+var background_stars: PackedVector2Array = PackedVector2Array()
 var paused_by_tree: bool = false
 var refresh_pending: bool = false
 var node_visual_keys: Dictionary = {}
+var node_states: Dictionary = {}
+var frontier_connections_cache: Array[PackedStringArray] = []
 var intermission_active: bool = false
 var intermission_next_round: int = 1
 var intermission_next_duration: int = 20
+var chart_layout_passes: int = 0
+var tooltip_content_refreshes: int = 0
 
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 	node_star_records = ChartData.node_star_map()
+	_build_background_stars()
+	_cache_chart_geometry()
 	_build_interface()
 	set_process_input(true)
 
@@ -186,6 +198,7 @@ func open_tree() -> void:
 	if overlay.visible or progression == null:
 		return
 	_cancel_node_hold()
+	pending_rotation_delta = 0.0
 	overlay.visible = true
 	_hide_node_tooltip()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -199,9 +212,11 @@ func open_tree() -> void:
 func close_tree() -> void:
 	if not overlay.visible:
 		return
+	_flush_pending_rotation()
 	_cancel_node_hold()
 	overlay.visible = false
 	_hide_node_tooltip()
+	_sync_star_animation_processing()
 	if paused_by_tree:
 		get_tree().paused = false
 	paused_by_tree = false
@@ -242,9 +257,11 @@ func _input(event: InputEvent) -> void:
 	if not is_open():
 		return
 	if event is InputEventMouseMotion and not hovered_node_id.is_empty():
-		tooltip_suppressed_until_motion = false
-		_show_node_tooltip(hovered_node_id)
-		_position_node_tooltip(overlay.get_local_mouse_position())
+		if tooltip_suppressed_until_motion or not tooltip_panel.visible:
+			tooltip_suppressed_until_motion = false
+			_show_node_tooltip(hovered_node_id)
+		else:
+			_position_node_tooltip(overlay.get_local_mouse_position())
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_ESCAPE or event.keycode == KEY_U:
 			close_tree()
@@ -253,6 +270,7 @@ func _input(event: InputEvent) -> void:
 
 
 func _process(delta: float) -> void:
+	_flush_pending_rotation()
 	if held_node_id.is_empty():
 		return
 	if not is_open() or progression == null:
@@ -276,14 +294,14 @@ func _on_tree_viewport_gui_input(event: InputEvent) -> void:
 			if event.ctrl_pressed:
 				_zoom_at(event.position, 1.10)
 			else:
-				_rotate_chart(-ROTATION_STEP)
+				_queue_chart_rotation(-ROTATION_STEP)
 			get_viewport().set_input_as_handled()
 			return
 		if event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			if event.ctrl_pressed:
 				_zoom_at(event.position, 1.0 / 1.10)
 			else:
-				_rotate_chart(ROTATION_STEP)
+				_queue_chart_rotation(ROTATION_STEP)
 			get_viewport().set_input_as_handled()
 			return
 
@@ -304,10 +322,12 @@ func _zoom_from_center(factor: float) -> void:
 	_zoom_at(content_clip.global_position + content_clip.size * 0.5, factor)
 
 
-func _reset_view() -> void:
+func _reset_view(persist: bool = true) -> void:
+	pending_rotation_delta = 0.0
+	tooltip_suppressed_until_motion = false
 	rotation_offset = DEFAULT_ROTATION
 	_layout_chart()
-	if settings_controller != null:
+	if persist and settings_controller != null:
 		settings_controller.set_research_chart_rotation(rotation_offset)
 	_frame_frontier()
 
@@ -315,10 +335,16 @@ func _reset_view() -> void:
 func _frame_frontier() -> void:
 	if content_clip == null or content_clip.size.x <= 1.0 or content_clip.size.y <= 1.0:
 		return
+	# Frame the figures that carry research, not the whole sky. The background
+	# constellations reach past the frame on purpose — the wheel is what brings
+	# them over the horizon. Fitting all twelve at once is what made the chart
+	# read as one dense clump no matter how far the sky was spread.
 	var visible_bounds := Rect2(CHART_ORIGIN, Vector2.ZERO)
-	for point_variant in star_positions.values():
-		var point := Vector2(point_variant)
-		visible_bounds = visible_bounds.expand(point)
+	for star_key_variant in star_positions:
+		var star_key := String(star_key_variant)
+		if not star_node_ids.has(star_key):
+			continue
+		visible_bounds = visible_bounds.expand(Vector2(star_positions[star_key]))
 	visible_bounds = visible_bounds.grow(72.0)
 	var horizontal_extent := maxf(absf(visible_bounds.position.x - CHART_ORIGIN.x), absf(visible_bounds.end.x - CHART_ORIGIN.x))
 	var upward_extent := maxf(1.0, CHART_ORIGIN.y - visible_bounds.position.y)
@@ -350,6 +376,21 @@ func _rotate_chart(amount: float) -> void:
 	if settings_controller != null:
 		settings_controller.set_research_chart_rotation(rotation_offset, false)
 	_layout_chart()
+
+
+func _queue_chart_rotation(amount: float) -> void:
+	if is_zero_approx(pending_rotation_delta):
+		_hide_node_tooltip(false)
+		tooltip_suppressed_until_motion = true
+	pending_rotation_delta = wrapf(pending_rotation_delta + amount, -PI, PI)
+
+
+func _flush_pending_rotation() -> void:
+	if is_zero_approx(pending_rotation_delta):
+		return
+	var amount := pending_rotation_delta
+	pending_rotation_delta = 0.0
+	_rotate_chart(amount)
 
 
 func _grouped(value: int) -> String:
@@ -423,11 +464,22 @@ func _north_label_y() -> float:
 	return origin_y + UITheme.px(16.0)
 
 
-func _layout_chart() -> void:
-	if tree_canvas == null:
-		return
-	star_positions.clear()
-	node_positions.clear()
+func _build_background_stars() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = BACKGROUND_STAR_SEED
+	background_stars.resize(BACKGROUND_STAR_COUNT)
+	var inner := BACKGROUND_STAR_MIN_RADIUS * BACKGROUND_STAR_MIN_RADIUS
+	var outer := BACKGROUND_STAR_MAX_RADIUS * BACKGROUND_STAR_MAX_RADIUS
+	for index in range(BACKGROUND_STAR_COUNT):
+		# Sampling the squared radius keeps the scatter even per unit area.
+		# Sampling the radius directly would crowd the stars at the pivot.
+		var distance := sqrt(rng.randf_range(inner, outer))
+		background_stars[index] = CHART_ORIGIN + Vector2.RIGHT.rotated(rng.randf_range(-PI, PI)) * distance
+
+
+func _cache_chart_geometry() -> void:
+	base_star_positions.clear()
+	star_node_ids.clear()
 	for constellation_id in ChartData.CONSTELLATIONS:
 		var constellation: Dictionary = ChartData.CONSTELLATIONS[constellation_id]
 		var placement: Dictionary = ChartData.PLACEMENTS[constellation_id]
@@ -437,20 +489,42 @@ func _layout_chart() -> void:
 		for star_variant in constellation.stars:
 			var star: Dictionary = star_variant
 			var local_offset := Vector2(star.local_position).rotated(tilt) * scale_amount
-			var base_position := anchor + local_offset
-			var chart_position := CHART_ORIGIN + (base_position - CHART_ORIGIN).rotated(rotation_offset)
 			var star_key := "%s/%s" % [constellation_id, String(star.id)]
-			star_positions[star_key] = chart_position
+			base_star_positions[star_key] = anchor + local_offset
 			var node_id := String(star.get("node_id", ""))
 			if not node_id.is_empty():
-				node_positions[node_id] = chart_position
+				star_node_ids[star_key] = node_id
+
+
+func _layout_chart() -> void:
+	if tree_canvas == null:
+		return
+	chart_layout_passes += 1
+	star_positions.clear()
+	node_positions.clear()
+	for star_key_variant in base_star_positions:
+		var star_key := String(star_key_variant)
+		var base_position := Vector2(base_star_positions[star_key])
+		var chart_position := CHART_ORIGIN + (base_position - CHART_ORIGIN).rotated(rotation_offset)
+		star_positions[star_key] = chart_position
+		if star_node_ids.has(star_key):
+			node_positions[String(star_node_ids[star_key])] = chart_position
 	for node_id in node_positions:
 		if not node_buttons.has(node_id):
 			continue
 		var button: Button = node_buttons[node_id]
 		var center := Vector2(node_positions[node_id])
 		button.position = center - button.size * 0.5
+		button.visible = bool(button.get_meta("revealed", true)) and center.y <= CHART_ORIGIN.y
 	tree_canvas.queue_redraw()
+
+
+func _is_node_above_horizon(node_id: String) -> bool:
+	# Before the first layout there are no positions yet; the layout pass that
+	# follows settles it.
+	if not node_positions.has(node_id):
+		return true
+	return Vector2(node_positions[node_id]).y <= CHART_ORIGIN.y
 
 
 func _on_node_hold_started(node_id: String) -> void:
@@ -496,7 +570,10 @@ func _on_node_hovered(node_id: String) -> void:
 		var star_visual: StarNodeVisual = node_hold_bars[node_id]
 		star_visual.set_hovered(true)
 	hovered_node_id = node_id
-	tooltip_suppressed_until_motion = false
+	if tree_canvas != null:
+		tree_canvas.queue_redraw()
+	if tooltip_suppressed_until_motion:
+		return
 	_show_node_tooltip(node_id)
 
 
@@ -511,11 +588,12 @@ func _on_node_unhovered(node_id: String) -> void:
 
 
 func _hide_node_tooltip(clear_hover: bool = true) -> void:
+	var hover_changed := clear_hover and not hovered_node_id.is_empty()
 	if clear_hover:
 		hovered_node_id = ""
-	if tooltip_panel != null:
+	if tooltip_panel != null and tooltip_panel.visible:
 		tooltip_panel.visible = false
-	if tree_canvas != null:
+	if hover_changed and tree_canvas != null:
 		tree_canvas.queue_redraw()
 
 
@@ -547,15 +625,21 @@ func _refresh() -> void:
 	systems_readout.text = tr("TREE_PROGRESS_COUNT") % [progression.upgrade_level, Balance.UPGRADE_NODES.size()]
 	var available_count := 0
 	var affordable_count := 0
+	node_states.clear()
 	for definition in Balance.UPGRADE_NODES:
 		var node_id := String(definition.id)
 		var state: String = progression.get_node_state(node_id)
+		node_states[node_id] = state
 		var visual_state := state
 		if state == "hidden" and _is_teaser_visible(definition):
 			visual_state = "teaser"
 		var visible := visual_state != "hidden"
 		var button: Button = node_buttons[node_id]
-		button.visible = visible
+		# Revealed is the node's own state; whether it is on screen also depends
+		# on where the wheel has put it. Both are stored so neither pass undoes
+		# the other.
+		button.set_meta("revealed", visible)
+		button.visible = visible and _is_node_above_horizon(node_id)
 		button.set_meta("visual_state", visual_state)
 		if not visible:
 			continue
@@ -568,6 +652,7 @@ func _refresh() -> void:
 		if String(node_visual_keys.get(node_id, "")) != visual_key:
 			_apply_node_visual(definition, visual_state)
 			node_visual_keys[node_id] = visual_key
+	_rebuild_frontier_connections()
 	if affordable_count > 0:
 		tree_status.text = tr("TREE_STATUS_READY") % affordable_count
 	elif available_count > 0:
@@ -579,6 +664,7 @@ func _refresh() -> void:
 			_show_node_tooltip(hovered_node_id)
 	else:
 		_hide_node_tooltip()
+	_sync_star_animation_processing()
 	tree_canvas.queue_redraw()
 
 
@@ -598,11 +684,35 @@ func _apply_node_visual(definition: Dictionary, visual_state: String) -> void:
 	star_visual.configure(visual_state, Color.WHITE, float(star.magnitude), String(star.kind), progression.can_purchase(node_id))
 
 
+func _sync_star_animation_processing() -> void:
+	var chart_active := is_open()
+	for node_id in node_hold_bars:
+		var star_visual: StarNodeVisual = node_hold_bars[node_id]
+		star_visual.set_process(chart_active and star_visual.visual_state == "available" and star_visual.affordable)
+
+
 func _show_node_tooltip(node_id: String) -> void:
 	if progression == null or not node_buttons.has(node_id) or not node_buttons[node_id].visible:
 		return
-	var definition := Balance.upgrade_definition(node_id)
 	var visual_state := String(node_buttons[node_id].get_meta("visual_state"))
+	var content_key := "%s:%s:%d:%d:%s" % [
+		node_id,
+		visual_state,
+		int(floor(progression.observation_data)),
+		int(progression.upgrade_level),
+		TranslationServer.get_locale(),
+	]
+	if tooltip_content_key == content_key:
+		var was_visible := tooltip_panel.visible
+		tooltip_panel.visible = true
+		if not was_visible:
+			tooltip_panel.reset_size()
+			_request_tooltip_refit()
+		_position_node_tooltip(overlay.get_local_mouse_position())
+		return
+	tooltip_content_key = content_key
+	tooltip_content_refreshes += 1
+	var definition := Balance.upgrade_definition(node_id)
 	var star_record: Dictionary = node_star_records[node_id]
 	var star: Dictionary = star_record.star
 	var constellation: Dictionary = ChartData.CONSTELLATIONS[String(star_record.constellation_id)]
@@ -637,13 +747,12 @@ func _show_node_tooltip(node_id: String) -> void:
 				tooltip_meta.text = "%s  •  %s" % [tr("TREE_COST") % int(definition.cost), prerequisite_text]
 	tooltip_branch.add_theme_color_override("font_color", UITheme.TOOLTIP_LABEL)
 	tooltip_meta.add_theme_color_override("font_color", UITheme.TOOLTIP_ACTION if visual_state == "available" and progression.can_purchase(node_id) else UITheme.TOOLTIP_VALUE)
-	tooltip_panel.add_theme_stylebox_override("panel", _panel_style(UITheme.TOOLTIP_BACKGROUND, UITheme.TOOLTIP_BORDER, 0, 1))
 	tooltip_panel.visible = true
+	tooltip_panel.reset_size()
 	_position_node_tooltip(overlay.get_local_mouse_position())
-	# Container minimum sizes settle a frame after the text changes, so the first
-	# measurement above is stale. Re-fit once the new text has been laid out,
-	# otherwise the panel keeps the previous entry's height and covers the sky.
-	_refit_node_tooltip.call_deferred()
+	# Container minimum sizes settle after the text changes. Coalesce their
+	# notifications so one content refresh schedules at most one deferred refit.
+	_request_tooltip_refit()
 	tree_canvas.queue_redraw()
 
 
@@ -825,9 +934,7 @@ func _build_node_tooltip() -> void:
 	tooltip_panel.visible = false
 	tooltip_panel.add_theme_stylebox_override("panel", _panel_style(UITheme.TOOLTIP_BACKGROUND, UITheme.TOOLTIP_BORDER, 0, 1))
 	overlay.add_child(tooltip_panel)
-	# The panel must re-fit exactly when its layout settles. A deferred call is one
-	# frame too early: the container's minimum size is still the previous entry's.
-	tooltip_panel.minimum_size_changed.connect(_refit_node_tooltip)
+	tooltip_panel.minimum_size_changed.connect(_request_tooltip_refit)
 	var margin := MarginContainer.new()
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	for side in ["margin_left", "margin_top", "margin_right", "margin_bottom"]:
@@ -859,18 +966,24 @@ func _build_node_tooltip() -> void:
 	column.add_child(tooltip_meta)
 
 
+func _request_tooltip_refit() -> void:
+	if tooltip_refit_pending:
+		return
+	tooltip_refit_pending = true
+	_refit_node_tooltip.call_deferred()
+
+
 func _refit_node_tooltip() -> void:
+	tooltip_refit_pending = false
 	if tooltip_panel == null or not tooltip_panel.visible or overlay == null:
 		return
+	tooltip_panel.reset_size()
 	_position_node_tooltip(overlay.get_local_mouse_position())
 
 
 func _position_node_tooltip(cursor_position: Vector2) -> void:
 	if tooltip_panel == null or not tooltip_panel.visible or overlay == null:
 		return
-	# Shrink to the current text before measuring; a stale size leaves the panel
-	# taller than its content and covers the constellation behind it.
-	tooltip_panel.reset_size()
 	var tooltip_size := tooltip_panel.size
 	# Control has no to_local/to_global, so the origin is mapped by hand: the chart
 	# point scales with the canvas, then shifts from global into overlay space.
@@ -918,35 +1031,42 @@ func _magnitude_radius(magnitude: float) -> float:
 	return clampf(7.4 - magnitude * 0.82, 3.4, 7.4)
 
 
-func _frontier_connections() -> Array[PackedStringArray]:
-	var result: Array[PackedStringArray] = []
-	if progression == null:
-		return result
+func _rebuild_frontier_connections() -> void:
+	frontier_connections_cache.clear()
 	for definition in Balance.UPGRADE_NODES:
 		var target_id := String(definition.id)
-		if progression.get_node_state(target_id) != "available":
+		if _cached_node_state(target_id) != "available":
 			continue
 		for prerequisite_variant in definition.prerequisites:
 			var source_id := String(prerequisite_variant)
-			if progression.get_node_state(source_id) == "purchased":
-				result.append(PackedStringArray([source_id, target_id]))
-	return result
+			if _cached_node_state(source_id) == "purchased":
+				frontier_connections_cache.append(PackedStringArray([source_id, target_id]))
+
+
+func _frontier_connections() -> Array[PackedStringArray]:
+	return frontier_connections_cache
+
+
+func _cached_node_state(node_id: String) -> String:
+	if node_states.has(node_id):
+		return String(node_states[node_id])
+	return String(progression.get_node_state(node_id)) if progression != null else ""
 
 
 func _draw_tree() -> void:
-	for index in range(BACKGROUND_STARS.size()):
-		var background_position := CHART_ORIGIN + (Vector2(BACKGROUND_STARS[index]) - CHART_ORIGIN).rotated(rotation_offset)
+	for index in range(background_stars.size()):
+		var background_position := CHART_ORIGIN + (background_stars[index] - CHART_ORIGIN).rotated(rotation_offset)
 		var radius := 1.7 if index % 5 == 0 else 1.0
 		var alpha := 0.28 if index % 5 == 0 else 0.16
 		tree_canvas.draw_circle(background_position, radius, Color(UITheme.STAR_BACKGROUND, alpha))
-	_draw_chart_horizon()
 	for constellation_id in ChartData.CONSTELLATIONS:
 		var constellation: Dictionary = ChartData.CONSTELLATIONS[constellation_id]
 		for segment_variant in constellation.segments:
 			var segment: Array = segment_variant
 			var start := Vector2(star_positions["%s/%s" % [constellation_id, String(segment[0])]])
 			var finish := Vector2(star_positions["%s/%s" % [constellation_id, String(segment[1])]])
-			tree_canvas.draw_line(start, finish, _segment_color(constellation_id, segment), _segment_width(constellation_id, segment), true)
+			var states := _segment_states(constellation_id, segment)
+			tree_canvas.draw_line(start, finish, _segment_color(states), _segment_width(states), true)
 		for star_variant in constellation.stars:
 			var star: Dictionary = star_variant
 			var point := Vector2(star_positions["%s/%s" % [constellation_id, String(star.id)]])
@@ -956,8 +1076,15 @@ func _draw_tree() -> void:
 			if String(star.kind) == "nebula":
 				tree_canvas.draw_circle(point, star_radius * 2.2, Color(UITheme.STAR_INSTALLED_GLOW, alpha * 0.42))
 			tree_canvas.draw_circle(point, maxf(1.2, star_radius * 0.55), Color(UITheme.STAR_BACKGROUND, alpha))
-	if progression == null:
-		return
+	if progression != null:
+		_draw_frontier_overlay()
+	# The ground goes on last. Half the sky now sits below the horizon at any
+	# one rotation, and it has to be buried by the ground rather than drawn
+	# over it.
+	_draw_chart_horizon()
+
+
+func _draw_frontier_overlay() -> void:
 	# Only the current purchasable frontier stays lit. Purchased history is
 	# already encoded by stable bright stars, so late-game DAG clutter never grows.
 	for frontier_variant in _frontier_connections():
@@ -969,19 +1096,18 @@ func _draw_tree() -> void:
 		var finish := connection[1]
 		tree_canvas.draw_line(start, finish, Color(UITheme.LINE_FRONTIER, 0.60), 1.5, true)
 	if not hovered_node_id.is_empty() and node_positions.has(hovered_node_id):
-		var hovered_state: String = progression.get_node_state(hovered_node_id)
+		var hovered_state := _cached_node_state(hovered_node_id)
 		if hovered_state == "locked" or hovered_state == "hidden":
 			var hovered_definition := Balance.upgrade_definition(hovered_node_id)
 			for prerequisite_variant in hovered_definition.prerequisites:
 				var source_id := String(prerequisite_variant)
-				if progression.get_node_state(source_id) == "purchased":
+				if _cached_node_state(source_id) == "purchased":
 					continue
 				var connection := _connection_points(source_id, hovered_node_id)
 				_draw_dashed_connection(connection[0], connection[1], Color("79859b"))
 
 
-func _segment_color(constellation_id: String, segment: Array) -> Color:
-	var states := _segment_states(constellation_id, segment)
+func _segment_color(states: PackedStringArray) -> Color:
 	if states[0] == "purchased" and states[1] == "purchased":
 		return Color(UITheme.LINE_INSTALLED, 0.42)
 	if (states[0] == "purchased" and states[1] == "available") or (states[1] == "purchased" and states[0] == "available"):
@@ -989,25 +1115,17 @@ func _segment_color(constellation_id: String, segment: Array) -> Color:
 	return Color(UITheme.LINE_IDLE, 0.13)
 
 
-func _segment_width(constellation_id: String, segment: Array) -> float:
-	var states := _segment_states(constellation_id, segment)
+func _segment_width(states: PackedStringArray) -> float:
 	var frontier := (states[0] == "purchased" and states[1] == "available") or (states[1] == "purchased" and states[0] == "available")
 	return 1.5 if frontier else 1.0
 
 
 func _segment_states(constellation_id: String, segment: Array) -> PackedStringArray:
 	var states := PackedStringArray(["", ""])
-	if progression == null:
-		return states
-	var constellation: Dictionary = ChartData.CONSTELLATIONS[constellation_id]
 	for index in range(2):
-		for star_variant in constellation.stars:
-			var star: Dictionary = star_variant
-			if String(star.id) != String(segment[index]):
-				continue
-			var node_id := String(star.get("node_id", ""))
-			states[index] = "" if node_id.is_empty() else String(progression.get_node_state(node_id))
-			break
+		var star_key := "%s/%s" % [constellation_id, String(segment[index])]
+		if star_node_ids.has(star_key):
+			states[index] = _cached_node_state(String(star_node_ids[star_key]))
 	return states
 
 
@@ -1036,11 +1154,16 @@ func _draw_chart_horizon() -> void:
 				true
 			)
 	var horizon_y := CHART_ORIGIN.y
+	# The ground runs well past the canvas. Now that the sky reaches beyond
+	# TREE_SIZE, a figure rotated below the horizon has to stay buried at any
+	# zoom, and a ridge that stopped at the canvas edge would let it show.
+	var overhang := TREE_SIZE.x
 	var ridge := PackedVector2Array([
-		Vector2(0, horizon_y + 9.0), Vector2(TREE_SIZE.x * 0.18, horizon_y - 4.0),
+		Vector2(-overhang, horizon_y + 9.0), Vector2(TREE_SIZE.x * 0.18, horizon_y - 4.0),
 		Vector2(TREE_SIZE.x * 0.36, horizon_y + 2.0), Vector2(TREE_SIZE.x * 0.54, horizon_y - 8.0),
 		Vector2(TREE_SIZE.x * 0.76, horizon_y + 1.0), Vector2(TREE_SIZE.x, horizon_y - 5.0),
-		Vector2(TREE_SIZE.x, TREE_SIZE.y), Vector2(0, TREE_SIZE.y)
+		Vector2(TREE_SIZE.x + overhang, horizon_y + 4.0),
+		Vector2(TREE_SIZE.x + overhang, TREE_SIZE.y + overhang), Vector2(-overhang, TREE_SIZE.y + overhang)
 	])
 	tree_canvas.draw_colored_polygon(ridge, Color("030611"))
 	var dome_center := CHART_ORIGIN + Vector2(0, -2.0)
