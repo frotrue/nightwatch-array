@@ -331,7 +331,7 @@ func _announce_regular_spawn(source_rng: RandomNumberGenerator = null) -> void:
 	var planning_rng: RandomNumberGenerator = rng if source_rng == null else source_rng
 	var type_id := _choose_regular_type_with_rng(planning_rng)
 	var lead_time: float = progression.get_forecast_lead()
-	# Never invite a commitment that the phase clock will silently erase. The
+	# Never announce a forecast that the phase clock will silently erase. The
 	# object needs both its full warning and enough centered manual time for its
 	# own catalog entry. Long Andromeda targets therefore stop announcing earlier
 	# than an ordinary meteor, but still complete within the current round.

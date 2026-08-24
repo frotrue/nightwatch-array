@@ -153,7 +153,7 @@ Eleven driver modes:
 | `scripted-engaged` | scripted manual driver |
 | `baseline-engaged` | manual driver with no hidden research |
 | `fast-manual-placement-one-dish` / `-two-dish` | hand-placed dishes |
-| `fast-predictive-commit-one-dish` / `-two-dish` | dish commitment to forecasts |
+| `fast-predictive-auto-one-dish` / `-two-dish` | automatic idle-dish pre-positioning |
 | `all-eligible-two-dish` | every dish-trackable type assigned |
 | `fragment-assigned-one-dish` | fragment handling |
 | `selector-partner-first` / `selector-bank-first` | lane selector ordering |
@@ -168,7 +168,7 @@ Header: `CONTACT_DENSITY_PROBE_ENV`.
 planning deliberately distributes endpoints across the whole sky, so a dish
 left at its central home position no longer earns accidental unattended
 completions. Evaluate workload and completion acceptance on the engaged,
-placement, commitment, assignment, and selector rows. Keep printing the
+placement, automatic-assignment, and selector rows. Keep printing the
 `no-input` rows so that the control remains visible; do not tune trajectories
 back toward the center merely to restore those numbers.
 
@@ -181,7 +181,7 @@ completions in 30 seconds, so one changed endpoint can look like a large
 percentage regression. Run at least 8–10 paired seeds for the old and new
 builds, then aggregate `observations_completed`, `dish_acquisitions_by_type`,
 `dish_completions_by_type`, and `opportunistic_dropped_without_completion` for
-the engaged, placement, commitment, assignment, and selector rows. In the
+the engaged, placement, automatic-assignment, and selector rows. In the
 2026-08-22 burnout review, the default seed made the two-dish manual row look
 like a 9→4 collapse, while ten paired seeds produced 59→60. The same aggregate
 still exposed a real fast dish-conversion change (92.3%→84.9%), showing why

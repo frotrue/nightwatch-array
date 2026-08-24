@@ -254,7 +254,7 @@ func get_max_active() -> int:
 
 
 # Secondary Camera hands the player a manually placed dish. Predictive Dish
-# Control later adds contact reservation without changing plain right-click.
+# Control later pre-positions idle dishes without adding another input gesture.
 # The network nodes keep their automatic lanes, one fewer each, while the final
 # Observatory Network deliberately adds late-game dish capacity.
 func get_dish_count() -> int:
@@ -263,7 +263,7 @@ func get_dish_count() -> int:
 	return 1 if has_upgrade("secondary_camera") else 0
 
 
-func dish_commitment_enabled() -> bool:
+func dish_auto_assignment_enabled() -> bool:
 	return has_upgrade("predictive_dish_control")
 
 

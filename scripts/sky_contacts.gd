@@ -23,7 +23,6 @@ var dishes: Array[Dictionary] = []
 var cursor_position := Vector2.ZERO
 var hovered_contact_id: int = -1
 var dish_movement_learned: bool = false
-var dish_commitment_learned: bool = false
 var abandoned_target_id: int = 0
 var abandoned_target_position := Vector2.ZERO
 var abandoned_target_flash: float = 0.0
@@ -75,7 +74,6 @@ func reset(clear_interaction_learning: bool = false) -> void:
 	abandoned_target_flash = 0.0
 	if clear_interaction_learning:
 		dish_movement_learned = false
-		dish_commitment_learned = false
 	for index in range(dishes.size()):
 		var dish: Dictionary = dishes[index]
 		dish.assigned_id = -1
@@ -90,6 +88,7 @@ func on_contact_announced(contact: Dictionary) -> void:
 	if not forecast_visible():
 		return
 	contacts.append(contact)
+	_assign_contact_automatically(contact)
 	queue_redraw()
 
 
@@ -98,7 +97,7 @@ func on_contact_resolved(contact: Dictionary, meteor) -> void:
 	if meteor == null:
 		_release_dish_for_contact(int(contact.id))
 		return
-	# The dish was committed to a prediction; now it has an object to hold.
+	# Predictive control reached this forecast; hand the dish to the live object.
 	for index in range(dishes.size()):
 		var dish: Dictionary = dishes[index]
 		if int(dish.assigned_id) == int(contact.id):
@@ -173,7 +172,7 @@ func _update_dishes(delta: float) -> void:
 			dish.arrived = true
 
 		# A slewing dish records nothing. Manual placement must arrive before it
-		# can acquire; researched commitment instead buys a direct handoff.
+		# can acquire; predictive control can arrive before a forecast resolves.
 		if bool(dish.arrived):
 			var acquired = _acquire_target(dish, index)
 			if acquired != null:
@@ -249,25 +248,26 @@ func nearest_dish_to(point: Vector2) -> int:
 	return best_index
 
 
-# Predictive commitment preserves the previous capacity-aware choice. This is
-# intentionally separate from plain movement and exists only behind research.
-func commitment_dish_for(contact: Dictionary) -> int:
+# Predictive control only uses a genuinely idle dish that can reach the current
+# estimate before entry. It never steals an active lock or a manual slew.
+func _automatic_dish_for(contact: Dictionary) -> int:
+	if not _dish_can_track_type(String(contact.type_id)):
+		return -1
 	var estimate := _estimate_of(contact)
 	var best_free := -1
 	var best_free_time := INF
-	var best_any := -1
-	var best_any_time := INF
 	for index in range(dishes.size()):
 		var dish: Dictionary = dishes[index]
 		var travel: float = Vector2(dish.position).distance_to(estimate) / SLEW_SPEED
-		if travel < best_any_time:
-			best_any_time = travel
-			best_any = index
-		var free: bool = int(dish.assigned_id) == -1 and _locked_target(dish) == null
+		var free: bool = (
+			int(dish.assigned_id) == -1
+			and _locked_target(dish) == null
+			and bool(dish.arrived)
+		)
 		if free and travel <= float(contact.countdown) and travel < best_free_time:
 			best_free_time = travel
 			best_free = index
-	return best_free if best_free >= 0 else best_any
+	return best_free
 
 
 func move_dish_to(point: Vector2) -> int:
@@ -312,39 +312,28 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	var point := Vector2(event.position)
 	cursor_position = point
-	var contact_id := _contact_at(point)
-	if event.shift_pressed and _commitment_enabled() and contact_id >= 0:
-		assign_to_contact(contact_id)
-	else:
-		move_dish_to(point)
+	move_dish_to(point)
 	get_viewport().set_input_as_handled()
 
 
-func assign_to_contact(contact_id: int) -> bool:
-	if not dish_active() or not _commitment_enabled():
+func _assign_contact_automatically(contact: Dictionary) -> bool:
+	if not dish_active() or not _auto_assignment_enabled():
 		return false
-	var contact := _find_contact(contact_id)
-	if contact.is_empty():
-		return false
-	var index := commitment_dish_for(contact)
+	var index := _automatic_dish_for(contact)
 	if index < 0:
 		return false
 	var dish: Dictionary = dishes[index]
-	if int(dish.assigned_id) == contact_id:
-		return false
-	_abandon_dish_work(dish)
-	dish.assigned_id = contact_id
+	dish.assigned_id = int(contact.id)
 	dish.locked_id = 0
 	dish.target = _estimate_of(contact)
 	dish.arrived = false
 	dishes[index] = dish
-	dish_commitment_learned = true
 	queue_redraw()
 	return true
 
 
-func _commitment_enabled() -> bool:
-	return progression != null and progression.dish_commitment_enabled()
+func _auto_assignment_enabled() -> bool:
+	return progression != null and progression.dish_auto_assignment_enabled()
 
 
 func _find_contact(contact_id: int) -> Dictionary:
@@ -367,8 +356,6 @@ func _draw() -> void:
 		return
 	for dish in dishes:
 		_draw_dish(dish)
-	if dish_active():
-		_draw_movement_preview()
 	for contact in contacts:
 		_draw_contact(contact)
 	_draw_abandoned_target_flash()
@@ -391,19 +378,6 @@ func _draw_dish(dish: Dictionary) -> void:
 		draw_arc(estimate, 25.0, 0.0, TAU, 32, Color("b99cff", 0.72), 1.5, true)
 	draw_circle(position, 7.0, Color(0.02, 0.05, 0.09, 0.95))
 	draw_circle(position, 4.4, color)
-
-
-func _draw_movement_preview() -> void:
-	var index := nearest_dish_to(cursor_position)
-	if index < 0:
-		return
-	var dish: Dictionary = dishes[index]
-	var preview_color := Color("ffe9a8")
-	draw_line(Vector2(dish.position), cursor_position, Color(preview_color, 0.48), 1.2, true)
-	var locked = _locked_target(dish)
-	if locked == null:
-		return
-	_draw_abandonment_mark(locked.global_position, Vector2(dish.position), 0.86)
 
 
 func _draw_abandoned_target_flash() -> void:
@@ -455,37 +429,12 @@ func _draw_contact(contact: Dictionary) -> void:
 		HORIZONTAL_ALIGNMENT_CENTER, 120.0, 13, Color(base_color, 0.7))
 
 	var hint_keys: Array[String] = []
-	# Plain right-click moves whichever dish is nearest the click, so it is not a
-	# per-contact action. Advertising it under every marker implied a targeting
-	# gesture the control does not have; the Secondary Camera node teaches it.
-	if _commitment_enabled() and (not dish_commitment_learned or hovered):
-		hint_keys.append("CONTACT_COMMIT_HINT")
 	# Manual-only information is secondary and appears only after classification,
 	# so an unclassified contact never becomes a type oracle.
 	if bool(contact.classified) and not _dish_can_track_type(String(contact.type_id)) and (not dish_movement_learned or hovered):
 		hint_keys.append("CONTACT_MANUAL_ONLY_HINT")
 	for hint_index in range(hint_keys.size()):
 		_draw_assignment_hint(estimate, base_color, font, hint_keys[hint_index], hint_index, hint_keys.size())
-	if hovered and _commitment_enabled() and Input.is_key_pressed(KEY_SHIFT):
-		_draw_commitment_preview(contact, estimate)
-
-
-func _draw_commitment_preview(contact: Dictionary, estimate: Vector2) -> void:
-	var index := commitment_dish_for(contact)
-	if index < 0:
-		return
-	var dish: Dictionary = dishes[index]
-	draw_line(Vector2(dish.position), estimate, Color("b99cff"), 1.6, true)
-	draw_arc(estimate, COVERAGE_RADIUS, 0.0, TAU, 56, Color("b99cff", 0.48), 1.2, true)
-	var locked = _locked_target(dish)
-	if locked != null:
-		_draw_abandonment_mark(locked.global_position, Vector2(dish.position), 0.86)
-	var dropped_id := int(dish.assigned_id)
-	if dropped_id == -1 or dropped_id == int(contact.id):
-		return
-	var dropped := _find_contact(dropped_id)
-	if not dropped.is_empty():
-		_draw_abandonment_mark(_estimate_of(dropped), Vector2(dish.position), 0.86)
 
 
 func _draw_assignment_hint(estimate: Vector2, base_color: Color, font: Font, hint_key: String, row: int, row_count: int) -> void:

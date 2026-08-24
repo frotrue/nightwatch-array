@@ -46,7 +46,7 @@ content.
 | `meteor_spawner.gd` | Spawn cadence, type rolls (including same-round satellites, variable stars, and comets), sky-wide burnout endpoint planning, forecast contact announcements, fragment spawning, shower and finale spawns, support-lane assignment. |
 | `meteor.gd` | One object's burn-progress motion, trail and terminal fade, observation progress, quality grading, split behaviour, and passive spectral calibration result. |
 | `observation_controller.gd` | Cursor sampling, manual tracking, swept-path hit detection, tracking and hover rings, and the software cursor. |
-| `sky_contacts.gd` | Low-chrome forecast contact rendering and the steerable dishes (right-click placement, Shift+right-click commitment). Contact Ledger narrows the uncertainty ring instead of adding value/time text. |
+| `sky_contacts.gd` | Low-chrome forecast contact rendering and steerable dishes. Right-click moves the nearest dish; Predictive Dish Control automatically pre-positions an idle dish. Contact Ledger narrows the uncertainty ring instead of adding value/time text. |
 | `event_controller.gd` | Meteor showers and the 18-minute finale, including round-boundary deferral. |
 | `effects_layer.gd` | Success bursts, data packets, incoming markers, forecast markers, screen kick and shake. |
 | `hud.gd` | All in-round UI, round summary, settings, save-slot dialogs, banners. |

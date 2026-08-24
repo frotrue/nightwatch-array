@@ -147,13 +147,10 @@ const UPGRADE_NODES: Array[Dictionary] = [
 		"major": true
 	},
 	{
-		# Known follow-up: the 70px and 40px forecast envelopes both fit inside
-		# 105px dish coverage, so Trajectory's precision half does not improve a
-		# safe center placement. Its direction line still enables downstream catches.
 		"id": "predictive_dish_control", "name": "Predictive Dish Control", "icon": "⌁", "cost": 285,
-		"description": "Shift-right-click a forecast contact to reserve a dish and hand it directly to the object on entry.",
+		"description": "Automatically pre-positions an idle dish for trackable forecast contacts; right-click placement still overrides it.",
 		"branch": "network", "prerequisites": ["secondary_camera"],
-		"hidden_until": ["secondary_camera"], "effect_type": "automation", "effect_parameters": {"dish_commitment": true},
+		"hidden_until": ["secondary_camera"], "effect_type": "automation", "effect_parameters": {"dish_auto_assignment": true},
 		"major": true
 	},
 	{

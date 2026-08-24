@@ -144,7 +144,6 @@ func _prepare(seed: int) -> void:
 	var game_banner_handler := Callable(game, "_on_event_banner")
 	if game.events.banner_requested.is_connected(game_banner_handler):
 		game.events.banner_requested.disconnect(game_banner_handler)
-	game.spawner.contact_announced.connect(_on_contact_announced)
 
 
 func _run_round(duration: float) -> void:
@@ -193,15 +192,6 @@ func _first_uncovered_target():
 		if target.can_be_tracked() and not dish_locked_ids.has(target.get_instance_id()):
 			return target
 	return null
-
-
-func _on_contact_announced(contact: Dictionary) -> void:
-	if not game.progression.dish_commitment_enabled():
-		return
-	for dish in game.sky_contacts.dishes:
-		if int(dish.assigned_id) == -1 and game.sky_contacts._locked_target(dish) == null:
-			game.sky_contacts.assign_to_contact(int(contact.id))
-			return
 
 
 func _on_target_spawned(target) -> void:
