@@ -144,8 +144,17 @@ var phase_window_seconds: int = 30
 var last_tracking_text: String = ""
 var last_tracking_progress_percent: int = -1
 var last_tracking_target_type: String = ""
+var last_tracking_quality_key: String = ""
 var last_tracking_multiplier_hundredths: int = -1
 var last_tracking_target_count: int = -1
+var tracking_percent_height: float = 0.0
+var tracking_target_height: float = 0.0
+var tracking_quality_size := Vector2.ZERO
+var tracking_multiplier_size := Vector2.ZERO
+var tracking_metrics_dirty: bool = true
+var tracking_layout_passes: int = 0
+var last_phase_window_width: float = -1.0
+var last_ready_count: int = -1
 var last_observation_data: float = -1.0
 var data_gain_tween: Tween
 var data_pulse_tween: Tween
@@ -306,34 +315,39 @@ func set_tracking(
 	if not tracking_cluster.visible:
 		tracking_cluster.visible = true
 		tracking_cluster.set_process(true)
+	var cursor_changed := not tracking_cluster.cursor.is_equal_approx(cursor_position)
 	tracking_cluster.cursor = cursor_position
 	tracking_cluster.progress = clampf(progress, 0.0, 1.0)
 	tracking_cluster.queue_redraw()
 	var progress_percent := int(progress * 100.0)
 	var multiplier_hundredths := int(round(multiplier * 100.0))
-	var unchanged := (
-		progress_percent == last_tracking_progress_percent
-		and target_type == last_tracking_target_type
-		and multiplier_hundredths == last_tracking_multiplier_hundredths
-		and target_count == last_tracking_target_count
-	)
-	if not unchanged:
+	if progress_percent != last_tracking_progress_percent:
 		last_tracking_progress_percent = progress_percent
-		last_tracking_target_type = target_type
-		last_tracking_multiplier_hundredths = multiplier_hundredths
-		last_tracking_target_count = target_count
 		tracking_percent.text = "%d%%" % progress_percent
+	if target_type != last_tracking_target_type:
+		last_tracking_target_type = target_type
 		tracking_target.text = tr("METEOR_%s" % target_type.to_upper())
-		var quality_key := _tracking_quality_key(progress)
+		last_tracking_text = tracking_target.text
+		tracking_metrics_dirty = true
+	var quality_key := _tracking_quality_key(progress)
+	if quality_key != last_tracking_quality_key:
+		last_tracking_quality_key = quality_key
 		tracking_quality.text = tr(quality_key)
+		tracking_metrics_dirty = true
+	if multiplier_hundredths != last_tracking_multiplier_hundredths:
+		last_tracking_multiplier_hundredths = multiplier_hundredths
+		var previous_multiplier_length := tracking_multiplier.text.length()
 		# A multiplier of x1.01 or less is noise, not a reward.
 		tracking_multiplier.text = (
 			tr("HUD_TRACK_MULTIPLIER") % (float(multiplier_hundredths) / 100.0)
 			if multiplier_hundredths > 101
 			else ""
 		)
-		last_tracking_text = tracking_target.text
-	_layout_tracking_cluster()
+		if previous_multiplier_length != tracking_multiplier.text.length():
+			tracking_metrics_dirty = true
+	last_tracking_target_count = target_count
+	if cursor_changed or tracking_metrics_dirty:
+		_layout_tracking_cluster()
 
 
 func _tracking_quality_key(progress: float) -> String:
@@ -359,8 +373,10 @@ func _invalidate_tracking_cache() -> void:
 	last_tracking_text = ""
 	last_tracking_progress_percent = -1
 	last_tracking_target_type = ""
+	last_tracking_quality_key = ""
 	last_tracking_multiplier_hundredths = -1
 	last_tracking_target_count = -1
+	tracking_metrics_dirty = true
 
 
 func mark_first_success() -> void:
@@ -624,6 +640,9 @@ func _refresh_ready_notice() -> void:
 	for definition in Balance.UPGRADE_NODES:
 		if progression.can_purchase(String(definition.id)):
 			ready += 1
+	if ready == last_ready_count:
+		return
+	last_ready_count = ready
 	ready_notice.visible = ready > 0
 	if ready_notice.visible:
 		ready_label.text = tr("HUD_READY_SYSTEMS") % ready
@@ -644,7 +663,11 @@ func _ensure_ready_pulse() -> void:
 func set_phase_window(ratio: float) -> void:
 	if phase_window_fill == null:
 		return
-	phase_window_fill.size.x = UITheme.px(360.0) * clampf(ratio, 0.0, 1.0)
+	var next_width := UITheme.px(360.0) * clampf(ratio, 0.0, 1.0)
+	if is_equal_approx(next_width, last_phase_window_width):
+		return
+	last_phase_window_width = next_width
+	phase_window_fill.size.x = next_width
 
 
 func get_data_anchor() -> Vector2:
@@ -876,7 +899,9 @@ func _apply_locale() -> void:
 	if root_control == null:
 		return
 	data_caption_label.text = tr("HUD_DATA_CAPTION")
+	last_ready_count = -1
 	_refresh_ready_notice()
+	_invalidate_tracking_cache()
 	_refresh_phase_time_label()
 	settings_button.text = tr("SETTINGS_BUTTON")
 	settings_title.text = tr("SETTINGS_TITLE")
@@ -1159,10 +1184,12 @@ func _build_tracking_cluster() -> void:
 	tracking_cluster.name = "TrackingCluster"
 	tracking_cluster.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	tracking_cluster.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tracking_cluster.process_mode = Node.PROCESS_MODE_PAUSABLE
 	tracking_cluster.ring_radius = UITheme.px(84.0)
 	tracking_cluster.arc_width = UITheme.px(3.4)
 	tracking_cluster.visible = false
 	root_control.add_child(tracking_cluster)
+	tracking_cluster.set_process(false)
 
 	tracking_percent = _spec_label("0%", UITheme.mono_tabular(), 26.0, UITheme.INSTRUMENT_ARC)
 	tracking_percent.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -1184,38 +1211,42 @@ func _build_tracking_cluster() -> void:
 
 
 func _layout_tracking_cluster() -> void:
+	tracking_layout_passes += 1
 	var cursor := tracking_cluster.cursor
 	var width := UITheme.px(420.0)
 	# The text block clears the 84px stroke so glyphs never sit on the meteor the
 	# player is currently tracking.
 	var percent_top := cursor.y + UITheme.px(102.0)
+	if tracking_metrics_dirty:
+		tracking_percent.size.x = width
+		tracking_target.size.x = width
+		tracking_percent_height = tracking_percent.get_combined_minimum_size().y
+		tracking_target_height = tracking_target.get_combined_minimum_size().y
+		tracking_quality_size = tracking_quality.get_combined_minimum_size()
+		tracking_multiplier_size = tracking_multiplier.get_combined_minimum_size()
+		tracking_quality.size = tracking_quality_size
+		tracking_multiplier.size = tracking_multiplier_size
+		tracking_metrics_dirty = false
 	for label in [tracking_percent, tracking_target]:
-		label.size.x = width
 		label.position.x = cursor.x - width * 0.5
 	tracking_percent.position.y = percent_top
-	var percent_height := tracking_percent.get_combined_minimum_size().y
-	tracking_target.position.y = percent_top + percent_height + UITheme.px(5.0)
-	var target_height := tracking_target.get_combined_minimum_size().y
-	var row_top := tracking_target.position.y + target_height + UITheme.px(8.0)
+	tracking_target.position.y = percent_top + tracking_percent_height + UITheme.px(5.0)
+	var row_top := tracking_target.position.y + tracking_target_height + UITheme.px(8.0)
 
 	var gap := UITheme.px(8.0)
-	var quality_size := tracking_quality.get_combined_minimum_size()
-	var multiplier_size := tracking_multiplier.get_combined_minimum_size()
-	tracking_quality.size = quality_size
-	tracking_multiplier.size = multiplier_size
 	var show_divider := not tracking_multiplier.text.is_empty()
 	tracking_divider.visible = show_divider
-	var row_width := quality_size.x
+	var row_width := tracking_quality_size.x
 	if show_divider:
-		row_width += gap + 1.0 + gap + multiplier_size.x
+		row_width += gap + 1.0 + gap + tracking_multiplier_size.x
 	var row_left := cursor.x - row_width * 0.5
 	tracking_quality.position = Vector2(row_left, row_top)
 	if show_divider:
 		tracking_divider.position = Vector2(
-			row_left + quality_size.x + gap,
-			row_top + quality_size.y * 0.5 - tracking_divider.size.y * 0.5
+			row_left + tracking_quality_size.x + gap,
+			row_top + tracking_quality_size.y * 0.5 - tracking_divider.size.y * 0.5
 		)
-		tracking_multiplier.position = Vector2(row_left + quality_size.x + gap + 1.0 + gap, row_top)
+		tracking_multiplier.position = Vector2(row_left + tracking_quality_size.x + gap + 1.0 + gap, row_top)
 
 
 func _build_startup_slots_ui() -> void:

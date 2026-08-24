@@ -33,7 +33,15 @@ func _run() -> void:
 	var overlay_control: Control = tree.overlay
 	var cursor: Vector2 = star.global_position + star.size * 0.5 - overlay_control.global_position
 	tree._position_node_tooltip(cursor)
+	# Fix animated pulse state and wait for the renderer so baseline comparisons
+	# are deterministic instead of occasionally capturing a partially drawn frame.
+	for star_visual_variant in tree.node_hold_bars.values():
+		var star_visual: Control = star_visual_variant
+		star_visual.set("pulse_phase", 0.0)
+		star_visual.set_process(false)
+		star_visual.queue_redraw()
 	await process_frame
+	await RenderingServer.frame_post_draw
 
 	var image := root.get_texture().get_image()
 	var output := "res://build/research_chart_preview.png"

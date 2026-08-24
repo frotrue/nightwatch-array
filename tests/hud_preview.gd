@@ -14,6 +14,9 @@ func _run() -> void:
 	game.hud.close_settings() if game.hud.has_method("close_settings") else null
 	game.progression.add_debug_data(1284.0)
 	game.hud.set_observation_phase(3, 24.0, 40.0)
+	# Freeze the gameplay controller so it cannot hide the synthetic tracking
+	# readout before the capture settles.
+	game.observer.set_process(false)
 	var centre: Vector2 = root.get_visible_rect().size * Vector2(0.5, 0.62)
 	game.hud.set_tracking(0.67, "fast", 1.34, 1, centre)
 	for _index in range(8):
