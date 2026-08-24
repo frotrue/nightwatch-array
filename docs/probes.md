@@ -68,7 +68,8 @@ when you record results, or the numbers are not reproducible.
 ### Duration ladder — `duration_ladder_probe.gd`
 
 Re-measures the 20 → 30 → 40 → 50 → 60-second ladder. 18 rounds per rung,
-`0.05s` steps, seed `20260821`, pacing denominator 20.
+`0.05s` steps, seed `20260821`, pacing denominator 40. The linked baseline keeps
+the historical 21-node / denominator-20 result for before-and-after comparison.
 
 ```powershell
 & $godot --headless --path . --script res://tests/duration_ladder_probe.gd
@@ -97,6 +98,26 @@ cell, `0.05s` steps, base seed `20260821`.
 | `NIGHTWATCH_PRICING_SEEDS` | `10` | Seed count per cell |
 
 Header: `DURATION_PRICING_ENV`.
+
+### Full-tree economy gate — `full_tree_economy_test.gd`
+
+Pass/fail gate for the expanded 41-system graph. It runs three deterministic
+18-minute scripted-engaged watches at `0.05s` steps, buys the cheapest currently
+available research at each intermission, prepares matching Lyra filters between
+contacts, and uses predictive dishes when installed. Every seed must reach
+41/41 before the final-event clock. It also reports the 270/540/810-second
+success curve, each constellation's discovery time, and the longest interval
+without a newly available node.
+
+```powershell
+& $godot --headless --path . --script res://tests/full_tree_economy_test.gd
+```
+
+Header: `FULL_TREE_ECONOMY_ENV`. Pass line: `FULL_TREE_ECONOMY_PASS`.
+
+[`constellation-research-baseline.md`](constellation-research-baseline.md)
+records the accepted candidate results without overwriting the historical
+21-system duration baseline.
 
 ### Duration matrix — `duration_matrix_probe.gd`
 

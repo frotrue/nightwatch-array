@@ -53,7 +53,7 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	print("DURATION_LADDER_PROBE_ENV engine=%s rounds_per_rung=%d step_seconds=%.2f seed=%d pacing_denominator=20" % [
+	print("DURATION_LADDER_PROBE_ENV engine=%s rounds_per_rung=%d step_seconds=%.2f seed=%d pacing_denominator=40" % [
 		Engine.get_version_info(),
 		ROUND_COUNT,
 		STEP,

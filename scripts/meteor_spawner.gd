@@ -328,17 +328,24 @@ func set_phase_time_remaining(seconds: float) -> void:
 # A forecast names where the object will be before it exists, and names it
 # wrong: the estimate carries an error that only resolves as the object closes.
 func _announce_regular_spawn(source_rng: RandomNumberGenerator = null) -> void:
-	var lead_time: float = progression.get_forecast_lead()
-	# Never invite a commitment that the phase clock will silently erase. The
-	# object needs both its full warning and one ordinary manual tracking window.
-	if phase_time_remaining < lead_time + MINIMUM_PAYABLE_TRACK_TIME:
-		return
 	var planning_rng: RandomNumberGenerator = rng if source_rng == null else source_rng
 	var type_id := _choose_regular_type_with_rng(planning_rng)
+	var lead_time: float = progression.get_forecast_lead()
+	# Never invite a commitment that the phase clock will silently erase. The
+	# object needs both its full warning and enough centered manual time for its
+	# own catalog entry. Long Andromeda targets therefore stop announcing earlier
+	# than an ordinary meteor, but still complete within the current round.
+	var spec := Balance.meteor_spec(type_id)
+	var payable_track_time := maxf(
+		MINIMUM_PAYABLE_TRACK_TIME,
+		float(spec.track_time) / 1.42
+	)
+	if phase_time_remaining < lead_time + payable_track_time:
+		return
 	var entry := _plan_entry_with_rng(type_id, planning_rng)
 	var direction: Vector2 = Vector2(entry.velocity).normalized()
-	var min_error: float = progression.get_forecast_min_error()
-	var max_error: float = progression.get_forecast_max_error()
+	var min_error: float = progression.get_forecast_min_error(type_id)
+	var max_error: float = progression.get_forecast_max_error(type_id)
 	var contact := {
 		"id": next_contact_id,
 		"type_id": type_id,
@@ -352,7 +359,8 @@ func _announce_regular_spawn(source_rng: RandomNumberGenerator = null) -> void:
 		"countdown": lead_time,
 		"lead_time": lead_time,
 		"trajectory_known": progression.has_upgrade("trajectory"),
-		"classified": progression.forecast_classifies(),
+		"classified": progression.forecast_classifies(type_id),
+		"spectral_band": String(spec.get("spectral_band", "blue")),
 		"abandoned_flash": 0.0,
 	}
 	next_contact_id += 1
@@ -414,11 +422,30 @@ func _choose_regular_type() -> String:
 
 func _choose_regular_type_with_rng(source_rng: RandomNumberGenerator) -> String:
 	var roll := source_rng.randf()
-	if progression.has_upgrade("rare_detection") and roll < 0.075:
+	var threshold := 0.0
+	if progression.has_upgrade("comet_solutions"):
+		threshold += 0.045
+		if roll < threshold:
+			return "comet"
+	if progression.has_upgrade("variable_watchlist"):
+		threshold += 0.05
+		if roll < threshold:
+			return "variable_star"
+	if progression.has_upgrade("satellite_catalog"):
+		threshold += 0.075
+		if roll < threshold:
+			return "satellite"
+	if progression.has_upgrade("rare_detection"):
+		threshold += 0.075
+	if progression.has_upgrade("rare_detection") and roll < threshold:
 		return "fireball"
-	if progression.has_upgrade("fragment_analysis") and roll < 0.25:
+	if progression.has_upgrade("fragment_analysis"):
+		threshold += 0.175
+	if progression.has_upgrade("fragment_analysis") and roll < threshold:
 		return "fragment"
-	if progression.has_upgrade("edge_detection") and roll < 0.50:
+	if progression.has_upgrade("edge_detection"):
+		threshold += 0.25
+	if progression.has_upgrade("edge_detection") and roll < threshold:
 		return "fast"
 	return "common"
 
@@ -430,6 +457,9 @@ func _current_features(type_id: String) -> Dictionary:
 		"precision": progression.has_upgrade("precision_multiplier"),
 		"perfect": progression.has_upgrade("perfect_observation"),
 		"automation": progression.get_automation_strength(type_id),
+		"analysis_speed": progression.get_analysis_speed_multiplier(type_id),
+		"spectral_identity": progression.has_upgrade("filter_wheel"),
+		"spectral_capstone": progression.has_upgrade("lyrid_spectrograph"),
 	}
 
 

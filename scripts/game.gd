@@ -394,6 +394,17 @@ func _on_meteor_spawned(meteor) -> void:
 
 func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: bool, quality_grade: String) -> void:
 	observer.release_target(meteor)
+	# The emitting target marks itself inactive immediately before this signal;
+	# count it explicitly so a three-contact finish means the player saw three.
+	var active_target_count := 1
+	for candidate in meteor_layer.get_children():
+		if candidate.has_method("can_be_tracked") and candidate.can_be_tracked():
+			active_target_count += 1
+	var research_multiplier: float = progression.get_observation_value_multiplier(
+		String(meteor.type_id), active_target_count
+	)
+	reward = round(reward * research_multiplier)
+	multiplier *= research_multiplier
 	var final_reward: float = progression.add_observation(reward, was_manual, multiplier)
 	if was_manual:
 		success_streak += 1

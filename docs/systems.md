@@ -41,12 +41,12 @@ content.
 | Script | Owns |
 |---|---|
 | `game.gd` | Round lifecycle, save/load orchestration, feedback dispatch (kick/shake/hitstop), debug keys. The only node that knows about all the others. |
-| `progression_controller.gd` | Data balance, purchased nodes, and **every derived upgrade effect**. Single source of truth: consumers ask it, not `game_balance.gd`. |
-| `game_balance.gd` | Static data only: the 21 upgrade definitions and the meteor spec table. `RefCounted`, no state. |
-| `meteor_spawner.gd` | Spawn cadence, type rolls, sky-wide burnout endpoint planning, forecast contact announcements, fragment spawning, shower and finale spawns, support-lane assignment. |
-| `meteor.gd` | One object's burn-progress motion, trail and terminal fade, observation progress, quality grading, and split behaviour. |
-| `observation_controller.gd` | Cursor sampling, manual tracking, swept-path hit detection, tracking and hover rings, the software cursor. |
-| `sky_contacts.gd` | Forecast contact rendering and the steerable dishes (right-click placement, Shift+right-click commitment). |
+| `progression_controller.gd` | Data balance, purchased nodes, discovery gates, and systemic derived upgrade effects. Single source of truth: consumers ask it, not `game_balance.gd`. |
+| `game_balance.gd` | Static data only: the 41 upgrade definitions and the meteor/deep-target spec table. `RefCounted`, no state. |
+| `meteor_spawner.gd` | Spawn cadence, type rolls (including same-round satellites, variable stars, and comets), sky-wide burnout endpoint planning, forecast contact announcements, fragment spawning, shower and finale spawns, support-lane assignment. |
+| `meteor.gd` | One object's burn-progress motion, trail and terminal fade, observation progress, quality grading, split behaviour, spectral family, and contact-locked filter result. |
+| `observation_controller.gd` | Cursor sampling, manual tracking, swept-path hit detection, tracking and hover rings, the software cursor, and between-contact `Q` filter preparation. |
+| `sky_contacts.gd` | Forecast contact rendering, optional Contact Ledger metrics, and the steerable dishes (right-click placement, Shift+right-click commitment). |
 | `event_controller.gd` | Meteor showers and the 18-minute finale, including round-boundary deferral. |
 | `effects_layer.gd` | Success bursts, data packets, incoming markers, forecast markers, screen kick and shake. |
 | `hud.gd` | All in-round UI, round summary, settings, save-slot dialogs, banners. |
@@ -146,6 +146,9 @@ These are load-bearing. Breaking them silently corrupts the Data/min series.
   parent/child process order cannot insert an intermission exactly at 18:00.
 - Every round clears unfinished objects and pending forecasts at zero rather
   than letting them leak into the next sample.
+- Long Andromeda targets are announced only while their own centered manual
+  analysis time still fits after the forecast lead; they never carry progress
+  or a live object across an intermission.
 - A shower starts only if its warning plus active phase fits before zero.
   Otherwise it stays due and starts in the next viable round
   (`event_controller.gd::_shower_fits_current_observation`).
@@ -157,6 +160,8 @@ These are load-bearing. Breaking them silently corrupts the Data/min series.
    coalesced via `Input.set_use_accumulated_input(true)`.
 2. While the left button is held, `_update_manual_tracking` latches a target and
    calls `meteor.apply_manual_observation(delta, distance, radius)`.
+   With Filter Wheel installed, `Q` changes the prepared band only while no
+   contact is active; the band is copied onto the target at first acquisition.
 3. Hit testing uses swept point-to-segment distance
    (`_distance_to_cursor_path`), so a fast flick cannot tunnel through a target
    between frames. Sweep contact is scaled by the estimated fraction of the

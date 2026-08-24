@@ -670,6 +670,8 @@ func _refresh() -> void:
 
 func _is_teaser_visible(definition: Dictionary) -> bool:
 	for gate_variant in definition.hidden_until:
+		if gate_variant is Dictionary:
+			continue
 		var gate_state: String = progression.get_node_state(String(gate_variant))
 		if gate_state != "hidden" and gate_state != "missing":
 			return true

@@ -64,7 +64,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var seed_count := _seed_count_from_environment()
-	print("DURATION_PRICING_ENV engine=%s timeline_seconds=%.0f step_seconds=%.2f seeds=%d pacing_denominator=20" % [
+	print("DURATION_PRICING_ENV engine=%s timeline_seconds=%.0f step_seconds=%.2f seeds=%d pacing_denominator=40" % [
 		Engine.get_version_info(),
 		TIMELINE_SECONDS,
 		STEP,
