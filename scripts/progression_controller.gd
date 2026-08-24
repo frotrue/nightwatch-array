@@ -285,13 +285,17 @@ func get_forecast_lead() -> float:
 func get_forecast_max_error(type_id: String = "") -> float:
 	if has_upgrade("change_detection") and is_deep_target(type_id):
 		return 22.0
-	return 40.0 if has_upgrade("trajectory") else 70.0
+	if has_upgrade("trajectory"):
+		return 40.0
+	return 58.0 if has_upgrade("contact_ledger") else 70.0
 
 
 func get_forecast_min_error(type_id: String = "") -> float:
 	if has_upgrade("change_detection") and is_deep_target(type_id):
 		return 8.0
-	return 14.0 if has_upgrade("trajectory") else 28.0
+	if has_upgrade("trajectory"):
+		return 14.0
+	return 23.0 if has_upgrade("contact_ledger") else 28.0
 
 
 func forecast_classifies(type_id: String = "") -> bool:

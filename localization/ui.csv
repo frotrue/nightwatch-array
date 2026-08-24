@@ -297,7 +297,7 @@ UPGRADE_AUTOMATED_TRACKING_DESC,Common targets are analyzed automatically; rare 
 UPGRADE_OBSERVATORY_NETWORK_NAME,Observatory Network,천문대 네트워크
 UPGRADE_OBSERVATORY_NETWORK_DESC,Links the whole array; previews shower entry sectors; adds a second steerable dish; and keeps two support camera lanes that accelerate active analysis.,전체 관측망을 연결해 유성우 진입 구역을 예측하고 직접 조준하는 두 번째 접시를 추가하며 진행 중인 분석을 가속하는 지원 카메라 채널 두 개를 유지합니다.
 UPGRADE_CONTACT_LEDGER_NAME,Contact Ledger,접촉 신호 대장
-UPGRADE_CONTACT_LEDGER_DESC,Adds expected value and tracking demand to every classified forecast contact.,분류된 예보 신호마다 예상 가치와 필요한 추적 시간을 표시합니다.
+UPGRADE_CONTACT_LEDGER_DESC,Cross-references incoming contacts to narrow their forecast uncertainty without adding another sky label.,별도 문구를 추가하지 않고 진입 신호를 교차 분석해 예보의 불확실성을 줄입니다.
 UPGRADE_COMPANION_RESOLUTION_NAME,Companion Resolution,동반체 분해
 UPGRADE_COMPANION_RESOLUTION_DESC,Resolves fragment companions as a single family and raises the value of recovered pieces.,유성 파편을 하나의 동반체 계열로 분석해 회수한 파편의 가치를 높입니다.
 UPGRADE_RADIANT_PLOTTING_NAME,Radiant Plotting,복사점 도식화
@@ -314,16 +314,16 @@ UPGRADE_ADAPTIVE_EXPOSURE_GRID_NAME,Adaptive Exposure Grid,적응형 노출 격�
 UPGRADE_ADAPTIVE_EXPOSURE_GRID_DESC,Adapts exposure across a crowded frame so every target remains visible longer.,밀집 화면 전체의 노출을 조정해 모든 표적을 더 오래 보이게 합니다.
 UPGRADE_PERSEID_SURVEY_NAME,Perseid Survey,페르세우스 유성군 조사
 UPGRADE_PERSEID_SURVEY_DESC,Completes the density survey and rewards simultaneous contacts.,밀도 조사를 완성해 동시 접촉 신호를 더 많이 유지하고 관측 보상을 높입니다.
-UPGRADE_FILTER_WHEEL_NAME,Filter Wheel,필터 휠
-UPGRADE_FILTER_WHEEL_DESC,Identifies each target's spectral family after the mid-run survey milestone and prepares the filter wheel.,중반 조사 이정표에 도달하면 표적의 분광 계열을 식별하고 필터 휠을 준비합니다.
+UPGRADE_FILTER_WHEEL_NAME,Spectral Classifier,분광 분류기
+UPGRADE_FILTER_WHEEL_DESC,Installs automatic spectral classification and opens passive band calibration research.,자동 분광 분류기를 설치하고 수동 조작이 없는 대역 보정 연구를 엽니다.
 UPGRADE_BLUE_BAND_NAME,Blue Band,청색 대역
-UPGRADE_BLUE_BAND_DESC,Adds a blue spectral filter. Press Q between contacts to prepare it.,청색 분광 필터를 추가합니다. 표적을 추적하지 않을 때 Q로 준비합니다.
+UPGRADE_BLUE_BAND_DESC,Automatically calibrates analysis for blue-band targets improving their speed and value.,청색 대역 표적을 자동 보정해 분석 속도와 가치를 높입니다.
 UPGRADE_AMBER_BAND_NAME,Amber Band,호박색 대역
-UPGRADE_AMBER_BAND_DESC,Adds an amber spectral filter to the between-contact Q cycle.,표적 사이에 Q로 선택할 수 있는 호박색 분광 필터를 추가합니다.
+UPGRADE_AMBER_BAND_DESC,Automatically calibrates analysis for amber-band targets improving their speed and value.,호박색 대역 표적을 자동 보정해 분석 속도와 가치를 높입니다.
 UPGRADE_VIOLET_BAND_NAME,Violet Band,보라색 대역
-UPGRADE_VIOLET_BAND_DESC,Adds a violet spectral filter to the between-contact Q cycle.,표적 사이에 Q로 선택할 수 있는 보라색 분광 필터를 추가합니다.
+UPGRADE_VIOLET_BAND_DESC,Automatically calibrates analysis for violet-band targets improving their speed and value.,보라색 대역 표적을 자동 보정해 분석 속도와 가치를 높입니다.
 UPGRADE_LYRID_SPECTROGRAPH_NAME,Lyrid Spectrograph,거문고자리 분광기
-UPGRADE_LYRID_SPECTROGRAPH_DESC,Turns a correctly prepared filter into faster analysis and a decisive spectral data bonus.,표적에 맞는 필터를 준비하면 분석 속도와 분광 데이터 보상이 크게 증가합니다.
+UPGRADE_LYRID_SPECTROGRAPH_DESC,Strengthens every calibrated spectral band for faster analysis and a decisive data bonus.,자동 보정된 모든 분광 대역의 분석 속도와 데이터 보상을 크게 높입니다.
 UPGRADE_EPHEMERIS_MARKS_NAME,Ephemeris Marks,천체력 표식
 UPGRADE_EPHEMERIS_MARKS_DESC,Marks long-lived paths after the late-run survey milestone and opens an independent deep-sky forecast.,후반 조사 이정표에 도달하면 장시간 천체의 경로를 표시하고 독립적인 심우주 예보를 엽니다.
 UPGRADE_SATELLITE_CATALOG_NAME,Satellite Catalog,인공위성 목록
@@ -339,7 +339,6 @@ UPGRADE_ANDROMEDA_DEEP_SURVEY_DESC,Completes the deep survey and increases the v
 CONTACT_UNCLASSIFIED,UNCLASSIFIED,미분류 신호
 CONTACT_COMMIT_HINT,SHIFT+RIGHT-CLICK: COMMIT DISH,Shift+우클릭: 접시 예약
 CONTACT_MANUAL_ONLY_HINT,MANUAL OBSERVATION ONLY,수동 관측 전용
-CONTACT_LEDGER_METRICS,%d DATA  •  %.1fs TRACK,데이터 %d  •  추적 %.1f초
 METEOR_COMMON,COMMON METEOR,일반 유성
 METEOR_FAST,FAST METEOR,고속 유성
 METEOR_FRAGMENT,FRAGMENTING METEOR,분열 유성
@@ -349,10 +348,6 @@ METEOR_MAJOR,MAJOR FIREBALL,대형 화구
 METEOR_SATELLITE,ARTIFICIAL SATELLITE,인공위성
 METEOR_VARIABLE_STAR,VARIABLE STAR,변광성
 METEOR_COMET,LONG-ARC COMET,장주기 혜성
-FILTER_BROADBAND,BROADBAND,광대역
-FILTER_BLUE,BLUE BAND,청색 대역
-FILTER_AMBER,AMBER BAND,호박색 대역
-FILTER_VIOLET,VIOLET BAND,보라색 대역
 QUALITY_AUTOMATIC,AUTOMATIC,자동
 QUALITY_PERFECT,PERFECT,완벽
 QUALITY_EXCELLENT,EXCELLENT,우수
@@ -363,8 +358,6 @@ BANNER_QUALITY,%s OBSERVATION  •  x%.2f,%s 관측  •  x%.2f
 BANNER_SYSTEM_ONLINE,SYSTEM ONLINE  •  %s,시스템 가동  •  %s
 BANNER_SECONDARY_ALERT,SECONDARY CAMERA ALERT,보조 카메라 경보
 BANNER_UNUSUAL_SIGNATURE,UNUSUAL SIGNATURE,이상 신호
-BANNER_FILTER_PREPARED,FILTER PREPARED  •  %s,필터 준비  •  %s
-BANNER_FILTER_LOCKED,FILTER LOCKED TO ACTIVE CONTACT,활성 표적에 필터가 고정됨
 EVENT_SHOWER_INCOMING,METEOR SHOWER INCOMING,유성우 접근 중
 EVENT_ATMOSPHERIC_BLOOM,ATMOSPHERIC BLOOM DETECTED,대기 발광 감지
 EVENT_SHOWER,METEOR SHOWER,유성우

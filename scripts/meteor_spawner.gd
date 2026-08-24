@@ -360,7 +360,6 @@ func _announce_regular_spawn(source_rng: RandomNumberGenerator = null) -> void:
 		"lead_time": lead_time,
 		"trajectory_known": progression.has_upgrade("trajectory"),
 		"classified": progression.forecast_classifies(type_id),
-		"spectral_band": String(spec.get("spectral_band", "blue")),
 		"abandoned_flash": 0.0,
 	}
 	next_contact_id += 1
@@ -451,6 +450,8 @@ func _choose_regular_type_with_rng(source_rng: RandomNumberGenerator) -> String:
 
 
 func _current_features(type_id: String) -> Dictionary:
+	var spec := Balance.meteor_spec(type_id)
+	var spectral_band := String(spec.get("spectral_band", "blue"))
 	return {
 		"wide_field": progression.has_upgrade("wide_field"),
 		"prediction": progression.has_upgrade("trajectory"),
@@ -458,7 +459,7 @@ func _current_features(type_id: String) -> Dictionary:
 		"perfect": progression.has_upgrade("perfect_observation"),
 		"automation": progression.get_automation_strength(type_id),
 		"analysis_speed": progression.get_analysis_speed_multiplier(type_id),
-		"spectral_identity": progression.has_upgrade("filter_wheel"),
+		"spectral_calibrated": progression.has_upgrade("%s_band" % spectral_band),
 		"spectral_capstone": progression.has_upgrade("lyrid_spectrograph"),
 	}
 
