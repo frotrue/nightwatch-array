@@ -4,7 +4,7 @@ const PROBE_DURATION := 30.0
 const STEP := 0.05
 const SPAWN_SEED := 20260821
 const SPAWN_SEED_ENV := "NIGHTWATCH_CONTACT_PROBE_SEED"
-const TYPE_BUCKETS := ["common", "fast", "fragment", "fragment_piece", "fireball", "major"]
+const TYPE_BUCKETS := ["common", "fast", "fragment", "fragment_piece", "fireball", "satellite", "variable_star", "comet", "major"]
 const MODE_NO_INPUT := "no-input"
 const MODE_SCRIPTED_ENGAGED := "scripted-engaged"
 const MODE_BASELINE_ENGAGED := "baseline-engaged"
@@ -26,7 +26,7 @@ const ROWS := [
 		"modes": [MODE_NO_INPUT, MODE_BASELINE_ENGAGED],
 	},
 	{
-		# The completed 21-node tree has 20 pacing upgrades; Predictive Dish
+		# The completed 41-node tree has 40 pacing upgrades; Predictive Dish
 		# Control is the sole interaction-only exclusion from density.
 		"name": "duration-ladder-end",
 		"upgrades": [
@@ -37,7 +37,13 @@ const ROWS := [
 			"thermal_management", "extended_watch_protocol",
 			"continuous_watch_rotation", "secondary_camera",
 			"predictive_dish_control", "multi_target_analysis",
-			"automated_tracking", "observatory_network",
+			"automated_tracking", "observatory_network", "contact_ledger",
+			"companion_resolution", "radiant_plotting", "crowd_forecast",
+			"burst_windowing", "debris_correlation", "cascade_sampling",
+			"adaptive_exposure_grid", "perseid_survey", "filter_wheel",
+			"blue_band", "amber_band", "violet_band", "lyrid_spectrograph",
+			"ephemeris_marks", "satellite_catalog", "change_detection",
+			"variable_watchlist", "comet_solutions", "andromeda_deep_survey",
 		],
 		"modes": [MODE_NO_INPUT, MODE_SCRIPTED_ENGAGED],
 	},

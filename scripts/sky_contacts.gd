@@ -1,5 +1,7 @@
 extends Node2D
 
+const Balance = preload("res://scripts/game_balance.gd")
+
 # Forecast information can arrive before the player owns hardware to act on it.
 # Secondary Camera adds the player-aimed dish and extends the warning to fund
 # its slew time; Wide Field Sensor alone still supports cursor pre-positioning.
@@ -443,6 +445,10 @@ func _draw_contact(contact: Dictionary) -> void:
 		draw_arc(estimate, error_radius * pulse, 0.0, TAU, 40, Color(base_color, 0.20), 1.0, true)
 	draw_arc(estimate, 20.0 * pulse, 0.0, TAU, 32,
 		Color(base_color, 0.85 if hovered else 0.6), 2.0 if hovered else 1.5, true)
+	if progression.has_upgrade("filter_wheel"):
+		var spectral_color := _spectral_band_color(String(contact.get("spectral_band", "blue")))
+		draw_arc(estimate, 24.0 * pulse, -PI * 0.78, -PI * 0.22, 14,
+			Color(spectral_color, 0.92), 3.0, true)
 	if bool(contact.get("trajectory_known", false)):
 		draw_line(estimate, estimate + Vector2(contact.direction) * 34.0, Color(base_color, 0.45), 1.2, true)
 
@@ -451,6 +457,11 @@ func _draw_contact(contact: Dictionary) -> void:
 		label = tr("METEOR_%s" % String(contact.type_id).to_upper())
 	draw_string(font, estimate + Vector2(-60.0, -28.0), label,
 		HORIZONTAL_ALIGNMENT_CENTER, 120.0, 14, Color(base_color, 0.95))
+	if bool(contact.classified) and progression.has_upgrade("contact_ledger"):
+		var spec := Balance.meteor_spec(String(contact.type_id))
+		var metrics := tr("CONTACT_LEDGER_METRICS") % [int(spec.value), float(spec.track_time)]
+		draw_string(font, estimate + Vector2(-70.0, -46.0), metrics,
+			HORIZONTAL_ALIGNMENT_CENTER, 140.0, 12, Color(base_color, 0.72))
 	draw_string(font, estimate + Vector2(-60.0, 40.0), "%.1fs" % maxf(0.0, float(contact.countdown)),
 		HORIZONTAL_ALIGNMENT_CENTER, 120.0, 13, Color(base_color, 0.7))
 
@@ -468,6 +479,13 @@ func _draw_contact(contact: Dictionary) -> void:
 		_draw_assignment_hint(estimate, base_color, font, hint_keys[hint_index], hint_index, hint_keys.size())
 	if hovered and _commitment_enabled() and Input.is_key_pressed(KEY_SHIFT):
 		_draw_commitment_preview(contact, estimate)
+
+
+func _spectral_band_color(band: String) -> Color:
+	match band:
+		"amber": return Color("ffbf66")
+		"violet": return Color("b78cff")
+		_: return Color("66bfff")
 
 
 func _draw_commitment_preview(contact: Dictionary, estimate: Vector2) -> void:

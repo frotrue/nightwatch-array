@@ -224,18 +224,66 @@ func _run() -> void:
 	_check(balance.FIRST_METEOR_DELAY <= 2.0, "the opening meteor arrives before the sky feels empty")
 	_check(balance.REGULAR_SPAWN_INTERVAL_MIN == 1.6 and balance.REGULAR_SPAWN_INTERVAL_MAX == 2.4, "regular spawn cadence keeps multiple choices in flight")
 	_check(game.progression.get_available_nodes().size() == 3, "only three opening choices are revealed")
-	_check(game.upgrade_tree.systems_readout != null, "the research chart owns the 0..21 completion readout")
+	_check(game.upgrade_tree.systems_readout != null, "the research chart owns the 0..41 completion readout")
 	_check(not game.hud.root_control.has_node("ArrayCompletionBar"), "the HUD no longer duplicates completion as a bar")
 	_check(not game.hud.tracking_cluster.is_processing(), "the hidden tracking instrument does no frame work before first use")
 	_check(game.progression.get_node_state("long_exposure") == "hidden", "adjacent optics node begins hidden")
+	_check(not game.progression.forecast_visible(), "Andromeda forecasts are inert before Ephemeris Marks")
+	_check(is_equal_approx(game.progression.get_lifetime_multiplier(), 1.0), "Perseus exposure is inert before purchase")
+	_check(is_equal_approx(game.progression.get_analysis_speed_multiplier("comet"), 1.0), "Andromeda analysis speed is inert before its capstone")
+	_check(is_equal_approx(game.progression.get_observation_value_multiplier("fragment_piece", 4), 1.0), "new constellation rewards are inert before purchase")
+	var research_probe = load("res://scripts/progression_controller.gd").new()
+	var base_probe_scale: float = research_probe.get_spawn_interval_scale()
+	research_probe.success_count = balance.ANDROMEDA_DISCOVERY_SUCCESSES
+	_check(research_probe.debug_purchase_node("radiant_plotting"), "Perseus discovery root purchases at its observation gate")
+	_check(research_probe.get_spawn_interval_scale() < base_probe_scale, "Radiant Plotting compresses arrivals only after purchase")
+	_check(research_probe.debug_purchase_node("crowd_forecast") and research_probe.get_forecast_lead() > 2.0, "Crowd Forecast extends the warning window")
+	_check(research_probe.debug_purchase_node("burst_windowing"), "Perseus density chain advances through Burst Windowing")
+	_check(research_probe.debug_purchase_node("adaptive_exposure_grid") and research_probe.get_lifetime_multiplier() > 1.0, "Adaptive Exposure Grid lengthens target visibility")
+	_check(research_probe.debug_purchase_node("debris_correlation"), "Perseus debris branch opens from its real Mirfak segment")
+	_check(research_probe.debug_purchase_node("cascade_sampling") and research_probe.get_max_active() == 5, "Cascade Sampling opens one bounded crowded-sky channel")
+	_check(research_probe.debug_purchase_node("perseid_survey") and research_probe.get_max_active() == 6, "Perseid Survey reaches the six-target performance cap")
+	_check(research_probe.get_observation_value_multiplier("fragment", 3) > 1.0, "Perseus survey rewards dense fragment observations")
+	_check(research_probe.debug_purchase_node("ephemeris_marks") and research_probe.forecast_visible(), "Ephemeris Marks independently opens the deep-sky forecast")
+	_check(research_probe.debug_purchase_node("satellite_catalog"), "Satellite Catalog opens its same-round target family")
+	_check(research_probe.debug_purchase_node("change_detection"), "Change Detection advances the Andromeda chain")
+	_check(research_probe.debug_purchase_node("variable_watchlist"), "Variable Watchlist opens its optional Andromeda arm")
+	_check(research_probe.debug_purchase_node("comet_solutions"), "Comet Solutions opens its long-arc target family")
+	_check(research_probe.debug_purchase_node("andromeda_deep_survey"), "Andromeda capstone follows the comet arm")
+	_check(research_probe.forecast_classifies("comet") and research_probe.get_forecast_max_error("comet") == 22.0, "Change Detection classifies and tightens deep-target forecasts")
+	_check(research_probe.get_analysis_speed_multiplier("comet") == 1.25 and research_probe.get_observation_value_multiplier("comet", 1) == 1.3, "Andromeda capstone improves long-target analysis without cross-round state")
+	for deep_type in ["satellite", "variable_star", "comet"]:
+		var deep_spec: Dictionary = balance.meteor_spec(deep_type)
+		_check(float(deep_spec.lifetime) >= 20.0 and float(deep_spec.lifetime) <= 40.0, "deep target stays within one round: " + deep_type)
+		_check(float(deep_spec.track_time) / 1.42 < float(deep_spec.lifetime), "deep target has a payable same-round analysis window: " + deep_type)
+	var filter_meteor_script = load("res://scripts/meteor.gd")
+	var unfiltered_probe = filter_meteor_script.new()
+	unfiltered_probe.configure(balance.meteor_spec("common"), "common", Vector2.ZERO, Vector2.RIGHT * 10.0, 1.0, {}, Vector2.RIGHT * 100.0)
+	_check(unfiltered_probe.get_filter_fit() == "inactive" and is_equal_approx(unfiltered_probe.get_filter_speed_multiplier(), 1.0), "Lyra filters are inert before Filter Wheel")
+	var filtered_probe = filter_meteor_script.new()
+	filtered_probe.configure(balance.meteor_spec("common"), "common", Vector2.ZERO, Vector2.RIGHT * 10.0, 1.0, {"spectral_identity": true}, Vector2.RIGHT * 100.0)
+	filtered_probe.lock_filter("blue")
+	filtered_probe.lock_filter("amber")
+	_check(filtered_probe.get_filter_fit() == "match", "a prepared Lyra filter locks at first target acquisition")
+	_check(filtered_probe.get_filter_speed_multiplier() == 1.25 and filtered_probe.get_filter_value_multiplier() == 1.15, "matched Lyra filters improve one contact without reflex switching")
+	var capstone_filter_probe = filter_meteor_script.new()
+	capstone_filter_probe.configure(balance.meteor_spec("common"), "common", Vector2.ZERO, Vector2.RIGHT * 10.0, 1.0, {"spectral_identity": true, "spectral_capstone": true}, Vector2.RIGHT * 100.0)
+	capstone_filter_probe.lock_filter("blue")
+	_check(capstone_filter_probe.get_filter_speed_multiplier() == 1.45 and capstone_filter_probe.get_filter_value_multiplier() == 1.35, "Lyrid Spectrograph strengthens a correctly prepared filter")
+	research_probe.free()
+	unfiltered_probe.free()
+	filtered_probe.free()
+	capstone_filter_probe.free()
 	_check(not balance.upgrade_definition("observation_scheduling").is_empty(), "duration research is present in the tree")
 	_check(int(balance.upgrade_definition("observation_scheduling").cost) == 60, "the mandatory first duration gate stays inexpensive")
 	_check(int(balance.upgrade_definition("thermal_management").cost) == 180, "the second duration step uses its measured price")
 	_check(int(balance.upgrade_definition("extended_watch_protocol").cost) == 280, "the third duration step uses its measured price")
 	_check(int(balance.upgrade_definition("continuous_watch_rotation").cost) == 380, "the fourth duration step uses its measured price")
-	_check("observation_scheduling" in balance.upgrade_definition("wide_field").prerequisites, "Wide Field requires Observation Scheduling")
-	_check(balance.upgrade_definition("thermal_management").prerequisites == ["wide_field"], "Thermal Management relies on Wide Field without a redundant edge")
-	_check(balance.upgrade_definition("continuous_watch_rotation").prerequisites == ["extended_watch_protocol", "rare_detection"], "Continuous Watch Rotation closes the duration/detection alternation")
+	_check(balance.upgrade_definition("wide_field").prerequisites == ["edge_detection"], "Wide Field stays inside the detection constellation")
+	_check(balance.upgrade_definition("thermal_management").prerequisites == ["observation_scheduling"], "Thermal Management stays inside Orion's duration arm")
+	_check(balance.upgrade_definition("continuous_watch_rotation").prerequisites == ["extended_watch_protocol"], "Continuous Watch Rotation stays inside Orion")
+	_check(game.progression.is_reveal_gate_met({"type": "success_count", "minimum": game.progression.success_count}), "success-count discovery gates open at their threshold")
+	_check(not game.progression.is_reveal_gate_met({"type": "success_count", "minimum": game.progression.success_count + 1}), "success-count discovery gates stay closed below their threshold")
 	var closed_tree_style_id: int = game.upgrade_tree.node_buttons["better_lens"].get_theme_stylebox("normal").get_instance_id()
 	var closed_tree_optics_position: Vector2 = game.upgrade_tree.node_buttons["better_lens"].position
 	var data_before_rejected_purchase: float = game.progression.observation_data
@@ -274,6 +322,7 @@ func _run() -> void:
 	_check(chart_validation_errors.is_empty(), "research chart maps every upgrade exactly once with valid constellation segments")
 	var chart_node_stars: Dictionary = chart_data.node_star_map()
 	var adjacent_internal_edges := true
+	var all_prerequisites_internal := true
 	for definition in balance.UPGRADE_NODES:
 		var target_node_id := String(definition.id)
 		var target_location: Dictionary = chart_node_stars[target_node_id]
@@ -281,6 +330,7 @@ func _run() -> void:
 			var prerequisite_node_id := String(prerequisite_variant)
 			var prerequisite_location: Dictionary = chart_node_stars[prerequisite_node_id]
 			if String(prerequisite_location.constellation_id) != String(target_location.constellation_id):
+				all_prerequisites_internal = false
 				continue
 			var constellation: Dictionary = chart_data.CONSTELLATIONS[target_location.constellation_id]
 			var prerequisite_star_id := String(prerequisite_location.star.id)
@@ -294,6 +344,7 @@ func _run() -> void:
 			if not edge_matches_segment:
 				adjacent_internal_edges = false
 	_check(adjacent_internal_edges, "same-constellation prerequisites follow declared figure segments instead of cutting across them")
+	_check(all_prerequisites_internal, "research prerequisites never cross constellation boundaries")
 	_check(opening_optics.position != opening_detection.position and opening_detection.position != opening_network.position, "opening research nodes occupy distinct constellation positions")
 	var optics_center_before := opening_optics.position + opening_optics.size * 0.5
 	var optics_radius_before := optics_center_before.distance_to(game.upgrade_tree.CHART_ORIGIN)
@@ -518,10 +569,9 @@ func _run() -> void:
 	_check(game.progression.get_forecast_max_error() == 70.0, "baseline forecasts expose a seventy-pixel uncertainty envelope")
 	_check(not game.progression.forecast_classifies(), "baseline forecasts do not classify contacts")
 	game.progression.debug_purchase_node("edge_detection")
-	_check(game.progression.get_node_state("wide_field") == "locked", "Wide Field cannot bypass its mandatory duration gate")
+	_check(game.progression.get_node_state("wide_field") == "available", "Edge Detection opens its own constellation's Wide Field path")
 	game.progression.debug_purchase_node("array_planning")
 	game.progression.debug_purchase_node("observation_scheduling")
-	_check(game.progression.get_node_state("wide_field") == "available", "Observation Scheduling opens the Wide Field path")
 	game.progression.debug_purchase_node("wide_field")
 	game.sky_contacts.refresh_dishes()
 	_check(game.spawner.forecast_enabled(), "Wide Field Sensor reveals incoming contacts")
@@ -551,6 +601,7 @@ func _run() -> void:
 	_check(not bool(wide_contact.classified), "Wide Field Sensor contacts begin unclassified")
 	_check(not bool(wide_contact.trajectory_known), "Wide Field Sensor alone does not reveal the approach vector")
 
+	_check(game.progression.debug_purchase_node("contact_ledger"), "Contact Ledger completes the Big Dipper approach to Trajectory Prediction")
 	game.progression.debug_purchase_node("trajectory")
 	game.spawner._announce_regular_spawn()
 	var trajectory_contact: Dictionary = game.spawner.pending_contacts[1]
@@ -929,10 +980,10 @@ func _run() -> void:
 	game.sky_contacts.reset()
 
 	game.progression.debug_purchase_all()
-	_check(game.progression.upgrade_level == 21, "all tree nodes unlock through prerequisite-safe debug purchase")
+	_check(game.progression.upgrade_level == 41, "all tree nodes unlock through prerequisite-safe debug purchase")
 	_check(game.progression.get_max_active() == 6, "research raises dense-sky capacity without removing the six-target performance cap")
-	_check(game.progression.upgrade_level == 21, "the run resolves to the full 21-system array completion")
-	_check(is_equal_approx(game.progression.get_progression_ratio(), 1.0), "21-node topology normalization preserves the completed-tree density endpoint")
+	_check(game.progression.upgrade_level == 41, "the run resolves to the full 41-system array completion")
+	_check(is_equal_approx(game.progression.get_progression_ratio(), 1.0), "41-node topology normalization preserves the completed-tree density endpoint")
 	for legacy_id in ["better_lens", "long_exposure", "wide_field", "trajectory", "precision_multiplier", "secondary_camera", "shower_detector", "automated_tracking"]:
 		_check(game.progression.has_upgrade(legacy_id), "legacy upgrade migrated: " + legacy_id)
 	_check(game.progression.has_upgrade("automated_tracking"), "final automation system is active")
@@ -992,8 +1043,8 @@ func _run() -> void:
 	_check(is_zero_approx(machine_only_major.dish_assist_rate) and is_zero_approx(machine_only_major.lane_assist_rate), "every limited machine source excludes the major target")
 	_check(not machine_only_major.observed_successfully and machine_only_major.observation_progress > 0.47 and machine_only_major.observation_progress < 0.51, "all active machine systems leave a major target at its intended passive coverage without manual input")
 	machine_only_major.free()
-	_check(game.progression.get_node_state("perfect_observation") == "purchased", "cross-branch Perfect Observation resolves")
-	_check(game.progression.get_node_state("observatory_network") == "purchased", "cross-branch Observatory Network resolves")
+	_check(game.progression.get_node_state("perfect_observation") == "purchased", "internal optics capstone resolves")
+	_check(game.progression.get_node_state("observatory_network") == "purchased", "internal Orion capstone resolves")
 	for duration_node in ["observation_scheduling", "thermal_management", "extended_watch_protocol", "continuous_watch_rotation"]:
 		_check(game.progression.has_upgrade(duration_node) and game.upgrade_tree.node_buttons.has(duration_node), "duration research has a live purchased tree surface: " + duration_node)
 	game.upgrade_tree.open_tree()
@@ -1060,7 +1111,8 @@ func _run() -> void:
 	_check(game.progression.debug_purchase_node("array_planning"), "Array Planning opens duration research")
 	_check(game.progression.debug_purchase_node("observation_scheduling") and game._observation_duration() == 30.0, "Observation Scheduling extends future rounds to 30 seconds")
 	_check(game.progression.debug_purchase_node("edge_detection"), "Edge Detection opens the gated detection path")
-	_check(game.progression.debug_purchase_node("wide_field"), "the mandatory duration gate allows Wide Field")
+	_check(game.progression.debug_purchase_node("wide_field"), "Edge Detection allows its internal Wide Field successor")
+	_check(game.progression.debug_purchase_node("contact_ledger"), "Edge Detection opens the alternate Big Dipper ledger path")
 	_check(game.progression.debug_purchase_node("thermal_management") and game._observation_duration() == 40.0, "Thermal Management extends future rounds to 40 seconds")
 	_check(game.progression.debug_purchase_node("trajectory"), "Trajectory Prediction opens the next duration pairing")
 	_check(game.progression.debug_purchase_node("extended_watch_protocol") and game._observation_duration() == 50.0, "Extended Watch Protocol extends future rounds to 50 seconds")

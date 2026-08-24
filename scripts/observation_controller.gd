@@ -17,6 +17,7 @@ var was_holding: bool = false
 var tracking_grace_remaining: float = 0.0
 var tracking_visual_active_last_frame: bool = false
 var native_cursor_visible: bool = false
+var prepared_filter: String = "broadband"
 
 
 func setup(target_layer: Node2D, progression_controller: Node, hud_layer: CanvasLayer) -> void:
@@ -46,8 +47,43 @@ func reset() -> void:
 	tracking_grace_remaining = 0.0
 	was_holding = false
 	tracking_visual_active_last_frame = false
+	prepared_filter = "broadband"
 	if hud != null:
 		hud.hide_tracking()
+	queue_redraw()
+
+
+func _unhandled_key_input(event: InputEvent) -> void:
+	if not (event is InputEventKey) or not event.pressed or event.echo or event.keycode != KEY_Q:
+		return
+	if progression == null or not progression.has_upgrade("filter_wheel"):
+		return
+	# The wheel is preparation, not a reflex counter. Once any target is being
+	# held the prepared band is locked until that contact is released.
+	if _selection_is_valid() or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+		if hud != null:
+			hud.show_banner(tr("BANNER_FILTER_LOCKED"), Color("ffb276"), 1.0)
+		get_viewport().set_input_as_handled()
+		return
+	var available: Array[String] = ["broadband"]
+	if progression.has_upgrade("blue_band"):
+		available.append("blue")
+	if progression.has_upgrade("amber_band"):
+		available.append("amber")
+	if progression.has_upgrade("violet_band"):
+		available.append("violet")
+	if available.size() <= 1:
+		get_viewport().set_input_as_handled()
+		return
+	var index := available.find(prepared_filter)
+	prepared_filter = available[(maxi(index, 0) + 1) % available.size()]
+	if hud != null:
+		hud.show_banner(
+			tr("BANNER_FILTER_PREPARED") % tr("FILTER_%s" % prepared_filter.to_upper()),
+			_filter_color(prepared_filter),
+			1.4
+		)
+	get_viewport().set_input_as_handled()
 	queue_redraw()
 
 
@@ -143,6 +179,8 @@ func _observe_additional_targets(delta: float, primary) -> void:
 func _apply_manual_contact(target, delta: float) -> bool:
 	if not _target_is_valid(target):
 		return false
+	if target.has_method("lock_filter"):
+		target.lock_filter(prepared_filter)
 	var tracking_radius: float = target.get_tracking_radius(progression.get_tracking_radius())
 	var current_distance: float = cursor_position.distance_to(target.global_position)
 	if current_distance <= tracking_radius:
@@ -303,6 +341,11 @@ func _draw_tracking_ring(target, is_primary: bool) -> void:
 	var tracking_radius: float = target.get_tracking_radius(progression.get_tracking_radius())
 	var quality: float = target.get_quality()
 	var ring_color := Color("82d7ff").lerp(Color("77ffd0"), quality)
+	if target.has_method("get_filter_fit"):
+		match String(target.get_filter_fit()):
+			"broadband": ring_color = target.get_spectral_color()
+			"match": ring_color = Color("77ffd0")
+			"mismatch": ring_color = Color("ff8b78")
 	var outer_alpha := 0.48 if is_primary else 0.22
 	var progress_alpha := 1.0 if is_primary else 0.76
 	draw_circle(target.global_position, tracking_radius + 4.0, Color(ring_color, 0.035 if is_primary else 0.018))
@@ -321,9 +364,19 @@ func _draw_tracking_ring(target, is_primary: bool) -> void:
 		draw_line(cursor_position, target.global_position, Color(ring_color, 0.18), 1.0, true)
 
 
+func _filter_color(filter_id: String) -> Color:
+	match filter_id:
+		"blue": return Color("66bfff")
+		"amber": return Color("ffbf66")
+		"violet": return Color("b78cff")
+		_: return Color("b8f3ff")
+
+
 func _draw_hover_ring(target) -> void:
 	var tracking_radius: float = target.get_tracking_radius(progression.get_tracking_radius())
 	var ring_color := Color("82d7ff")
+	if target.has_method("get_filter_fit") and String(target.get_filter_fit()) == "broadband":
+		ring_color = target.get_spectral_color()
 	var pulse := 1.0 + sin(Time.get_ticks_msec() * 0.006) * 0.06
 	var radius := tracking_radius * pulse
 	draw_arc(target.global_position, radius, 0.0, TAU, 40, Color(ring_color, 0.34), 1.8, true)

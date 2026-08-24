@@ -5,10 +5,9 @@ signal upgrade_purchased(definition)
 signal purchase_rejected(node_id, reason_key, value)
 
 const Balance = preload("res://scripts/game_balance.gd")
-# The 21-node topology has 20 pacing upgrades. Predictive Dish Control remains
-# interaction-only, so excluding it normalizes the completed tree to 1.0 rather
-# than silently turning the added duration node into a density retune.
-const PACING_NODE_COUNT := 20
+# The 41-node topology has 40 pacing upgrades. Predictive Dish Control remains
+# interaction-only, so excluding it normalizes the completed tree to 1.0.
+const PACING_NODE_COUNT := 40
 
 var observation_data: float = 0.0
 var success_count: int = 0
@@ -130,9 +129,20 @@ func is_node_revealed(node_id: String) -> bool:
 	if reveal_gates.is_empty():
 		return true
 	for gate in reveal_gates:
-		if has_upgrade(String(gate)):
+		if is_reveal_gate_met(gate):
 			return true
 	return false
+
+
+func is_reveal_gate_met(gate) -> bool:
+	if gate is Dictionary:
+		var condition: Dictionary = gate
+		match String(condition.get("type", "")):
+			"success_count":
+				return success_count >= maxi(0, int(condition.get("minimum", 0)))
+			_:
+				return false
+	return has_upgrade(String(gate))
 
 
 func can_purchase(node_id: String) -> bool:
@@ -187,6 +197,9 @@ func debug_purchase_node(node_id: String) -> bool:
 
 
 func debug_purchase_all() -> void:
+	# Discovery gates model earned observations. The all-research debug path is
+	# explicitly a completed-tree fixture, so make every discovery root visible.
+	success_count = maxi(success_count, Balance.ANDROMEDA_DISCOVERY_SUCCESSES)
 	observation_data += 100000.0
 	var made_progress := true
 	while made_progress:
@@ -203,11 +216,19 @@ func get_tracking_radius() -> float:
 
 
 func get_lifetime_multiplier() -> float:
-	return 1.35 if has_upgrade("long_exposure") else 1.0
+	var multiplier := 1.35 if has_upgrade("long_exposure") else 1.0
+	if has_upgrade("adaptive_exposure_grid"):
+		multiplier *= 1.12
+	return multiplier
 
 
 func get_spawn_interval_scale() -> float:
-	return lerpf(1.0, 0.34, get_progression_ratio())
+	var scale := lerpf(1.0, 0.34, get_progression_ratio())
+	if has_upgrade("radiant_plotting"):
+		scale *= 0.94
+	if has_upgrade("burst_windowing"):
+		scale *= 0.88
+	return scale
 
 
 func get_observation_duration() -> float:
@@ -227,6 +248,8 @@ func get_max_active() -> int:
 		Balance.BASE_MAX_ACTIVE_METEORS
 		+ int(has_upgrade("array_planning"))
 		+ int(has_upgrade("multi_target_analysis"))
+		+ int(has_upgrade("cascade_sampling"))
+		+ int(has_upgrade("perseid_survey"))
 	)
 
 
@@ -245,7 +268,7 @@ func dish_commitment_enabled() -> bool:
 
 
 func forecast_visible() -> bool:
-	return has_upgrade("wide_field") or dish_active()
+	return has_upgrade("wide_field") or has_upgrade("ephemeris_marks") or dish_active()
 
 
 func dish_active() -> bool:
@@ -253,19 +276,51 @@ func dish_active() -> bool:
 
 
 func get_forecast_lead() -> float:
-	return 4.0 if dish_active() else 2.0
+	var lead := 4.0 if dish_active() else (3.0 if has_upgrade("ephemeris_marks") else 2.0)
+	if has_upgrade("crowd_forecast"):
+		lead += 0.8
+	return lead
 
 
-func get_forecast_max_error() -> float:
+func get_forecast_max_error(type_id: String = "") -> float:
+	if has_upgrade("change_detection") and is_deep_target(type_id):
+		return 22.0
 	return 40.0 if has_upgrade("trajectory") else 70.0
 
 
-func get_forecast_min_error() -> float:
+func get_forecast_min_error(type_id: String = "") -> float:
+	if has_upgrade("change_detection") and is_deep_target(type_id):
+		return 8.0
 	return 14.0 if has_upgrade("trajectory") else 28.0
 
 
-func forecast_classifies() -> bool:
-	return has_upgrade("rare_detection")
+func forecast_classifies(type_id: String = "") -> bool:
+	return has_upgrade("rare_detection") or (
+		has_upgrade("change_detection") and is_deep_target(type_id)
+	)
+
+
+func is_deep_target(type_id: String) -> bool:
+	return type_id in ["satellite", "variable_star", "comet"]
+
+
+func get_analysis_speed_multiplier(type_id: String) -> float:
+	if has_upgrade("andromeda_deep_survey") and is_deep_target(type_id):
+		return 1.25
+	return 1.0
+
+
+func get_observation_value_multiplier(type_id: String, active_target_count: int) -> float:
+	var multiplier := 1.0
+	if type_id == "fragment_piece" and has_upgrade("companion_resolution"):
+		multiplier *= 1.35
+	if type_id in ["fragment", "fragment_piece"] and has_upgrade("debris_correlation"):
+		multiplier *= 1.2
+	if is_deep_target(type_id) and has_upgrade("andromeda_deep_survey"):
+		multiplier *= 1.3
+	if active_target_count >= 3 and has_upgrade("perseid_survey"):
+		multiplier *= 1.18
+	return multiplier
 
 
 func get_secondary_slots() -> int:

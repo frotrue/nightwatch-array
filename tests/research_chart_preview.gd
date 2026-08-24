@@ -17,19 +17,21 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 
-	game.progression.add_debug_data(100.0)
-	game.progression.request_purchase("better_lens")
+	game.progression.debug_purchase_all()
 	game.upgrade_tree.open_tree()
 	await process_frame
 	await process_frame
 
 	# Hover a node so the cursor tooltip is part of the capture. The script has no
-	# real pointer, so the tooltip is placed at the hovered star by hand.
+	# real pointer, so the tooltip is placed at the hovered star by hand. Rotate
+	# half a sky to put the three newly mapped figures above the horizon together.
 	var tree = game.upgrade_tree
-	tree._on_node_hovered("long_exposure")
+	tree.rotation_offset = PI
+	tree._layout_chart()
+	tree._on_node_hovered("perseid_survey")
 	for _index in range(4):
 		await process_frame
-	var star: Control = tree.node_buttons["long_exposure"]
+	var star: Control = tree.node_buttons["perseid_survey"]
 	var overlay_control: Control = tree.overlay
 	var cursor: Vector2 = star.global_position + star.size * 0.5 - overlay_control.global_position
 	tree._position_node_tooltip(cursor)
