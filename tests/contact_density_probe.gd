@@ -10,8 +10,8 @@ const MODE_SCRIPTED_ENGAGED := "scripted-engaged"
 const MODE_BASELINE_ENGAGED := "baseline-engaged"
 const MODE_FAST_MANUAL_ONE_DISH := "fast-manual-placement-one-dish"
 const MODE_FAST_MANUAL_TWO_DISH := "fast-manual-placement-two-dish"
-const MODE_FAST_COMMITTED_ONE_DISH := "fast-predictive-commit-one-dish"
-const MODE_FAST_COMMITTED_TWO_DISH := "fast-predictive-commit-two-dish"
+const MODE_FAST_AUTO_ONE_DISH := "fast-predictive-auto-one-dish"
+const MODE_FAST_AUTO_TWO_DISH := "fast-predictive-auto-two-dish"
 const MODE_ALL_ELIGIBLE_TWO_DISH := "all-eligible-two-dish"
 const MODE_FRAGMENT_ASSIGNED_ONE_DISH := "fragment-assigned-one-dish"
 const MODE_SELECTOR_PARTNER_FIRST := "selector-partner-first"
@@ -59,18 +59,18 @@ const ROWS := [
 	},
 	{
 		"name": "wide+dish",
-		# Both capacity configurations own the commitment node's prerequisites;
+		# Both capacity configurations own the predictive node's prerequisites;
 		# the only control difference is Predictive Dish Control itself.
 		"upgrades": ["edge_detection", "array_planning", "observation_scheduling", "wide_field", "trajectory", "secondary_camera"],
 		"modes": [
 			MODE_NO_INPUT,
 			MODE_SCRIPTED_ENGAGED,
 			# The historical 16-of-30 unassigned result belongs only to the
-			# predictive commitment tier. Manual placement has no reservation.
+			# predictive assignment tier. Manual placement has no reservation.
 			MODE_FAST_MANUAL_ONE_DISH,
 			MODE_FAST_MANUAL_TWO_DISH,
-			MODE_FAST_COMMITTED_ONE_DISH,
-			MODE_FAST_COMMITTED_TWO_DISH,
+			MODE_FAST_AUTO_ONE_DISH,
+			MODE_FAST_AUTO_TWO_DISH,
 		],
 	},
 	{
@@ -172,7 +172,7 @@ func _run() -> void:
 		STEP,
 		spawn_seed,
 	])
-	print("CONTACT_DENSITY_PROBE_NOTE legacy_fast_capacity_scope=predictive-commit-with-reservation baseline_manual_placement_requires_separate_measurement=true")
+	print("CONTACT_DENSITY_PROBE_NOTE current_predictive_control=automatic-idle-dish-prepositioning legacy_reservation_rows_are_historical=true")
 	for row in ROWS:
 		for mode in row.modes:
 			await _run_row(row, String(mode))
@@ -283,7 +283,7 @@ func _prepare_row(row: Dictionary, mode: String) -> void:
 	for node_id in row.upgrades:
 		game.progression.purchased_nodes[String(node_id)] = true
 		game.progression.purchase_order.append(String(node_id))
-	if _mode_uses_predictive_commitment(mode):
+	if _mode_uses_predictive_assignment(mode):
 		for node_id in ["trajectory", "predictive_dish_control"]:
 			if not game.progression.purchased_nodes.has(node_id):
 				game.progression.purchased_nodes[node_id] = true
@@ -359,14 +359,14 @@ func _on_contact_announced(contact: Dictionary) -> void:
 	)
 	if not should_assign:
 		return
-	if not _has_free_dish() or not game.sky_contacts.assign_to_contact(int(contact.id)):
+	var contact_id := int(contact.id)
+	if _dish_assigned_to_contact(contact_id) < 0:
 		if fast_capacity_contact:
 			unassigned_fast_contacts += 1
 			unassigned_eligible_contacts += 1
 		if all_eligible_mode and dish_eligible:
 			unassigned_eligible_contacts += 1
 		return
-	var contact_id := int(contact.id)
 	assigned_contact_ids[contact_id] = type_id
 	assignment_elapsed[contact_id] = 0.0
 	assignment_leads[contact_id] = float(contact.lead_time)
@@ -424,8 +424,8 @@ func _is_fast_capacity_mode() -> bool:
 	return probe_mode in [
 		MODE_FAST_MANUAL_ONE_DISH,
 		MODE_FAST_MANUAL_TWO_DISH,
-		MODE_FAST_COMMITTED_ONE_DISH,
-		MODE_FAST_COMMITTED_TWO_DISH,
+		MODE_FAST_AUTO_ONE_DISH,
+		MODE_FAST_AUTO_TWO_DISH,
 	]
 
 
@@ -433,11 +433,11 @@ func _is_manual_placement_capacity_mode() -> bool:
 	return probe_mode in [MODE_FAST_MANUAL_ONE_DISH, MODE_FAST_MANUAL_TWO_DISH]
 
 
-func _mode_uses_predictive_commitment(mode: String) -> bool:
+func _mode_uses_predictive_assignment(mode: String) -> bool:
 	return mode in [
 		MODE_SCRIPTED_ENGAGED,
-		MODE_FAST_COMMITTED_ONE_DISH,
-		MODE_FAST_COMMITTED_TWO_DISH,
+		MODE_FAST_AUTO_ONE_DISH,
+		MODE_FAST_AUTO_TWO_DISH,
 		MODE_ALL_ELIGIBLE_TWO_DISH,
 		MODE_FRAGMENT_ASSIGNED_ONE_DISH,
 		MODE_SELECTOR_PARTNER_FIRST,
@@ -456,9 +456,16 @@ func _is_all_eligible_mode() -> bool:
 func _mode_uses_two_dishes(mode: String) -> bool:
 	return mode in [
 		MODE_FAST_MANUAL_TWO_DISH,
-		MODE_FAST_COMMITTED_TWO_DISH,
+		MODE_FAST_AUTO_TWO_DISH,
 		MODE_ALL_ELIGIBLE_TWO_DISH,
 	]
+
+
+func _dish_assigned_to_contact(contact_id: int) -> int:
+	for index in range(game.sky_contacts.dishes.size()):
+		if int(game.sky_contacts.dishes[index].assigned_id) == contact_id:
+			return index
+	return -1
 
 
 func _has_free_dish() -> bool:
@@ -631,15 +638,15 @@ func _dish_control_text() -> String:
 		return "none"
 	if _is_manual_placement_capacity_mode():
 		return "manual-point-placement-no-reservation"
-	if _mode_uses_predictive_commitment(probe_mode):
-		return "predictive-contact-commitment-with-reservation"
+	if _mode_uses_predictive_assignment(probe_mode):
+		return "predictive-automatic-prepositioning"
 	return "none"
 
 
 func _capacity_evidence_scope_text() -> String:
 	if _is_manual_placement_capacity_mode():
 		return "new-baseline"
-	if probe_mode in [MODE_FAST_COMMITTED_ONE_DISH, MODE_FAST_COMMITTED_TWO_DISH]:
+	if probe_mode in [MODE_FAST_AUTO_ONE_DISH, MODE_FAST_AUTO_TWO_DISH]:
 		return "legacy-comparable-researched-tier-only"
 	return "not-a-capacity-row"
 

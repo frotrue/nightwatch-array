@@ -196,11 +196,8 @@ func _reset_round_metrics() -> void:
 	round_had_shower = false
 
 
-func _on_contact_announced(contact: Dictionary) -> void:
+func _on_contact_announced(_contact: Dictionary) -> void:
 	round_announced += 1
-	if not game.sky_contacts.dish_active() or not _has_free_dish():
-		return
-	game.sky_contacts.assign_to_contact(int(contact.id))
 
 
 func _on_contact_resolved(_contact: Dictionary, _meteor) -> void:
@@ -219,13 +216,6 @@ func _on_meteor_observed(_meteor, reward: float, multiplier: float, was_manual: 
 
 func _on_shower_started() -> void:
 	round_had_shower = true
-
-
-func _has_free_dish() -> bool:
-	for dish in game.sky_contacts.dishes:
-		if int(dish.assigned_id) == -1 and game.sky_contacts._locked_target(dish) == null:
-			return true
-	return false
 
 
 func _process_meteors(delta: float) -> void:

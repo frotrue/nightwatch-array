@@ -142,12 +142,11 @@ func _run() -> void:
 	_check(TranslationServer.translate("TREE_INTERMISSION_SUBTITLE") % [2, 30] == "업그레이드 시간  /  2차 관측은 30초", "Korean upgrade-break guidance explains the next round and duration")
 	_check(TranslationServer.translate("PHASE_SUMMARY_TITLE") % 1 == "1차 관측 완료", "Korean phase summary title reads naturally")
 	_check(TranslationServer.translate("PHASE_SUMMARY_SYSTEMS_CHANGED") % 130.0 == "실현 처리량 130.0 데이터/분  •  시스템 변경  •  다음 라운드에서 새 기준 기록", "Korean mixed-build summary explains realized productivity and the next baseline")
-	_check(TranslationServer.translate("CONTACT_COMMIT_HINT") == "Shift+우클릭: 접시 예약", "Korean predictive-control hint teaches its separate gesture")
 	_check(TranslationServer.translate("CONTACT_MANUAL_ONLY_HINT") == "수동 관측 전용", "Korean rare-contact hint reserves the target for manual observation")
 	_check(
 		game.upgrade_tree._upgrade_description(predictive_control_definition)
-		== "예보 신호를 Shift+우클릭하면 접시를 예약해 천체 진입 시 표적을 자동으로 인계합니다.",
-		"Korean Predictive Dish Control description explains reservation and handoff"
+		== "추적 가능한 예보 신호에 유휴 접시를 자동으로 미리 배치하며 우클릭 수동 배치가 항상 우선합니다.",
+		"Korean Predictive Dish Control description explains automatic pre-positioning"
 	)
 	_check(
 		game.upgrade_tree._upgrade_description(multi_target_definition)
@@ -174,12 +173,11 @@ func _run() -> void:
 	game.settings.set_language("en", false)
 	await process_frame
 	_check(game.hud.settings_button.text.ends_with("SETTINGS"), "English can be restored at runtime")
-	_check(TranslationServer.translate("CONTACT_COMMIT_HINT") == "SHIFT+RIGHT-CLICK: COMMIT DISH", "English predictive-control hint teaches its separate gesture")
 	_check(TranslationServer.translate("CONTACT_MANUAL_ONLY_HINT") == "MANUAL OBSERVATION ONLY", "English rare-contact hint reserves the target for manual observation")
 	_check(
 		game.upgrade_tree._upgrade_description(predictive_control_definition)
-		== "Shift-right-click a forecast contact to reserve a dish and hand it directly to the object on entry.",
-		"English Predictive Dish Control description explains reservation and handoff"
+		== "Automatically pre-positions an idle dish for trackable forecast contacts; right-click placement still overrides it.",
+		"English Predictive Dish Control description explains automatic pre-positioning"
 	)
 	_check(
 		game.upgrade_tree._upgrade_description(multi_target_definition)
@@ -591,7 +589,7 @@ func _run() -> void:
 	_check(game.spawner.pending_contacts.size() == 1, "a wide-field forecast is queued before its object exists")
 	var wide_contact: Dictionary = game.spawner.pending_contacts[0]
 	_check(game.sky_contacts.contacts.size() == 1, "a wide-field contact is retained without a dish")
-	_check(not game.sky_contacts.assign_to_contact(int(wide_contact.id)), "a pre-dish contact remains non-interactive")
+	_check(not game.sky_contacts.dish_active(), "a pre-dish contact remains non-interactive")
 	_check(float(wide_contact.lead_time) == 2.0, "Wide Field Sensor provides two seconds of warning")
 	_check(float(wide_contact.max_error) == 70.0, "Wide Field Sensor begins with the baseline error envelope")
 	_check(not bool(wide_contact.classified), "Wide Field Sensor contacts begin unclassified")
@@ -659,8 +657,7 @@ func _run() -> void:
 	_check(int(game.sky_contacts.dishes[0].assigned_id) == -1, "plain right-click over a contact never reserves it")
 	_check(Vector2(game.sky_contacts.dishes[0].target).is_equal_approx(pointer_position), "plain right-click moves the nearest dish to the clicked contact point")
 	_check(game.sky_contacts.dish_movement_learned, "the first dish movement dismisses its independent teaching hint")
-	_check(not game.sky_contacts.dish_commitment_learned, "manual placement does not dismiss the researched commitment lesson")
-	_check(not game.sky_contacts.assign_to_contact(int(contact.id)), "contact commitment remains unavailable before its research")
+	_check(not game.progression.dish_auto_assignment_enabled(), "dish auto-assignment remains unavailable before its research")
 	var isolated_contact_position := Vector2(-1000.0, -1000.0)
 	contact.intercept = isolated_contact_position
 	game.observer.cursor_position = isolated_contact_position
@@ -680,33 +677,38 @@ func _run() -> void:
 		"left-button tracking fallthrough on an empty contact leaves selection and grace clean"
 	)
 	game.hud.visible = hud_was_visible
+	var ready_dish: Dictionary = game.sky_contacts.dishes[0]
+	ready_dish.position = ready_dish.target
+	ready_dish.arrived = true
+	game.sky_contacts.dishes[0] = ready_dish
 
 	for prerequisite_id in ["edge_detection", "observation_scheduling", "wide_field", "trajectory"]:
 		game.progression.debug_purchase_node(prerequisite_id)
 	var pacing_ratio_before_predictive_control: float = game.progression.get_progression_ratio()
 	game.progression.debug_purchase_node("predictive_dish_control")
-	_check(game.progression.dish_commitment_enabled(), "Predictive Dish Control unlocks contact commitment after the manual layer")
+	_check(game.progression.dish_auto_assignment_enabled(), "Predictive Dish Control unlocks automatic pre-positioning after the manual layer")
 	_check(is_equal_approx(game.progression.get_progression_ratio(), pacing_ratio_before_predictive_control), "new dish interaction research does not silently retune spawn density")
-	contact.intercept = pointer_position
-	var commit_click := InputEventMouseButton.new()
-	commit_click.button_index = MOUSE_BUTTON_RIGHT
-	commit_click.pressed = true
-	commit_click.shift_pressed = true
-	commit_click.position = pointer_position
-	game.sky_contacts._unhandled_input(commit_click)
-	_check(int(game.sky_contacts.dishes[0].assigned_id) == int(contact.id), "the researched Shift-right-click gesture reserves a forecast contact")
-	_check(game.sky_contacts.dish_commitment_learned, "successful researched commitment dismisses only its own lesson")
-	_check(not bool(game.sky_contacts.dishes[0].arrived), "a committed dish has to slew before direct handoff")
+	_check(int(game.sky_contacts.dishes[0].assigned_id) == -1, "research does not retroactively seize an existing contact")
 	game.spawner._announce_regular_spawn()
-	var second_contact: Dictionary = game.spawner.pending_contacts[1]
-	game.sky_contacts.assign_to_contact(int(second_contact.id))
-	_check(float(contact.abandoned_flash) > 0.0, "re-tasking the only dish marks the contact it abandoned")
-	_check(int(game.sky_contacts.dishes[0].assigned_id) == int(second_contact.id), "one dish cannot hold two contacts")
+	var automatic_contact: Dictionary = game.spawner.pending_contacts[1]
+	_check(int(game.sky_contacts.dishes[0].assigned_id) == int(automatic_contact.id), "an idle dish automatically pre-positions for a new trackable forecast")
+	_check(not bool(game.sky_contacts.dishes[0].arrived), "automatic pre-positioning still has to pay its slew time")
+	game.spawner._announce_regular_spawn()
+	var second_contact: Dictionary = game.spawner.pending_contacts[2]
+	_check(int(game.sky_contacts.dishes[0].assigned_id) == int(automatic_contact.id), "automatic control never steals a busy dish for a newer contact")
 	var cancellation_point := pointer_position + Vector2(210.0, 90.0)
-	right_click.position = cancellation_point
-	game.sky_contacts._unhandled_input(right_click)
-	_check(int(game.sky_contacts.dishes[0].assigned_id) == -1, "plain right-click cancels a researched contact reservation")
-	_check(Vector2(game.sky_contacts.dishes[0].target).is_equal_approx(cancellation_point), "reservation cancellation still obeys literal point movement")
+	var shifted_right_click := InputEventMouseButton.new()
+	shifted_right_click.button_index = MOUSE_BUTTON_RIGHT
+	shifted_right_click.pressed = true
+	shifted_right_click.shift_pressed = true
+	shifted_right_click.position = cancellation_point
+	game.sky_contacts._unhandled_input(shifted_right_click)
+	_check(int(game.sky_contacts.dishes[0].assigned_id) == -1, "right-click manual placement overrides automatic pre-positioning")
+	_check(Vector2(game.sky_contacts.dishes[0].target).is_equal_approx(cancellation_point), "Shift adds no reservation gesture and obeys the same point movement")
+	var settled_dish: Dictionary = game.sky_contacts.dishes[0]
+	settled_dish.position = cancellation_point
+	settled_dish.arrived = true
+	game.sky_contacts.dishes[0] = settled_dish
 	var fireball_contact: Dictionary = second_contact.duplicate(true)
 	fireball_contact.id = 9001
 	fireball_contact.type_id = "fireball"
@@ -714,9 +716,8 @@ func _run() -> void:
 	fireball_contact.abandoned_flash = 0.0
 	fireball_contact.intercept = cancellation_point + Vector2(160.0, 0.0)
 	fireball_contact.error_offset = Vector2.ZERO
-	game.sky_contacts.contacts.append(fireball_contact)
-	_check(game.sky_contacts.assign_to_contact(int(fireball_contact.id)), "researched commitment accepts a classified fireball without a movement-layer type refusal")
-	_check(int(game.sky_contacts.dishes[0].assigned_id) == int(fireball_contact.id), "rare contact commitment reserves movement but not tracking eligibility")
+	game.sky_contacts.on_contact_announced(fireball_contact)
+	_check(int(game.sky_contacts.dishes[0].assigned_id) == -1, "automatic control ignores manual-only fireball forecasts")
 	right_click.position = Vector2(fireball_contact.intercept)
 	game.sky_contacts._unhandled_input(right_click)
 	_check(Vector2(game.sky_contacts.dishes[0].target).is_equal_approx(Vector2(fireball_contact.intercept)), "plain right-click over a classified fireball still moves the dish")
@@ -989,7 +990,7 @@ func _run() -> void:
 	_check(game.progression.get_secondary_slots() == 2, "observatory network keeps its two automatic lanes when dish capacity grows")
 	_check(game.progression.get_dish_count() == 2, "observatory network adds a second steerable dish for late-game capacity")
 	_check(game.sky_contacts.dishes.size() == 2, "purchasing the observatory network places both steerable dishes")
-	_check(game.progression.dish_commitment_enabled(), "completed research includes Predictive Dish Control")
+	_check(game.progression.dish_auto_assignment_enabled(), "completed research includes automatic Predictive Dish Control")
 	_check(game.progression.get_automation_strength("fireball") == 0.0, "rare fireballs remain manual high-value targets")
 	# Literal nearest is intentionally spatial, not availability-aware: a busy
 	# near dish moves even while a farther dish is idle.
