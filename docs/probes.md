@@ -235,3 +235,12 @@ $env:NIGHTWATCH_PRICING_SEEDS = "20"; & $godot --headless --path . --script res:
 
 성공하면 `PREVIEW_SAVED:` 한 줄이 나온다. 이것은 통과/실패 게이트가 아니라
 그림을 보고 판단하기 위한 도구다.
+
+## 메인 HUD 캡처
+
+`tests/hud_preview.gd`는 메인 HUD를 캡처해 `build/hud_preview.png`로 저장한다.
+연구 성도 캡처와 같이 창 모드로 실행한다.
+
+```powershell
+& "C:\Users\user\AppData\Local\Temp\codex-godot-4.7.2\Godot_v4.7.2-stable_win64_console.exe" --path . --script res://tests/hud_preview.gd
+```

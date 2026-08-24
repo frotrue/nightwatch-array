@@ -80,7 +80,8 @@ func _process(delta: float) -> void:
 			selected_meteor.get_progress(),
 			String(selected_meteor.type_id),
 			predicted_multiplier,
-			maxi(1, _valid_tracked_count())
+			maxi(1, _valid_tracked_count()),
+			get_viewport().get_mouse_position()
 		)
 	else:
 		hud.hide_tracking()

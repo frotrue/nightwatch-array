@@ -10,25 +10,82 @@ signal reset_slot_requested(slot: int)
 signal tutorial_replay_requested
 
 const Balance = preload("res://scripts/game_balance.gd")
+const UITheme = preload("res://scripts/ui_theme.gd")
+
+
+class TrackingCluster:
+	extends Control
+
+	var cursor := Vector2.ZERO
+	var progress: float = 0.0
+	var ring_radius: float = 50.0
+	var arc_width: float = 2.0
+	var diffusion: float = 0.0
+
+
+	func _process(delta: float) -> void:
+		diffusion = fmod(diffusion + delta / 1.5, 1.0)
+		queue_redraw()
+
+
+	func _draw() -> void:
+		if not visible:
+			return
+		draw_arc(cursor, ring_radius, 0.0, TAU, 96, Color(UITheme.INSTRUMENT_RING, 0.28), 1.0, true)
+		# The expanding ring is the only motion on this screen that is not a meteor,
+		# so it reads as "the instrument is live" without competing for attention.
+		var eased := 1.0 - pow(1.0 - diffusion, 3.0)
+		draw_arc(
+			cursor,
+			ring_radius * lerpf(1.0, 1.5, eased),
+			0.0,
+			TAU,
+			96,
+			Color(UITheme.INSTRUMENT_ARC, 0.30 * (1.0 - eased)),
+			1.0,
+			true
+		)
+		if progress > 0.0:
+			draw_arc(
+				cursor,
+				ring_radius,
+				-PI * 0.5,
+				-PI * 0.5 + TAU * progress,
+				64,
+				UITheme.INSTRUMENT_ARC,
+				arc_width,
+				true
+			)
+		draw_circle(cursor, UITheme.px(1.5), UITheme.INSTRUMENT_ARC)
+
+
 
 var progression: Node
 var settings_controller: Node
 var save_game_controller: Node
 var root_control: Control
-var top_panel: PanelContainer
 var data_caption_label: Label
 var data_label: Label
 var data_gain_label: Label
-var array_caption_label: Label
-var array_progress_label: Label
-var array_progress_bar: ProgressBar
 var time_label: Label
 var save_mode_label: Label
 var tutorial_label: Label
+var banner_root: Control
+var banner_rule: ColorRect
 var banner_label: Label
-var tracking_panel: PanelContainer
-var tracking_name: Label
-var tracking_bar: ProgressBar
+var banner_subtitle: Label
+var tracking_cluster: TrackingCluster
+var tracking_percent: Label
+var tracking_target: Label
+var tracking_quality: Label
+var tracking_multiplier: Label
+var tracking_divider: ColorRect
+var phase_round_label: Label
+var phase_window_track: ColorRect
+var phase_window_fill: ColorRect
+var ready_notice: Control
+var ready_pip: ColorRect
+var ready_label: Label
 var debug_panel: PanelContainer
 var debug_label: Label
 var end_overlay: ColorRect
@@ -83,6 +140,7 @@ var phase_display_configured: bool = false
 var observation_phase_active: bool = false
 var observation_phase_round: int = 1
 var observation_phase_second: int = 30
+var phase_window_seconds: int = 30
 var last_tracking_text: String = ""
 var last_tracking_progress_percent: int = -1
 var last_tracking_target_type: String = ""
@@ -91,6 +149,7 @@ var last_tracking_target_count: int = -1
 var last_observation_data: float = -1.0
 var data_gain_tween: Tween
 var data_pulse_tween: Tween
+var ready_pulse_tween: Tween
 var last_end_success: bool = false
 var paused_by_settings: bool = false
 var paused_by_startup: bool = false
@@ -131,9 +190,9 @@ func _process(delta: float) -> void:
 	if banner_timer > 0.0:
 		banner_timer -= delta
 		var fade := clampf(banner_timer / 0.3, 0.0, 1.0)
-		banner_label.modulate.a = fade
+		banner_root.modulate.a = fade
 		if banner_timer <= 0.0:
-			banner_label.visible = false
+			banner_root.visible = false
 	if autosave_status_timer > 0.0:
 		autosave_status_timer -= delta
 		if autosave_status_timer <= 0.0:
@@ -153,7 +212,9 @@ func set_runtime(seconds: float) -> void:
 	time_label.text = tr("HUD_TIME") % [minutes, remaining]
 
 
-func set_observation_phase(round_number: int, seconds_remaining: float) -> void:
+func set_observation_phase(round_number: int, seconds_remaining: float, phase_duration: float = 0.0) -> void:
+	if phase_duration > 0.0:
+		phase_window_seconds = maxi(1, ceili(phase_duration))
 	var whole_seconds := maxi(0, ceili(seconds_remaining))
 	var phase_changed := (
 		not phase_display_configured
@@ -165,6 +226,7 @@ func set_observation_phase(round_number: int, seconds_remaining: float) -> void:
 	observation_phase_active = true
 	observation_phase_round = maxi(1, round_number)
 	observation_phase_second = whole_seconds
+	set_phase_window(float(whole_seconds) / maxf(1.0, float(phase_window_seconds)))
 	if phase_changed:
 		_refresh_phase_time_label()
 
@@ -184,55 +246,112 @@ func _refresh_phase_time_label() -> void:
 		return
 	if not phase_display_configured:
 		var whole_seconds := int(runtime_seconds)
-		time_label.text = tr("HUD_TIME") % [whole_seconds / 60, whole_seconds % 60]
+		phase_round_label.text = ""
+		time_label.text = tr("HUD_PHASE_CLOCK") % [whole_seconds / 60, whole_seconds % 60]
+		_layout_phase_clock()
 		return
+	phase_round_label.text = tr("HUD_PHASE_ROUND") % observation_phase_round
 	if observation_phase_active:
-		time_label.text = tr("HUD_OBSERVATION_TIME") % [
-			observation_phase_round,
+		time_label.text = tr("HUD_PHASE_CLOCK") % [
 			observation_phase_second / 60,
 			observation_phase_second % 60,
 		]
 	else:
 		time_label.text = tr("HUD_UPGRADE_PHASE") % observation_phase_round
+	_layout_phase_clock()
 
 
 func show_banner(text: String, color: Color = Color.WHITE, duration: float = 2.5) -> void:
-	banner_label.text = text
-	banner_label.add_theme_color_override("font_color", color)
-	banner_label.modulate.a = 1.0
-	banner_label.visible = true
+	# Callers still pass one string; a bullet separator splits title from subtitle.
+	var title := text
+	var subtitle := ""
+	for separator in ["  •  ", " • ", "•"]:
+		if separator in text:
+			var parts := text.split(separator, false, 1)
+			title = parts[0].strip_edges()
+			subtitle = parts[1].strip_edges() if parts.size() > 1 else ""
+			break
+	banner_label.text = title
+	banner_label.add_theme_color_override("font_color", color if color != Color.WHITE else UITheme.BANNER_TITLE)
+	banner_subtitle.text = subtitle
+	banner_subtitle.visible = not subtitle.is_empty()
+	banner_root.modulate.a = 1.0
+	banner_root.visible = true
 	banner_timer = duration
+	_layout_banner()
 
 
-func set_tracking(progress: float, target_type: String, multiplier: float, target_count: int = 1) -> void:
-	if not tracking_panel.visible:
-		tracking_panel.visible = true
+func _layout_banner() -> void:
+	if banner_root == null:
+		return
+	var width := UITheme.px(300.0)
+	banner_rule.position = Vector2(-width * 0.5, UITheme.px(240.0))
+	banner_rule.size = Vector2(width, 1.0)
+	var text_width := UITheme.px(900.0)
+	for label in [banner_label, banner_subtitle]:
+		label.size.x = text_width
+		label.position.x = -text_width * 0.5
+	banner_label.position.y = banner_rule.position.y + UITheme.px(20.0)
+	var title_height := banner_label.get_combined_minimum_size().y
+	banner_subtitle.position.y = banner_label.position.y + title_height + UITheme.px(14.0)
+
+
+func set_tracking(
+	progress: float,
+	target_type: String,
+	multiplier: float,
+	target_count: int = 1,
+	cursor_position: Vector2 = Vector2.ZERO
+) -> void:
+	if not tracking_cluster.visible:
+		tracking_cluster.visible = true
+		tracking_cluster.set_process(true)
+	tracking_cluster.cursor = cursor_position
+	tracking_cluster.progress = clampf(progress, 0.0, 1.0)
+	tracking_cluster.queue_redraw()
 	var progress_percent := int(progress * 100.0)
 	var multiplier_hundredths := int(round(multiplier * 100.0))
-	if (
+	var unchanged := (
 		progress_percent == last_tracking_progress_percent
 		and target_type == last_tracking_target_type
 		and multiplier_hundredths == last_tracking_multiplier_hundredths
 		and target_count == last_tracking_target_count
-	):
-		return
-	last_tracking_progress_percent = progress_percent
-	last_tracking_target_type = target_type
-	last_tracking_multiplier_hundredths = multiplier_hundredths
-	last_tracking_target_count = target_count
-	tracking_bar.value = float(progress_percent)
-	var target_name := tr("METEOR_%s" % target_type.to_upper())
-	var next_text := tr("HUD_TRACKING_MULTI") % [target_name, progress_percent, target_count] if target_count > 1 else tr("HUD_TRACKING") % [target_name, progress_percent]
-	if multiplier_hundredths > 101:
-		next_text += "   x%.2f" % (float(multiplier_hundredths) / 100.0)
-	if next_text != last_tracking_text:
-		last_tracking_text = next_text
-		tracking_name.text = next_text
+	)
+	if not unchanged:
+		last_tracking_progress_percent = progress_percent
+		last_tracking_target_type = target_type
+		last_tracking_multiplier_hundredths = multiplier_hundredths
+		last_tracking_target_count = target_count
+		tracking_percent.text = "%d%%" % progress_percent
+		tracking_target.text = tr("METEOR_%s" % target_type.to_upper())
+		var quality_key := _tracking_quality_key(progress)
+		tracking_quality.text = tr(quality_key)
+		# A multiplier of x1.01 or less is noise, not a reward.
+		tracking_multiplier.text = (
+			tr("HUD_TRACK_MULTIPLIER") % (float(multiplier_hundredths) / 100.0)
+			if multiplier_hundredths > 101
+			else ""
+		)
+		last_tracking_text = tracking_target.text
+	_layout_tracking_cluster()
+
+
+func _tracking_quality_key(progress: float) -> String:
+	# The cluster names the grade the player is currently earning; the ring colour
+	# used to be the only channel for it.
+	if progress >= 0.99:
+		return "QUALITY_PERFECT"
+	if progress >= 0.75:
+		return "QUALITY_EXCELLENT"
+	if progress >= 0.45:
+		return "QUALITY_GOOD"
+	return "QUALITY_PARTIAL"
 
 
 func hide_tracking() -> void:
-	if tracking_panel != null and tracking_panel.visible:
-		tracking_panel.visible = false
+	if tracking_cluster != null and tracking_cluster.visible:
+		tracking_cluster.visible = false
+		tracking_cluster.set_process(false)
 		_invalidate_tracking_cache()
 
 
@@ -278,8 +397,7 @@ func is_debug_visible() -> bool:
 
 func is_pointer_over_hud(pointer_position: Vector2) -> bool:
 	for surface in [
-		top_panel, tracking_panel, debug_panel,
-		settings_button, banner_label, tutorial_label,
+		debug_panel, settings_button, banner_root, tutorial_label,
 	]:
 		if surface is Control and surface.is_visible_in_tree() and surface.get_global_rect().has_point(pointer_position):
 			return true
@@ -484,12 +602,49 @@ func _refresh_progression() -> void:
 	if last_observation_data >= 0.0 and current_data > last_observation_data:
 		_show_data_gain(current_data - last_observation_data)
 	last_observation_data = current_data
-	data_label.text = "%d" % int(floor(current_data))
-	array_progress_bar.value = float(progression.upgrade_level)
-	array_progress_label.text = tr("HUD_ARRAY_PROGRESS") % [
-		progression.upgrade_level,
-		Balance.UPGRADE_NODES.size()
-	]
+	data_label.text = _grouped(int(floor(current_data)))
+	_layout_data_readout()
+	_refresh_ready_notice()
+
+
+func _grouped(value: int) -> String:
+	var digits := str(absi(value))
+	var grouped := ""
+	for index in range(digits.length()):
+		if index > 0 and (digits.length() - index) % 3 == 0:
+			grouped += ","
+		grouped += digits[index]
+	return ("-" if value < 0 else "") + grouped
+
+
+func _refresh_ready_notice() -> void:
+	if ready_notice == null or progression == null:
+		return
+	var ready := 0
+	for definition in Balance.UPGRADE_NODES:
+		if progression.can_purchase(String(definition.id)):
+			ready += 1
+	ready_notice.visible = ready > 0
+	if ready_notice.visible:
+		ready_label.text = tr("HUD_READY_SYSTEMS") % ready
+		_layout_ready_notice()
+		_ensure_ready_pulse()
+	elif ready_pulse_tween != null and ready_pulse_tween.is_valid():
+		ready_pulse_tween.kill()
+
+
+func _ensure_ready_pulse() -> void:
+	if ready_pulse_tween != null and ready_pulse_tween.is_valid():
+		return
+	ready_pulse_tween = create_tween().set_loops()
+	ready_pulse_tween.tween_property(ready_pip, "modulate:a", 0.35, 0.8).set_trans(Tween.TRANS_SINE)
+	ready_pulse_tween.tween_property(ready_pip, "modulate:a", 1.0, 0.8).set_trans(Tween.TRANS_SINE)
+
+
+func set_phase_window(ratio: float) -> void:
+	if phase_window_fill == null:
+		return
+	phase_window_fill.size.x = UITheme.px(360.0) * clampf(ratio, 0.0, 1.0)
 
 
 func get_data_anchor() -> Vector2:
@@ -721,8 +876,9 @@ func _apply_locale() -> void:
 	if root_control == null:
 		return
 	data_caption_label.text = tr("HUD_DATA_CAPTION")
-	array_caption_label.text = tr("HUD_ARRAY_CAPTION")
-	settings_button.text = "⚙  " + tr("SETTINGS_BUTTON")
+	_refresh_ready_notice()
+	_refresh_phase_time_label()
+	settings_button.text = tr("SETTINGS_BUTTON")
 	settings_title.text = tr("SETTINGS_TITLE")
 	settings_subtitle.text = tr("SETTINGS_SUBTITLE")
 	settings_language_label.text = tr("SETTINGS_LANGUAGE")
@@ -770,144 +926,44 @@ func _build_interface() -> void:
 	root_control.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root_control.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root_control)
-	var interface_font := SystemFont.new()
-	interface_font.font_names = PackedStringArray(["Pretendard", "Noto Sans CJK KR", "Malgun Gothic", "Segoe UI"])
-	root_control.add_theme_font_override("font", interface_font)
+	root_control.add_theme_font_override("font", UITheme.sans())
+	_build_sky_gradients()
 
-	top_panel = PanelContainer.new()
-	top_panel.name = "TopStatus"
-	top_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	top_panel.offset_left = 18.0
-	top_panel.offset_top = 16.0
-	top_panel.offset_right = 518.0
-	top_panel.offset_bottom = 80.0
-	top_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.025, 0.055, 0.10, 0.82), Color(0.26, 0.48, 0.68, 0.34), 8))
-	top_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root_control.add_child(top_panel)
-	var top_margin := MarginContainer.new()
-	top_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	top_margin.add_theme_constant_override("margin_left", 14)
-	top_margin.add_theme_constant_override("margin_right", 14)
-	top_margin.add_theme_constant_override("margin_top", 7)
-	top_margin.add_theme_constant_override("margin_bottom", 7)
-	top_panel.add_child(top_margin)
-	var top_row := HBoxContainer.new()
-	top_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	top_row.add_theme_constant_override("separation", 11)
-	top_margin.add_child(top_row)
+	_build_data_readout()
+	_build_phase_clock()
+	_build_ready_notice()
 
-	var data_column := VBoxContainer.new()
-	data_column.name = "DataReadout"
-	data_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	data_column.custom_minimum_size = Vector2(112, 0)
-	data_column.add_theme_constant_override("separation", -2)
-	top_row.add_child(data_column)
-	data_caption_label = _make_label(tr("HUD_DATA_CAPTION"), 9, Color("7f9db5"))
-	var data_row := HBoxContainer.new()
-	data_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	data_row.add_theme_constant_override("separation", 8)
-	data_label = _make_label("0", 27, Color("e7fbff"))
-	data_gain_label = _make_label(tr("HUD_DATA_GAIN") % 0, 12, Color("8fffe5"))
-	data_gain_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	data_gain_label.visible = false
-	data_row.add_child(data_label)
-	data_row.add_child(data_gain_label)
-	data_column.add_child(data_caption_label)
-	data_column.add_child(data_row)
-
-	var first_divider := VSeparator.new()
-	first_divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	top_row.add_child(first_divider)
-	var progress_column := VBoxContainer.new()
-	progress_column.name = "ArrayProgress"
-	progress_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	progress_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	progress_column.add_theme_constant_override("separation", 3)
-	top_row.add_child(progress_column)
-	var progress_header := HBoxContainer.new()
-	progress_header.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	array_caption_label = _make_label(tr("HUD_ARRAY_CAPTION"), 9, Color("7f9db5"))
-	array_caption_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	array_progress_label = _make_label(tr("HUD_ARRAY_PROGRESS") % [0, Balance.UPGRADE_NODES.size()], 11, Color("9fc4d8"))
-	array_progress_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	progress_header.add_child(array_caption_label)
-	progress_header.add_child(array_progress_label)
-	array_progress_bar = ProgressBar.new()
-	array_progress_bar.name = "ArrayCompletionBar"
-	array_progress_bar.max_value = float(Balance.UPGRADE_NODES.size())
-	array_progress_bar.show_percentage = false
-	array_progress_bar.custom_minimum_size = Vector2(150, 7)
-	array_progress_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	array_progress_bar.add_theme_stylebox_override("background", _panel_style(Color("071722"), Color("173849"), 3))
-	array_progress_bar.add_theme_stylebox_override("fill", _panel_style(Color("368f9f"), Color("70e7d8"), 3))
-	progress_column.add_child(progress_header)
-	progress_column.add_child(array_progress_bar)
-
-	var second_divider := VSeparator.new()
-	second_divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	top_row.add_child(second_divider)
-	var run_column := VBoxContainer.new()
-	run_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	run_column.custom_minimum_size = Vector2(126, 0)
-	run_column.alignment = BoxContainer.ALIGNMENT_CENTER
-	run_column.add_theme_constant_override("separation", 2)
-	top_row.add_child(run_column)
-	time_label = _make_label(tr("HUD_TIME") % [0, 0], 11, Color("7893ac"))
-	time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	time_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	save_mode_label = _make_label("", 9, Color("7897ad"))
-	save_mode_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	save_mode_label.visible = false
-	run_column.add_child(time_label)
-	run_column.add_child(save_mode_label)
-
-	banner_label = _make_label("", 24, Color.WHITE)
-	banner_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	banner_label.anchor_left = 0.25
-	banner_label.anchor_right = 0.75
-	banner_label.offset_top = 60.0
-	banner_label.offset_bottom = 100.0
+	banner_root = Control.new()
+	banner_root.name = "EventBanner"
+	banner_root.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	banner_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	banner_root.visible = false
+	root_control.add_child(banner_root)
+	banner_rule = ColorRect.new()
+	banner_rule.color = UITheme.BANNER_RULE
+	banner_rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	banner_root.add_child(banner_rule)
+	banner_label = _spec_label("", UITheme.sans("light"), 27.0, UITheme.BANNER_TITLE, 0.22)
 	banner_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	banner_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	banner_label.visible = false
-	root_control.add_child(banner_label)
+	banner_root.add_child(banner_label)
+	banner_subtitle = _spec_label("", UITheme.mono(), 13.0, UITheme.BANNER_SUB, 0.20)
+	banner_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	banner_root.add_child(banner_subtitle)
+	_layout_banner()
 
-	tutorial_label = _make_label(tr("HUD_TUTORIAL_START"), 16, Color("c9d8e8"))
+	tutorial_label = _spec_label(tr("HUD_TUTORIAL_START"), UITheme.sans(), 15.0, UITheme.HINT)
 	tutorial_label.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	tutorial_label.anchor_left = 0.28
-	tutorial_label.anchor_right = 0.72
-	tutorial_label.offset_top = -79.0
-	tutorial_label.offset_bottom = -43.0
+	tutorial_label.anchor_left = 0.0
+	tutorial_label.anchor_right = 1.0
+	tutorial_label.offset_left = 0.0
+	tutorial_label.offset_right = 0.0
+	tutorial_label.offset_top = -UITheme.px(54.0) - UITheme.px(28.0)
+	tutorial_label.offset_bottom = -UITheme.px(54.0)
 	tutorial_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	tutorial_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	root_control.add_child(tutorial_label)
 
-	tracking_panel = PanelContainer.new()
-	tracking_panel.name = "TrackingReadout"
-	tracking_panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	tracking_panel.offset_left = 18.0
-	tracking_panel.offset_top = -88.0
-	tracking_panel.offset_right = 228.0
-	tracking_panel.offset_bottom = -36.0
-	tracking_panel.custom_minimum_size = Vector2(210, 48)
-	tracking_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	tracking_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.02, 0.07, 0.11, 0.88), Color(0.32, 0.76, 0.86, 0.44), 6))
-	tracking_panel.visible = false
-	root_control.add_child(tracking_panel)
-	var tracking_column := VBoxContainer.new()
-	tracking_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	tracking_panel.add_child(tracking_column)
-	tracking_name = _make_label(tr("HUD_TRACKING") % [tr("METEOR_COMMON"), 0], 12, Color("bcefff"))
-	tracking_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	tracking_bar = ProgressBar.new()
-	tracking_bar.max_value = 100.0
-	tracking_bar.show_percentage = false
-	tracking_bar.custom_minimum_size = Vector2(194, 8)
-	tracking_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	tracking_bar.add_theme_stylebox_override("background", _panel_style(Color("071722"), Color("173849"), 3))
-	tracking_bar.add_theme_stylebox_override("fill", _panel_style(Color("65dcbf"), Color("8fffe5"), 3))
-	tracking_column.add_child(tracking_name)
-	tracking_column.add_child(tracking_bar)
+	_build_tracking_cluster()
 
 	_build_debug_panel()
 	_build_end_overlay()
@@ -915,19 +971,251 @@ func _build_interface() -> void:
 	_build_settings_ui()
 	settings_button = Button.new()
 	settings_button.name = "SettingsButton"
-	settings_button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	settings_button.offset_left = -116.0
-	settings_button.offset_top = 16.0
-	settings_button.offset_right = -18.0
-	settings_button.offset_bottom = 52.0
-	settings_button.text = "⚙  " + tr("SETTINGS_BUTTON")
-	settings_button.add_theme_font_size_override("font_size", 13)
-	settings_button.add_theme_stylebox_override("normal", _panel_style(Color(0.025, 0.055, 0.10, 0.88), Color(0.26, 0.48, 0.68, 0.5), 8))
-	settings_button.add_theme_stylebox_override("hover", _panel_style(Color(0.04, 0.10, 0.16, 0.96), Color("62b7d4"), 8))
+	settings_button.text = tr("SETTINGS_BUTTON")
+	settings_button.flat = true
+	settings_button.focus_mode = Control.FOCUS_NONE
+	settings_button.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	settings_button.offset_left = -UITheme.px(200.0)
+	settings_button.offset_top = -UITheme.px(50.0) - UITheme.px(22.0)
+	settings_button.offset_right = -UITheme.px(56.0)
+	settings_button.offset_bottom = -UITheme.px(50.0)
+	settings_button.alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	settings_button.add_theme_font_override("font", UITheme.mono())
+	settings_button.add_theme_font_size_override("font_size", UITheme.size_px(12.0))
+	settings_button.add_theme_constant_override("spacing_glyph", UITheme.tracking(UITheme.size_px(12.0), 0.20))
+	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		settings_button.add_theme_color_override(state, UITheme.INK_LOW)
+	settings_button.add_theme_color_override("font_hover_color", UITheme.INK_MID)
 	settings_button.pressed.connect(open_settings)
 	root_control.add_child(settings_button)
 	_build_startup_slots_ui()
 	_build_reset_dialog()
+
+
+func _gradient_veil(from_alpha: float, height_spec: float, at_top: bool) -> TextureRect:
+	# Legibility comes from two soft veils, not from bordered panels.
+	var gradient := Gradient.new()
+	var ink := Color(0.0078, 0.0118, 0.0235, from_alpha)
+	gradient.set_color(0, ink if at_top else Color(ink, 0.0))
+	gradient.set_color(1, Color(ink, 0.0) if at_top else ink)
+	var texture := GradientTexture2D.new()
+	texture.gradient = gradient
+	texture.fill_from = Vector2(0.0, 0.0)
+	texture.fill_to = Vector2(0.0, 1.0)
+	texture.width = 8
+	texture.height = 64
+	var rect := TextureRect.new()
+	rect.texture = texture
+	rect.stretch_mode = TextureRect.STRETCH_SCALE
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if at_top:
+		rect.set_anchors_preset(Control.PRESET_TOP_WIDE)
+		rect.offset_bottom = UITheme.px(height_spec)
+	else:
+		rect.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+		rect.offset_top = -UITheme.px(height_spec)
+	return rect
+
+
+func _build_sky_gradients() -> void:
+	root_control.add_child(_gradient_veil(0.72, 230.0, true))
+	root_control.add_child(_gradient_veil(0.60, 140.0, false))
+
+
+func _spec_label(text: String, font: Font, spec_size: float, color: Color, em: float = 0.0) -> Label:
+	var label := Label.new()
+	label.text = text
+	var font_size := UITheme.size_px(spec_size)
+	label.add_theme_font_override("font", font)
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", color)
+	if not is_zero_approx(em):
+		label.add_theme_constant_override("spacing_glyph", UITheme.tracking(font_size, em))
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return label
+
+
+func _build_data_readout() -> void:
+	var column := Control.new()
+	column.name = "DataReadout"
+	column.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	column.offset_left = UITheme.px(56.0)
+	column.offset_top = UITheme.px(46.0)
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root_control.add_child(column)
+
+	data_label = _spec_label("0", UITheme.mono_tabular(), 76.0, UITheme.INK_MAX, -0.03)
+	data_label.position = Vector2.ZERO
+	column.add_child(data_label)
+
+	data_gain_label = _spec_label(tr("HUD_DATA_GAIN") % 0, UITheme.mono_tabular(), 22.0, UITheme.GAIN)
+	data_gain_label.visible = false
+	column.add_child(data_gain_label)
+
+	data_caption_label = _spec_label(tr("HUD_DATA_CAPTION"), UITheme.mono(), 12.0, UITheme.INK_MID, 0.28)
+	column.add_child(data_caption_label)
+	_layout_data_readout()
+	data_label.resized.connect(_layout_data_readout)
+
+
+func _layout_data_readout() -> void:
+	if data_label == null:
+		return
+	var value_size := data_label.get_combined_minimum_size()
+	data_label.size = value_size
+	# The gain sits on the value's baseline, not its box, so it does not drift when
+	# the counter gains a digit.
+	var gain_size := data_gain_label.get_combined_minimum_size()
+	data_gain_label.position = Vector2(
+		value_size.x + UITheme.px(14.0),
+		value_size.y * 0.86 - gain_size.y
+	)
+	data_caption_label.position = Vector2(0.0, value_size.y * 0.86 + UITheme.px(12.0))
+
+
+func _build_phase_clock() -> void:
+	var column := Control.new()
+	column.name = "PhaseClock"
+	column.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root_control.add_child(column)
+
+	phase_round_label = _spec_label("", UITheme.mono(), 12.0, Color("937260"), 0.30)
+	phase_round_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(phase_round_label)
+
+	time_label = _spec_label(tr("HUD_TIME") % [0, 0], UITheme.mono_tabular(), 40.0, UITheme.INK_HIGH, 0.02)
+	time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(time_label)
+
+	phase_window_track = ColorRect.new()
+	phase_window_track.color = UITheme.ACCENT_DEEP
+	phase_window_track.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(phase_window_track)
+	phase_window_fill = ColorRect.new()
+	phase_window_fill.color = UITheme.ACCENT_LINE
+	phase_window_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(phase_window_fill)
+
+	save_mode_label = _spec_label("", UITheme.mono(), 12.0, UITheme.INK_LOW, 0.18)
+	save_mode_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	save_mode_label.visible = false
+	column.add_child(save_mode_label)
+	_layout_phase_clock()
+
+
+func _layout_phase_clock() -> void:
+	if time_label == null:
+		return
+	var width := UITheme.px(360.0)
+	var round_height := phase_round_label.get_combined_minimum_size().y
+	var clock_height := time_label.get_combined_minimum_size().y
+	for label in [phase_round_label, time_label, save_mode_label]:
+		label.size.x = width
+		label.position.x = -width * 0.5
+	phase_round_label.position.y = UITheme.px(48.0)
+	time_label.position.y = phase_round_label.position.y + round_height + UITheme.px(9.0)
+	var line_y := time_label.position.y + clock_height + UITheme.px(14.0)
+	phase_window_track.position = Vector2(-width * 0.5, line_y)
+	phase_window_track.size = Vector2(width, 1.0)
+	phase_window_fill.position = phase_window_track.position
+	phase_window_fill.size = Vector2(width, 1.0)
+	save_mode_label.position.y = line_y + UITheme.px(12.0)
+
+
+func _build_ready_notice() -> void:
+	ready_notice = Control.new()
+	ready_notice.name = "ReadySystems"
+	ready_notice.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	ready_notice.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ready_notice.visible = false
+	root_control.add_child(ready_notice)
+
+	ready_pip = ColorRect.new()
+	ready_pip.color = UITheme.ACCENT_PIP
+	ready_pip.size = Vector2(UITheme.px(7.0), UITheme.px(7.0))
+	ready_pip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ready_notice.add_child(ready_pip)
+
+	ready_label = _spec_label("", UITheme.sans(), 14.0, UITheme.ACCENT_TEXT, 0.06)
+	ready_notice.add_child(ready_label)
+
+
+func _layout_ready_notice() -> void:
+	if ready_notice == null or not ready_notice.visible:
+		return
+	var text_size := ready_label.get_combined_minimum_size()
+	ready_label.size = text_size
+	var pip_gap := UITheme.px(10.0)
+	var total := text_size.x + pip_gap + ready_pip.size.x
+	var left := -UITheme.px(56.0) - total
+	var top := UITheme.px(46.0)
+	ready_pip.position = Vector2(left, top + text_size.y * 0.5 - ready_pip.size.y * 0.5)
+	ready_label.position = Vector2(left + ready_pip.size.x + pip_gap, top)
+
+
+func _build_tracking_cluster() -> void:
+	tracking_cluster = TrackingCluster.new()
+	tracking_cluster.name = "TrackingCluster"
+	tracking_cluster.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	tracking_cluster.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tracking_cluster.ring_radius = UITheme.px(84.0)
+	tracking_cluster.arc_width = UITheme.px(3.4)
+	tracking_cluster.visible = false
+	root_control.add_child(tracking_cluster)
+
+	tracking_percent = _spec_label("0%", UITheme.mono_tabular(), 26.0, UITheme.INSTRUMENT_ARC)
+	tracking_percent.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	tracking_cluster.add_child(tracking_percent)
+
+	tracking_target = _spec_label("", UITheme.sans(), 14.0, Color(UITheme.INSTRUMENT_LABEL, 0.80), 0.14)
+	tracking_target.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	tracking_cluster.add_child(tracking_target)
+
+	tracking_quality = _spec_label("", UITheme.mono(), 13.0, UITheme.INSTRUMENT_QUALITY, 0.12)
+	tracking_cluster.add_child(tracking_quality)
+	tracking_divider = ColorRect.new()
+	tracking_divider.color = Color("7D6A5E")
+	tracking_divider.size = Vector2(1.0, UITheme.px(11.0))
+	tracking_divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tracking_cluster.add_child(tracking_divider)
+	tracking_multiplier = _spec_label("", UITheme.mono_tabular(), 13.0, UITheme.INSTRUMENT_QUALITY)
+	tracking_cluster.add_child(tracking_multiplier)
+
+
+func _layout_tracking_cluster() -> void:
+	var cursor := tracking_cluster.cursor
+	var width := UITheme.px(420.0)
+	# The text block clears the 84px stroke so glyphs never sit on the meteor the
+	# player is currently tracking.
+	var percent_top := cursor.y + UITheme.px(102.0)
+	for label in [tracking_percent, tracking_target]:
+		label.size.x = width
+		label.position.x = cursor.x - width * 0.5
+	tracking_percent.position.y = percent_top
+	var percent_height := tracking_percent.get_combined_minimum_size().y
+	tracking_target.position.y = percent_top + percent_height + UITheme.px(5.0)
+	var target_height := tracking_target.get_combined_minimum_size().y
+	var row_top := tracking_target.position.y + target_height + UITheme.px(8.0)
+
+	var gap := UITheme.px(8.0)
+	var quality_size := tracking_quality.get_combined_minimum_size()
+	var multiplier_size := tracking_multiplier.get_combined_minimum_size()
+	tracking_quality.size = quality_size
+	tracking_multiplier.size = multiplier_size
+	var show_divider := not tracking_multiplier.text.is_empty()
+	tracking_divider.visible = show_divider
+	var row_width := quality_size.x
+	if show_divider:
+		row_width += gap + 1.0 + gap + multiplier_size.x
+	var row_left := cursor.x - row_width * 0.5
+	tracking_quality.position = Vector2(row_left, row_top)
+	if show_divider:
+		tracking_divider.position = Vector2(
+			row_left + quality_size.x + gap,
+			row_top + quality_size.y * 0.5 - tracking_divider.size.y * 0.5
+		)
+		tracking_multiplier.position = Vector2(row_left + quality_size.x + gap + 1.0 + gap, row_top)
 
 
 func _build_startup_slots_ui() -> void:

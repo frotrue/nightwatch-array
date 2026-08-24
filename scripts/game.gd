@@ -185,7 +185,7 @@ func _process(delta: float) -> void:
 	observation_phase_remaining = maxf(0.0, observation_phase_remaining - real_delta)
 	spawner.set_phase_time_remaining(observation_phase_remaining)
 	hud.set_runtime(elapsed_time)
-	hud.set_observation_phase(observation_round, observation_phase_remaining)
+	hud.set_observation_phase(observation_round, observation_phase_remaining, observation_phase_duration)
 	if streak_remaining > 0.0:
 		streak_remaining = maxf(0.0, streak_remaining - real_delta)
 		if streak_remaining <= 0.0:
@@ -227,7 +227,7 @@ func _begin_observation_phase(advance_round: bool = false, remaining_override: f
 	phase_resumed_from_save = false
 	upgrade_tree.clear_intermission_context()
 	hud.hide_phase_summary()
-	hud.set_observation_phase(observation_round, observation_phase_remaining)
+	hud.set_observation_phase(observation_round, observation_phase_remaining, observation_phase_duration)
 	spawner.start_spawning()
 	events.run_time = elapsed_time
 	events.start()
