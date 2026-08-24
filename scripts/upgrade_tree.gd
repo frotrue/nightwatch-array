@@ -18,14 +18,14 @@ const STAR_HIT_SIZE := Vector2(44.0, 44.0)
 const TOOLTIP_SIZE := Vector2(318.0, 0.0)
 const TOOLTIP_CURSOR_OFFSET := 18.0
 const TOOLTIP_SCREEN_MARGIN := 10.0
-const BACKGROUND_STARS := [
-	Vector2(74, 48), Vector2(184, 238), Vector2(267, 91), Vector2(386, 390),
-	Vector2(488, 215), Vector2(594, 590), Vector2(704, 82), Vector2(812, 414),
-	Vector2(916, 177), Vector2(1018, 568), Vector2(1119, 88), Vector2(1230, 408),
-	Vector2(1342, 155), Vector2(1410, 544), Vector2(154, 612), Vector2(670, 332),
-	Vector2(1072, 357), Vector2(1288, 604), Vector2(437, 511), Vector2(947, 46),
-	Vector2(214, 704), Vector2(742, 746), Vector2(1088, 682), Vector2(1380, 735)
-]
+# The field is a disc around the horizon pivot rather than a rectangle over the
+# canvas. The chart's sky is wider than the canvas now, so a rectangular field
+# left a black quarter on screen at some rotations. Seeded, so the sky is the
+# same sky every session.
+const BACKGROUND_STAR_COUNT := 150
+const BACKGROUND_STAR_MIN_RADIUS := 90.0
+const BACKGROUND_STAR_MAX_RADIUS := 1180.0
+const BACKGROUND_STAR_SEED := 20260824
 
 
 class StarNodeVisual:
@@ -156,6 +156,7 @@ var zoom: float = 0.78
 var pan_position := Vector2.ZERO
 var rotation_offset: float = DEFAULT_ROTATION
 var pending_rotation_delta: float = 0.0
+var background_stars: PackedVector2Array = PackedVector2Array()
 var paused_by_tree: bool = false
 var refresh_pending: bool = false
 var node_visual_keys: Dictionary = {}
@@ -171,6 +172,7 @@ var tooltip_content_refreshes: int = 0
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 	node_star_records = ChartData.node_star_map()
+	_build_background_stars()
 	_cache_chart_geometry()
 	_build_interface()
 	set_process_input(true)
@@ -333,10 +335,16 @@ func _reset_view(persist: bool = true) -> void:
 func _frame_frontier() -> void:
 	if content_clip == null or content_clip.size.x <= 1.0 or content_clip.size.y <= 1.0:
 		return
+	# Frame the figures that carry research, not the whole sky. The background
+	# constellations reach past the frame on purpose — the wheel is what brings
+	# them over the horizon. Fitting all twelve at once is what made the chart
+	# read as one dense clump no matter how far the sky was spread.
 	var visible_bounds := Rect2(CHART_ORIGIN, Vector2.ZERO)
-	for point_variant in star_positions.values():
-		var point := Vector2(point_variant)
-		visible_bounds = visible_bounds.expand(point)
+	for star_key_variant in star_positions:
+		var star_key := String(star_key_variant)
+		if not star_node_ids.has(star_key):
+			continue
+		visible_bounds = visible_bounds.expand(Vector2(star_positions[star_key]))
 	visible_bounds = visible_bounds.grow(72.0)
 	var horizontal_extent := maxf(absf(visible_bounds.position.x - CHART_ORIGIN.x), absf(visible_bounds.end.x - CHART_ORIGIN.x))
 	var upward_extent := maxf(1.0, CHART_ORIGIN.y - visible_bounds.position.y)
@@ -456,6 +464,19 @@ func _north_label_y() -> float:
 	return origin_y + UITheme.px(16.0)
 
 
+func _build_background_stars() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = BACKGROUND_STAR_SEED
+	background_stars.resize(BACKGROUND_STAR_COUNT)
+	var inner := BACKGROUND_STAR_MIN_RADIUS * BACKGROUND_STAR_MIN_RADIUS
+	var outer := BACKGROUND_STAR_MAX_RADIUS * BACKGROUND_STAR_MAX_RADIUS
+	for index in range(BACKGROUND_STAR_COUNT):
+		# Sampling the squared radius keeps the scatter even per unit area.
+		# Sampling the radius directly would crowd the stars at the pivot.
+		var distance := sqrt(rng.randf_range(inner, outer))
+		background_stars[index] = CHART_ORIGIN + Vector2.RIGHT.rotated(rng.randf_range(-PI, PI)) * distance
+
+
 func _cache_chart_geometry() -> void:
 	base_star_positions.clear()
 	star_node_ids.clear()
@@ -494,7 +515,16 @@ func _layout_chart() -> void:
 		var button: Button = node_buttons[node_id]
 		var center := Vector2(node_positions[node_id])
 		button.position = center - button.size * 0.5
+		button.visible = bool(button.get_meta("revealed", true)) and center.y <= CHART_ORIGIN.y
 	tree_canvas.queue_redraw()
+
+
+func _is_node_above_horizon(node_id: String) -> bool:
+	# Before the first layout there are no positions yet; the layout pass that
+	# follows settles it.
+	if not node_positions.has(node_id):
+		return true
+	return Vector2(node_positions[node_id]).y <= CHART_ORIGIN.y
 
 
 func _on_node_hold_started(node_id: String) -> void:
@@ -605,7 +635,11 @@ func _refresh() -> void:
 			visual_state = "teaser"
 		var visible := visual_state != "hidden"
 		var button: Button = node_buttons[node_id]
-		button.visible = visible
+		# Revealed is the node's own state; whether it is on screen also depends
+		# on where the wheel has put it. Both are stored so neither pass undoes
+		# the other.
+		button.set_meta("revealed", visible)
+		button.visible = visible and _is_node_above_horizon(node_id)
 		button.set_meta("visual_state", visual_state)
 		if not visible:
 			continue
@@ -1020,12 +1054,11 @@ func _cached_node_state(node_id: String) -> String:
 
 
 func _draw_tree() -> void:
-	for index in range(BACKGROUND_STARS.size()):
-		var background_position := CHART_ORIGIN + (Vector2(BACKGROUND_STARS[index]) - CHART_ORIGIN).rotated(rotation_offset)
+	for index in range(background_stars.size()):
+		var background_position := CHART_ORIGIN + (background_stars[index] - CHART_ORIGIN).rotated(rotation_offset)
 		var radius := 1.7 if index % 5 == 0 else 1.0
 		var alpha := 0.28 if index % 5 == 0 else 0.16
 		tree_canvas.draw_circle(background_position, radius, Color(UITheme.STAR_BACKGROUND, alpha))
-	_draw_chart_horizon()
 	for constellation_id in ChartData.CONSTELLATIONS:
 		var constellation: Dictionary = ChartData.CONSTELLATIONS[constellation_id]
 		for segment_variant in constellation.segments:
@@ -1043,8 +1076,15 @@ func _draw_tree() -> void:
 			if String(star.kind) == "nebula":
 				tree_canvas.draw_circle(point, star_radius * 2.2, Color(UITheme.STAR_INSTALLED_GLOW, alpha * 0.42))
 			tree_canvas.draw_circle(point, maxf(1.2, star_radius * 0.55), Color(UITheme.STAR_BACKGROUND, alpha))
-	if progression == null:
-		return
+	if progression != null:
+		_draw_frontier_overlay()
+	# The ground goes on last. Half the sky now sits below the horizon at any
+	# one rotation, and it has to be buried by the ground rather than drawn
+	# over it.
+	_draw_chart_horizon()
+
+
+func _draw_frontier_overlay() -> void:
 	# Only the current purchasable frontier stays lit. Purchased history is
 	# already encoded by stable bright stars, so late-game DAG clutter never grows.
 	for frontier_variant in _frontier_connections():
@@ -1114,11 +1154,16 @@ func _draw_chart_horizon() -> void:
 				true
 			)
 	var horizon_y := CHART_ORIGIN.y
+	# The ground runs well past the canvas. Now that the sky reaches beyond
+	# TREE_SIZE, a figure rotated below the horizon has to stay buried at any
+	# zoom, and a ridge that stopped at the canvas edge would let it show.
+	var overhang := TREE_SIZE.x
 	var ridge := PackedVector2Array([
-		Vector2(0, horizon_y + 9.0), Vector2(TREE_SIZE.x * 0.18, horizon_y - 4.0),
+		Vector2(-overhang, horizon_y + 9.0), Vector2(TREE_SIZE.x * 0.18, horizon_y - 4.0),
 		Vector2(TREE_SIZE.x * 0.36, horizon_y + 2.0), Vector2(TREE_SIZE.x * 0.54, horizon_y - 8.0),
 		Vector2(TREE_SIZE.x * 0.76, horizon_y + 1.0), Vector2(TREE_SIZE.x, horizon_y - 5.0),
-		Vector2(TREE_SIZE.x, TREE_SIZE.y), Vector2(0, TREE_SIZE.y)
+		Vector2(TREE_SIZE.x + overhang, horizon_y + 4.0),
+		Vector2(TREE_SIZE.x + overhang, TREE_SIZE.y + overhang), Vector2(-overhang, TREE_SIZE.y + overhang)
 	])
 	tree_canvas.draw_colored_polygon(ridge, Color("030611"))
 	var dome_center := CHART_ORIGIN + Vector2(0, -2.0)

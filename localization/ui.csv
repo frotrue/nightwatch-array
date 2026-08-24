@@ -168,6 +168,87 @@ STAR_TRAPEZIUM,Trapezium,트라페지움
 STAR_HATYSA,Hatysa,하티사
 STAR_SAIPH,Saiph,사이프
 STAR_RIGEL,Rigel,리겔
+CONSTELLATION_ANDROMEDA,ANDROMEDA,안드로메다자리
+CONSTELLATION_PERSEUS,PERSEUS,페르세우스자리
+CONSTELLATION_LYRA,LYRA,거문고자리
+CONSTELLATION_DRACO,DRACO,용자리
+CONSTELLATION_URSA_MINOR,URSA MINOR,작은곰자리
+CONSTELLATION_LEO,LEO,사자자리
+CONSTELLATION_GEMINI,GEMINI,쌍둥이자리
+CONSTELLATION_TAURUS,TAURUS,황소자리
+CONSTELLATION_CANIS_MAJOR,CANIS MAJOR,큰개자리
+STAR_ALPHERATZ,Alpheratz,알페라츠
+STAR_DELTA_AND,Delta Andromedae,델타 안드로메다
+STAR_MIRACH,Mirach,미라크
+STAR_MU_AND,Mu Andromedae,뮤 안드로메다
+STAR_NU_AND,Nu Andromedae,뉴 안드로메다
+STAR_ANDROMEDA_GALAXY,Andromeda Galaxy,안드로메다은하
+STAR_ALMACH,Almach,알마크
+STAR_ETA_PER,Miram,미람
+STAR_GAMMA_PER,Gamma Persei,감마 페르세우스
+STAR_MIRFAK,Mirfak,미르파크
+STAR_DELTA_PER,Delta Persei,델타 페르세우스
+STAR_EPSILON_PER,Epsilon Persei,엡실론 페르세우스
+STAR_ZETA_PER,Atik,아티크
+STAR_ALGOL,Algol,알골
+STAR_RHO_PER,Gorgonea Tertia,고르고네아 테르티아
+STAR_VEGA,Vega,베가
+STAR_EPSILON_LYR,Epsilon Lyrae,엡실론 거문고
+STAR_ZETA_LYR,Zeta Lyrae,제타 거문고
+STAR_SHELIAK,Sheliak,셸리아크
+STAR_SULAFAT,Sulafat,술라파트
+STAR_DELTA_LYR,Delta Lyrae,델타 거문고
+STAR_ELTANIN,Eltanin,엘타닌
+STAR_RASTABAN,Rastaban,라스타반
+STAR_NU_DRA,Kuma,쿠마
+STAR_XI_DRA,Grumium,그루미움
+STAR_ALTAIS,Altais,알타이스
+STAR_ZETA_DRA,Aldhibah,알디바
+STAR_ETA_DRA,Athebyne,아테바인
+STAR_THUBAN,Thuban,투반
+STAR_IOTA_DRA,Edasich,에다시크
+STAR_POLARIS,Polaris,북극성
+STAR_YILDUN,Yildun,일둔
+STAR_EPSILON_UMI,Epsilon Ursae Minoris,엡실론 작은곰
+STAR_ZETA_UMI,Zeta Ursae Minoris,제타 작은곰
+STAR_ETA_UMI,Eta Ursae Minoris,에타 작은곰
+STAR_KOCHAB,Kochab,코카브
+STAR_PHERKAD,Pherkad,페르카드
+STAR_REGULUS,Regulus,레굴루스
+STAR_ETA_LEO,Eta Leonis,에타 사자
+STAR_ALGIEBA,Algieba,알기에바
+STAR_ZETA_LEO,Adhafera,아다페라
+STAR_MU_LEO,Rasalas,라살라스
+STAR_EPSILON_LEO,Algenubi,알게누비
+STAR_CHERTAN,Chertan,체르탄
+STAR_ZOSMA,Zosma,조스마
+STAR_DENEBOLA,Denebola,데네볼라
+STAR_CASTOR,Castor,카스토르
+STAR_POLLUX,Pollux,폴룩스
+STAR_TAU_GEM,Tau Geminorum,타우 쌍둥이
+STAR_MEBSUTA,Mebsuta,메브수타
+STAR_UPSILON_GEM,Upsilon Geminorum,웁실론 쌍둥이
+STAR_WASAT,Wasat,와사트
+STAR_TEJAT,Tejat,테자트
+STAR_PROPUS,Propus,프로푸스
+STAR_ALHENA,Alhena,알헤나
+STAR_ALZIRR,Alzirr,알지르
+STAR_PLEIADES,Pleiades,플레이아데스
+STAR_EPSILON_TAU,Ain,아인
+STAR_DELTA_TAU,Delta Tauri,델타 황소
+STAR_HYADUM,Hyadum I,히아둠 I
+STAR_THETA_TAU,Theta Tauri,세타 황소
+STAR_ALDEBARAN,Aldebaran,알데바란
+STAR_TIANGUAN,Tianguan,톈관
+STAR_ELNATH,Elnath,엘나스
+STAR_SIRIUS,Sirius,시리우스
+STAR_MIRZAM,Mirzam,미르잠
+STAR_MULIPHEIN,Muliphein,물리페인
+STAR_OMICRON_CMA,Omicron 2 Canis Majoris,오미크론2 큰개
+STAR_WEZEN,Wezen,웨젠
+STAR_ADHARA,Adhara,아다라
+STAR_FURUD,Furud,푸루드
+STAR_ALUDRA,Aludra,알루드라
 EFFECT_PASSIVE,PASSIVE,지속 효과
 EFFECT_TRANSFORMATION,TRANSFORMATION,기능 확장
 EFFECT_DISCOVERY,DISCOVERY,발견
