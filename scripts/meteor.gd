@@ -2,7 +2,7 @@ extends Node2D
 
 signal observed(meteor, reward, multiplier, was_manual, quality_grade)
 signal expired(meteor, was_major)
-signal fragment_requested(origin, velocity, parent_type)
+signal fragment_requested(origin, velocity, parent_type, parent_is_echo)
 
 static var SHARED_ADDITIVE_MATERIAL: CanvasItemMaterial
 
@@ -169,10 +169,10 @@ func _process(delta: float) -> void:
 	if not split_done:
 		if type_id == "fragment" and get_burn_progress() >= split_progress:
 			split_done = true
-			fragment_requested.emit(global_position, velocity, type_id)
+			fragment_requested.emit(global_position, velocity, type_id, bool(get_meta("gemini_echo", false)))
 		elif type_id == "major" and get_burn_progress() >= split_progress:
 			split_done = true
-			fragment_requested.emit(global_position, velocity, type_id)
+			fragment_requested.emit(global_position, velocity, type_id, bool(get_meta("gemini_echo", false)))
 
 	if observation_progress >= 1.0:
 		_finish_observation(auto_rate)
@@ -369,7 +369,7 @@ func _finish_observation(auto_rate: float) -> void:
 		return
 	if type_id == "fragment" and not split_done:
 		split_done = true
-		fragment_requested.emit(global_position, velocity, type_id)
+		fragment_requested.emit(global_position, velocity, type_id, bool(get_meta("gemini_echo", false)))
 	alive = false
 	observed_successfully = true
 	linger_duration = 0.62 if type_id != "major" else 1.1

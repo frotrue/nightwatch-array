@@ -41,9 +41,9 @@ content.
 | Script | Owns |
 |---|---|
 | `game.gd` | Round lifecycle, save/load orchestration, feedback dispatch (kick/shake/hitstop), debug keys. The only node that knows about all the others. |
-| `progression_controller.gd` | Data balance, purchased nodes, discovery gates, and systemic derived upgrade effects. Single source of truth: consumers ask it, not `game_balance.gd`. |
-| `game_balance.gd` | Static data only: the 41 upgrade definitions and the meteor/deep-target spec table. `RefCounted`, no state. |
-| `meteor_spawner.gd` | Spawn cadence, type rolls (including same-round satellites, variable stars, and comets), sky-wide burnout endpoint planning, forecast contact announcements, fragment spawning, shower and finale spawns, support-lane assignment. |
+| `progression_controller.gd` | Data balance, purchased nodes, discovery gates, persistent Leo storm charge, and systemic derived upgrade effects. Single source of truth: consumers ask it, not `game_balance.gd`. |
+| `game_balance.gd` | Static data only: the 52 upgrade definitions and the meteor/deep-target spec table. `RefCounted`, no state. |
+| `meteor_spawner.gd` | Spawn cadence, type rolls (including same-round satellites, variable stars, and comets), Gemini observation-echo bursts, paced Leo meteor-storm queues, sky-wide burnout endpoint planning, forecast contact announcements, fragment spawning, shower and finale spawns, support-lane assignment. |
 | `meteor.gd` | One object's burn-progress motion, trail and terminal fade, observation progress, quality grading, split behaviour, and passive spectral calibration result. |
 | `observation_controller.gd` | Cursor sampling, manual tracking, swept-path hit detection, tracking and hover rings, and the software cursor. |
 | `sky_contacts.gd` | Low-chrome forecast contact rendering and steerable dishes. Right-click moves the nearest dish; Predictive Dish Control automatically pre-positions an idle dish. Contact Ledger narrows the uncertainty ring instead of adding value/time text. |

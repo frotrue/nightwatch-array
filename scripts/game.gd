@@ -232,6 +232,9 @@ func _begin_observation_phase(advance_round: bool = false, remaining_override: f
 	spawner.start_spawning()
 	events.run_time = elapsed_time
 	events.start()
+	var pending_leonid_count := _try_start_leonid_storm()
+	if pending_leonid_count > 0:
+		hud.show_banner(tr("BANNER_LEONID_STORM") % pending_leonid_count, UITheme.INK_MAX, 1.8)
 	spawner.refresh_active_features()
 	if resume_game:
 		get_tree().paused = false
@@ -411,6 +414,20 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 	reward = round(reward * research_multiplier)
 	multiplier *= research_multiplier
 	var final_reward: float = progression.add_observation(reward, was_manual, multiplier)
+	var is_proc_meteor := (
+		bool(meteor.get_meta("gemini_echo", false))
+		or bool(meteor.get_meta("leonid_storm", false))
+	)
+	var leonid_spawn_count := 0
+	if was_manual and not is_proc_meteor and not meteor.is_major():
+		progression.record_leonid_manual_success()
+		leonid_spawn_count = _try_start_leonid_storm()
+	var echo_spawn_count := 0
+	if not meteor.is_major():
+		echo_spawn_count = spawner.try_spawn_observation_echo(
+			was_manual,
+			is_proc_meteor
+		)
 	if was_manual:
 		success_streak += 1
 		streak_remaining = STREAK_TIMEOUT
@@ -448,11 +465,25 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 			_apply_hitstop(lerpf(0.05, 0.11, freeze_weight))
 	if progression.has_upgrade("perfect_observation") and was_manual and quality_grade in ["EXCELLENT", "PERFECT"]:
 		hud.show_banner(tr("BANNER_QUALITY") % [tr("QUALITY_%s" % quality_grade), multiplier], meteor.get_visual_color(), 1.5)
+	if echo_spawn_count > 0:
+		hud.show_banner(tr("BANNER_GEMINI_ECHO") % echo_spawn_count, UITheme.INK_MAX, 1.5)
+	if leonid_spawn_count > 0:
+		hud.show_banner(tr("BANNER_LEONID_STORM") % leonid_spawn_count, UITheme.INK_MAX, 1.8)
 	if progression.success_count == 1:
 		hud.mark_first_success()
 	tutorial.notify_observation_completed()
 	if meteor.is_major():
 		_complete_prototype(true)
+
+
+func _try_start_leonid_storm() -> int:
+	if not progression.leonid_storm_ready():
+		return 0
+	var storm_count: int = progression.get_leonid_storm_count()
+	if not spawner.try_start_leonid_storm():
+		return 0
+	progression.consume_leonid_storm_charge()
+	return storm_count
 
 
 func _observation_strength(reward: float, was_manual: bool, quality_grade: String) -> float:

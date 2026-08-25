@@ -13,6 +13,8 @@ func _initialize() -> void:
 func _run() -> void:
 	var scene: PackedScene = load("res://scenes/main.tscn")
 	var game: Node = scene.instantiate()
+	game.startup_slot_prompt_enabled = false
+	game.get_node("Tutorial").auto_start_enabled = false
 	root.add_child(game)
 	await process_frame
 	await process_frame
@@ -23,15 +25,17 @@ func _run() -> void:
 	await process_frame
 
 	# Hover a node so the cursor tooltip is part of the capture. The script has no
-	# real pointer, so the tooltip is placed at the hovered star by hand. Rotate
-	# half a sky to put the three newly mapped figures above the horizon together.
+	# real pointer, so the tooltip is placed at the hovered star by hand. Keep
+	# Orion and Taurus together above the horizon so the Trapezium research
+	# node and the background Pleiades cluster can be reviewed in one capture.
 	var tree = game.upgrade_tree
-	tree.rotation_offset = PI
+	tree._reset_view(false)
+	tree.rotation_offset = -0.65
 	tree._layout_chart()
-	tree._on_node_hovered("perseid_survey")
+	tree._on_node_hovered("automated_tracking")
 	for _index in range(4):
 		await process_frame
-	var star: Control = tree.node_buttons["perseid_survey"]
+	var star: Control = tree.node_buttons["automated_tracking"]
 	var overlay_control: Control = tree.overlay
 	var cursor: Vector2 = star.global_position + star.size * 0.5 - overlay_control.global_position
 	tree._position_node_tooltip(cursor)

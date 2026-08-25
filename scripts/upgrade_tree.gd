@@ -26,10 +26,20 @@ const BACKGROUND_STAR_COUNT := 150
 const BACKGROUND_STAR_MIN_RADIUS := 90.0
 const BACKGROUND_STAR_MAX_RADIUS := 1180.0
 const BACKGROUND_STAR_SEED := 20260824
+const CLUSTER_MARKER_OFFSETS := [
+	Vector2(-1.45, -0.42),
+	Vector2(-0.62, 0.88),
+	Vector2(0.20, -1.08),
+	Vector2(0.92, -0.22),
+	Vector2(1.35, 0.72),
+	Vector2(0.28, 1.36),
+]
 
 
 class StarNodeVisual:
 	extends Control
+	const PURCHASED_GLOW_SCALE := 2.35
+	const PURCHASED_ENDPOINT_GLOW_SCALE := 2.75
 
 	var hold_ratio: float = 0.0
 	var branch_color := UITheme.STAR_LOCKED
@@ -39,6 +49,7 @@ class StarNodeVisual:
 	var affordable := false
 	var hovered := false
 	var pulse_phase := 0.0
+	var branch_endpoint := false
 
 
 	func set_fill_progress(ratio: float, elapsed: float) -> void:
@@ -52,12 +63,13 @@ class StarNodeVisual:
 		queue_redraw()
 
 
-	func configure(state: String, color: Color, apparent_magnitude: float, kind: String, can_afford: bool) -> void:
+	func configure(state: String, color: Color, apparent_magnitude: float, kind: String, can_afford: bool, is_branch_endpoint: bool) -> void:
 		visual_state = state
 		branch_color = color
 		magnitude = apparent_magnitude
 		star_kind = kind
 		affordable = can_afford
+		branch_endpoint = is_branch_endpoint
 		set_process(visual_state == "available" and affordable)
 		queue_redraw()
 
@@ -71,6 +83,22 @@ class StarNodeVisual:
 		return clampf(7.4 - magnitude * 0.82, 3.4, 7.4)
 
 
+	func purchased_glow_scale() -> float:
+		return PURCHASED_ENDPOINT_GLOW_SCALE if branch_endpoint else PURCHASED_GLOW_SCALE
+
+
+	func _draw_cluster_marker(center: Vector2, radius: float) -> void:
+		# A small asymmetric point group identifies a real cluster without
+		# borrowing the circular state language used by research nodes.
+		for index in range(CLUSTER_MARKER_OFFSETS.size()):
+			var point_radius := maxf(0.72, radius * (0.28 if index % 2 == 0 else 0.20))
+			draw_circle(
+				center + CLUSTER_MARKER_OFFSETS[index] * radius * 0.72,
+				point_radius,
+				Color(UITheme.STAR_BACKGROUND, 0.30)
+			)
+
+
 	func _process(delta: float) -> void:
 		pulse_phase = fmod(pulse_phase + delta * 3.2, TAU)
 		queue_redraw()
@@ -80,11 +108,11 @@ class StarNodeVisual:
 		var center := size * 0.5
 		var radius := visual_radius()
 		var pulse := 1.0 + (sin(pulse_phase) * 0.12 if visual_state == "available" and affordable else 0.0)
-		if star_kind == "nebula" and visual_state != "hidden":
-			draw_circle(center, radius * 7.0, Color(UITheme.STAR_INSTALLED_GLOW, 0.30))
+		if star_kind == "cluster" and visual_state != "hidden":
+			_draw_cluster_marker(center, radius)
 		match visual_state:
 			"purchased":
-				draw_circle(center, radius * 3.4, Color(UITheme.STAR_INSTALLED_GLOW, 0.70))
+				draw_circle(center, radius * purchased_glow_scale(), Color(UITheme.STAR_INSTALLED_GLOW, 0.70))
 				draw_circle(center, radius, UITheme.STAR_INSTALLED)
 			"available":
 				if affordable:
@@ -683,7 +711,25 @@ func _apply_node_visual(definition: Dictionary, visual_state: String) -> void:
 	var star_visual: StarNodeVisual = node_hold_bars[node_id]
 	var star_record: Dictionary = node_star_records[node_id]
 	var star: Dictionary = star_record.star
-	star_visual.configure(visual_state, Color.WHITE, float(star.magnitude), String(star.kind), progression.can_purchase(node_id))
+	star_visual.configure(
+		visual_state,
+		Color.WHITE,
+		float(star.magnitude),
+		String(star.kind),
+		progression.can_purchase(node_id),
+		_is_branch_endpoint(definition)
+	)
+
+
+func _is_branch_endpoint(definition: Dictionary) -> bool:
+	var node_id := String(definition.id)
+	var branch_id := String(definition.branch)
+	for candidate in Balance.UPGRADE_NODES:
+		if String(candidate.branch) != branch_id:
+			continue
+		if node_id in candidate.prerequisites:
+			return false
+	return true
 
 
 func _sync_star_animation_processing() -> void:
@@ -920,7 +966,14 @@ func _build_node_button(definition: Dictionary) -> void:
 	var branch_color: Color = Balance.BRANCHES[String(definition.branch)].color
 	var star_record: Dictionary = node_star_records[node_id]
 	var star: Dictionary = star_record.star
-	star_visual.configure("hidden", branch_color, float(star.magnitude), String(star.kind), false)
+	star_visual.configure(
+		"hidden",
+		branch_color,
+		float(star.magnitude),
+		String(star.kind),
+		false,
+		_is_branch_endpoint(definition)
+	)
 	button.add_child(star_visual)
 
 	node_buttons[node_id] = button
@@ -1075,8 +1128,12 @@ func _draw_tree() -> void:
 			var star_radius := _magnitude_radius(float(star.magnitude))
 			var node_id := String(star.get("node_id", ""))
 			var alpha := 0.23 if node_id.is_empty() else 0.12
-			if String(star.kind) == "nebula":
-				tree_canvas.draw_circle(point, star_radius * 2.2, Color(UITheme.STAR_INSTALLED_GLOW, alpha * 0.42))
+			if node_id.is_empty():
+				match String(star.kind):
+					"cluster":
+						_draw_background_cluster(point, star_radius, alpha)
+					"galaxy":
+						_draw_background_galaxy(point, star_radius, alpha)
 			tree_canvas.draw_circle(point, maxf(1.2, star_radius * 0.55), Color(UITheme.STAR_BACKGROUND, alpha))
 	if progression != null:
 		_draw_frontier_overlay()
@@ -1084,6 +1141,30 @@ func _draw_tree() -> void:
 	# one rotation, and it has to be buried by the ground rather than drawn
 	# over it.
 	_draw_chart_horizon()
+
+
+func _draw_background_cluster(center: Vector2, radius: float, alpha: float) -> void:
+	for index in range(CLUSTER_MARKER_OFFSETS.size()):
+		var point_radius := maxf(0.65, radius * (0.24 if index % 2 == 0 else 0.17))
+		tree_canvas.draw_circle(
+			center + CLUSTER_MARKER_OFFSETS[index] * radius * 0.68,
+			point_radius,
+			Color(UITheme.STAR_BACKGROUND, alpha * 0.82)
+		)
+
+
+func _draw_background_galaxy(center: Vector2, radius: float, alpha: float) -> void:
+	# M31 is an elongated deep-sky mark, never a circular interaction halo.
+	var axis := Vector2(1.0, 0.32).normalized()
+	tree_canvas.draw_line(
+		center - axis * radius * 1.75,
+		center + axis * radius * 1.75,
+		Color(UITheme.STAR_BACKGROUND, alpha * 0.46),
+		maxf(0.7, radius * 0.18),
+		true
+	)
+	tree_canvas.draw_circle(center - axis * radius * 0.55, maxf(0.65, radius * 0.16), Color(UITheme.STAR_BACKGROUND, alpha * 0.62))
+	tree_canvas.draw_circle(center + axis * radius * 0.46, maxf(0.75, radius * 0.20), Color(UITheme.STAR_BACKGROUND, alpha * 0.72))
 
 
 func _draw_frontier_overlay() -> void:
