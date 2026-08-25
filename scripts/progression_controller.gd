@@ -8,6 +8,8 @@ const Balance = preload("res://scripts/game_balance.gd")
 # The original 52-node topology has 51 pacing upgrades. Predictive Dish Control
 # and later content research remain interaction-only for density normalization.
 const PACING_NODE_COUNT := 51
+const BASE_MANUAL_COMBO_WINDOW := 2.6
+const MAX_MANUAL_COMBO_COUNT := 12
 
 var observation_data: float = 0.0
 var success_count: int = 0
@@ -17,7 +19,8 @@ var manual_successes: int = 0
 var automatic_successes: int = 0
 var total_data_earned: float = 0.0
 var best_multiplier: float = 1.0
-var manual_streak: int = 0
+var manual_combo_count: int = 0
+var manual_combo_remaining: float = 0.0
 var leonid_charge: int = 0
 
 var upgrade_level: int:
@@ -34,7 +37,7 @@ func reset() -> void:
 	automatic_successes = 0
 	total_data_earned = 0.0
 	best_multiplier = 1.0
-	manual_streak = 0
+	reset_manual_combo()
 	leonid_charge = 0
 	state_changed.emit()
 
@@ -49,7 +52,6 @@ func get_save_data() -> Dictionary:
 		"automatic_successes": automatic_successes,
 		"total_data_earned": total_data_earned,
 		"best_multiplier": best_multiplier,
-		"manual_streak": manual_streak,
 		"leonid_charge": leonid_charge,
 	}
 
@@ -61,7 +63,10 @@ func load_save_data(data: Dictionary) -> void:
 	automatic_successes = maxi(0, int(data.get("automatic_successes", 0)))
 	total_data_earned = maxf(0.0, float(data.get("total_data_earned", observation_data)))
 	best_multiplier = maxf(1.0, float(data.get("best_multiplier", 1.0)))
-	manual_streak = maxi(0, int(data.get("manual_streak", 0)))
+	# Manual momentum belongs to the live observation rhythm. Old saves may
+	# still contain `manual_streak`; deliberately ignore it instead of carrying a
+	# timed interaction bonus across a load or an intermission.
+	reset_manual_combo()
 	leonid_charge = maxi(0, int(data.get("leonid_charge", 0)))
 	purchased_nodes.clear()
 	purchase_order.clear()
@@ -88,11 +93,9 @@ func load_save_data(data: Dictionary) -> void:
 func add_observation(amount: float, was_manual: bool, multiplier: float) -> float:
 	var final_amount := amount
 	if was_manual:
-		manual_streak += 1
+		record_manual_combo_success()
 		if has_upgrade("observation_streak"):
-			final_amount *= 1.0 + minf(0.5, float(maxi(0, manual_streak - 1)) * 0.08)
-	else:
-		manual_streak = 0
+			final_amount *= 1.0 + minf(0.5, float(maxi(0, manual_combo_count - 1)) * 0.08)
 	final_amount = round(final_amount)
 	observation_data += final_amount
 	total_data_earned += final_amount
@@ -217,7 +220,86 @@ func debug_purchase_all() -> void:
 
 
 func get_tracking_radius() -> float:
-	return 52.0 if has_upgrade("better_lens") else 36.0
+	var base_radius := 52.0 if has_upgrade("better_lens") else 36.0
+	return base_radius + get_taurus_tracking_radius_bonus()
+
+
+func record_manual_combo_success() -> void:
+	if manual_combo_remaining <= 0.0:
+		manual_combo_count = 0
+	manual_combo_count = mini(MAX_MANUAL_COMBO_COUNT, manual_combo_count + 1)
+	manual_combo_remaining = get_manual_combo_window()
+
+
+func update_manual_combo(delta: float) -> void:
+	if manual_combo_count <= 0:
+		return
+	manual_combo_remaining = maxf(0.0, manual_combo_remaining - maxf(0.0, delta))
+	if manual_combo_remaining <= 0.0:
+		manual_combo_count = 0
+
+
+func reset_manual_combo() -> void:
+	manual_combo_count = 0
+	manual_combo_remaining = 0.0
+
+
+func get_manual_combo_window() -> float:
+	if has_upgrade("taurus_full_gallop"):
+		return 5.0
+	if has_upgrade("sustained_charge"):
+		return 4.0
+	if has_upgrade("cadence_memory"):
+		return 3.5
+	if has_upgrade("momentum_acquisition"):
+		return 3.0
+	return BASE_MANUAL_COMBO_WINDOW
+
+
+func get_taurus_combo_cap() -> int:
+	if not has_upgrade("momentum_acquisition"):
+		return 0
+	if has_upgrade("taurus_full_gallop"):
+		return 10
+	if has_upgrade("sustained_charge"):
+		return 7
+	if has_upgrade("cadence_memory"):
+		return 5
+	return 4
+
+
+func get_taurus_combo_stack_count() -> int:
+	return mini(manual_combo_count, get_taurus_combo_cap())
+
+
+func get_manual_combo_progress() -> float:
+	if manual_combo_count <= 0:
+		return 0.0
+	return clampf(manual_combo_remaining / maxf(get_manual_combo_window(), 0.001), 0.0, 1.0)
+
+
+func get_manual_analysis_speed_multiplier() -> float:
+	var stacks := get_taurus_combo_stack_count()
+	if stacks <= 0:
+		return 1.0
+	var speed_per_stack := 0.02
+	if has_upgrade("accelerated_analysis"):
+		speed_per_stack = 0.04
+	elif has_upgrade("rapid_focus"):
+		speed_per_stack = 0.03
+	return 1.0 + float(stacks) * speed_per_stack
+
+
+func get_taurus_tracking_radius_bonus() -> float:
+	var stacks := get_taurus_combo_stack_count()
+	if stacks <= 0:
+		return 0.0
+	var radius_per_stack := 1.0
+	if has_upgrade("expanded_sweep"):
+		radius_per_stack = 2.0
+	elif has_upgrade("wide_pursuit"):
+		radius_per_stack = 1.5
+	return float(stacks) * radius_per_stack
 
 
 func get_lifetime_multiplier() -> float:

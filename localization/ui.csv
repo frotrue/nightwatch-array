@@ -175,7 +175,7 @@ CONSTELLATION_DRACO,DRACO,용자리
 CONSTELLATION_URSA_MINOR,URSA MINOR,작은곰자리
 CONSTELLATION_LEO,LEO  /  METEOR STORM,사자자리  /  유성 폭풍
 CONSTELLATION_GEMINI,GEMINI  /  ECHO,쌍둥이자리  /  공명
-CONSTELLATION_TAURUS,TAURUS,황소자리
+CONSTELLATION_TAURUS,TAURUS  /  MOMENTUM,황소자리  /  관측 가속
 CONSTELLATION_CANIS_MAJOR,CANIS MAJOR,큰개자리
 STAR_ALPHERATZ,Alpheratz,알페라츠
 STAR_DELTA_AND,Delta Andromedae,델타 안드로메다
@@ -259,7 +259,7 @@ UPGRADE_BETTER_LENS_DESC,A wider focus ring makes manual tracking more forgiving
 UPGRADE_LONG_EXPOSURE_NAME,Long Exposure,장노출
 UPGRADE_LONG_EXPOSURE_DESC,Meteors stay visible 35% longer and leave denser trails.,유성이 35% 더 오래 보이며 더 짙은 궤적을 남깁니다.
 UPGRADE_OBSERVATION_STREAK_NAME,Observation Streak,연속 관측
-UPGRADE_OBSERVATION_STREAK_DESC,Consecutive manual observations build a modest reward chain; automation breaks it.,수동 관측에 연속 성공하면 추가 보상이 쌓이고 자동 관측을 하면 초기화됩니다.
+UPGRADE_OBSERVATION_STREAK_DESC,Manual observations completed before the combo timer expires build a modest reward chain.,콤보 제한 시간이 끝나기 전에 수동 관측을 이어가면 추가 보상이 쌓입니다.
 UPGRADE_PRECISION_MULTIPLIER_NAME,Precision Spectrometer,정밀 분광기
 UPGRADE_PRECISION_MULTIPLIER_DESC,Centered manual tracking builds a reward multiplier.,유성 중심을 정확히 추적할수록 보상 배율이 올라갑니다.
 UPGRADE_PERFECT_OBSERVATION_NAME,Perfect Observation,완벽한 관측
@@ -380,6 +380,22 @@ UPGRADE_ECHO_DECONFLICTION_NAME,Echo Deconfliction,공명 경로 분리
 UPGRADE_ECHO_DECONFLICTION_DESC,Automatically distributes one burst across separated burnout cells so its targets do not stack.,한 공명의 표적이 겹치지 않도록 서로 떨어진 소멸 셀에 자동 분산합니다.
 UPGRADE_ECHO_BEACON_NAME,Echo Beacon,공명 비콘
 UPGRADE_ECHO_BEACON_DESC,Announces delayed echoes as ordinary forecast contacts so dishes and operators can pre-position.,지연 공명을 일반 예보 접촉으로 알려 접시와 관측자가 미리 배치할 수 있게 합니다.
+UPGRADE_MOMENTUM_ACQUISITION_NAME,Momentum Acquisition,모멘텀 포착
+UPGRADE_MOMENTUM_ACQUISITION_DESC,Manual observations within three seconds build up to four Momentum stacks; each adds 2% analysis speed and 1 px of tracking range.,3초 안에 수동 관측을 이어가면 모멘텀이 최대 4중첩됩니다. 중첩마다 분석 속도가 2% 빨라지고 추적 범위가 1px 넓어집니다.
+UPGRADE_WIDE_PURSUIT_NAME,Wide Pursuit,광역 추적
+UPGRADE_WIDE_PURSUIT_DESC,Raises Momentum's tracking-range gain from 1 px to 1.5 px per stack.,모멘텀 중첩당 추적 범위 증가량을 1px에서 1.5px로 높입니다.
+UPGRADE_RAPID_FOCUS_NAME,Rapid Focus,신속 초점
+UPGRADE_RAPID_FOCUS_DESC,Raises Momentum's manual-analysis gain from 2% to 3% per stack.,모멘텀 중첩당 수동 분석 속도 증가량을 2%에서 3%로 높입니다.
+UPGRADE_CADENCE_MEMORY_NAME,Cadence Memory,박자 기억
+UPGRADE_CADENCE_MEMORY_DESC,Extends the Momentum window from three seconds to 3.5 seconds and lets five stacks affect its buffs.,모멘텀 제한 시간을 3초에서 3.5초로 늘리고 최대 5중첩까지 강화 효과에 반영합니다.
+UPGRADE_EXPANDED_SWEEP_NAME,Expanded Sweep,확장 탐색
+UPGRADE_EXPANDED_SWEEP_DESC,Raises Momentum's tracking-range gain from 1.5 px to 2 px per stack.,모멘텀 중첩당 추적 범위 증가량을 1.5px에서 2px로 높입니다.
+UPGRADE_ACCELERATED_ANALYSIS_NAME,Accelerated Analysis,가속 분석
+UPGRADE_ACCELERATED_ANALYSIS_DESC,Raises Momentum's manual-analysis gain from 3% to 4% per stack.,모멘텀 중첩당 수동 분석 속도 증가량을 3%에서 4%로 높입니다.
+UPGRADE_SUSTAINED_CHARGE_NAME,Sustained Charge,지속 가속
+UPGRADE_SUSTAINED_CHARGE_DESC,Extends the Momentum window to four seconds and lets seven stacks affect its buffs.,모멘텀 제한 시간을 4초로 늘리고 최대 7중첩까지 강화 효과에 반영합니다.
+UPGRADE_TAURUS_FULL_GALLOP_NAME,Full Gallop,전력 질주
+UPGRADE_TAURUS_FULL_GALLOP_DESC,Extends Momentum to five seconds and lets ten stacks grant up to 40% manual-analysis speed and 20 px of tracking range.,모멘텀 제한 시간을 5초로 늘리고 최대 10중첩으로 수동 분석 속도 40%와 추적 범위 20px를 얻습니다.
 CONTACT_UNCLASSIFIED,UNCLASSIFIED,미분류 신호
 METEOR_COMMON,COMMON METEOR,일반 유성
 METEOR_FAST,FAST METEOR,고속 유성

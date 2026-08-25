@@ -26,16 +26,16 @@ func _run() -> void:
 
 	# Hover a node so the cursor tooltip is part of the capture. The script has no
 	# real pointer, so the tooltip is placed at the hovered star by hand. Keep
-	# Orion and Taurus together above the horizon so the Trapezium research
-	# node and the background Pleiades cluster can be reviewed in one capture.
+	# Keep Taurus above the horizon so its complete Momentum path and the
+	# research-bearing Pleiades cluster can be reviewed in one capture.
 	var tree = game.upgrade_tree
 	tree._reset_view(false)
 	tree.rotation_offset = -0.65
 	tree._layout_chart()
-	tree._on_node_hovered("automated_tracking")
+	tree._on_node_hovered("taurus_full_gallop")
 	for _index in range(4):
 		await process_frame
-	var star: Control = tree.node_buttons["automated_tracking"]
+	var star: Control = tree.node_buttons["taurus_full_gallop"]
 	var overlay_control: Control = tree.overlay
 	var cursor: Vector2 = star.global_position + star.size * 0.5 - overlay_control.global_position
 	tree._position_node_tooltip(cursor)

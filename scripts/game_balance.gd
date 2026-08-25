@@ -14,6 +14,7 @@ const REGULAR_SPAWN_INTERVAL_MAX := 2.4
 const PERSEUS_DISCOVERY_SUCCESSES := 200
 const GEMINI_DISCOVERY_SUCCESSES := 400
 const LYRA_DISCOVERY_SUCCESSES := 600
+const TAURUS_DISCOVERY_SUCCESSES := 800
 const ANDROMEDA_DISCOVERY_SUCCESSES := 980
 const LEO_DISCOVERY_SUCCESSES := 1200
 const ECHO_SIGNATURE_LOCK_SUCCESSES := 1250
@@ -34,6 +35,7 @@ const BRANCHES := {
 	"network": {"name": "OBSERVATION NETWORK", "color": Color("52e0b1")},
 	"perseus": {"name": "PERSEUS / DENSITY", "color": Color("ffb56b")},
 	"gemini": {"name": "GEMINI / ECHO", "color": Color("ffd27d")},
+	"taurus": {"name": "TAURUS / MOMENTUM", "color": Color("ffbd7a")},
 	"lyra": {"name": "LYRA / SPECTRUM", "color": Color("69a9ff")},
 	"andromeda": {"name": "ANDROMEDA / DEEP SURVEY", "color": Color("ff78c8")},
 	"leo": {"name": "LEO / METEOR STORM", "color": Color("ff9a66")}
@@ -58,7 +60,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "observation_streak", "name": "Observation Streak", "icon": "×3", "cost": 64,
-		"description": "Consecutive manual observations build a modest reward chain; automation breaks it.",
+		"description": "Manual observations completed before the combo timer expires build a modest reward chain.",
 		"branch": "optics", "prerequisites": ["better_lens"],
 		"hidden_until": ["better_lens"], "effect_type": "transformation", "effect_parameters": {"step": 0.08, "maximum": 0.5},
 		"major": false
@@ -481,6 +483,62 @@ const UPGRADE_NODES: Array[Dictionary] = [
 		"description": "Announces delayed echoes as ordinary forecast contacts so dishes and operators can pre-position.",
 		"branch": "gemini", "prerequisites": ["triple_echo_array"],
 		"hidden_until": [{"type": "success_count", "minimum": ECHO_BEACON_SUCCESSES}], "effect_type": "unlock", "effect_parameters": {"echo_forecast": true},
+		"major": true, "affects_pacing": false
+	},
+	{
+		"id": "momentum_acquisition", "name": "Momentum Acquisition", "icon": "×4", "cost": 75,
+		"description": "Manual observations within three seconds build up to four Momentum stacks; each adds 2% analysis speed and 1 px of tracking range.",
+		"branch": "taurus", "prerequisites": [],
+		"hidden_until": [{"type": "success_count", "minimum": TAURUS_DISCOVERY_SUCCESSES}], "effect_type": "unlock", "effect_parameters": {"combo_window": 3.0, "combo_cap": 4, "speed_per_stack": 0.02, "radius_per_stack": 1.0},
+		"major": false, "affects_pacing": false
+	},
+	{
+		"id": "wide_pursuit", "name": "Wide Pursuit", "icon": "+1.5", "cost": 120,
+		"description": "Raises Momentum's tracking-range gain from 1 px to 1.5 px per stack.",
+		"branch": "taurus", "prerequisites": ["momentum_acquisition"],
+		"hidden_until": ["momentum_acquisition"], "effect_type": "passive", "effect_parameters": {"radius_per_stack": 1.5},
+		"major": false, "affects_pacing": false
+	},
+	{
+		"id": "rapid_focus", "name": "Rapid Focus", "icon": "+3%", "cost": 140,
+		"description": "Raises Momentum's manual-analysis gain from 2% to 3% per stack.",
+		"branch": "taurus", "prerequisites": ["momentum_acquisition"],
+		"hidden_until": ["momentum_acquisition"], "effect_type": "passive", "effect_parameters": {"speed_per_stack": 0.03},
+		"major": false, "affects_pacing": false
+	},
+	{
+		"id": "cadence_memory", "name": "Cadence Memory", "icon": "3.5s", "cost": 170,
+		"description": "Extends the Momentum window from three seconds to 3.5 seconds and lets five stacks affect its buffs.",
+		"branch": "taurus", "prerequisites": ["momentum_acquisition"],
+		"hidden_until": ["momentum_acquisition"], "effect_type": "transformation", "effect_parameters": {"combo_window": 3.5, "combo_cap": 5},
+		"major": false, "affects_pacing": false
+	},
+	{
+		"id": "expanded_sweep", "name": "Expanded Sweep", "icon": "+2", "cost": 220,
+		"description": "Raises Momentum's tracking-range gain from 1.5 px to 2 px per stack.",
+		"branch": "taurus", "prerequisites": ["cadence_memory"],
+		"hidden_until": ["cadence_memory"], "effect_type": "passive", "effect_parameters": {"radius_per_stack": 2.0},
+		"major": false, "affects_pacing": false
+	},
+	{
+		"id": "accelerated_analysis", "name": "Accelerated Analysis", "icon": "+4%", "cost": 250,
+		"description": "Raises Momentum's manual-analysis gain from 3% to 4% per stack.",
+		"branch": "taurus", "prerequisites": ["expanded_sweep"],
+		"hidden_until": ["expanded_sweep"], "effect_type": "transformation", "effect_parameters": {"speed_per_stack": 0.04},
+		"major": true, "affects_pacing": false
+	},
+	{
+		"id": "sustained_charge", "name": "Sustained Charge", "icon": "×7", "cost": 380,
+		"description": "Extends the Momentum window to four seconds and lets seven stacks affect its buffs.",
+		"branch": "taurus", "prerequisites": ["accelerated_analysis"],
+		"hidden_until": ["accelerated_analysis"], "effect_type": "transformation", "effect_parameters": {"combo_window": 4.0, "combo_cap": 7},
+		"major": true, "affects_pacing": false
+	},
+	{
+		"id": "taurus_full_gallop", "name": "Full Gallop", "icon": "×10", "cost": 650,
+		"description": "Extends Momentum to five seconds and lets ten stacks grant up to 40% manual-analysis speed and 20 px of tracking range.",
+		"branch": "taurus", "prerequisites": ["sustained_charge"],
+		"hidden_until": ["sustained_charge"], "effect_type": "transformation", "effect_parameters": {"combo_window": 5.0, "combo_cap": 10},
 		"major": true, "affects_pacing": false
 	}
 ]

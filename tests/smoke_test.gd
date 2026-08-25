@@ -254,9 +254,31 @@ func _run() -> void:
 	_check(is_equal_approx(game.progression.get_observation_value_multiplier("fragment_piece", 4), 1.0), "new constellation rewards are inert before purchase")
 	_check(is_zero_approx(game.progression.get_observation_echo_probability()) and game.progression.get_observation_echo_count() == 0, "Gemini echoes are inert before purchase")
 	_check(game.progression.get_leonid_trigger_count() == 0 and game.progression.get_leonid_storm_count() == 0 and game.progression.leonid_charge == 0, "Leonid storms are inert before purchase")
+	_check(is_equal_approx(game.progression.get_manual_analysis_speed_multiplier(), 1.0) and is_zero_approx(game.progression.get_taurus_tracking_radius_bonus()), "Taurus Momentum is inert before its discovery root")
 	var research_probe = load("res://scripts/progression_controller.gd").new()
 	var base_probe_scale: float = research_probe.get_spawn_interval_scale()
 	research_probe.success_count = balance.LEO_DISCOVERY_SUCCESSES
+	_check(research_probe.debug_purchase_node("momentum_acquisition"), "Taurus Momentum opens at its independent observation gate")
+	for _combo_step in range(4):
+		research_probe.add_observation(1.0, true, 1.0)
+	_check(research_probe.manual_combo_count == 4 and research_probe.get_taurus_combo_cap() == 4 and is_equal_approx(research_probe.get_manual_combo_window(), 3.0), "Taurus opens with a three-second four-stack combo")
+	_check(is_equal_approx(research_probe.get_manual_analysis_speed_multiplier(), 1.08) and is_equal_approx(research_probe.get_taurus_tracking_radius_bonus(), 4.0), "opening Momentum stacks raise only manual speed and tracking range")
+	research_probe.add_observation(1.0, false, 1.0)
+	_check(research_probe.manual_combo_count == 4, "automatic observations neither build nor break manual Momentum")
+	research_probe.update_manual_combo(3.01)
+	_check(research_probe.manual_combo_count == 0, "Momentum expires when its observation window elapses")
+	_check(research_probe.debug_purchase_node("wide_pursuit") and research_probe.debug_purchase_node("rapid_focus"), "Taurus side stars refine range and speed from the shared root")
+	_check(research_probe.debug_purchase_node("cadence_memory") and research_probe.debug_purchase_node("expanded_sweep") and research_probe.debug_purchase_node("accelerated_analysis"), "Taurus follows its central figure through the mid-combo refinements")
+	_check(research_probe.debug_purchase_node("sustained_charge") and research_probe.debug_purchase_node("taurus_full_gallop"), "Taurus completes its five-second ten-stack Momentum path")
+	for _full_combo_step in range(10):
+		research_probe.add_observation(1.0, true, 1.0)
+	_check(research_probe.get_taurus_combo_stack_count() == 10 and is_equal_approx(research_probe.get_manual_combo_window(), 5.0), "completed Taurus holds ten effective stacks for five seconds")
+	_check(is_equal_approx(research_probe.get_manual_analysis_speed_multiplier(), 1.4) and is_equal_approx(research_probe.get_taurus_tracking_radius_bonus(), 20.0), "completed Taurus reaches the declared 40-percent speed and 20-pixel range ceiling")
+	var combo_save_probe = load("res://scripts/progression_controller.gd").new()
+	combo_save_probe.load_save_data(research_probe.get_save_data())
+	_check(combo_save_probe.has_upgrade("taurus_full_gallop") and combo_save_probe.manual_combo_count == 0, "Taurus research persists while live Momentum never crosses a save or round boundary")
+	combo_save_probe.free()
+	research_probe.reset_manual_combo()
 	_check(research_probe.debug_purchase_node("radiant_plotting"), "Perseus discovery root purchases at its observation gate")
 	_check(research_probe.get_spawn_interval_scale() < base_probe_scale, "Radiant Plotting compresses arrivals only after purchase")
 	_check(research_probe.debug_purchase_node("crowd_forecast") and research_probe.get_forecast_lead() > 2.0, "Crowd Forecast extends the warning window")
@@ -533,6 +555,11 @@ func _run() -> void:
 		if not String(Dictionary(leo_star_variant).get("node_id", "")).is_empty():
 			leo_research_stars += 1
 	_check(leo_research_stars == 9, "Leo maps research across all nine stars and can complete every figure segment")
+	var taurus_research_stars := 0
+	for taurus_star_variant in chart_data.CONSTELLATIONS.taurus.stars:
+		if not String(Dictionary(taurus_star_variant).get("node_id", "")).is_empty():
+			taurus_research_stars += 1
+	_check(taurus_research_stars == 8, "Taurus maps Momentum research across all eight stars and every figure segment")
 	var deep_sky_marker_kinds := {}
 	for marker_constellation_id in ["orion", "taurus", "andromeda"]:
 		for marker_star_variant in chart_data.CONSTELLATIONS[marker_constellation_id].stars:
@@ -1230,7 +1257,7 @@ func _run() -> void:
 				and installed_states[1] == "purchased"
 				and game.upgrade_tree._segment_color(installed_states) == Color(chart_ui_theme.LINE_INSTALLED, 0.42)
 			)
-	_check(installed_research_segments == 60 and all_research_segments_installed, "all sixty research-constellation segments reach the installed color at full completion")
+	_check(installed_research_segments == 67 and all_research_segments_installed, "all sixty-seven research-constellation segments reach the installed color at full completion")
 	_check(game.progression.get_max_active() == 6, "research raises dense-sky capacity without removing the six-target performance cap")
 	_check(game.progression.upgrade_level == balance.UPGRADE_NODES.size(), "the run resolves to the full research array completion")
 	_check(is_equal_approx(game.progression.get_progression_ratio(), 1.0), "the original pacing topology preserves the completed-tree density endpoint")

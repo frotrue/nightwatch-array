@@ -157,16 +157,17 @@ const CONSTELLATIONS := {
 		"segments": [["castor", "pollux"], ["castor", "tau_gem"], ["tau_gem", "mebsuta"], ["mebsuta", "tejat"], ["tejat", "propus"], ["pollux", "upsilon_gem"], ["upsilon_gem", "wasat"], ["wasat", "alzirr"], ["wasat", "alhena"]]
 	},
 	"taurus": {
+		"branch": "taurus",
 		"label_key": "CONSTELLATION_TAURUS",
 		"stars": [
-			{"id": "pleiades", "name_key": "STAR_PLEIADES", "bayer": "M45", "magnitude": 1.60, "local_position": Vector2(-1.00, -0.52), "node_id": "", "kind": "cluster"},
-			{"id": "epsilon_tau", "name_key": "STAR_EPSILON_TAU", "bayer": "ε Tau", "magnitude": 3.53, "local_position": Vector2(-0.30, -0.30), "node_id": "", "kind": "star"},
-			{"id": "delta_tau", "name_key": "STAR_DELTA_TAU", "bayer": "δ Tau", "magnitude": 3.76, "local_position": Vector2(-0.38, -0.02), "node_id": "", "kind": "star"},
-			{"id": "hyadum", "name_key": "STAR_HYADUM", "bayer": "γ Tau", "magnitude": 3.65, "local_position": Vector2(-0.44, 0.24), "node_id": "", "kind": "star"},
-			{"id": "theta_tau", "name_key": "STAR_THETA_TAU", "bayer": "θ Tau", "magnitude": 3.40, "local_position": Vector2(-0.16, 0.30), "node_id": "", "kind": "star"},
-			{"id": "aldebaran", "name_key": "STAR_ALDEBARAN", "bayer": "α Tau", "magnitude": 0.85, "local_position": Vector2(0.08, 0.36), "node_id": "", "kind": "star"},
-			{"id": "tianguan", "name_key": "STAR_TIANGUAN", "bayer": "ζ Tau", "magnitude": 3.00, "local_position": Vector2(0.88, 0.52), "node_id": "", "kind": "star"},
-			{"id": "elnath", "name_key": "STAR_ELNATH", "bayer": "β Tau", "magnitude": 1.65, "local_position": Vector2(0.72, -0.62), "node_id": "", "kind": "star"}
+			{"id": "pleiades", "name_key": "STAR_PLEIADES", "bayer": "M45", "magnitude": 1.60, "local_position": Vector2(-1.00, -0.52), "node_id": "wide_pursuit", "kind": "cluster"},
+			{"id": "epsilon_tau", "name_key": "STAR_EPSILON_TAU", "bayer": "ε Tau", "magnitude": 3.53, "local_position": Vector2(-0.30, -0.30), "node_id": "momentum_acquisition", "kind": "star"},
+			{"id": "delta_tau", "name_key": "STAR_DELTA_TAU", "bayer": "δ Tau", "magnitude": 3.76, "local_position": Vector2(-0.38, -0.02), "node_id": "cadence_memory", "kind": "star"},
+			{"id": "hyadum", "name_key": "STAR_HYADUM", "bayer": "γ Tau", "magnitude": 3.65, "local_position": Vector2(-0.44, 0.24), "node_id": "expanded_sweep", "kind": "star"},
+			{"id": "theta_tau", "name_key": "STAR_THETA_TAU", "bayer": "θ Tau", "magnitude": 3.40, "local_position": Vector2(-0.16, 0.30), "node_id": "accelerated_analysis", "kind": "star"},
+			{"id": "aldebaran", "name_key": "STAR_ALDEBARAN", "bayer": "α Tau", "magnitude": 0.85, "local_position": Vector2(0.08, 0.36), "node_id": "sustained_charge", "kind": "star"},
+			{"id": "tianguan", "name_key": "STAR_TIANGUAN", "bayer": "ζ Tau", "magnitude": 3.00, "local_position": Vector2(0.88, 0.52), "node_id": "taurus_full_gallop", "kind": "star"},
+			{"id": "elnath", "name_key": "STAR_ELNATH", "bayer": "β Tau", "magnitude": 1.65, "local_position": Vector2(0.72, -0.62), "node_id": "rapid_focus", "kind": "star"}
 		],
 		"segments": [["pleiades", "epsilon_tau"], ["epsilon_tau", "delta_tau"], ["delta_tau", "hyadum"], ["hyadum", "theta_tau"], ["theta_tau", "aldebaran"], ["aldebaran", "tianguan"], ["epsilon_tau", "elnath"]]
 	},

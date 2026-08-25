@@ -101,12 +101,12 @@ Header: `DURATION_PRICING_ENV`.
 
 ### Full-tree economy gate — `full_tree_economy_test.gd`
 
-Pass/fail gate for the expanded 63-system graph. It runs three deterministic
+Pass/fail gate for the expanded 71-system graph. It runs three deterministic
 18-minute scripted-engaged watches at `0.05s` steps, buys the cheapest currently
 available research at each intermission, applies purchased Lyra calibration
-automatically, reproduces purchased Gemini echo bursts and Leo storm charge,
+automatically, reproduces purchased Taurus combo speed, Gemini echo bursts, and Leo storm charge,
 and uses predictive dishes when installed. Every seed must reach
-63/63 before the final-event clock. It also reports the 270/540/810-second
+71/71 before the final-event clock. It also reports the 270/540/810-second
 success curve, each constellation's discovery time, and the longest interval
 without a newly available node.
 
