@@ -220,6 +220,7 @@ func _on_target_observed(target, reward: float, multiplier: float, was_manual: b
 	var is_proc_target := (
 		bool(target.get_meta("gemini_echo", false))
 		or bool(target.get_meta("leonid_storm", false))
+		or bool(target.get_meta("perseid_outburst", false))
 	)
 	if was_manual and not is_proc_target and not target.is_major():
 		game.progression.record_leonid_manual_success()
@@ -228,7 +229,8 @@ func _on_target_observed(target, reward: float, multiplier: float, was_manual: b
 	if not target.is_major():
 		game.spawner.try_spawn_observation_echo(
 			was_manual,
-			is_proc_target
+			is_proc_target,
+			target
 		)
 
 

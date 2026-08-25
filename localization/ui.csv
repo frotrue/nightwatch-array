@@ -358,6 +358,28 @@ UPGRADE_STORM_FRONT_NAME,Storm Front,폭풍 전선
 UPGRADE_STORM_FRONT_DESC,Reduces the requirement to six fresh manual observations and raises each storm from 12 meteors to 16.,필요한 새로운 유성 수동 관측을 6회로 줄이고 폭풍마다 진입하는 유성을 12개에서 16개로 늘립니다.
 UPGRADE_LEONID_STORM_NAME,Leonid Storm,사자자리 유성 폭풍
 UPGRADE_LEONID_STORM_DESC,Reduces the requirement to five fresh manual observations and raises each seven-second storm from 16 meteors to 20.,필요한 새로운 유성 수동 관측을 5회로 줄이고 7초 동안 진입하는 유성을 16개에서 20개로 늘립니다.
+UPGRADE_PERSEID_OUTBURST_NAME,Perseid Outburst,페르세우스 유성군 돌발
+UPGRADE_PERSEID_OUTBURST_DESC,Unlocks short warned Perseid outbursts with their own radiant cadence.,고유한 복사점 주기로 짧게 예고되는 페르세우스 유성군 돌발을 해금합니다.
+UPGRADE_DOUBLE_STAR_RESOLUTION_NAME,Double-Star Resolution,쌍성 분해
+UPGRADE_DOUBLE_STAR_RESOLUTION_DESC,Resolves paired binary-star contacts within a single observation watch.,한 관측 회차 안에서 쌍성 접촉의 두 성분을 분해합니다.
+UPGRADE_GALAXY_IMAGING_NAME,Galaxy Imaging,은하 촬영
+UPGRADE_GALAXY_IMAGING_DESC,Adds long-exposure galaxy fields to the same-round deep-sky survey.,같은 회차 안에 완료하는 장노출 은하 시야를 심우주 조사에 추가합니다.
+UPGRADE_SPLIT_RADIANT_MODEL_NAME,Split Radiant Model,분할 복사점 모형
+UPGRADE_SPLIT_RADIANT_MODEL_DESC,Alternates Leonid storm entries between two mirrored radiant sectors.,사자자리 유성 폭풍 진입을 대칭인 두 복사점 구역 사이에서 교대로 배치합니다.
+UPGRADE_FRAGMENT_FRONT_NAME,Fragment Front,파편 전선
+UPGRADE_FRAGMENT_FRONT_DESC,Leads each Leonid storm with a fragmenting meteor that announces the front's arrival.,각 사자자리 유성 폭풍의 선두에 분열 유성을 보내 전선 도착을 알립니다.
+UPGRADE_FIREBALL_TAIL_NAME,Fireball Tail,화구 꼬리
+UPGRADE_FIREBALL_TAIL_DESC,Closes each Leonid storm with a manual-only fireball after the regular stream.,일반 유성류 뒤에 수동 관측 전용 화구를 보내 각 사자자리 유성 폭풍을 마무리합니다.
+UPGRADE_ECHO_SIGNATURE_LOCK_NAME,Echo Signature Lock,공명 신호 고정
+UPGRADE_ECHO_SIGNATURE_LOCK_DESC,Makes each Gemini echo copy the fresh manual target's meteor class instead of rolling a random class.,각 쌍둥이자리 공명이 무작위 분류 대신 방금 수동 관측한 유성 분류를 복제합니다.
+UPGRADE_MIRROR_ECHO_SOLUTION_NAME,Mirror Echo Solution,대칭 공명 해
+UPGRADE_MIRROR_ECHO_SOLUTION_DESC,Reconstructs copied echoes from the mirrored side of the triggering target's path.,복제된 공명을 발동 표적 궤적의 반대편에서 대칭으로 복원합니다.
+UPGRADE_ECHO_DELAY_LINE_NAME,Echo Delay Line,공명 지연선
+UPGRADE_ECHO_DELAY_LINE_DESC,Staggers each Gemini burst into a readable sequence that still finishes inside the current watch.,각 쌍둥이자리 공명을 현재 회차 안에서 끝나는 읽기 쉬운 순차 진입으로 분산합니다.
+UPGRADE_ECHO_DECONFLICTION_NAME,Echo Deconfliction,공명 경로 분리
+UPGRADE_ECHO_DECONFLICTION_DESC,Automatically distributes one burst across separated burnout cells so its targets do not stack.,한 공명의 표적이 겹치지 않도록 서로 떨어진 소멸 셀에 자동 분산합니다.
+UPGRADE_ECHO_BEACON_NAME,Echo Beacon,공명 비콘
+UPGRADE_ECHO_BEACON_DESC,Announces delayed echoes as ordinary forecast contacts so dishes and operators can pre-position.,지연 공명을 일반 예보 접촉으로 알려 접시와 관측자가 미리 배치할 수 있게 합니다.
 CONTACT_UNCLASSIFIED,UNCLASSIFIED,미분류 신호
 METEOR_COMMON,COMMON METEOR,일반 유성
 METEOR_FAST,FAST METEOR,고속 유성
@@ -368,6 +390,8 @@ METEOR_MAJOR,MAJOR FIREBALL,대형 화구
 METEOR_SATELLITE,ARTIFICIAL SATELLITE,인공위성
 METEOR_VARIABLE_STAR,VARIABLE STAR,변광성
 METEOR_COMET,LONG-ARC COMET,장주기 혜성
+METEOR_BINARY_STAR,BINARY STAR,쌍성
+METEOR_GALAXY,GALAXY FIELD,은하 시야
 QUALITY_AUTOMATIC,AUTOMATIC,자동
 QUALITY_PERFECT,PERFECT,완벽
 QUALITY_EXCELLENT,EXCELLENT,우수
@@ -384,6 +408,9 @@ EVENT_SHOWER_INCOMING,METEOR SHOWER INCOMING,유성우 접근 중
 EVENT_ATMOSPHERIC_BLOOM,ATMOSPHERIC BLOOM DETECTED,대기 발광 감지
 EVENT_SHOWER,METEOR SHOWER,유성우
 EVENT_SHOWER_PASSED,SHOWER PASSED  •  ARRAY STABLE,유성우 통과  •  관측망 안정
+EVENT_PERSEID_OUTBURST_INCOMING,PERSEID OUTBURST INCOMING,페르세우스 유성군 돌발 접근 중
+EVENT_PERSEID_OUTBURST,PERSEID OUTBURST,페르세우스 유성군 돌발
+EVENT_PERSEID_OUTBURST_PASSED,OUTBURST PASSED  •  ARRAY STABLE,돌발 통과  •  관측망 안정
 EVENT_MAJOR_FIREBALL,MAJOR FIREBALL,대형 화구
 END_RUN_TIME,RUN TIME   %02d:%02d,진행 시간   %02d:%02d
 END_OBSERVATIONS,OBSERVATIONS   %d,관측 횟수   %d

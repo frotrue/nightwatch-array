@@ -18,12 +18,21 @@ var shower_timer: float = 0.0
 var shower_spawn_timer: float = 0.0
 var shower_index: int = 0
 var next_shower_time: float = -1.0
+var outburst_state: String = "idle"
+var outburst_timer: float = 0.0
+var outburst_spawn_timer: float = 0.0
+var outburst_index: int = 0
+var next_outburst_time: float = -1.0
 var final_state: String = "idle"
 var final_timer: float = 0.0
 var final_started: bool = false
 var rng := RandomNumberGenerator.new()
 
 const SHOWER_BOUNDARY_MARGIN := 0.12
+const PERSEID_OUTBURST_WARNING := 1.8
+const PERSEID_OUTBURST_DURATION := 3.4
+const PERSEID_OUTBURST_INTERVAL := 0.42
+const PERSEID_OUTBURST_COUNT := 8
 
 
 func setup(meteor_spawner: Node, progression_controller: Node) -> void:
@@ -46,6 +55,12 @@ func pause_for_intermission() -> void:
 		shower_spawn_timer = 0.0
 		shower_index = 0
 		next_shower_time = run_time
+	if outburst_state != "idle":
+		outburst_state = "idle"
+		outburst_timer = 0.0
+		outburst_spawn_timer = 0.0
+		outburst_index = 0
+		next_outburst_time = run_time
 	if spawner != null:
 		spawner.pause_regular_spawns = false
 
@@ -58,6 +73,11 @@ func reset() -> void:
 	shower_spawn_timer = 0.0
 	shower_index = 0
 	next_shower_time = -1.0
+	outburst_state = "idle"
+	outburst_timer = 0.0
+	outburst_spawn_timer = 0.0
+	outburst_index = 0
+	next_outburst_time = -1.0
 	final_state = "idle"
 	final_timer = 0.0
 	final_started = false
@@ -73,17 +93,22 @@ func _process(delta: float) -> void:
 	if not final_started and run_time >= Balance.FINAL_EVENT_TIME:
 		trigger_final()
 
-	if progression.has_upgrade("shower_detector") and next_shower_time < 0.0 and shower_state == "idle":
+	if progression.has_upgrade("shower_detector") and next_shower_time < 0.0 and shower_state == "idle" and outburst_state == "idle":
 		next_shower_time = run_time + 14.0
-	if next_shower_time > 0.0 and run_time >= next_shower_time and shower_state == "idle" and not final_started:
+	if next_shower_time > 0.0 and run_time >= next_shower_time and shower_state == "idle" and outburst_state == "idle" and not final_started:
 		trigger_shower()
+	if progression.has_upgrade("perseid_outburst") and next_outburst_time < 0.0 and outburst_state == "idle":
+		next_outburst_time = run_time + 8.0
+	if next_outburst_time > 0.0 and run_time >= next_outburst_time and outburst_state == "idle" and shower_state == "idle" and not final_started:
+		trigger_perseid_outburst()
 
 	_update_shower(delta)
+	_update_perseid_outburst(delta)
 	_update_final(delta)
 
 
 func trigger_shower() -> bool:
-	if final_started or shower_state != "idle":
+	if final_started or shower_state != "idle" or outburst_state != "idle":
 		return false
 	if not _shower_fits_current_observation():
 		# Leave next_shower_time due. The first viable frame of the next round
@@ -111,6 +136,25 @@ func trigger_shower() -> bool:
 	return true
 
 
+func trigger_perseid_outburst() -> bool:
+	if final_started or shower_state != "idle" or outburst_state != "idle":
+		return false
+	var required := PERSEID_OUTBURST_WARNING + PERSEID_OUTBURST_DURATION + SHOWER_BOUNDARY_MARGIN
+	if spawner != null and float(spawner.phase_time_remaining) < required:
+		if next_outburst_time < 0.0:
+			next_outburst_time = run_time
+		return false
+	outburst_state = "warning"
+	outburst_timer = PERSEID_OUTBURST_WARNING
+	outburst_spawn_timer = 0.0
+	outburst_index = 0
+	next_outburst_time = -1.0
+	spawner.pause_regular_spawns = true
+	banner_requested.emit("EVENT_PERSEID_OUTBURST_INCOMING", UITheme.ACCENT_TEXT)
+	sky_activity_changed.emit(0.48)
+	return true
+
+
 func _shower_fits_current_observation() -> bool:
 	if spawner == null:
 		return true
@@ -126,6 +170,8 @@ func trigger_final() -> void:
 	final_timer = 4.2
 	shower_state = "idle"
 	next_shower_time = -1.0
+	outburst_state = "idle"
+	next_outburst_time = -1.0
 	spawner.pause_regular_spawns = true
 	banner_requested.emit("EVENT_ATMOSPHERIC_BLOOM", UITheme.ACCENT_PIP)
 	sky_activity_changed.emit(1.0)
@@ -161,6 +207,31 @@ func _update_shower(delta: float) -> void:
 				next_shower_time = run_time + rng.randf_range(40.0, 58.0)
 				sky_activity_changed.emit(0.16)
 				banner_requested.emit("EVENT_SHOWER_PASSED", UITheme.BANNER_SUB)
+
+
+func _update_perseid_outburst(delta: float) -> void:
+	match outburst_state:
+		"warning":
+			outburst_timer -= delta
+			if outburst_timer <= 0.0:
+				outburst_state = "active"
+				outburst_timer = PERSEID_OUTBURST_DURATION
+				outburst_spawn_timer = 0.0
+				banner_requested.emit("EVENT_PERSEID_OUTBURST", UITheme.BANNER_TITLE)
+				sky_activity_changed.emit(0.82)
+		"active":
+			outburst_timer -= delta
+			outburst_spawn_timer -= delta
+			if outburst_index < PERSEID_OUTBURST_COUNT and outburst_spawn_timer <= 0.0:
+				outburst_spawn_timer += PERSEID_OUTBURST_INTERVAL
+				spawner.spawn_for_perseid_outburst(outburst_index)
+				outburst_index += 1
+			if outburst_timer <= 0.0:
+				outburst_state = "idle"
+				spawner.pause_regular_spawns = false
+				next_outburst_time = run_time + rng.randf_range(48.0, 64.0)
+				sky_activity_changed.emit(0.16)
+				banner_requested.emit("EVENT_PERSEID_OUTBURST_PASSED", UITheme.BANNER_SUB)
 
 
 func _update_final(delta: float) -> void:

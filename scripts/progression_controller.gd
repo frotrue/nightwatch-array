@@ -5,8 +5,8 @@ signal upgrade_purchased(definition)
 signal purchase_rejected(node_id, reason_key, value)
 
 const Balance = preload("res://scripts/game_balance.gd")
-# The 52-node topology has 51 pacing upgrades. Predictive Dish Control remains
-# interaction-only, so excluding it normalizes the completed tree to 1.0.
+# The original 52-node topology has 51 pacing upgrades. Predictive Dish Control
+# and later content research remain interaction-only for density normalization.
 const PACING_NODE_COUNT := 51
 
 var observation_data: float = 0.0
@@ -204,7 +204,7 @@ func debug_purchase_node(node_id: String) -> bool:
 func debug_purchase_all() -> void:
 	# Discovery gates model earned observations. The all-research debug path is
 	# explicitly a completed-tree fixture, so make every discovery root visible.
-	success_count = maxi(success_count, Balance.LEO_DISCOVERY_SUCCESSES)
+	success_count = maxi(success_count, Balance.GALAXY_IMAGING_SUCCESSES)
 	observation_data += 100000.0
 	var made_progress := true
 	while made_progress:
@@ -350,7 +350,9 @@ func get_forecast_lead() -> float:
 
 
 func get_forecast_max_error(type_id: String = "") -> float:
-	if has_upgrade("change_detection") and is_deep_target(type_id):
+	if has_upgrade("change_detection") and is_andromeda_target(type_id):
+		return 22.0
+	if has_upgrade("double_star_resolution") and type_id == "binary_star":
 		return 22.0
 	if has_upgrade("trajectory"):
 		return 40.0
@@ -358,7 +360,9 @@ func get_forecast_max_error(type_id: String = "") -> float:
 
 
 func get_forecast_min_error(type_id: String = "") -> float:
-	if has_upgrade("change_detection") and is_deep_target(type_id):
+	if has_upgrade("change_detection") and is_andromeda_target(type_id):
+		return 8.0
+	if has_upgrade("double_star_resolution") and type_id == "binary_star":
 		return 8.0
 	if has_upgrade("trajectory"):
 		return 14.0
@@ -366,17 +370,23 @@ func get_forecast_min_error(type_id: String = "") -> float:
 
 
 func forecast_classifies(type_id: String = "") -> bool:
-	return has_upgrade("rare_detection") or (
-		has_upgrade("change_detection") and is_deep_target(type_id)
+	return (
+		has_upgrade("rare_detection")
+		or (has_upgrade("change_detection") and is_andromeda_target(type_id))
+		or (has_upgrade("double_star_resolution") and type_id == "binary_star")
 	)
 
 
 func is_deep_target(type_id: String) -> bool:
-	return type_id in ["satellite", "variable_star", "comet"]
+	return type_id in ["satellite", "variable_star", "comet", "binary_star", "galaxy"]
+
+
+func is_andromeda_target(type_id: String) -> bool:
+	return type_id in ["satellite", "variable_star", "comet", "galaxy"]
 
 
 func get_analysis_speed_multiplier(type_id: String) -> float:
-	if has_upgrade("andromeda_deep_survey") and is_deep_target(type_id):
+	if has_upgrade("andromeda_deep_survey") and is_andromeda_target(type_id):
 		return 1.25
 	return 1.0
 
@@ -387,7 +397,7 @@ func get_observation_value_multiplier(type_id: String, active_target_count: int)
 		multiplier *= 1.35
 	if type_id in ["fragment", "fragment_piece"] and has_upgrade("debris_correlation"):
 		multiplier *= 1.2
-	if is_deep_target(type_id) and has_upgrade("andromeda_deep_survey"):
+	if is_andromeda_target(type_id) and has_upgrade("andromeda_deep_survey"):
 		multiplier *= 1.3
 	if active_target_count >= 3 and has_upgrade("perseid_survey"):
 		multiplier *= 1.18
@@ -403,9 +413,17 @@ func get_secondary_slots() -> int:
 
 
 func get_progression_ratio() -> float:
-	# Topology normalization only: all duration research genuinely advances
-	# pacing, while Predictive Dish Control adds interaction without density.
-	var pacing_level := upgrade_level - int(has_upgrade("predictive_dish_control"))
+	# The original 51 pacing systems retain the shipped density curve. Later
+	# content can add targets and interaction without diluting that curve before
+	# it is purchased or accelerating it after the original tree is complete.
+	var pacing_level := 0
+	for node_variant in purchased_nodes:
+		var node_id := String(node_variant)
+		if node_id == "predictive_dish_control":
+			continue
+		var definition := Balance.upgrade_definition(node_id)
+		if bool(definition.get("affects_pacing", true)):
+			pacing_level += 1
 	return clampf(float(pacing_level) / float(PACING_NODE_COUNT), 0.0, 1.0)
 
 

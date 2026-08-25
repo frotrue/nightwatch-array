@@ -48,11 +48,11 @@ const CONSTELLATIONS := {
 		],
 		"segments": [["meissa", "betelgeuse"], ["meissa", "bellatrix"], ["betelgeuse", "alnitak"], ["bellatrix", "mintaka"], ["alnitak", "alnilam"], ["alnilam", "mintaka"], ["alnitak", "saiph"], ["mintaka", "rigel"], ["alnilam", "trapezium"], ["trapezium", "hatysa"]]
 	},
-	# Newly discovered research figures keep at least one star unassigned so the
-	# chart still reads as a sky rather than a diagram. The remaining background
-	# figures carry no branch until research is mapped onto them. Every star is a
-	# real member of its figure; placement between figures stays compositional,
-	# but neighbours remain the sky's real neighbours.
+	# Every endpoint in a research-bearing figure is assigned so each declared
+	# constellation segment can reach the installed state. The remaining
+	# background figures carry no branch until research is mapped onto them.
+	# Every star is a real member of its figure; placement between figures stays
+	# compositional, but neighbours remain the sky's real neighbours.
 	"andromeda": {
 		"branch": "andromeda",
 		"label_key": "CONSTELLATION_ANDROMEDA",
@@ -62,7 +62,7 @@ const CONSTELLATIONS := {
 			{"id": "mirach", "name_key": "STAR_MIRACH", "bayer": "β And", "magnitude": 2.06, "local_position": Vector2(0.02, 0.14), "node_id": "change_detection", "kind": "star"},
 			{"id": "mu_and", "name_key": "STAR_MU_AND", "bayer": "μ And", "magnitude": 3.86, "local_position": Vector2(-0.14, -0.34), "node_id": "comet_solutions", "kind": "star"},
 			{"id": "nu_and", "name_key": "STAR_NU_AND", "bayer": "ν And", "magnitude": 4.53, "local_position": Vector2(-0.24, -0.62), "node_id": "andromeda_deep_survey", "kind": "star"},
-			{"id": "andromeda_galaxy", "name_key": "STAR_ANDROMEDA_GALAXY", "bayer": "M31", "magnitude": 3.44, "local_position": Vector2(-0.36, -0.94), "node_id": "", "kind": "galaxy"},
+			{"id": "andromeda_galaxy", "name_key": "STAR_ANDROMEDA_GALAXY", "bayer": "M31", "magnitude": 3.44, "local_position": Vector2(-0.36, -0.94), "node_id": "galaxy_imaging", "kind": "galaxy"},
 			{"id": "almach", "name_key": "STAR_ALMACH", "bayer": "γ And", "magnitude": 2.10, "local_position": Vector2(0.62, -0.10), "node_id": "variable_watchlist", "kind": "star"}
 		],
 		"segments": [["alpheratz", "delta_and"], ["delta_and", "mirach"], ["mirach", "almach"], ["mirach", "mu_and"], ["mu_and", "nu_and"], ["nu_and", "andromeda_galaxy"]]
@@ -76,7 +76,7 @@ const CONSTELLATIONS := {
 			{"id": "mirfak", "name_key": "STAR_MIRFAK", "bayer": "α Per", "magnitude": 1.79, "local_position": Vector2(-0.16, -0.10), "node_id": "burst_windowing", "kind": "star"},
 			{"id": "delta_per", "name_key": "STAR_DELTA_PER", "bayer": "δ Per", "magnitude": 3.01, "local_position": Vector2(0.30, 0.10), "node_id": "adaptive_exposure_grid", "kind": "star"},
 			{"id": "epsilon_per", "name_key": "STAR_EPSILON_PER", "bayer": "ε Per", "magnitude": 2.90, "local_position": Vector2(0.54, 0.62), "node_id": "perseid_survey", "kind": "star"},
-			{"id": "zeta_per", "name_key": "STAR_ZETA_PER", "bayer": "ζ Per", "magnitude": 2.85, "local_position": Vector2(0.30, 0.96), "node_id": "", "kind": "star"},
+			{"id": "zeta_per", "name_key": "STAR_ZETA_PER", "bayer": "ζ Per", "magnitude": 2.85, "local_position": Vector2(0.30, 0.96), "node_id": "perseid_outburst", "kind": "star"},
 			{"id": "algol", "name_key": "STAR_ALGOL", "bayer": "β Per", "magnitude": 2.12, "local_position": Vector2(-0.44, 0.46), "node_id": "debris_correlation", "kind": "star"},
 			{"id": "rho_per", "name_key": "STAR_RHO_PER", "bayer": "ρ Per", "magnitude": 3.39, "local_position": Vector2(-0.68, 0.76), "node_id": "cascade_sampling", "kind": "star"}
 		],
@@ -87,7 +87,7 @@ const CONSTELLATIONS := {
 		"label_key": "CONSTELLATION_LYRA",
 		"stars": [
 			{"id": "vega", "name_key": "STAR_VEGA", "bayer": "α Lyr", "magnitude": 0.03, "local_position": Vector2(-0.62, -0.86), "node_id": "filter_wheel", "kind": "star"},
-			{"id": "epsilon_lyr", "name_key": "STAR_EPSILON_LYR", "bayer": "ε Lyr", "magnitude": 4.67, "local_position": Vector2(-0.06, -0.92), "node_id": "", "kind": "star"},
+			{"id": "epsilon_lyr", "name_key": "STAR_EPSILON_LYR", "bayer": "ε Lyr", "magnitude": 4.67, "local_position": Vector2(-0.06, -0.92), "node_id": "double_star_resolution", "kind": "star"},
 			{"id": "zeta_lyr", "name_key": "STAR_ZETA_LYR", "bayer": "ζ Lyr", "magnitude": 4.36, "local_position": Vector2(-0.34, -0.48), "node_id": "blue_band", "kind": "star"},
 			{"id": "sheliak", "name_key": "STAR_SHELIAK", "bayer": "β Lyr", "magnitude": 3.52, "local_position": Vector2(-0.46, 0.32), "node_id": "amber_band", "kind": "star"},
 			{"id": "sulafat", "name_key": "STAR_SULAFAT", "bayer": "γ Lyr", "magnitude": 3.24, "local_position": Vector2(0.34, 0.46), "node_id": "violet_band", "kind": "star"},
@@ -133,9 +133,9 @@ const CONSTELLATIONS := {
 			{"id": "zeta_leo", "name_key": "STAR_ZETA_LEO", "bayer": "ζ Leo", "magnitude": 3.44, "local_position": Vector2(-0.78, -0.46), "node_id": "rapid_reacquisition", "kind": "star"},
 			{"id": "mu_leo", "name_key": "STAR_MU_LEO", "bayer": "μ Leo", "magnitude": 3.88, "local_position": Vector2(-0.96, -0.70), "node_id": "storm_front", "kind": "star"},
 			{"id": "epsilon_leo", "name_key": "STAR_EPSILON_LEO", "bayer": "ε Leo", "magnitude": 2.98, "local_position": Vector2(-1.00, -0.34), "node_id": "leonid_storm", "kind": "star"},
-			{"id": "chertan", "name_key": "STAR_CHERTAN", "bayer": "θ Leo", "magnitude": 3.32, "local_position": Vector2(0.26, 0.44), "node_id": "", "kind": "star"},
-			{"id": "zosma", "name_key": "STAR_ZOSMA", "bayer": "δ Leo", "magnitude": 2.56, "local_position": Vector2(0.32, -0.06), "node_id": "", "kind": "star"},
-			{"id": "denebola", "name_key": "STAR_DENEBOLA", "bayer": "β Leo", "magnitude": 2.14, "local_position": Vector2(0.96, 0.10), "node_id": "", "kind": "star"}
+			{"id": "chertan", "name_key": "STAR_CHERTAN", "bayer": "θ Leo", "magnitude": 3.32, "local_position": Vector2(0.26, 0.44), "node_id": "split_radiant_model", "kind": "star"},
+			{"id": "zosma", "name_key": "STAR_ZOSMA", "bayer": "δ Leo", "magnitude": 2.56, "local_position": Vector2(0.32, -0.06), "node_id": "fragment_front", "kind": "star"},
+			{"id": "denebola", "name_key": "STAR_DENEBOLA", "bayer": "β Leo", "magnitude": 2.14, "local_position": Vector2(0.96, 0.10), "node_id": "fireball_tail", "kind": "star"}
 		],
 		"segments": [["regulus", "eta_leo"], ["eta_leo", "algieba"], ["algieba", "zeta_leo"], ["zeta_leo", "mu_leo"], ["mu_leo", "epsilon_leo"], ["regulus", "chertan"], ["chertan", "zosma"], ["zosma", "denebola"], ["denebola", "chertan"], ["algieba", "zosma"]]
 	},
@@ -146,13 +146,13 @@ const CONSTELLATIONS := {
 			{"id": "castor", "name_key": "STAR_CASTOR", "bayer": "α Gem", "magnitude": 1.58, "local_position": Vector2(-0.52, -0.94), "node_id": "echo_correlation_10", "kind": "star"},
 			{"id": "pollux", "name_key": "STAR_POLLUX", "bayer": "β Gem", "magnitude": 1.14, "local_position": Vector2(0.22, -0.86), "node_id": "single_echo_channel", "kind": "star"},
 			{"id": "tau_gem", "name_key": "STAR_TAU_GEM", "bayer": "τ Gem", "magnitude": 4.41, "local_position": Vector2(-0.40, -0.52), "node_id": "echo_correlation_20", "kind": "star"},
-			{"id": "mebsuta", "name_key": "STAR_MEBSUTA", "bayer": "ε Gem", "magnitude": 2.98, "local_position": Vector2(-0.56, -0.06), "node_id": "", "kind": "star"},
+			{"id": "mebsuta", "name_key": "STAR_MEBSUTA", "bayer": "ε Gem", "magnitude": 2.98, "local_position": Vector2(-0.56, -0.06), "node_id": "echo_signature_lock", "kind": "star"},
 			{"id": "upsilon_gem", "name_key": "STAR_UPSILON_GEM", "bayer": "υ Gem", "magnitude": 4.06, "local_position": Vector2(0.14, -0.34), "node_id": "dual_echo_channel", "kind": "star"},
 			{"id": "wasat", "name_key": "STAR_WASAT", "bayer": "δ Gem", "magnitude": 3.53, "local_position": Vector2(0.10, 0.22), "node_id": "triple_echo_array", "kind": "star"},
-			{"id": "tejat", "name_key": "STAR_TEJAT", "bayer": "μ Gem", "magnitude": 2.87, "local_position": Vector2(-0.86, 0.30), "node_id": "", "kind": "star"},
-			{"id": "propus", "name_key": "STAR_PROPUS", "bayer": "η Gem", "magnitude": 3.28, "local_position": Vector2(-0.90, 0.56), "node_id": "", "kind": "star"},
-			{"id": "alhena", "name_key": "STAR_ALHENA", "bayer": "γ Gem", "magnitude": 1.93, "local_position": Vector2(-0.10, 0.86), "node_id": "", "kind": "star"},
-			{"id": "alzirr", "name_key": "STAR_ALZIRR", "bayer": "ξ Gem", "magnitude": 3.35, "local_position": Vector2(0.44, 0.94), "node_id": "", "kind": "star"}
+			{"id": "tejat", "name_key": "STAR_TEJAT", "bayer": "μ Gem", "magnitude": 2.87, "local_position": Vector2(-0.86, 0.30), "node_id": "mirror_echo_solution", "kind": "star"},
+			{"id": "propus", "name_key": "STAR_PROPUS", "bayer": "η Gem", "magnitude": 3.28, "local_position": Vector2(-0.90, 0.56), "node_id": "echo_delay_line", "kind": "star"},
+			{"id": "alhena", "name_key": "STAR_ALHENA", "bayer": "γ Gem", "magnitude": 1.93, "local_position": Vector2(-0.10, 0.86), "node_id": "echo_deconfliction", "kind": "star"},
+			{"id": "alzirr", "name_key": "STAR_ALZIRR", "bayer": "ξ Gem", "magnitude": 3.35, "local_position": Vector2(0.44, 0.94), "node_id": "echo_beacon", "kind": "star"}
 		],
 		"segments": [["castor", "pollux"], ["castor", "tau_gem"], ["tau_gem", "mebsuta"], ["mebsuta", "tejat"], ["tejat", "propus"], ["pollux", "upsilon_gem"], ["upsilon_gem", "wasat"], ["wasat", "alzirr"], ["wasat", "alhena"]]
 	},
@@ -263,6 +263,7 @@ static func validation_errors(expected_node_ids: Array[String]) -> Array[String]
 			errors.append("Missing placement for %s" % constellation_id)
 		var constellation: Dictionary = CONSTELLATIONS[constellation_id]
 		var star_ids := {}
+		var star_node_ids := {}
 		for star_variant in constellation.stars:
 			var star: Dictionary = star_variant
 			var star_id := String(star.get("id", ""))
@@ -270,12 +271,19 @@ static func validation_errors(expected_node_ids: Array[String]) -> Array[String]
 				errors.append("Invalid or duplicate star id in %s: %s" % [constellation_id, star_id])
 			star_ids[star_id] = true
 			var node_id := String(star.get("node_id", ""))
+			star_node_ids[star_id] = node_id
 			if not node_id.is_empty():
 				mapped_counts[node_id] = int(mapped_counts.get(node_id, 0)) + 1
 		for segment_variant in constellation.segments:
 			var segment: Array = segment_variant
 			if segment.size() != 2 or not star_ids.has(String(segment[0])) or not star_ids.has(String(segment[1])):
 				errors.append("Invalid segment in %s: %s" % [constellation_id, segment])
+				continue
+			if constellation.has("branch"):
+				for endpoint_variant in segment:
+					var endpoint_id := String(endpoint_variant)
+					if String(star_node_ids.get(endpoint_id, "")).is_empty():
+						errors.append("Research segment endpoint %s/%s has no node" % [constellation_id, endpoint_id])
 	for node_id in expected_node_ids:
 		if int(mapped_counts.get(node_id, 0)) != 1:
 			errors.append("Expected exactly one star for node %s" % node_id)
