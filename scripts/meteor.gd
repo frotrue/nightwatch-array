@@ -2,7 +2,7 @@ extends Node2D
 
 signal observed(meteor, reward, multiplier, was_manual, quality_grade)
 signal expired(meteor, was_major)
-signal fragment_requested(origin, velocity, parent_type, parent_is_echo)
+signal fragment_requested(origin, velocity, parent_type, parent_is_echo, parent_is_leonid, parent_is_perseid)
 
 static var SHARED_ADDITIVE_MATERIAL: CanvasItemMaterial
 
@@ -169,10 +169,10 @@ func _process(delta: float) -> void:
 	if not split_done:
 		if type_id == "fragment" and get_burn_progress() >= split_progress:
 			split_done = true
-			fragment_requested.emit(global_position, velocity, type_id, bool(get_meta("gemini_echo", false)))
+			fragment_requested.emit(global_position, velocity, type_id, bool(get_meta("gemini_echo", false)), bool(get_meta("leonid_storm", false)), bool(get_meta("perseid_outburst", false)))
 		elif type_id == "major" and get_burn_progress() >= split_progress:
 			split_done = true
-			fragment_requested.emit(global_position, velocity, type_id, bool(get_meta("gemini_echo", false)))
+			fragment_requested.emit(global_position, velocity, type_id, bool(get_meta("gemini_echo", false)), bool(get_meta("leonid_storm", false)), bool(get_meta("perseid_outburst", false)))
 
 	if observation_progress >= 1.0:
 		_finish_observation(auto_rate)
@@ -313,6 +313,10 @@ func get_burn_visibility() -> float:
 			brightness *= 0.72 + 0.38 * (0.5 + 0.5 * sin(age * 2.7 + wobble_phase))
 		"comet":
 			brightness *= 1.0 + 0.08 * sin(age * 5.0 + wobble_phase)
+		"binary":
+			brightness *= 0.86 + 0.14 * (0.5 + 0.5 * sin(age * 3.4 + wobble_phase))
+		"galaxy":
+			brightness *= 0.90 + 0.10 * sin(age * 1.7 + wobble_phase)
 	if progress <= burn_fade_start:
 		brightness = maxf(0.78, brightness)
 	return maxf(0.10, brightness)
@@ -369,7 +373,7 @@ func _finish_observation(auto_rate: float) -> void:
 		return
 	if type_id == "fragment" and not split_done:
 		split_done = true
-		fragment_requested.emit(global_position, velocity, type_id, bool(get_meta("gemini_echo", false)))
+		fragment_requested.emit(global_position, velocity, type_id, bool(get_meta("gemini_echo", false)), bool(get_meta("leonid_storm", false)), bool(get_meta("perseid_outburst", false)))
 	alive = false
 	observed_successfully = true
 	linger_duration = 0.62 if type_id != "major" else 1.1
@@ -422,11 +426,25 @@ func _draw() -> void:
 		pulse_amount = 0.035
 	var pulse := 1.0 + sin(age * 13.0 + wobble_phase) * pulse_amount
 	var r := body_radius * pulse * success_bloom
-	draw_circle(Vector2.ZERO, r * 3.4, Color(glow_color, clampf(0.065 * visibility, 0.0, 1.0)))
-	draw_circle(Vector2.ZERO, r * 1.95, Color(glow_color, clampf(0.17 * visibility, 0.0, 1.0)))
-	draw_arc(Vector2.ZERO, r + 8.0 + sin(age * 4.0) * 1.5, 0.0, TAU, 28, Color(glow_color, clampf(0.16 * visibility, 0.0, 1.0)), 1.2, true)
-	draw_circle(Vector2.ZERO, r, Color(primary_color, clampf(visibility, 0.0, 1.0)))
-	draw_circle(-travel_direction * r * 0.22, r * 0.45, Color(1.0, 1.0, 1.0, clampf(visibility, 0.0, 1.0)))
+	if type_id == "galaxy":
+		var galaxy_axis := Vector2(1.0, 0.34).rotated(travel_direction.angle()).normalized()
+		draw_line(-galaxy_axis * r * 2.7, galaxy_axis * r * 2.7, Color(glow_color, 0.12 * visibility), r * 1.4, true)
+		draw_line(-galaxy_axis * r * 2.2, galaxy_axis * r * 2.2, Color(primary_color, 0.72 * visibility), maxf(1.0, r * 0.34), true)
+		draw_circle(Vector2.ZERO, r * 0.48, Color(1.0, 1.0, 1.0, 0.82 * visibility))
+	elif type_id == "binary_star":
+		var binary_axis := Vector2(-travel_direction.y, travel_direction.x)
+		var separation := r * (0.58 + 0.16 * sin(age * 2.6 + wobble_phase))
+		for side in [-1.0, 1.0]:
+			var component: Vector2 = binary_axis * separation * float(side)
+			draw_circle(component, r * 2.3, Color(glow_color, clampf(0.08 * visibility, 0.0, 1.0)))
+			draw_circle(component, r * 0.62, Color(primary_color, clampf(visibility, 0.0, 1.0)))
+			draw_circle(component - travel_direction * r * 0.14, r * 0.24, Color(1.0, 1.0, 1.0, clampf(visibility, 0.0, 1.0)))
+	else:
+		draw_circle(Vector2.ZERO, r * 3.4, Color(glow_color, clampf(0.065 * visibility, 0.0, 1.0)))
+		draw_circle(Vector2.ZERO, r * 1.95, Color(glow_color, clampf(0.17 * visibility, 0.0, 1.0)))
+		draw_arc(Vector2.ZERO, r + 8.0 + sin(age * 4.0) * 1.5, 0.0, TAU, 28, Color(glow_color, clampf(0.16 * visibility, 0.0, 1.0)), 1.2, true)
+		draw_circle(Vector2.ZERO, r, Color(primary_color, clampf(visibility, 0.0, 1.0)))
+		draw_circle(-travel_direction * r * 0.22, r * 0.45, Color(1.0, 1.0, 1.0, clampf(visibility, 0.0, 1.0)))
 
 	if type_id == "fireball" or type_id == "major":
 		var flame_dir := -travel_direction

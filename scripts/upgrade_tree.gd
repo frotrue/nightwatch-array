@@ -99,6 +99,32 @@ class StarNodeVisual:
 			)
 
 
+	func _draw_galaxy_marker(center: Vector2, radius: float) -> void:
+		# Research state follows M31's elongated deep-sky mark instead of borrowing
+		# the circular halo used by stellar nodes.
+		var axis := Vector2(1.0, 0.32).normalized()
+		var extent := radius * 2.35
+		match visual_state:
+			"purchased":
+				draw_line(center - axis * extent, center + axis * extent, Color(UITheme.STAR_INSTALLED_GLOW, 0.58), maxf(2.0, radius * 1.15), true)
+				draw_line(center - axis * extent * 0.88, center + axis * extent * 0.88, UITheme.STAR_INSTALLED, maxf(1.0, radius * 0.28), true)
+			"available":
+				var ready_color := UITheme.STAR_READY_FILL if affordable else UITheme.STAR_SHORT_BORDER
+				var ready_alpha := 0.72 + (0.18 * sin(pulse_phase) if affordable else 0.0)
+				draw_line(center - axis * extent, center + axis * extent, Color(ready_color, ready_alpha), maxf(1.0, radius * 0.34), true)
+			"locked", "teaser":
+				draw_line(center - axis * extent * 0.76, center + axis * extent * 0.76, Color(UITheme.STAR_LOCKED, 0.28), maxf(0.8, radius * 0.22), true)
+			_:
+				draw_line(center - axis * extent * 0.70, center + axis * extent * 0.70, Color(UITheme.STAR_BACKGROUND, 0.30), maxf(0.8, radius * 0.20), true)
+		if hovered and visual_state != "hidden":
+			draw_line(center - axis * extent * 1.18, center + axis * extent * 1.18, Color(UITheme.STAR_READY_RING, 0.34), maxf(1.0, radius * 0.18), true)
+		if hold_ratio > 0.0:
+			var track_start := center - axis * extent * 1.22
+			var track_finish := center + axis * extent * 1.22
+			draw_line(track_start, track_finish, Color(UITheme.HORIZON_TICK, 0.40), 1.0, true)
+			draw_line(track_start, track_start.lerp(track_finish, hold_ratio), UITheme.STAR_READY_RING, UITheme.px(2.6), true)
+
+
 	func _process(delta: float) -> void:
 		pulse_phase = fmod(pulse_phase + delta * 3.2, TAU)
 		queue_redraw()
@@ -108,6 +134,9 @@ class StarNodeVisual:
 		var center := size * 0.5
 		var radius := visual_radius()
 		var pulse := 1.0 + (sin(pulse_phase) * 0.12 if visual_state == "available" and affordable else 0.0)
+		if star_kind == "galaxy":
+			_draw_galaxy_marker(center, radius)
+			return
 		if star_kind == "cluster" and visual_state != "hidden":
 			_draw_cluster_marker(center, radius)
 		match visual_state:

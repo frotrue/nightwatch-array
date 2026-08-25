@@ -16,6 +16,17 @@ const GEMINI_DISCOVERY_SUCCESSES := 400
 const LYRA_DISCOVERY_SUCCESSES := 600
 const ANDROMEDA_DISCOVERY_SUCCESSES := 980
 const LEO_DISCOVERY_SUCCESSES := 1200
+const ECHO_SIGNATURE_LOCK_SUCCESSES := 1250
+const SPLIT_RADIANT_MODEL_SUCCESSES := 1300
+const PERSEID_OUTBURST_SUCCESSES := 1350
+const ECHO_DECONFLICTION_SUCCESSES := 1400
+const MIRROR_ECHO_SOLUTION_SUCCESSES := 1450
+const DOUBLE_STAR_RESOLUTION_SUCCESSES := 1500
+const FRAGMENT_FRONT_SUCCESSES := 1550
+const ECHO_BEACON_SUCCESSES := 1600
+const ECHO_DELAY_LINE_SUCCESSES := 1750
+const FIREBALL_TAIL_SUCCESSES := 1850
+const GALAXY_IMAGING_SUCCESSES := 1900
 
 const BRANCHES := {
 	"optics": {"name": "OPTICS / MANUAL", "color": Color("53d6ff")},
@@ -394,6 +405,83 @@ const UPGRADE_NODES: Array[Dictionary] = [
 		"branch": "leo", "prerequisites": ["storm_front"],
 		"hidden_until": ["storm_front"], "effect_type": "transformation", "effect_parameters": {"manual_trigger": 5, "storm_count": 20},
 		"major": true
+	},
+	{
+		"id": "perseid_outburst", "name": "Perseid Outburst", "icon": "✺", "cost": 900,
+		"description": "Unlocks short warned Perseid outbursts with their own radiant cadence.",
+		"branch": "perseus", "prerequisites": ["perseid_survey"],
+		"hidden_until": [{"type": "success_count", "minimum": PERSEID_OUTBURST_SUCCESSES}], "effect_type": "discovery", "effect_parameters": {"event": "perseid_outburst"},
+		"major": true, "affects_pacing": false
+	},
+	{
+		"id": "double_star_resolution", "name": "Double-Star Resolution", "icon": "⁚", "cost": 850,
+		"description": "Resolves paired binary-star contacts within a single observation watch.",
+		"branch": "lyra", "prerequisites": ["filter_wheel"],
+		"hidden_until": [{"type": "success_count", "minimum": DOUBLE_STAR_RESOLUTION_SUCCESSES}], "effect_type": "discovery", "effect_parameters": {"target_type": "binary_star"},
+		"major": true, "affects_pacing": false
+	},
+	{
+		"id": "galaxy_imaging", "name": "Galaxy Imaging", "icon": "M31", "cost": 1250,
+		"description": "Adds long-exposure galaxy fields to the same-round deep-sky survey.",
+		"branch": "andromeda", "prerequisites": ["andromeda_deep_survey"],
+		"hidden_until": [{"type": "success_count", "minimum": GALAXY_IMAGING_SUCCESSES}], "effect_type": "discovery", "effect_parameters": {"target_type": "galaxy"},
+		"major": true, "affects_pacing": false
+	},
+	{
+		"id": "split_radiant_model", "name": "Split Radiant Model", "icon": "⋔", "cost": 780,
+		"description": "Alternates Leonid storm entries between two mirrored radiant sectors.",
+		"branch": "leo", "prerequisites": ["leonid_radiant"],
+		"hidden_until": [{"type": "success_count", "minimum": SPLIT_RADIANT_MODEL_SUCCESSES}], "effect_type": "transformation", "effect_parameters": {"storm_radiants": 2},
+		"major": false, "affects_pacing": false
+	},
+	{
+		"id": "fragment_front", "name": "Fragment Front", "icon": "◆", "cost": 1040,
+		"description": "Leads each Leonid storm with a fragmenting meteor that announces the front's arrival.",
+		"branch": "leo", "prerequisites": ["split_radiant_model"],
+		"hidden_until": [{"type": "success_count", "minimum": FRAGMENT_FRONT_SUCCESSES}], "effect_type": "discovery", "effect_parameters": {"storm_lead_type": "fragment"},
+		"major": true, "affects_pacing": false
+	},
+	{
+		"id": "fireball_tail", "name": "Fireball Tail", "icon": "★", "cost": 1320,
+		"description": "Closes each Leonid storm with a manual-only fireball after the regular stream.",
+		"branch": "leo", "prerequisites": ["fragment_front"],
+		"hidden_until": [{"type": "success_count", "minimum": FIREBALL_TAIL_SUCCESSES}], "effect_type": "discovery", "effect_parameters": {"storm_tail_type": "fireball"},
+		"major": true, "affects_pacing": false
+	},
+	{
+		"id": "echo_signature_lock", "name": "Echo Signature Lock", "icon": "≡", "cost": 760,
+		"description": "Makes each Gemini echo copy the fresh manual target's meteor class instead of rolling a random class.",
+		"branch": "gemini", "prerequisites": ["echo_correlation_20"],
+		"hidden_until": [{"type": "success_count", "minimum": ECHO_SIGNATURE_LOCK_SUCCESSES}], "effect_type": "transformation", "effect_parameters": {"echo_signature_lock": true},
+		"major": false, "affects_pacing": false
+	},
+	{
+		"id": "mirror_echo_solution", "name": "Mirror Echo Solution", "icon": "⇋", "cost": 940,
+		"description": "Reconstructs copied echoes from the mirrored side of the triggering target's path.",
+		"branch": "gemini", "prerequisites": ["echo_signature_lock"],
+		"hidden_until": [{"type": "success_count", "minimum": MIRROR_ECHO_SOLUTION_SUCCESSES}], "effect_type": "transformation", "effect_parameters": {"mirror_echo_path": true},
+		"major": true, "affects_pacing": false
+	},
+	{
+		"id": "echo_delay_line", "name": "Echo Delay Line", "icon": "⋯", "cost": 1180,
+		"description": "Staggers each Gemini burst into a readable sequence that still finishes inside the current watch.",
+		"branch": "gemini", "prerequisites": ["mirror_echo_solution"],
+		"hidden_until": [{"type": "success_count", "minimum": ECHO_DELAY_LINE_SUCCESSES}], "effect_type": "unlock", "effect_parameters": {"echo_delay_line": true},
+		"major": true, "affects_pacing": false
+	},
+	{
+		"id": "echo_deconfliction", "name": "Echo Deconfliction", "icon": "⌗", "cost": 980,
+		"description": "Automatically distributes one burst across separated burnout cells so its targets do not stack.",
+		"branch": "gemini", "prerequisites": ["triple_echo_array"],
+		"hidden_until": [{"type": "success_count", "minimum": ECHO_DECONFLICTION_SUCCESSES}], "effect_type": "automation", "effect_parameters": {"echo_deconfliction": true},
+		"major": true, "affects_pacing": false
+	},
+	{
+		"id": "echo_beacon", "name": "Echo Beacon", "icon": "⌁", "cost": 1080,
+		"description": "Announces delayed echoes as ordinary forecast contacts so dishes and operators can pre-position.",
+		"branch": "gemini", "prerequisites": ["triple_echo_array"],
+		"hidden_until": [{"type": "success_count", "minimum": ECHO_BEACON_SUCCESSES}], "effect_type": "unlock", "effect_parameters": {"echo_forecast": true},
+		"major": true, "affects_pacing": false
 	}
 ]
 
@@ -477,6 +565,24 @@ static func meteor_spec(type_id: String) -> Dictionary:
 				"spectral_band": "amber",
 				"burn_terminal_ratio": 0.74, "burn_fade_start": 0.92, "burn_style": "comet",
 				"burn_wobble": 2.0, "burnout_linger": 0.42,
+			}
+		"binary_star":
+			return {
+				"name": "BINARY STAR", "speed": 32.0, "lifetime": 34.0,
+				"radius": 12.0, "trail": 12, "value": 118.0, "track_time": 3.8,
+				"color": Color("e8e0ff"), "glow": Color("8ea9ff"),
+				"spectral_band": "violet",
+				"burn_terminal_ratio": 0.88, "burn_fade_start": 0.95, "burn_style": "binary",
+				"burnout_linger": 0.34,
+			}
+		"galaxy":
+			return {
+				"name": "GALAXY FIELD", "speed": 20.0, "lifetime": 40.0,
+				"radius": 18.0, "trail": 8, "value": 220.0, "track_time": 5.2,
+				"color": Color("ffe8d2"), "glow": Color("dc84ff"),
+				"spectral_band": "amber",
+				"burn_terminal_ratio": 0.94, "burn_fade_start": 0.97, "burn_style": "galaxy",
+				"burnout_linger": 0.48,
 			}
 		_:
 			return {

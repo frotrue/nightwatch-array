@@ -274,6 +274,13 @@ func _run() -> void:
 	_check(research_probe.debug_purchase_node("andromeda_deep_survey"), "Andromeda capstone follows the comet arm")
 	_check(research_probe.forecast_classifies("comet") and research_probe.get_forecast_max_error("comet") == 22.0, "Change Detection classifies and tightens deep-target forecasts")
 	_check(research_probe.get_analysis_speed_multiplier("comet") == 1.25 and research_probe.get_observation_value_multiplier("comet", 1) == 1.3, "Andromeda capstone improves long-target analysis without cross-round state")
+	research_probe.success_count = balance.GALAXY_IMAGING_SUCCESSES
+	_check(research_probe.debug_purchase_node("perseid_outburst"), "Perseid Outburst arrives after the completed Perseus survey and its late success gate")
+	_check(research_probe.debug_purchase_node("filter_wheel"), "Lyra classifier opens before the late double-star side branch")
+	_check(research_probe.debug_purchase_node("double_star_resolution"), "Double-Star Resolution follows Vega and its late success gate")
+	_check(research_probe.debug_purchase_node("galaxy_imaging"), "Galaxy Imaging follows the completed Andromeda survey and its late success gate")
+	_check(research_probe.forecast_classifies("binary_star") and research_probe.get_forecast_max_error("binary_star") == 22.0, "Double-Star Resolution classifies and tightens binary-star forecasts")
+	_check(research_probe.get_analysis_speed_multiplier("galaxy") == 1.25 and research_probe.get_observation_value_multiplier("galaxy", 1) == 1.3, "Galaxy fields inherit the completed Andromeda survey analysis")
 	_check(research_probe.debug_purchase_node("echo_correlation_10") and is_equal_approx(research_probe.get_observation_echo_probability(), 0.10), "Gemini correlation opens at a ten-percent manual trigger chance")
 	_check(research_probe.get_observation_echo_count() == 0, "Gemini probability research cannot launch meteors before an echo channel is online")
 	_check(research_probe.debug_purchase_node("single_echo_channel") and research_probe.get_observation_echo_count() == 1, "Gemini's second root opens one echo channel")
@@ -302,12 +309,108 @@ func _run() -> void:
 	for child_index in range(echo_children_before_split, echo_layer.get_child_count()):
 		echo_descendants_tagged = echo_descendants_tagged and bool(echo_layer.get_child(child_index).get_meta("gemini_echo", false))
 	_check(echo_descendants_tagged, "fragment pieces inherit the echo tag and cannot reopen the Gemini chain")
+	for old_echo_target in echo_layer.get_children():
+		old_echo_target.free()
+	var echo_trigger_script = load("res://scripts/meteor.gd")
+	var echo_trigger = echo_trigger_script.new()
+	var echo_view_size: Vector2 = echo_spawner.get_viewport().get_visible_rect().size
+	echo_trigger.configure(
+		balance.meteor_spec("fast"), "fast", Vector2(100.0, 120.0),
+		Vector2(390.0, 70.0), 1.0, {}, Vector2(echo_view_size.x - 180.0, echo_view_size.y - 140.0)
+	)
+	_check(research_probe.debug_purchase_node("echo_signature_lock"), "Echo Signature Lock follows Tau Geminorum and its late success gate")
+	var echo_trigger_snapshot: Dictionary = echo_spawner._echo_trigger_snapshot(echo_trigger)
+	_check(echo_spawner._echo_type_for_trigger(echo_trigger_snapshot) == "fast", "Echo Signature Lock copies the fresh manual target class")
+	_check(research_probe.debug_purchase_node("mirror_echo_solution"), "Mirror Echo Solution follows Mebsuta along the lower Castor body")
+	var mirror_plan: Dictionary = echo_spawner._plan_echo_entry("fast", 1, 3, echo_trigger_snapshot)
+	_check(is_equal_approx(float(Vector2(mirror_plan.start).x), echo_view_size.x - 100.0), "Mirror Echo Solution reconstructs the trigger from the opposite sky side")
+	_check(research_probe.debug_purchase_node("echo_delay_line"), "Echo Delay Line follows Tejat and completes the lower Castor body")
+	var delayed_required: float = echo_spawner._echo_required_phase_time("fast")
+	echo_spawner.set_phase_time_remaining(delayed_required - 0.01)
+	_check(not echo_spawner.can_schedule_observation_echo("fast"), "the full delayed echo sequence is rejected when it would cross the round boundary")
+	echo_spawner.set_phase_time_remaining(delayed_required)
+	_check(echo_spawner.can_schedule_observation_echo("fast"), "the delayed echo sequence is accepted exactly when its last target remains payable")
+	_check(echo_spawner._spawn_observation_echo_burst(echo_trigger) == 3 and echo_spawner.pending_echoes.size() == 3 and echo_layer.get_child_count() == 0, "Echo Delay Line queues all three channels instead of stacking them immediately")
+	echo_spawner._update_pending_echoes(0.0)
+	_check(echo_layer.get_child_count() == 1 and echo_spawner.pending_echoes.size() == 2, "Echo Delay Line releases its first target immediately")
+	echo_spawner._update_pending_echoes(0.74)
+	_check(echo_layer.get_child_count() == 1, "Echo Delay Line holds the second target until its declared interval")
+	echo_spawner._update_pending_echoes(0.02)
+	echo_spawner._update_pending_echoes(0.75)
+	_check(echo_layer.get_child_count() == 3 and echo_spawner.pending_echoes.is_empty(), "Echo Delay Line releases the remaining targets in sequence inside the round")
+	for delayed_echo_target in echo_layer.get_children():
+		delayed_echo_target.free()
+	_check(research_probe.debug_purchase_node("echo_deconfliction"), "Echo Deconfliction follows Wasat on one lower Pollux branch")
+	var deconflicted_points: Array[Vector2] = []
+	var deconflicted_starts_right: bool = true
+	for echo_index in range(3):
+		var deconflicted_plan: Dictionary = echo_spawner._plan_echo_entry("fast", echo_index, 3, echo_trigger_snapshot)
+		deconflicted_points.append(Vector2(deconflicted_plan.burnout))
+		deconflicted_starts_right = deconflicted_starts_right and float(Vector2(deconflicted_plan.start).x) > echo_view_size.x * 0.5
+	var deconflicted_separation: bool = true
+	for first_echo_index in range(deconflicted_points.size()):
+		for second_echo_index in range(first_echo_index + 1, deconflicted_points.size()):
+			deconflicted_separation = deconflicted_separation and deconflicted_points[first_echo_index].distance_to(deconflicted_points[second_echo_index]) > 80.0
+	_check(deconflicted_separation and deconflicted_starts_right, "Echo Deconfliction separates burnout cells while preserving the mirrored entry side")
+	_check(research_probe.debug_purchase_node("echo_beacon"), "Echo Beacon follows Wasat on the second lower Pollux branch")
+	var beacon_required: float = echo_spawner._echo_required_phase_time("fast")
+	echo_spawner.set_phase_time_remaining(beacon_required)
+	_check(echo_spawner._spawn_observation_echo_burst(echo_trigger) == 3 and echo_spawner.pending_contacts.size() == 3 and echo_spawner.pending_echoes.is_empty(), "Echo Beacon routes all delayed targets through the standard forecast-contact pipeline")
+	var standard_echo_contacts := true
+	for echo_contact_variant in echo_spawner.pending_contacts:
+		var echo_contact: Dictionary = echo_contact_variant
+		standard_echo_contacts = standard_echo_contacts and bool(echo_contact.gemini_echo) and bool(echo_contact.classified) and echo_contact.has("error_offset") and echo_contact.has("intercept")
+	_check(standard_echo_contacts, "Echo Beacon reuses the existing red-light contact vocabulary without a second overlay language")
+	echo_spawner._update_pending_contacts(echo_spawner.ECHO_BEACON_LEAD - 0.01)
+	_check(echo_layer.get_child_count() == 0 and echo_spawner.pending_contacts.size() == 3, "Echo Beacon keeps every target pending through its visible warning")
+	echo_spawner._update_pending_contacts(0.02)
+	_check(echo_layer.get_child_count() == 1 and bool(echo_layer.get_child(0).get_meta("gemini_echo", false)), "the first beacon resolves into a tagged non-recursive echo")
+	echo_spawner._update_pending_contacts(2.0)
+	var every_beacon_echo_tagged := echo_layer.get_child_count() == 3
+	for beacon_echo_target in echo_layer.get_children():
+		every_beacon_echo_tagged = every_beacon_echo_tagged and bool(beacon_echo_target.get_meta("gemini_echo", false))
+	_check(every_beacon_echo_tagged and echo_spawner.pending_contacts.is_empty(), "all beacon contacts resolve as tagged echoes before the accepted boundary")
+	for beacon_echo_target in echo_layer.get_children():
+		beacon_echo_target.free()
+	echo_trigger.free()
+	var outburst_events = load("res://scripts/event_controller.gd").new()
+	root.add_child(outburst_events)
+	outburst_events.setup(echo_spawner, research_probe)
+	echo_spawner.set_phase_time_remaining(10.0)
+	_check(outburst_events.trigger_perseid_outburst(), "a purchased Perseid outburst starts when its complete warning and active window fit")
+	outburst_events._update_perseid_outburst(outburst_events.PERSEID_OUTBURST_WARNING)
+	for _outburst_step in range(100):
+		outburst_events._update_perseid_outburst(0.05)
+		if outburst_events.outburst_state == "idle":
+			break
+	var tagged_outburst_targets := 0
+	for outburst_target in echo_layer.get_children():
+		if bool(outburst_target.get_meta("perseid_outburst", false)):
+			tagged_outburst_targets += 1
+	_check(tagged_outburst_targets == outburst_events.PERSEID_OUTBURST_COUNT and outburst_events.outburst_state == "idle", "Perseid Outburst delivers exactly eight tagged targets inside one bounded event")
+	var outburst_children_before_split := echo_layer.get_child_count()
+	echo_spawner._on_fragment_requested(Vector2(420, 210), Vector2(90, 0), "fragment", false, false, true)
+	var outburst_descendants_tagged := echo_layer.get_child_count() == outburst_children_before_split + 3
+	for child_index in range(outburst_children_before_split, echo_layer.get_child_count()):
+		outburst_descendants_tagged = outburst_descendants_tagged and bool(echo_layer.get_child(child_index).get_meta("perseid_outburst", false))
+	_check(outburst_descendants_tagged, "Perseid fragment pieces retain the proc tag and cannot charge Leo or reopen Gemini")
+	for outburst_target in echo_layer.get_children():
+		outburst_target.free()
+	outburst_events.free()
 	_check(research_probe.debug_purchase_node("leonid_radiant") and research_probe.get_leonid_trigger_count() == 10 and research_probe.get_leonid_storm_count() == 8, "Leo opens with a ten-observation eight-meteor storm")
 	_check(research_probe.debug_purchase_node("compressed_cadence") and research_probe.get_leonid_trigger_count() == 9 and research_probe.get_leonid_storm_count() == 8, "Leo's second node reduces the trigger to nine")
 	_check(research_probe.debug_purchase_node("dense_stream") and research_probe.get_leonid_trigger_count() == 8 and research_probe.get_leonid_storm_count() == 12, "Leo's third node reaches eight observations and twelve meteors")
 	_check(research_probe.debug_purchase_node("rapid_reacquisition") and research_probe.get_leonid_trigger_count() == 7 and research_probe.get_leonid_storm_count() == 12, "Leo's fourth node reduces the trigger to seven")
 	_check(research_probe.debug_purchase_node("storm_front") and research_probe.get_leonid_trigger_count() == 6 and research_probe.get_leonid_storm_count() == 16, "Leo's fifth node reaches six observations and sixteen meteors")
 	_check(research_probe.debug_purchase_node("leonid_storm") and research_probe.get_leonid_trigger_count() == 5 and research_probe.get_leonid_storm_count() == 20, "Leo's capstone reaches five observations and twenty meteors")
+	var legacy_leo_probe = load("res://scripts/progression_controller.gd").new()
+	legacy_leo_probe.load_save_data(research_probe.get_save_data())
+	_check(legacy_leo_probe.has_upgrade("leonid_storm") and not legacy_leo_probe.has_upgrade("split_radiant_model") and legacy_leo_probe.get_leonid_storm_count() == 20, "a completed legacy Leo save keeps its original storm without gaining new composition research")
+	legacy_leo_probe.free()
+	_check(research_probe.debug_purchase_node("split_radiant_model"), "Split Radiant Model follows Regulus and its late success gate")
+	_check(research_probe.debug_purchase_node("fragment_front"), "Fragment Front follows Chertan along the Leo body")
+	_check(research_probe.debug_purchase_node("fireball_tail"), "Fireball Tail follows Zosma and completes the Leo body")
+	_check(research_probe.get_leonid_trigger_count() == 5 and research_probe.get_leonid_storm_count() == 20, "Leo composition research changes storm shape without adding hidden count multipliers")
 	for _charge in range(4):
 		research_probe.record_leonid_manual_success()
 	_check(not research_probe.leonid_storm_ready() and research_probe.leonid_charge == 4, "four fresh manual observations do not trigger the completed Leo storm")
@@ -329,19 +432,34 @@ func _run() -> void:
 			break
 	var leonid_children_after := echo_layer.get_child_count()
 	var every_leonid_tagged := leonid_children_after == leonid_children_before + 20
+	var alternating_radiants := true
 	for child_index in range(leonid_children_before, leonid_children_after):
 		var leonid_target = echo_layer.get_child(child_index)
 		every_leonid_tagged = (
 			every_leonid_tagged
 			and bool(leonid_target.get_meta("leonid_storm", false))
-			and String(leonid_target.type_id) in ["common", "fast"]
+			and String(leonid_target.type_id) in ["common", "fast", "fragment", "fireball"]
 		)
-	_check(every_leonid_tagged and not echo_spawner.leonid_storm_active(), "the Leo capstone evenly delivers and tags exactly twenty bounded meteors")
+		var storm_index := child_index - leonid_children_before
+		var starts_left: bool = float(leonid_target.entry_position.x) <= echo_spawner.get_viewport().get_visible_rect().size.x * 0.5
+		alternating_radiants = alternating_radiants and starts_left == (storm_index % 2 == 0)
+	var first_storm_target = echo_layer.get_child(leonid_children_before)
+	var last_storm_target = echo_layer.get_child(leonid_children_after - 1)
+	_check(every_leonid_tagged and not echo_spawner.leonid_storm_active(), "the completed Leo body evenly delivers and tags exactly twenty bounded meteors")
+	_check(alternating_radiants, "Split Radiant Model alternates the bounded storm between mirrored sky sectors")
+	_check(String(first_storm_target.type_id) == "fragment" and String(last_storm_target.type_id) == "fireball", "Fragment Front and Fireball Tail bookend the storm without changing its count")
+	_check(is_zero_approx(research_probe.get_automation_strength("fireball")), "the Leonid tail fireball remains a manual-only product")
+	var leonid_children_before_split := echo_layer.get_child_count()
+	echo_spawner._on_fragment_requested(Vector2(460, 240), Vector2(90, 0), "fragment", false, true, false)
+	var leonid_descendants_tagged := echo_layer.get_child_count() == leonid_children_before_split + 3
+	for child_index in range(leonid_children_before_split, echo_layer.get_child_count()):
+		leonid_descendants_tagged = leonid_descendants_tagged and bool(echo_layer.get_child(child_index).get_meta("leonid_storm", false))
+	_check(leonid_descendants_tagged, "Leonid fragment pieces retain the proc tag and cannot charge their own storm or reopen Gemini")
 	research_probe.consume_leonid_storm_charge()
 	_check(not research_probe.leonid_storm_ready() and research_probe.leonid_charge == 0, "starting a Leonid storm consumes its manual-observation charge")
 	echo_spawner.free()
 	echo_layer.free()
-	for deep_type in ["satellite", "variable_star", "comet"]:
+	for deep_type in ["satellite", "variable_star", "comet", "binary_star", "galaxy"]:
 		var deep_spec: Dictionary = balance.meteor_spec(deep_type)
 		_check(float(deep_spec.lifetime) >= 20.0 and float(deep_spec.lifetime) <= 40.0, "deep target stays within one round: " + deep_type)
 		_check(float(deep_spec.track_time) / 1.42 < float(deep_spec.lifetime), "deep target has a payable same-round analysis window: " + deep_type)
@@ -409,12 +527,12 @@ func _run() -> void:
 	for gemini_star_variant in chart_data.CONSTELLATIONS.gemini.stars:
 		if not String(Dictionary(gemini_star_variant).get("node_id", "")).is_empty():
 			gemini_research_stars += 1
-	_check(gemini_research_stars == 5, "Gemini presents exactly five research stars while the rest remain background stars")
+	_check(gemini_research_stars == 10, "Gemini maps research across both complete bodies and can light every figure segment")
 	var leo_research_stars := 0
 	for leo_star_variant in chart_data.CONSTELLATIONS.leo.stars:
 		if not String(Dictionary(leo_star_variant).get("node_id", "")).is_empty():
 			leo_research_stars += 1
-	_check(leo_research_stars == 6, "Leo presents exactly six research stars while the rest remain background stars")
+	_check(leo_research_stars == 9, "Leo maps research across all nine stars and can complete every figure segment")
 	var deep_sky_marker_kinds := {}
 	for marker_constellation_id in ["orion", "taurus", "andromeda"]:
 		for marker_star_variant in chart_data.CONSTELLATIONS[marker_constellation_id].stars:
@@ -954,7 +1072,7 @@ func _run() -> void:
 	_check(speed_is_monotonic, "burn curve speed decreases monotonically")
 	_check(motion_probe.position.distance_to(motion_probe.burnout_position) < 0.05, "burn curve ends at the planned burnout point")
 	motion_probe.free()
-	for visibility_type in ["common", "fast", "fragment", "fragment_piece", "fireball", "major"]:
+	for visibility_type in ["common", "fast", "fragment", "fragment_piece", "fireball", "major", "satellite", "variable_star", "comet", "binary_star", "galaxy"]:
 		var visibility_spec: Dictionary = balance.meteor_spec(visibility_type)
 		var visibility_probe = meteor_script.new()
 		visibility_probe.configure(
@@ -1093,9 +1211,29 @@ func _run() -> void:
 
 	game.progression.debug_purchase_all()
 	_check(game.progression.upgrade_level == balance.UPGRADE_NODES.size(), "all tree nodes unlock through prerequisite-safe debug purchase")
+	game.upgrade_tree._refresh()
+	await process_frame
+	var installed_research_segments := 0
+	var all_research_segments_installed := true
+	var chart_ui_theme = load("res://scripts/ui_theme.gd")
+	for installed_constellation_id in chart_data.CONSTELLATIONS:
+		var installed_constellation: Dictionary = chart_data.CONSTELLATIONS[installed_constellation_id]
+		if not installed_constellation.has("branch"):
+			continue
+		for installed_segment_variant in installed_constellation.segments:
+			var installed_segment: Array = installed_segment_variant
+			var installed_states: PackedStringArray = game.upgrade_tree._segment_states(String(installed_constellation_id), installed_segment)
+			installed_research_segments += 1
+			all_research_segments_installed = (
+				all_research_segments_installed
+				and installed_states[0] == "purchased"
+				and installed_states[1] == "purchased"
+				and game.upgrade_tree._segment_color(installed_states) == Color(chart_ui_theme.LINE_INSTALLED, 0.42)
+			)
+	_check(installed_research_segments == 60 and all_research_segments_installed, "all sixty research-constellation segments reach the installed color at full completion")
 	_check(game.progression.get_max_active() == 6, "research raises dense-sky capacity without removing the six-target performance cap")
-	_check(game.progression.upgrade_level == 52, "the run resolves to the full 52-system array completion")
-	_check(is_equal_approx(game.progression.get_progression_ratio(), 1.0), "52-node topology normalization preserves the completed-tree density endpoint")
+	_check(game.progression.upgrade_level == balance.UPGRADE_NODES.size(), "the run resolves to the full research array completion")
+	_check(is_equal_approx(game.progression.get_progression_ratio(), 1.0), "the original pacing topology preserves the completed-tree density endpoint")
 	for legacy_id in ["better_lens", "long_exposure", "wide_field", "trajectory", "precision_multiplier", "secondary_camera", "shower_detector", "automated_tracking"]:
 		_check(game.progression.has_upgrade(legacy_id), "legacy upgrade migrated: " + legacy_id)
 	_check(game.progression.has_upgrade("automated_tracking"), "final automation system is active")

@@ -417,6 +417,7 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 	var is_proc_meteor := (
 		bool(meteor.get_meta("gemini_echo", false))
 		or bool(meteor.get_meta("leonid_storm", false))
+		or bool(meteor.get_meta("perseid_outburst", false))
 	)
 	var leonid_spawn_count := 0
 	if was_manual and not is_proc_meteor and not meteor.is_major():
@@ -426,7 +427,8 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 	if not meteor.is_major():
 		echo_spawn_count = spawner.try_spawn_observation_echo(
 			was_manual,
-			is_proc_meteor
+			is_proc_meteor,
+			meteor
 		)
 	if was_manual:
 		success_streak += 1

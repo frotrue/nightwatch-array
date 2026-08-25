@@ -4,7 +4,7 @@ const PROBE_DURATION := 30.0
 const STEP := 0.05
 const SPAWN_SEED := 20260821
 const SPAWN_SEED_ENV := "NIGHTWATCH_CONTACT_PROBE_SEED"
-const TYPE_BUCKETS := ["common", "fast", "fragment", "fragment_piece", "fireball", "satellite", "variable_star", "comet", "major"]
+const TYPE_BUCKETS := ["common", "fast", "fragment", "fragment_piece", "fireball", "satellite", "variable_star", "comet", "binary_star", "galaxy", "major"]
 const MODE_NO_INPUT := "no-input"
 const MODE_SCRIPTED_ENGAGED := "scripted-engaged"
 const MODE_BASELINE_ENGAGED := "baseline-engaged"
@@ -26,7 +26,7 @@ const ROWS := [
 		"modes": [MODE_NO_INPUT, MODE_BASELINE_ENGAGED],
 	},
 	{
-		# The completed 52-node tree has 51 pacing upgrades; Predictive Dish
+		# The original 52-node tree has 51 pacing upgrades; Predictive Dish
 		# Control is the sole interaction-only exclusion from density.
 		"name": "duration-ladder-end",
 		"upgrades": [
@@ -428,6 +428,7 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 	var is_proc_meteor := (
 		bool(meteor.get_meta("gemini_echo", false))
 		or bool(meteor.get_meta("leonid_storm", false))
+		or bool(meteor.get_meta("perseid_outburst", false))
 	)
 	if was_manual and not is_proc_meteor and not meteor.is_major():
 		game.progression.record_leonid_manual_success()
@@ -436,7 +437,8 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 	if not meteor.is_major():
 		game.spawner.try_spawn_observation_echo(
 			was_manual,
-			is_proc_meteor
+			is_proc_meteor,
+			meteor
 		)
 
 

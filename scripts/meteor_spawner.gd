@@ -23,6 +23,9 @@ const BURNOUT_JITTER_ATTEMPTS := 8
 const PLAN_SPEED_FACTOR_MIN := 0.96
 const PLAN_SPEED_FACTOR_MAX := 1.08
 const MIN_ECHO_PHASE_REMAINING := 2.0
+const ECHO_DELAY_INTERVAL := 0.75
+const ECHO_BEACON_LEAD := 1.25
+const ECHO_BOUNDARY_MARGIN := 0.12
 const LEONID_STORM_DURATION := 7.0
 const LEONID_STORM_REQUIRED_TIME := 9.0
 # Automatic lanes are partial assist: at 7x analysis time the scan duration
@@ -56,6 +59,8 @@ var leonid_storm_remaining: int = 0
 var leonid_storm_timer: float = 0.0
 var leonid_storm_interval: float = 0.0
 var leonid_storm_spawn_index: int = 0
+var pending_echoes: Array[Dictionary] = []
+var echo_burst_serial: int = 0
 
 
 func setup(target_layer: Node2D, progression_controller: Node) -> void:
@@ -88,6 +93,8 @@ func reset() -> void:
 	first_spawn_pending = true
 	secondary_refresh = 0.0
 	pending_contacts.clear()
+	pending_echoes.clear()
+	echo_burst_serial = 0
 	phase_time_remaining = INF
 	burnout_cell_cursors.clear()
 	leonid_storm_remaining = 0
@@ -103,6 +110,7 @@ func _process(delta: float) -> void:
 	if secondary_refresh <= 0.0:
 		secondary_refresh = 0.35
 		_refresh_secondary_camera()
+	_update_pending_echoes(delta)
 	_update_pending_contacts(delta)
 	_update_leonid_storm(delta)
 	if pause_regular_spawns:
@@ -127,7 +135,7 @@ func _process(delta: float) -> void:
 	next_spawn_time = maxf(1.15, base_interval * progression.get_spawn_interval_scale())
 
 
-func spawn_meteor(type_id: String = "common", custom_start := Vector2.INF, custom_velocity := Vector2.INF, lifetime_override: float = -1.0, custom_burnout := Vector2.INF, is_observation_echo: bool = false, is_leonid_storm: bool = false):
+func spawn_meteor(type_id: String = "common", custom_start := Vector2.INF, custom_velocity := Vector2.INF, lifetime_override: float = -1.0, custom_burnout := Vector2.INF, is_observation_echo: bool = false, is_leonid_storm: bool = false, is_perseid_outburst: bool = false):
 	# Shower and fragment paths intentionally bypass the regular progression cap.
 	# Keep one reserved slot for the final major target while bounding all burst
 	# paths so a missed frame cannot turn into an ever-growing render workload.
@@ -153,6 +161,8 @@ func spawn_meteor(type_id: String = "common", custom_start := Vector2.INF, custo
 		meteor.set_meta("gemini_echo", true)
 	if is_leonid_storm:
 		meteor.set_meta("leonid_storm", true)
+	if is_perseid_outburst:
+		meteor.set_meta("perseid_outburst", true)
 	meteor.fragment_requested.connect(_on_fragment_requested)
 	meteor_layer.add_child(meteor)
 	meteor_spawned.emit(meteor)
@@ -169,7 +179,11 @@ func should_trigger_observation_echo(roll: float) -> bool:
 	)
 
 
-func try_spawn_observation_echo(trigger_was_manual: bool, trigger_is_echo: bool) -> int:
+func can_schedule_observation_echo(trigger_type: String = "") -> bool:
+	return phase_time_remaining >= _echo_required_phase_time(trigger_type)
+
+
+func try_spawn_observation_echo(trigger_was_manual: bool, trigger_is_echo: bool, trigger_meteor = null) -> int:
 	# Echoes reward a fresh manual success. Meteors created by the burst cannot
 	# recursively open another burst, and a near-expired round never rolls an
 	# effect whose targets would be erased by the intermission boundary.
@@ -177,24 +191,182 @@ func try_spawn_observation_echo(trigger_was_manual: bool, trigger_is_echo: bool)
 		not running
 		or not trigger_was_manual
 		or trigger_is_echo
-		or phase_time_remaining < MIN_ECHO_PHASE_REMAINING
+		or not can_schedule_observation_echo(String(trigger_meteor.type_id) if is_instance_valid(trigger_meteor) else "")
 		or not should_trigger_observation_echo(echo_rng.randf())
 	):
 		return 0
-	return _spawn_observation_echo_burst()
+	return _spawn_observation_echo_burst(trigger_meteor)
 
 
-func _spawn_observation_echo_burst() -> int:
-	var spawned := 0
-	for _index in progression.get_observation_echo_count():
-		var meteor = spawn_meteor(
-			_choose_echo_type_with_rng(echo_rng),
-			Vector2.INF, Vector2.INF, -1.0, Vector2.INF, true
-		)
-		if meteor == null:
+func _spawn_observation_echo_burst(trigger_meteor = null) -> int:
+	var count: int = progression.get_observation_echo_count()
+	var trigger := _echo_trigger_snapshot(trigger_meteor)
+	var scheduled := 0
+	for index in count:
+		var reserved_objects := meteor_layer.get_child_count() + pending_contacts.size() + pending_echoes.size()
+		if reserved_objects >= MAX_TOTAL_METEORS - 1:
 			break
-		spawned += 1
-	return spawned
+		var type_id := _echo_type_for_trigger(trigger)
+		var entry := _plan_echo_entry(type_id, index, count, trigger)
+		var delay := float(index) * ECHO_DELAY_INTERVAL if progression.has_upgrade("echo_delay_line") else 0.0
+		if progression.has_upgrade("echo_beacon"):
+			_announce_echo_contact(type_id, entry, ECHO_BEACON_LEAD + delay, index)
+			scheduled += 1
+		elif progression.has_upgrade("echo_delay_line"):
+			pending_echoes.append({
+				"countdown": delay,
+				"type_id": type_id,
+				"entry": entry,
+				"sequence": index,
+			})
+			scheduled += 1
+		else:
+			var meteor = spawn_meteor(type_id, entry.start, entry.velocity, -1.0, entry.burnout, true)
+			if meteor == null:
+				break
+			scheduled += 1
+	echo_burst_serial += 1
+	return scheduled
+
+
+func _echo_required_phase_time(trigger_type: String) -> float:
+	var last_delay := 0.0
+	if progression != null and progression.has_upgrade("echo_delay_line"):
+		last_delay = float(maxi(0, progression.get_observation_echo_count() - 1)) * ECHO_DELAY_INTERVAL
+	var lead := ECHO_BEACON_LEAD if progression != null and progression.has_upgrade("echo_beacon") else 0.0
+	var candidate_types: Array[String] = []
+	if progression != null and progression.has_upgrade("echo_signature_lock") and trigger_type in ["common", "fast", "fragment", "fireball"]:
+		candidate_types.append(trigger_type)
+	else:
+		candidate_types.append("common")
+		if progression != null and progression.has_upgrade("edge_detection"):
+			candidate_types.append("fast")
+		if progression != null and progression.has_upgrade("fragment_analysis"):
+			candidate_types.append("fragment")
+		if progression != null and progression.has_upgrade("rare_detection"):
+			candidate_types.append("fireball")
+	var payable_time := MINIMUM_PAYABLE_TRACK_TIME
+	for type_id in candidate_types:
+		payable_time = maxf(payable_time, float(Balance.meteor_spec(type_id).track_time) / 1.42)
+	return maxf(MIN_ECHO_PHASE_REMAINING, lead + last_delay + payable_time + ECHO_BOUNDARY_MARGIN)
+
+
+func _echo_trigger_snapshot(trigger_meteor) -> Dictionary:
+	if not is_instance_valid(trigger_meteor):
+		return {}
+	return {
+		"type_id": String(trigger_meteor.type_id),
+		"entry": Vector2(trigger_meteor.entry_position),
+		"burnout": Vector2(trigger_meteor.burnout_position),
+		"velocity": Vector2(trigger_meteor.initial_velocity),
+	}
+
+
+func _echo_type_for_trigger(trigger: Dictionary) -> String:
+	var trigger_type := String(trigger.get("type_id", ""))
+	if progression.has_upgrade("echo_signature_lock") and trigger_type in ["common", "fast", "fragment", "fireball"]:
+		return trigger_type
+	return _choose_echo_type_with_rng(echo_rng)
+
+
+func _plan_echo_entry(type_id: String, index: int, count: int, trigger: Dictionary) -> Dictionary:
+	if progression.has_upgrade("echo_deconfliction"):
+		return _plan_deconflicted_echo_entry(type_id, index, count, trigger)
+	if progression.has_upgrade("mirror_echo_solution") and not trigger.is_empty():
+		var size := get_viewport().get_visible_rect().size
+		var mirrored_start := Vector2(size.x - float(Vector2(trigger.entry).x), float(Vector2(trigger.entry).y))
+		var mirrored_burnout := Vector2(size.x - float(Vector2(trigger.burnout).x), float(Vector2(trigger.burnout).y))
+		var direction := (mirrored_burnout - mirrored_start).normalized()
+		var offset := (float(index) - float(count - 1) * 0.5) * 24.0
+		var perpendicular := Vector2(-direction.y, direction.x) * offset
+		return {
+			"start": mirrored_start + perpendicular,
+			"velocity": Vector2(-float(Vector2(trigger.velocity).x), float(Vector2(trigger.velocity).y)),
+			"burnout": mirrored_burnout + perpendicular,
+		}
+	return plan_entry(type_id)
+
+
+func _plan_deconflicted_echo_entry(type_id: String, index: int, count: int, trigger: Dictionary) -> Dictionary:
+	var size := get_viewport().get_visible_rect().size
+	var spec := Balance.meteor_spec(type_id)
+	var speed := float(spec.speed)
+	var lifetime_scale: float = progression.get_lifetime_multiplier() if progression != null else 1.0
+	var burn_distance := MeteorScript.burn_distance_for(speed, float(spec.lifetime) * lifetime_scale, float(spec.get("burn_terminal_ratio", 1.0)))
+	var reachable := _reachable_burnout_cells(type_id, size, burn_distance)
+	if reachable.is_empty():
+		return plan_entry(type_id)
+	var wants_left := false
+	if progression.has_upgrade("mirror_echo_solution") and not trigger.is_empty():
+		wants_left = float(Vector2(trigger.entry).x) > size.x * 0.5
+		var mirrored_reachable: Array[int] = []
+		for reachable_cell_variant in reachable:
+			var reachable_cell := int(reachable_cell_variant)
+			var reachable_target := _burnout_cell_center(size, reachable_cell)
+			for candidate in _entry_candidates(reachable_target, size, burn_distance):
+				if (float(Vector2(candidate).x) <= size.x * 0.5) == wants_left:
+					mirrored_reachable.append(reachable_cell)
+					break
+		if mirrored_reachable.size() >= count:
+			reachable = mirrored_reachable
+	var spacing := maxi(1, reachable.size() / maxi(1, count))
+	var cell_index: int = int(reachable[(echo_burst_serial + index * spacing) % reachable.size()])
+	var target := _burnout_cell_center(size, cell_index)
+	var candidates := _entry_candidates(target, size, burn_distance)
+	if candidates.is_empty():
+		return plan_entry(type_id)
+	var chosen: Vector2 = candidates[index % candidates.size()]
+	if progression.has_upgrade("mirror_echo_solution") and not trigger.is_empty():
+		for candidate in candidates:
+			if (float(Vector2(candidate).x) <= size.x * 0.5) == wants_left:
+				chosen = Vector2(candidate)
+				break
+	return {
+		"start": chosen,
+		"velocity": (target - chosen).normalized() * speed,
+		"burnout": target,
+		"burn_distance": burn_distance,
+	}
+
+
+func _announce_echo_contact(type_id: String, entry: Dictionary, countdown: float, sequence: int) -> void:
+	var direction := Vector2(entry.velocity).normalized()
+	var max_error: float = progression.get_forecast_max_error(type_id)
+	var min_error: float = progression.get_forecast_min_error(type_id)
+	var contact := {
+		"id": next_contact_id,
+		"type_id": type_id,
+		"start": entry.start,
+		"velocity": entry.velocity,
+		"burnout": entry.burnout,
+		"direction": direction,
+		"intercept": Vector2(entry.start) + direction * FORECAST_INTERCEPT_DISTANCE,
+		"error_offset": Vector2.from_angle(forecast_rng.randf_range(0.0, TAU)) * forecast_rng.randf_range(min_error, max_error),
+		"max_error": max_error,
+		"countdown": countdown,
+		"lead_time": countdown,
+		"trajectory_known": progression.has_upgrade("mirror_echo_solution") or progression.has_upgrade("trajectory"),
+		"classified": true,
+		"abandoned_flash": 0.0,
+		"gemini_echo": true,
+		"echo_sequence": sequence,
+	}
+	next_contact_id += 1
+	pending_contacts.append(contact)
+	contact_announced.emit(contact)
+
+
+func _update_pending_echoes(delta: float) -> void:
+	var remaining: Array[Dictionary] = []
+	for echo_variant in pending_echoes:
+		var echo: Dictionary = echo_variant
+		echo.countdown = float(echo.countdown) - delta
+		if float(echo.countdown) > 0.0:
+			remaining.append(echo)
+			continue
+		var entry: Dictionary = echo.entry
+		spawn_meteor(String(echo.type_id), entry.start, entry.velocity, -1.0, entry.burnout, true)
+	pending_echoes = remaining
 
 
 func try_start_leonid_storm() -> bool:
@@ -224,12 +396,10 @@ func _update_leonid_storm(delta: float) -> void:
 		return
 	leonid_storm_timer -= delta
 	while leonid_storm_remaining > 0 and leonid_storm_timer <= 0.0:
-		var type_id := "common"
-		if progression.has_upgrade("edge_detection") and leonid_storm_spawn_index % 3 == 1:
-			type_id = "fast"
+		var type_id := _leonid_storm_type(leonid_storm_spawn_index)
+		var entry := _leonid_storm_entry(type_id, leonid_storm_spawn_index)
 		var meteor = spawn_meteor(
-			type_id,
-			Vector2.INF, Vector2.INF, -1.0, Vector2.INF, false, true
+			type_id, entry.start, entry.velocity, -1.0, entry.burnout, false, true
 		)
 		if meteor == null:
 			leonid_storm_timer = 0.10
@@ -237,6 +407,34 @@ func _update_leonid_storm(delta: float) -> void:
 		leonid_storm_remaining -= 1
 		leonid_storm_spawn_index += 1
 		leonid_storm_timer += leonid_storm_interval
+
+
+func _leonid_storm_type(index: int) -> String:
+	var storm_count: int = progression.get_leonid_storm_count() if progression != null else 0
+	if index == 0 and progression.has_upgrade("fragment_front"):
+		return "fragment"
+	if index == storm_count - 1 and progression.has_upgrade("fireball_tail"):
+		return "fireball"
+	if progression.has_upgrade("edge_detection") and index % 3 == 1:
+		return "fast"
+	return "common"
+
+
+func _leonid_storm_entry(type_id: String, index: int) -> Dictionary:
+	var entry := plan_entry(type_id)
+	if not progression.has_upgrade("split_radiant_model"):
+		return entry
+	var size := get_viewport().get_visible_rect().size
+	var should_start_left := index % 2 == 0
+	var starts_left := float(Vector2(entry.start).x) <= size.x * 0.5
+	if should_start_left == starts_left:
+		return entry
+	return {
+		"start": Vector2(size.x - float(Vector2(entry.start).x), float(Vector2(entry.start).y)),
+		"velocity": Vector2(-float(Vector2(entry.velocity).x), float(Vector2(entry.velocity).y)),
+		"burnout": Vector2(size.x - float(Vector2(entry.burnout).x), float(Vector2(entry.burnout).y)),
+		"burn_distance": float(entry.get("burn_distance", 0.0)),
+	}
 
 
 func plan_entry(type_id: String) -> Dictionary:
@@ -471,9 +669,10 @@ func _update_pending_contacts(delta: float) -> void:
 		if float(contact.countdown) > 0.0:
 			continue
 		pending_contacts.remove_at(index)
+		var is_echo := bool(contact.get("gemini_echo", false))
 		var meteor = spawn_meteor(
 			String(contact.type_id), contact.start, contact.velocity, -1.0,
-			Vector2(contact.get("burnout", Vector2.INF))
+			Vector2(contact.get("burnout", Vector2.INF)), is_echo
 		)
 		contact_resolved.emit(contact, meteor)
 
@@ -487,6 +686,15 @@ func spawn_for_shower(index: int) -> void:
 	elif index % 3 == 1:
 		type_id = "fast"
 	spawn_meteor(type_id)
+
+
+func spawn_for_perseid_outburst(index: int) -> void:
+	var type_id := "common"
+	if progression.has_upgrade("fragment_analysis") and index in [2, 6]:
+		type_id = "fragment"
+	elif progression.has_upgrade("edge_detection") and index % 2 == 1:
+		type_id = "fast"
+	spawn_meteor(type_id, Vector2.INF, Vector2.INF, -1.0, Vector2.INF, false, false, true)
 
 
 func spawn_major_fireball():
@@ -518,6 +726,14 @@ func _choose_regular_type() -> String:
 func _choose_regular_type_with_rng(source_rng: RandomNumberGenerator) -> String:
 	var roll := source_rng.randf()
 	var threshold := 0.0
+	if progression.has_upgrade("galaxy_imaging"):
+		threshold += 0.02
+		if roll < threshold:
+			return "galaxy"
+	if progression.has_upgrade("double_star_resolution"):
+		threshold += 0.035
+		if roll < threshold:
+			return "binary_star"
 	if progression.has_upgrade("comet_solutions"):
 		threshold += 0.045
 		if roll < threshold:
@@ -622,7 +838,7 @@ func set_bank_unsupported_before_dish(enabled: bool) -> void:
 	)
 
 
-func _on_fragment_requested(origin: Vector2, parent_velocity: Vector2, parent_type: String, parent_is_echo: bool) -> void:
+func _on_fragment_requested(origin: Vector2, parent_velocity: Vector2, parent_type: String, parent_is_echo: bool, parent_is_leonid: bool = false, parent_is_perseid: bool = false) -> void:
 	var piece_count := 4 if parent_type == "major" else 3
 	var spread := 0.34 if parent_type == "major" else 0.25
 	var burst_direction := parent_velocity.normalized()
@@ -642,7 +858,7 @@ func _on_fragment_requested(origin: Vector2, parent_velocity: Vector2, parent_ty
 		spawn_meteor(
 			"fragment_piece", origin + direction * 7.0, direction * speed,
 			3.2 if parent_type == "major" else 2.65, Vector2.INF,
-			parent_is_echo
+			parent_is_echo, parent_is_leonid, parent_is_perseid
 		)
 
 
