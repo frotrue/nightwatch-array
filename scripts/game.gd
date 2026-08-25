@@ -4,10 +4,6 @@ const UITheme = preload("res://scripts/ui_theme.gd")
 const Balance = preload("res://scripts/game_balance.gd")
 const SoundSynth = preload("res://scripts/sound_synth.gd")
 const AUTOSAVE_INTERVAL_SECONDS := 60.0
-# A manual chain expires on rhythm, not on a miss. Late rounds carry more
-# meteors than anyone can reach, so resetting on every expiry would pin the
-# streak near zero exactly when the array is at its busiest.
-const STREAK_TIMEOUT := 2.6
 const HITSTOP_TIME_SCALE := 0.06
 # Every manual observation gets a directional kick; the rumble and the freeze
 # are reserved for the top of the value range so a big hit still has something
@@ -58,8 +54,6 @@ var phase_resumed_from_save: bool = false
 var last_clean_round_result: Dictionary = {}
 var best_round_rate: float = 0.0
 var suppress_phase_transition: bool = false
-var success_streak: int = 0
-var streak_remaining: float = 0.0
 var hitstop_active: bool = false
 
 
@@ -187,10 +181,7 @@ func _process(delta: float) -> void:
 	spawner.set_phase_time_remaining(observation_phase_remaining)
 	hud.set_runtime(elapsed_time)
 	hud.set_observation_phase(observation_round, observation_phase_remaining, observation_phase_duration)
-	if streak_remaining > 0.0:
-		streak_remaining = maxf(0.0, streak_remaining - real_delta)
-		if streak_remaining <= 0.0:
-			success_streak = 0
+	progression.update_manual_combo(real_delta)
 	if active_save_slot > 0:
 		autosave_elapsed += real_delta
 		if autosave_elapsed >= AUTOSAVE_INTERVAL_SECONDS:
@@ -217,8 +208,7 @@ func _begin_observation_phase(advance_round: bool = false, remaining_override: f
 	observation_phase_remaining = duration if remaining_override < 0.0 else clampf(remaining_override, 0.05, duration)
 	spawner.set_phase_time_remaining(observation_phase_remaining)
 	observation_phase_active = true
-	success_streak = 0
-	streak_remaining = 0.0
+	progression.reset_manual_combo()
 	phase_start_successes = progression.success_count
 	phase_start_manual_successes = progression.manual_successes
 	phase_start_automatic_successes = progression.automatic_successes
@@ -243,6 +233,7 @@ func _begin_observation_phase(advance_round: bool = false, remaining_override: f
 func _end_observation_phase() -> void:
 	if completed or not observation_phase_active:
 		return
+	progression.reset_manual_combo()
 	var result := _build_round_result()
 	var previous_result := last_clean_round_result.duplicate(true)
 	var build_changed := bool(result.get("build_changed", false))
@@ -430,9 +421,6 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 			is_proc_meteor,
 			meteor
 		)
-	if was_manual:
-		success_streak += 1
-		streak_remaining = STREAK_TIMEOUT
 	var strength := _observation_strength(final_reward, was_manual, quality_grade)
 	effects.spawn_success(
 		meteor.global_position,
@@ -444,7 +432,7 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 		hud.get_data_anchor()
 	)
 	if was_manual:
-		sound.play_success(multiplier, success_streak, strength)
+		sound.play_success(multiplier, progression.manual_combo_count, strength)
 	else:
 		# Automation gets its own quiet voice. Routing it through the manual
 		# ladder would hold the chain at the top note for free and erase the one
@@ -501,7 +489,7 @@ func _observation_strength(reward: float, was_manual: bool, quality_grade: Strin
 			strength = minf(1.0, strength + 0.30)
 		"EXCELLENT":
 			strength = minf(1.0, strength + 0.15)
-	return minf(1.0, strength + minf(float(success_streak), 12.0) * 0.015)
+	return minf(1.0, strength + minf(float(progression.manual_combo_count), 12.0) * 0.015)
 
 
 func _apply_hitstop(duration: float) -> void:

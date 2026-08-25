@@ -205,7 +205,12 @@ func _update_burn_motion(delta: float) -> void:
 			travel_direction = velocity.normalized()
 
 
-func apply_manual_observation(delta: float, cursor_distance: float, tracking_radius: float) -> void:
+func apply_manual_observation(
+	delta: float,
+	cursor_distance: float,
+	tracking_radius: float,
+	manual_speed_multiplier: float = 1.0
+) -> void:
 	if not alive:
 		return
 	var current_frame := Engine.get_process_frames()
@@ -218,7 +223,11 @@ func apply_manual_observation(delta: float, cursor_distance: float, tracking_rad
 	manual_tracking_time += delta
 	quality_integral += quality * delta
 	var tracking_speed := lerpf(0.72, 1.42, quality)
-	tracking_speed *= analysis_speed_multiplier * get_spectral_speed_multiplier()
+	tracking_speed *= (
+		analysis_speed_multiplier
+		* get_spectral_speed_multiplier()
+		* maxf(1.0, manual_speed_multiplier)
+	)
 	observation_progress += delta * tracking_speed / required_track_time
 	precision_focus += delta * quality
 	queue_redraw()

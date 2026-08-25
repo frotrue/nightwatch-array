@@ -237,12 +237,18 @@ func _on_shower_started() -> void:
 
 
 func _process_meteors(delta: float) -> void:
+	game.progression.update_manual_combo(delta)
 	var manual_target = _first_uncovered_meteor()
 	for meteor in game.meteor_layer.get_children():
 		if not is_instance_valid(meteor):
 			continue
 		if meteor == manual_target:
-			meteor.apply_manual_observation(delta, 0.0, game.progression.get_tracking_radius())
+			meteor.apply_manual_observation(
+				delta,
+				0.0,
+				game.progression.get_tracking_radius(),
+				game.progression.get_manual_analysis_speed_multiplier()
+			)
 		meteor._process(delta)
 		if not meteor.alive:
 			meteor.free()

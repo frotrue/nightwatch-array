@@ -622,6 +622,7 @@ func _dish_busy_fraction_text() -> String:
 
 
 func _process_meteors(delta: float) -> void:
+	game.progression.update_manual_combo(delta)
 	var manual_target = null
 	if probe_mode in [MODE_SCRIPTED_ENGAGED, MODE_BASELINE_ENGAGED]:
 		manual_target = _first_uncovered_meteor()
@@ -629,7 +630,12 @@ func _process_meteors(delta: float) -> void:
 		if not is_instance_valid(meteor):
 			continue
 		if meteor == manual_target:
-			meteor.apply_manual_observation(delta, 0.0, game.progression.get_tracking_radius())
+			meteor.apply_manual_observation(
+				delta,
+				0.0,
+				game.progression.get_tracking_radius(),
+				game.progression.get_manual_analysis_speed_multiplier()
+			)
 		meteor._process(delta)
 		if not meteor.alive:
 			meteor.free()

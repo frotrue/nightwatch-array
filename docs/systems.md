@@ -41,8 +41,8 @@ content.
 | Script | Owns |
 |---|---|
 | `game.gd` | Round lifecycle, save/load orchestration, feedback dispatch (kick/shake/hitstop), debug keys. The only node that knows about all the others. |
-| `progression_controller.gd` | Data balance, purchased nodes, discovery gates, persistent Leo storm charge, and systemic derived upgrade effects. Single source of truth: consumers ask it, not `game_balance.gd`. |
-| `game_balance.gd` | Static data only: the 63 upgrade definitions and the meteor/deep-target spec table. `RefCounted`, no state. |
+| `progression_controller.gd` | Data balance, purchased nodes, discovery gates, transient Taurus manual combo, persistent Leo storm charge, and systemic derived upgrade effects. Single source of truth: consumers ask it, not `game_balance.gd`. |
+| `game_balance.gd` | Static data only: the 71 upgrade definitions and the meteor/deep-target spec table. `RefCounted`, no state. |
 | `meteor_spawner.gd` | Spawn cadence, type rolls (including same-round satellites, variable stars, comets, binary stars, and galaxy fields), delayed/forecast Gemini observation echoes, paced Leo meteor-storm queues, sky-wide burnout endpoint planning, forecast contact announcements, fragment spawning, shower and finale spawns, support-lane assignment. |
 | `meteor.gd` | One object's burn-progress motion, trail and terminal fade, observation progress, quality grading, split behaviour, and passive spectral calibration result. |
 | `observation_controller.gd` | Cursor sampling, manual tracking, swept-path hit detection, tracking and hover rings, and the software cursor. |
@@ -159,7 +159,7 @@ These are load-bearing. Breaking them silently corrupts the Data/min series.
    frame. It does **not** subscribe to raw mouse-motion events; input is
    coalesced via `Input.set_use_accumulated_input(true)`.
 2. While the left button is held, `_update_manual_tracking` latches a target and
-   calls `meteor.apply_manual_observation(delta, distance, radius)`. Purchased
+   calls `meteor.apply_manual_observation(delta, distance, radius, speed)`. Purchased
    Lyra bands are matched automatically by the spawner; observation adds no
    filter-selection input or persistent spectral overlay.
 3. Hit testing uses swept point-to-segment distance
@@ -174,6 +174,13 @@ These are load-bearing. Breaking them silently corrupts the Data/min series.
    `game._on_meteor_observed` computes one `strength` scalar that drives every
    feedback channel — particles, audio, kick, shake, hitstop — so they cannot
    drift apart.
+
+Successful manual observations also advance one transient combo in
+`progression_controller.gd`. Taurus research lengthens its window and turns its
+effective stacks into manual-only analysis speed and tracking-radius bonuses.
+Automatic completions neither advance nor clear it; elapsed observation time,
+round transitions, and save loads do. The software cursor renders its timer arc
+and stack count directly around the changing observation radius.
 
 Automatic progress (passive automation, dish assist, support lanes) adds into
 the same `observation_progress`. Manual and automatic completions are separated

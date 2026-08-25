@@ -76,6 +76,7 @@ func _run_seed(seed: int) -> Dictionary:
 		"echo_correlation_10": -1.0,
 		"single_echo_channel": -1.0,
 		"filter_wheel": -1.0,
+		"momentum_acquisition": -1.0,
 		"ephemeris_marks": -1.0,
 		"leonid_radiant": -1.0,
 	}
@@ -151,6 +152,7 @@ func _prepare(seed: int) -> void:
 
 
 func _run_round(duration: float) -> void:
+	game.progression.reset_manual_combo()
 	game.spawner.set_phase_time_remaining(duration)
 	game.spawner.start_spawning()
 	game.events.start()
@@ -159,6 +161,7 @@ func _run_round(duration: float) -> void:
 	var round_elapsed := 0.0
 	while round_elapsed < duration:
 		var delta := minf(STEP, duration - round_elapsed)
+		game.progression.update_manual_combo(delta)
 		var remaining := maxf(0.0, duration - round_elapsed)
 		game.spawner.set_phase_time_remaining(remaining)
 		game.spawner._process(delta)
@@ -182,7 +185,12 @@ func _process_targets(delta: float) -> void:
 		if not is_instance_valid(target):
 			continue
 		if target == manual_target:
-			target.apply_manual_observation(delta, 0.0, game.progression.get_tracking_radius())
+			target.apply_manual_observation(
+				delta,
+				0.0,
+				game.progression.get_tracking_radius(),
+				game.progression.get_manual_analysis_speed_multiplier()
+			)
 		target._process(delta)
 		if not target.alive:
 			target.free()

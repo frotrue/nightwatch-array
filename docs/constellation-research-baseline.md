@@ -1,6 +1,6 @@
 # Historical 41-System Constellation Research Baseline
 
-> Frozen pre-Gemini snapshot. The live graph has 63 systems; the measurements
+> Frozen pre-Gemini snapshot. The live graph has 71 systems; the measurements
 > below intentionally preserve the 41-system state they recorded.
 
 Candidate measurement recorded 2026-08-24 for the constellation-grouped

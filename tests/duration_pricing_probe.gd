@@ -229,12 +229,18 @@ func _on_meteor_observed(_meteor, reward: float, multiplier: float, was_manual: 
 
 
 func _process_meteors(delta: float) -> void:
+	progression.update_manual_combo(delta)
 	var manual_target = _first_meteor()
 	for meteor in game.meteor_layer.get_children():
 		if not is_instance_valid(meteor):
 			continue
 		if meteor == manual_target:
-			meteor.apply_manual_observation(delta, 0.0, progression.get_tracking_radius())
+			meteor.apply_manual_observation(
+				delta,
+				0.0,
+				progression.get_tracking_radius(),
+				progression.get_manual_analysis_speed_multiplier()
+			)
 		meteor._process(delta)
 		if not meteor.alive:
 			meteor.free()

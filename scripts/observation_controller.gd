@@ -90,10 +90,15 @@ func _process(delta: float) -> void:
 		hud.hide_tracking()
 	# Keep animated tracking feedback live, but leave an idle software cursor
 	# cached until either it moves or a tracking visual changes state.
-	var tracking_visual_active := (
+	var tracking_visual_active: bool = (
 		_selection_is_valid()
 		or _target_is_valid(hovered_meteor)
 		or not tracked_meteors.is_empty()
+		or (
+			progression != null
+			and progression.has_upgrade("momentum_acquisition")
+			and progression.get_taurus_combo_stack_count() > 0
+		)
 	)
 	if cursor_position != previous_cursor_position or tracking_visual_active or tracking_visual_active_last_frame:
 		queue_redraw()
@@ -149,14 +154,24 @@ func _apply_manual_contact(target, delta: float) -> bool:
 	var tracking_radius: float = target.get_tracking_radius(progression.get_tracking_radius())
 	var current_distance: float = cursor_position.distance_to(target.global_position)
 	if current_distance <= tracking_radius:
-		target.apply_manual_observation(delta, current_distance, tracking_radius)
+		target.apply_manual_observation(
+			delta,
+			current_distance,
+			tracking_radius,
+			progression.get_manual_analysis_speed_multiplier()
+		)
 		return true
 	var swept_distance := _distance_to_cursor_path(target.global_position)
 	if swept_distance <= tracking_radius:
 		# Credit only the estimated fraction of the frame spent inside the
 		# tracking radius; a fast flick can acquire but cannot grant free progress.
 		var contact_scale := _estimate_sweep_contact_scale(tracking_radius, swept_distance)
-		target.apply_manual_observation(delta * contact_scale, swept_distance, tracking_radius)
+		target.apply_manual_observation(
+			delta * contact_scale,
+			swept_distance,
+			tracking_radius,
+			progression.get_manual_analysis_speed_multiplier()
+		)
 		return true
 	return false
 
@@ -320,6 +335,41 @@ func _draw_software_cursor() -> void:
 		draw_line(center_mark_start, center_mark_end, Color(cursor_color, reticle_alpha), 1.6, true)
 	draw_circle(cursor_position, 4.0, shadow_color)
 	draw_circle(cursor_position, 1.8, cursor_color)
+	_draw_manual_combo(observation_radius)
+
+
+func _draw_manual_combo(observation_radius: float) -> void:
+	if progression == null or not progression.has_upgrade("momentum_acquisition"):
+		return
+	var stacks: int = progression.get_taurus_combo_stack_count()
+	if stacks <= 0:
+		return
+	var timer_radius := observation_radius + 8.0
+	var timer_progress: float = progression.get_manual_combo_progress()
+	var timer_color := UITheme.ACCENT_LINE.lerp(UITheme.INK_MAX, float(stacks) / 10.0)
+	draw_arc(cursor_position, timer_radius, 0.0, TAU, 64, Color(UITheme.SHADOW, 0.78), 4.2, true)
+	draw_arc(
+		cursor_position,
+		timer_radius,
+		-PI * 0.5,
+		-PI * 0.5 + TAU * timer_progress,
+		64,
+		Color(timer_color, 0.92),
+		2.2,
+		true
+	)
+	var font: Font = UITheme.mono_tabular(true)
+	var font_size := UITheme.size_px(22.0)
+	var label_position := cursor_position + Vector2(timer_radius + 7.0, float(font_size) * 0.35)
+	draw_string(
+		font,
+		label_position,
+		"×%d" % stacks,
+		HORIZONTAL_ALIGNMENT_LEFT,
+		-1.0,
+		font_size,
+		Color(timer_color, 0.94)
+	)
 
 
 func _software_cursor_radius() -> float:
