@@ -1,5 +1,7 @@
 extends Node2D
 
+const UITheme = preload("res://scripts/ui_theme.gd")
+
 # Forecast information can arrive before the player owns hardware to act on it.
 # Secondary Camera adds the player-aimed dish and extends the warning to fund
 # its slew time; Wide Field Sensor alone still supports cursor pre-positioning.
@@ -22,7 +24,6 @@ var contacts: Array[Dictionary] = []
 var dishes: Array[Dictionary] = []
 var cursor_position := Vector2.ZERO
 var hovered_contact_id: int = -1
-var dish_movement_learned: bool = false
 var abandoned_target_id: int = 0
 var abandoned_target_position := Vector2.ZERO
 var abandoned_target_flash: float = 0.0
@@ -66,14 +67,12 @@ func refresh_dishes() -> void:
 	queue_redraw()
 
 
-func reset(clear_interaction_learning: bool = false) -> void:
+func reset() -> void:
 	_clear_dish_assists()
 	contacts.clear()
 	hovered_contact_id = -1
 	abandoned_target_id = 0
 	abandoned_target_flash = 0.0
-	if clear_interaction_learning:
-		dish_movement_learned = false
 	for index in range(dishes.size()):
 		var dish: Dictionary = dishes[index]
 		dish.assigned_id = -1
@@ -283,7 +282,6 @@ func move_dish_to(point: Vector2) -> int:
 	dish.target = point
 	dish.arrived = Vector2(dish.position).is_equal_approx(point)
 	dishes[index] = dish
-	dish_movement_learned = true
 	queue_redraw()
 	return index
 
@@ -364,7 +362,9 @@ func _draw() -> void:
 func _draw_dish(dish: Dictionary) -> void:
 	var position: Vector2 = dish.position
 	var arrived: bool = bool(dish.arrived)
-	var color := Color("64e6c2") if arrived else Color("d8b45c")
+	# Parked and covering reads as the actionable accent; still slewing stays
+	# neutral, because it is not yet doing anything.
+	var color := UITheme.ACCENT_LINE if arrived else UITheme.INK_MID
 	draw_circle(position, COVERAGE_RADIUS, Color(color, 0.05 if arrived else 0.02))
 	draw_arc(position, COVERAGE_RADIUS, 0.0, TAU, 56, Color(color, 0.42 if arrived else 0.20),
 		1.8 if arrived else 1.1, true)
@@ -374,9 +374,9 @@ func _draw_dish(dish: Dictionary) -> void:
 	var assigned_contact := _find_contact(int(dish.assigned_id))
 	if not assigned_contact.is_empty():
 		var estimate := _estimate_of(assigned_contact)
-		draw_line(position, estimate, Color("b99cff", 0.72), 1.6, true)
-		draw_arc(estimate, 25.0, 0.0, TAU, 32, Color("b99cff", 0.72), 1.5, true)
-	draw_circle(position, 7.0, Color(0.02, 0.05, 0.09, 0.95))
+		draw_line(position, estimate, Color(UITheme.ACCENT_TEXT, 0.72), 1.6, true)
+		draw_arc(estimate, 25.0, 0.0, TAU, 32, Color(UITheme.ACCENT_TEXT, 0.72), 1.5, true)
+	draw_circle(position, 7.0, UITheme.SHADOW)
 	draw_circle(position, 4.4, color)
 
 
@@ -393,7 +393,7 @@ func _draw_abandoned_target_flash() -> void:
 
 
 func _draw_abandonment_mark(point: Vector2, tether_start: Vector2, alpha: float) -> void:
-	var color := Color("ff6a5e", clampf(alpha, 0.0, 1.0))
+	var color := Color(UITheme.ALERT, clampf(alpha, 0.0, 1.0))
 	if not tether_start.is_equal_approx(point):
 		draw_line(tether_start, point, color, 1.6, true)
 	draw_arc(point, 27.0, 0.0, TAU, 32, color, 2.2, true)
@@ -402,13 +402,15 @@ func _draw_abandonment_mark(point: Vector2, tether_start: Vector2, alpha: float)
 
 
 func _draw_contact(contact: Dictionary) -> void:
-	var font := ThemeDB.fallback_font
+	var font := UITheme.sans()
 	var lead: float = maxf(float(contact.lead_time), 0.001)
 	var certainty: float = clampf(1.0 - float(contact.countdown) / lead, 0.0, 1.0)
 	var estimate := _estimate_of(contact)
-	var base_color := Color("8fb6ff").lerp(Color("ffd27a"), certainty)
+	# Certainty is brightness plus warmth: a loose early estimate sits at the
+	# neutral mid ink and firms up into the actionable accent as it resolves.
+	var base_color := UITheme.INK_MID.lerp(UITheme.ACCENT_TEXT, certainty)
 	if float(contact.get("abandoned_flash", 0.0)) > 0.0:
-		base_color = Color("ff6a5e")
+		base_color = UITheme.ALERT
 	var hovered: bool = int(contact.id) == hovered_contact_id
 	var pulse := 1.0 + sin(Time.get_ticks_msec() * 0.006) * 0.08
 
@@ -425,24 +427,7 @@ func _draw_contact(contact: Dictionary) -> void:
 		label = tr("METEOR_%s" % String(contact.type_id).to_upper())
 	draw_string(font, estimate + Vector2(-60.0, -28.0), label,
 		HORIZONTAL_ALIGNMENT_CENTER, 120.0, 14, Color(base_color, 0.95))
-	draw_string(font, estimate + Vector2(-60.0, 40.0), "%.1fs" % maxf(0.0, float(contact.countdown)),
+	# Tabular figures: a countdown that reflows its own width every tenth of a
+	# second is the exact jitter the red-light spec rules out.
+	draw_string(UITheme.mono_tabular(), estimate + Vector2(-60.0, 40.0), "%.1fs" % maxf(0.0, float(contact.countdown)),
 		HORIZONTAL_ALIGNMENT_CENTER, 120.0, 13, Color(base_color, 0.7))
-
-	var hint_keys: Array[String] = []
-	# Manual-only information is secondary and appears only after classification,
-	# so an unclassified contact never becomes a type oracle.
-	if bool(contact.classified) and not _dish_can_track_type(String(contact.type_id)) and (not dish_movement_learned or hovered):
-		hint_keys.append("CONTACT_MANUAL_ONLY_HINT")
-	for hint_index in range(hint_keys.size()):
-		_draw_assignment_hint(estimate, base_color, font, hint_keys[hint_index], hint_index, hint_keys.size())
-
-
-func _draw_assignment_hint(estimate: Vector2, base_color: Color, font: Font, hint_key: String, row: int, row_count: int) -> void:
-	var hint_top := 49.0 + float(row) * 28.0
-	if estimate.y + 49.0 + float(row_count) * 28.0 > get_viewport_rect().size.y - 8.0:
-		hint_top = -49.0 - float(row_count - row) * 28.0
-	var hint_rect := Rect2(estimate + Vector2(-94.0, hint_top), Vector2(188.0, 24.0))
-	draw_rect(hint_rect, Color(0.015, 0.035, 0.07, 0.92), true)
-	draw_rect(hint_rect, Color(base_color, 0.68), false, 1.0)
-	draw_string(font, estimate + Vector2(-94.0, hint_top + 17.0), tr(hint_key),
-		HORIZONTAL_ALIGNMENT_CENTER, 188.0, 12, Color("f2fbff"))

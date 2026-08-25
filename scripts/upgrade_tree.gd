@@ -32,7 +32,7 @@ class StarNodeVisual:
 	extends Control
 
 	var hold_ratio: float = 0.0
-	var branch_color := Color("7f9caf")
+	var branch_color := UITheme.STAR_LOCKED
 	var visual_state := "hidden"
 	var magnitude: float = 3.0
 	var star_kind := "star"
@@ -828,7 +828,7 @@ func _build_interface() -> void:
 	title_label = _spec_label(tr("HUD_DATA_CAPTION"), UITheme.mono(), 12.0, UITheme.INK_MID, 0.28)
 	header.add_child(title_label)
 
-	installed_caption = _spec_label(tr("TREE_INSTALLED_CAPTION"), UITheme.mono(), 12.0, Color("937260"), 0.30)
+	installed_caption = _spec_label(tr("TREE_INSTALLED_CAPTION"), UITheme.mono(), 12.0, UITheme.INK_MID, 0.30)
 	installed_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	header.add_child(installed_caption)
 	systems_readout = _spec_label(
@@ -946,23 +946,23 @@ func _build_node_tooltip() -> void:
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_theme_constant_override("separation", 5)
 	margin.add_child(column)
-	tooltip_branch = _make_label("", 10, Color("6f879b"))
+	tooltip_branch = _make_label("", 10, UITheme.TOOLTIP_LABEL)
 	column.add_child(tooltip_branch)
-	tooltip_name = _make_label("", 18, Color("f3f8ff"))
+	tooltip_name = _make_label("", 18, UITheme.TOOLTIP_NAME)
 	tooltip_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	tooltip_name.custom_minimum_size.x = 290.0
 	column.add_child(tooltip_name)
-	tooltip_star = _make_label("", 10, Color("7692aa"))
+	tooltip_star = _make_label("", 10, UITheme.TOOLTIP_VALUE)
 	tooltip_star.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(tooltip_star)
 	var divider := HSeparator.new()
 	divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(divider)
-	tooltip_description = _make_label("", 11, Color("b4c2d2"))
+	tooltip_description = _make_label("", 11, UITheme.TOOLTIP_BODY)
 	tooltip_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	tooltip_description.custom_minimum_size.x = 290.0
 	column.add_child(tooltip_description)
-	tooltip_meta = _make_label("", 11, Color("7f9caf"))
+	tooltip_meta = _make_label("", 11, UITheme.TOOLTIP_LABEL)
 	tooltip_meta.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	tooltip_meta.custom_minimum_size.x = 290.0
 	column.add_child(tooltip_meta)
@@ -1106,7 +1106,7 @@ func _draw_frontier_overlay() -> void:
 				if _cached_node_state(source_id) == "purchased":
 					continue
 				var connection := _connection_points(source_id, hovered_node_id)
-				_draw_dashed_connection(connection[0], connection[1], Color("79859b"))
+				_draw_dashed_connection(connection[0], connection[1], UITheme.LINE_IDLE)
 
 
 func _segment_color(states: PackedStringArray) -> Color:
@@ -1167,12 +1167,12 @@ func _draw_chart_horizon() -> void:
 		Vector2(TREE_SIZE.x + overhang, horizon_y + 4.0),
 		Vector2(TREE_SIZE.x + overhang, TREE_SIZE.y + overhang), Vector2(-overhang, TREE_SIZE.y + overhang)
 	])
-	tree_canvas.draw_colored_polygon(ridge, Color("030611"))
+	tree_canvas.draw_colored_polygon(ridge, UITheme.GROUND)
 	var dome_center := CHART_ORIGIN + Vector2(0, -2.0)
-	tree_canvas.draw_circle(dome_center, 24.0, Color("050a16"))
-	tree_canvas.draw_rect(Rect2(dome_center.x - 26.0, dome_center.y, 52.0, 28.0), Color("050a16"))
-	tree_canvas.draw_line(dome_center + Vector2(0, -22), dome_center + Vector2(15, -38), Color("14243a"), 3.0, true)
-	tree_canvas.draw_circle(dome_center + Vector2(16, -39), 2.2, Color("74a1c7"))
+	tree_canvas.draw_circle(dome_center, 24.0, UITheme.GROUND)
+	tree_canvas.draw_rect(Rect2(dome_center.x - 26.0, dome_center.y, 52.0, 28.0), UITheme.GROUND)
+	tree_canvas.draw_line(dome_center + Vector2(0, -22), dome_center + Vector2(15, -38), UITheme.HORIZON, 3.0, true)
+	tree_canvas.draw_circle(dome_center + Vector2(16, -39), 2.2, UITheme.HORIZON_TICK)
 
 
 func _draw_dashed_connection(start: Vector2, finish: Vector2, color: Color) -> void:
@@ -1188,13 +1188,29 @@ func _draw_dashed_connection(start: Vector2, finish: Vector2, color: Color) -> v
 
 
 func _style_header_button(button: Button) -> void:
+	# Text with a rule under it, matching the chart's own close action and the
+	# HUD overlays. The bordered box was the last cyan-era shape on this screen.
+	var font_size := UITheme.size_px(15.0)
+	button.flat = true
 	button.focus_mode = Control.FOCUS_NONE
-	button.add_theme_font_size_override("font_size", 11)
-	button.add_theme_color_override("font_color", Color("b8cada"))
-	button.add_theme_stylebox_override("normal", _panel_style(Color("11192b"), Color("344a60"), 7, 1))
-	button.add_theme_stylebox_override("hover", _panel_style(Color("17243a"), Color("5a88a6"), 7, 1))
-	button.add_theme_stylebox_override("pressed", _panel_style(Color("0b1220"), Color("72bedb"), 7, 1))
-
+	button.add_theme_font_override("font", UITheme.mono())
+	button.add_theme_font_size_override("font_size", font_size)
+	button.add_theme_constant_override("spacing_glyph", UITheme.tracking(font_size, 0.16))
+	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		button.add_theme_color_override(state, UITheme.INK_MID)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0, 0, 0, 0)
+	style.border_width_bottom = 1
+	style.border_color = UITheme.ACCENT_DEEP
+	style.content_margin_left = UITheme.px(9.0)
+	style.content_margin_right = UITheme.px(9.0)
+	style.content_margin_top = UITheme.px(7.0)
+	style.content_margin_bottom = UITheme.px(6.0)
+	var hover := style.duplicate()
+	hover.border_color = UITheme.ACCENT_TEXT
+	for state in ["normal", "pressed", "focus"]:
+		button.add_theme_stylebox_override(state, style)
+	button.add_theme_stylebox_override("hover", hover)
 
 func _spec_label(text: String, font: Font, spec_size: float, color: Color, em: float = 0.0) -> Label:
 	var label := Label.new()

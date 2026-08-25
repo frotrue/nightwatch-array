@@ -337,7 +337,6 @@ UPGRADE_COMET_SOLUTIONS_DESC,Adds long-arc comets that remain in the current obs
 UPGRADE_ANDROMEDA_DEEP_SURVEY_NAME,Andromeda Deep Survey,안드로메다 심우주 조사
 UPGRADE_ANDROMEDA_DEEP_SURVEY_DESC,Completes the deep survey and increases the value and analysis speed of long-lived targets.,심우주 조사를 완성해 장시간 표적의 가치와 분석 속도를 높입니다.
 CONTACT_UNCLASSIFIED,UNCLASSIFIED,미분류 신호
-CONTACT_MANUAL_ONLY_HINT,MANUAL OBSERVATION ONLY,수동 관측 전용
 METEOR_COMMON,COMMON METEOR,일반 유성
 METEOR_FAST,FAST METEOR,고속 유성
 METEOR_FRAGMENT,FRAGMENTING METEOR,분열 유성
