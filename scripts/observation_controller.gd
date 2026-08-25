@@ -1,5 +1,7 @@
 extends Node2D
 
+const UITheme = preload("res://scripts/ui_theme.gd")
+
 const TRACKING_BREAK_MULTIPLIER := 1.72
 const TRACKING_GRACE_SECONDS := 0.14
 const DEFAULT_TRACKING_RADIUS := 36.0
@@ -81,7 +83,8 @@ func _process(delta: float) -> void:
 			String(selected_meteor.type_id),
 			predicted_multiplier,
 			maxi(1, _valid_tracked_count()),
-			cursor_position
+			cursor_position,
+			_software_cursor_radius()
 		)
 	else:
 		hud.hide_tracking()
@@ -276,23 +279,47 @@ func _draw_software_cursor() -> void:
 	# The cursor is the observation field itself, so Better Lens communicates its
 	# wider range directly instead of relying on a separate crosshair.
 	var observation_radius := _software_cursor_radius()
-	var shadow_color := Color(0.01, 0.025, 0.05, 0.94)
-	var cursor_color := Color("7dffe0") if was_holding else Color("b8f3ff")
+	var tracking := _selection_is_valid()
+	var progress: float = selected_meteor.get_progress() if tracking else 0.0
+	# The cursor and the progress gauge are one circle. They used to be two rings
+	# a few pixels apart, both centred here, drawing the same place twice.
+	#
+	# It is also where the neutral white belongs. Idle, this is the player's hand
+	# and stays in red light; the moment it latches onto a target it becomes the
+	# live instrument and is the only neutral-white thing on screen. The colour
+	# change is what says "you are measuring now".
+	var shadow_color := Color(0.03, 0.012, 0.008, 0.94)
+	var cursor_color := UITheme.INSTRUMENT_ARC if tracking else UITheme.INK_HIGH
 	var field_alpha := 0.065 if was_holding else 0.026
+	var reticle_alpha := 0.34 if tracking else (0.96 if was_holding else 0.72)
 	draw_circle(cursor_position, observation_radius, Color(cursor_color, field_alpha))
-	draw_arc(cursor_position, observation_radius, 0.0, TAU, 64, shadow_color, 4.2, true)
-	draw_arc(cursor_position, observation_radius, 0.0, TAU, 64, Color(cursor_color, 0.96 if was_holding else 0.72), 1.8, true)
+	# The backing stroke only needs to be wide enough for whatever sits on it.
+	draw_arc(cursor_position, observation_radius, 0.0, TAU, 64, shadow_color, 5.6 if tracking else 4.2, true)
+	# Plain circle at rest. Under observation the same circle sweeps and thickens,
+	# so progress is read as a fattening border rather than as a second ring.
+	draw_arc(cursor_position, observation_radius, 0.0, TAU, 64, Color(cursor_color, reticle_alpha), 1.8, true)
+	if tracking and progress > 0.0:
+		draw_arc(
+			cursor_position,
+			observation_radius,
+			-PI * 0.5,
+			-PI * 0.5 + TAU * progress,
+			64,
+			cursor_color,
+			lerpf(2.2, 5.0, progress),
+			true
+		)
 	for direction in [Vector2.LEFT, Vector2.RIGHT, Vector2.UP, Vector2.DOWN]:
 		var range_tick_start: Vector2 = cursor_position + direction * (observation_radius - 4.0)
 		var range_tick_end: Vector2 = cursor_position + direction * (observation_radius + 5.0)
 		draw_line(range_tick_start, range_tick_end, shadow_color, 4.2, true)
-		draw_line(range_tick_start, range_tick_end, cursor_color, 1.8, true)
+		draw_line(range_tick_start, range_tick_end, Color(cursor_color, reticle_alpha), 1.8, true)
 		var center_mark_start: Vector2 = cursor_position + direction * 4.0
 		var center_mark_end: Vector2 = cursor_position + direction * 8.0
 		draw_line(center_mark_start, center_mark_end, shadow_color, 4.0, true)
-		draw_line(center_mark_start, center_mark_end, cursor_color, 1.6, true)
+		draw_line(center_mark_start, center_mark_end, Color(cursor_color, reticle_alpha), 1.6, true)
 	draw_circle(cursor_position, 4.0, shadow_color)
-	draw_circle(cursor_position, 1.8, Color("f4ffff"))
+	draw_circle(cursor_position, 1.8, cursor_color)
 
 
 func _software_cursor_radius() -> float:
@@ -302,28 +329,37 @@ func _software_cursor_radius() -> float:
 func _draw_tracking_ring(target, is_primary: bool) -> void:
 	var tracking_radius: float = target.get_tracking_radius(progression.get_tracking_radius())
 	var quality: float = target.get_quality()
-	var ring_color := Color("82d7ff").lerp(Color("77ffd0"), quality)
-	var outer_alpha := 0.48 if is_primary else 0.22
-	var progress_alpha := 1.0 if is_primary else 0.76
-	draw_circle(target.global_position, tracking_radius + 4.0, Color(ring_color, 0.035 if is_primary else 0.018))
-	draw_arc(target.global_position, tracking_radius, 0.0, TAU, 48, Color(ring_color, outer_alpha), 2.0 if is_primary else 1.3, true)
+	# Quality rides brightness inside the palette: a poorly centred track sits
+	# at the accent line, a perfectly centred one climbs to the brightest ink.
+	var ring_color := UITheme.ACCENT_LINE.lerp(UITheme.INK_MAX, quality)
+	# The primary target draws no ring at all. The cursor is the gauge for it and
+	# is sitting on it, so a circle here only doubles the one already there. When
+	# the cursor drifts inside the grace radius the connector line is what says
+	# which object is still latched.
+	if is_primary:
+		draw_line(cursor_position, target.global_position, Color(UITheme.ACCENT_DEEP, 0.45), 1.0, true)
+		return
+	# Secondary targets keep a ring of their own, on one radius: the dim full
+	# circle is the track and the bright arc fills it. The cursor gauge only ever
+	# reports the primary, so these have nothing else showing their progress.
+	draw_circle(target.global_position, tracking_radius, Color(ring_color, 0.018))
+	draw_arc(target.global_position, tracking_radius, 0.0, TAU, 48, Color(ring_color, 0.16), 0.9, true)
 	draw_arc(
 		target.global_position,
-		tracking_radius - 4.0,
+		tracking_radius,
 		-PI * 0.5,
 		-PI * 0.5 + TAU * target.get_progress(),
 		48,
-		Color(ring_color, progress_alpha),
-		3.5 if is_primary else 2.1,
+		Color(ring_color, 0.76),
+		1.8,
 		true
 	)
-	if is_primary:
-		draw_line(cursor_position, target.global_position, Color(ring_color, 0.18), 1.0, true)
 
 
 func _draw_hover_ring(target) -> void:
 	var tracking_radius: float = target.get_tracking_radius(progression.get_tracking_radius())
-	var ring_color := Color("82d7ff")
+	# A hint, not a gauge, so it stays below the tracking ring.
+	var ring_color := UITheme.INK_MID
 	var pulse := 1.0 + sin(Time.get_ticks_msec() * 0.006) * 0.06
 	var radius := tracking_radius * pulse
 	draw_arc(target.global_position, radius, 0.0, TAU, 40, Color(ring_color, 0.34), 1.8, true)
