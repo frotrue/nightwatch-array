@@ -93,6 +93,7 @@ var end_title: Label
 var end_stats: Label
 var restart_button: Button
 var phase_summary_overlay: Control
+var in_round_visibility: Dictionary = {}
 var phase_summary_title: Label
 var phase_summary_subtitle: Label
 var phase_summary_observations: Label
@@ -103,7 +104,7 @@ var phase_summary_badges: Label
 var phase_summary_button: Button
 var settings_button: Button
 var settings_overlay: Control
-var settings_panel: PanelContainer
+var settings_panel: Control
 var settings_title: Label
 var settings_subtitle: Label
 var settings_language_label: Label
@@ -423,13 +424,60 @@ func is_pointer_over_hud(pointer_position: Vector2) -> bool:
 func show_end(success: bool, stats_text: String) -> void:
 	last_end_success = success
 	end_title.text = tr("HUD_END_SUCCESS") if success else tr("HUD_END_FAILURE")
-	end_title.add_theme_color_override("font_color", Color("ffe1a3") if success else Color("ff9a86"))
+	# Outcome reads as brightness rather than hue. The whole layer is red light,
+	# so a red "failure" colour would say nothing; a sky that went dim on you does.
+	end_title.add_theme_color_override("font_color", UITheme.INK_MAX if success else UITheme.INK_MID)
 	end_stats.text = stats_text
 	end_overlay.visible = true
+	end_overlay.move_to_front()
+	_refresh_in_round_readouts()
 
 
 func hide_end() -> void:
 	end_overlay.visible = false
+	_refresh_in_round_readouts()
+
+
+# Live readouts that belong to the round that just ended. The summary is
+# typeset straight onto the sky now, so there is no panel in front of them and
+# they would sit inside the summary's own column.
+const IN_ROUND_GROUPS := ["DataReadout", "PhaseClock", "ReadySystems", "TrackingCluster", "EventBanner"]
+
+
+func _refresh_in_round_readouts() -> void:
+	# Any of the three overlays owns the screen while it is up, and none of them
+	# has a panel to hide the live readouts behind any more.
+	var covered := is_phase_summary_open()
+	covered = covered or (end_overlay != null and end_overlay.visible)
+	covered = covered or (settings_overlay != null and settings_overlay.visible)
+	if covered:
+		_stash_in_round_readouts()
+	else:
+		_restore_in_round_readouts()
+
+
+func _stash_in_round_readouts() -> void:
+	# Idempotent: overlays can stack, and a second stash would record the state
+	# the first one already hid.
+	if not in_round_visibility.is_empty():
+		return
+	for group_name in IN_ROUND_GROUPS:
+		var group: Control = root_control.get_node_or_null(NodePath(group_name))
+		if group == null:
+			continue
+		# Their own state is recorded rather than assumed: the tracking cluster
+		# and the banner are already hidden most of the time, and restoring them
+		# to visible would put stale readouts back on screen.
+		in_round_visibility[group_name] = group.visible
+		group.visible = false
+
+
+func _restore_in_round_readouts() -> void:
+	for group_name_variant in in_round_visibility:
+		var group: Control = root_control.get_node_or_null(NodePath(String(group_name_variant)))
+		if group != null:
+			group.visible = bool(in_round_visibility[group_name_variant])
+	in_round_visibility.clear()
 
 
 func show_phase_summary(
@@ -470,6 +518,7 @@ func show_phase_summary(
 	phase_summary_button.text = tr("PHASE_SUMMARY_CONTINUE")
 	phase_summary_overlay.visible = true
 	phase_summary_overlay.move_to_front()
+	_refresh_in_round_readouts()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 
@@ -503,6 +552,7 @@ func _signed_rate_value(value: float) -> String:
 func hide_phase_summary() -> void:
 	if phase_summary_overlay != null:
 		phase_summary_overlay.visible = false
+	_refresh_in_round_readouts()
 
 
 func is_phase_summary_open() -> bool:
@@ -514,6 +564,7 @@ func open_settings() -> void:
 		return
 	settings_overlay.visible = true
 	settings_overlay.move_to_front()
+	_refresh_in_round_readouts()
 	paused_by_settings = not get_tree().paused
 	get_tree().paused = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -527,6 +578,7 @@ func close_settings() -> void:
 	if not settings_overlay.visible:
 		return
 	settings_overlay.visible = false
+	_refresh_in_round_readouts()
 	if overwrite_dialog != null and overwrite_dialog.visible:
 		overwrite_dialog.hide()
 	if reset_dialog != null and reset_dialog.visible:
@@ -883,8 +935,11 @@ func _set_save_management_expanded(expanded: bool) -> void:
 		return
 	save_management_container.visible = expanded
 	save_management_button.text = tr("SETTINGS_SAVE_HIDE") if expanded else tr("SETTINGS_SAVE_MANAGEMENT")
-	settings_panel.offset_top = -280.0 if expanded else -210.0
-	settings_panel.offset_bottom = 280.0 if expanded else 210.0
+	# The column centres itself, so the frame only has to be tall enough for the
+	# expanded state. Growing it on toggle made the whole block jump.
+	var half_height := UITheme.px(470.0) if expanded else UITheme.px(350.0)
+	settings_panel.offset_top = -half_height
+	settings_panel.offset_bottom = half_height
 
 
 func _sync_language_selector() -> void:
@@ -1376,40 +1431,52 @@ func _build_debug_panel() -> void:
 func _build_end_overlay() -> void:
 	end_overlay = ColorRect.new()
 	end_overlay.name = "EndOverlay"
-	end_overlay.color = Color(0.004, 0.009, 0.025, 0.91)
+	end_overlay.color = Color(0.016, 0.008, 0.006, 0.94)
 	end_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	end_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	end_overlay.visible = false
 	root_control.add_child(end_overlay)
-	var center_panel := PanelContainer.new()
-	center_panel.set_anchors_preset(Control.PRESET_CENTER)
-	center_panel.offset_left = -265.0
-	center_panel.offset_top = -180.0
-	center_panel.offset_right = 265.0
-	center_panel.offset_bottom = 180.0
-	center_panel.add_theme_stylebox_override("panel", _panel_style(Color("071324"), Color("467695"), 12))
-	end_overlay.add_child(center_panel)
-	var margin := MarginContainer.new()
-	for side in ["margin_left", "margin_top", "margin_right", "margin_bottom"]:
-		margin.add_theme_constant_override(side, 24)
-	center_panel.add_child(margin)
+	var frame := Control.new()
+	frame.name = "EndColumn"
+	frame.set_anchors_preset(Control.PRESET_CENTER)
+	frame.offset_left = -UITheme.px(640.0)
+	frame.offset_right = UITheme.px(640.0)
+	frame.offset_top = -UITheme.px(320.0)
+	frame.offset_bottom = UITheme.px(320.0)
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	end_overlay.add_child(frame)
 	var column := VBoxContainer.new()
+	column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	column.alignment = BoxContainer.ALIGNMENT_CENTER
-	column.add_theme_constant_override("separation", 18)
-	margin.add_child(column)
-	end_title = _make_label(tr("HUD_END_SUCCESS"), 28, Color("ffe1a3"))
+	column.add_theme_constant_override("separation", int(UITheme.px(20.0)))
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame.add_child(column)
+
+	end_title = _spec_label(tr("HUD_END_SUCCESS"), UITheme.sans("medium"), 46.0, UITheme.INK_MAX, -0.01)
 	end_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	end_stats = _make_label("", 16, Color("adc7da"))
+	column.add_child(end_title)
+
+	var rule := CenterContainer.new()
+	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(rule)
+	var rule_line := ColorRect.new()
+	rule_line.color = UITheme.ACCENT_DEEP
+	rule_line.custom_minimum_size = Vector2(UITheme.px(420.0), 1.0)
+	rule_line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	rule.add_child(rule_line)
+
+	# The run tally is a column of figures, so it takes the tabular mono the
+	# rest of the instrument layer uses. Proportional digits would leave the
+	# six values ragged against each other.
+	end_stats = _spec_label("", UITheme.mono_tabular(), 20.0, UITheme.INK_HIGH, 0.04)
 	end_stats.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	end_stats.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	end_stats.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.add_child(end_stats)
+
 	restart_button = Button.new()
 	restart_button.text = tr("HUD_RESTART")
-	restart_button.custom_minimum_size = Vector2(0, 44)
-	restart_button.add_theme_font_size_override("font_size", 15)
+	restart_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_style_text_action(restart_button, 22.0, UITheme.BANNER_TITLE)
 	restart_button.pressed.connect(func(): restart_requested.emit())
-	column.add_child(end_title)
-	column.add_child(end_stats)
 	column.add_child(restart_button)
 
 
@@ -1420,65 +1487,118 @@ func _build_phase_summary_overlay() -> void:
 	phase_summary_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	phase_summary_overlay.visible = false
 	root_control.add_child(phase_summary_overlay)
+	# No bordered panel. The round summary is typeset straight onto the dimmed
+	# sky, the same way the in-round readouts and the research chart are. A panel
+	# here was the last surface still speaking the old cyan HUD language.
 	var dim := ColorRect.new()
-	dim.color = Color(0.002, 0.008, 0.02, 0.76)
+	dim.color = Color(0.016, 0.008, 0.006, 0.88)
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	phase_summary_overlay.add_child(dim)
-	var panel := PanelContainer.new()
-	panel.set_anchors_preset(Control.PRESET_CENTER)
-	panel.offset_left = -230.0
-	panel.offset_top = -180.0
-	panel.offset_right = 230.0
-	panel.offset_bottom = 180.0
-	panel.add_theme_stylebox_override("panel", _panel_style(Color("071522"), Color("4eb3c9"), 13))
-	phase_summary_overlay.add_child(panel)
-	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 28)
-	margin.add_theme_constant_override("margin_right", 28)
-	margin.add_theme_constant_override("margin_top", 23)
-	margin.add_theme_constant_override("margin_bottom", 23)
-	panel.add_child(margin)
+	var frame := Control.new()
+	frame.name = "SummaryColumn"
+	frame.set_anchors_preset(Control.PRESET_CENTER)
+	frame.offset_left = -UITheme.px(640.0)
+	frame.offset_right = UITheme.px(640.0)
+	frame.offset_top = -UITheme.px(300.0)
+	frame.offset_bottom = UITheme.px(300.0)
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	phase_summary_overlay.add_child(frame)
 	var column := VBoxContainer.new()
+	column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	column.alignment = BoxContainer.ALIGNMENT_CENTER
-	column.add_theme_constant_override("separation", 10)
-	margin.add_child(column)
-	phase_summary_title = _make_label("", 27, Color("e8fbff"))
+	column.add_theme_constant_override("separation", int(UITheme.px(14.0)))
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame.add_child(column)
+
+	phase_summary_title = _spec_label("", UITheme.sans("medium"), 44.0, UITheme.INK_MAX, -0.01)
 	phase_summary_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	phase_summary_subtitle = _make_label("", 11, Color("7f9fb2"))
-	phase_summary_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(phase_summary_title)
+
+	phase_summary_subtitle = _spec_label("", UITheme.mono(), 13.0, UITheme.INK_MID, 0.30)
+	phase_summary_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(phase_summary_subtitle)
-	var divider := HSeparator.new()
-	divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	column.add_child(divider)
-	phase_summary_data = _make_label("", 28, Color("8fffe5"))
+
+	var rule := CenterContainer.new()
+	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(rule)
+	var rule_line := ColorRect.new()
+	rule_line.color = UITheme.ACCENT_DEEP
+	rule_line.custom_minimum_size = Vector2(UITheme.px(420.0), 1.0)
+	rule_line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	rule.add_child(rule_line)
+
+	# The round's output is a gain, so it takes the gain ink the data counter
+	# already uses when it ticks up.
+	phase_summary_data = _spec_label("", UITheme.sans("medium"), 40.0, UITheme.GAIN, 0.0)
 	phase_summary_data.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	phase_summary_comparison = _make_label("", 14, Color("8fc5d5"))
-	phase_summary_comparison.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	phase_summary_observations = _make_label("", 17, Color("cceaf2"))
-	phase_summary_observations.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	phase_summary_split = _make_label("", 13, Color("91adbd"))
-	phase_summary_split.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(phase_summary_data)
+
+	phase_summary_comparison = _spec_label("", UITheme.sans(), 17.0, UITheme.INK_MID, 0.02)
+	phase_summary_comparison.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	phase_summary_comparison.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(phase_summary_comparison)
+
+	phase_summary_observations = _spec_label("", UITheme.sans("medium"), 22.0, UITheme.INK_HIGH, 0.0)
+	phase_summary_observations.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(phase_summary_observations)
+
+	phase_summary_split = _spec_label("", UITheme.sans("light"), 16.0, UITheme.INK_LOW, 0.06)
+	phase_summary_split.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(phase_summary_split)
-	phase_summary_badges = _make_label("", 12, Color("d8ccff"))
+
+	phase_summary_badges = _spec_label("", UITheme.sans(), 15.0, UITheme.ACCENT_TEXT, 0.12)
 	phase_summary_badges.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	phase_summary_badges.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	phase_summary_badges.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	phase_summary_badges.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	column.add_child(phase_summary_badges)
+
+	# Text with a rule under it, matching the research chart header action rather
+	# than a filled button.
 	phase_summary_button = Button.new()
-	phase_summary_button.custom_minimum_size = Vector2(0, 44)
-	phase_summary_button.add_theme_font_size_override("font_size", 15)
-	phase_summary_button.add_theme_color_override("font_color", Color("e4fbff"))
-	phase_summary_button.add_theme_stylebox_override("normal", _panel_style(Color("124b5b"), Color("4eb3c9"), 7))
-	phase_summary_button.add_theme_stylebox_override("hover", _panel_style(Color("176477"), Color("75d4e6"), 7))
-	phase_summary_button.add_theme_stylebox_override("pressed", _panel_style(Color("0c3542"), Color("8ee8f3"), 7))
+	phase_summary_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_style_text_action(phase_summary_button, 22.0, UITheme.BANNER_TITLE)
 	phase_summary_button.pressed.connect(_on_phase_summary_continue_pressed)
 	column.add_child(phase_summary_button)
+
+
+func _hairline(spec_width: float = 420.0) -> CenterContainer:
+	var holder := CenterContainer.new()
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var line := ColorRect.new()
+	line.color = UITheme.ACCENT_DEEP
+	line.custom_minimum_size = Vector2(UITheme.px(spec_width), 1.0)
+	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.add_child(line)
+	return holder
+
+
+func _style_text_action(button: Button, spec_size: float, color: Color) -> void:
+	# Controls in the red-light layer are text with a rule under them, the same
+	# as the research chart header action. A filled, bordered, rounded button is
+	# the shape the observatory redesign removed.
+	var font_size := UITheme.size_px(spec_size)
+	button.flat = true
+	button.focus_mode = Control.FOCUS_NONE
+	button.add_theme_font_override("font", UITheme.sans())
+	button.add_theme_font_size_override("font_size", font_size)
+	button.add_theme_constant_override("spacing_glyph", UITheme.tracking(font_size, 0.06))
+	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		button.add_theme_color_override(state, color)
+	button.add_theme_color_override("font_disabled_color", UITheme.INK_LOW)
+	for state in ["normal", "hover", "pressed", "focus", "disabled"]:
+		button.add_theme_stylebox_override(state, _action_underline_style(state == "hover"))
+
+
+func _action_underline_style(bright: bool) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0, 0, 0, 0)
+	style.border_width_bottom = 1
+	style.border_color = UITheme.ACCENT_TEXT if bright else UITheme.ACCENT_DEEP
+	style.content_margin_left = UITheme.px(10.0)
+	style.content_margin_right = UITheme.px(10.0)
+	style.content_margin_top = UITheme.px(12.0)
+	style.content_margin_bottom = UITheme.px(9.0)
+	return style
 
 
 func _build_settings_ui() -> void:
@@ -1489,71 +1609,86 @@ func _build_settings_ui() -> void:
 	settings_overlay.visible = false
 	root_control.add_child(settings_overlay)
 	var dim := ColorRect.new()
-	dim.color = Color(0.004, 0.009, 0.025, 0.82)
+	dim.color = Color(0.016, 0.008, 0.006, 0.9)
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	settings_overlay.add_child(dim)
-	settings_panel = PanelContainer.new()
+	# A column on the dimmed sky, not a bordered card. settings_panel stays a
+	# Control so the save-management expansion can keep resizing it.
+	settings_panel = Control.new()
+	settings_panel.name = "SettingsColumn"
 	settings_panel.set_anchors_preset(Control.PRESET_CENTER)
-	settings_panel.offset_left = -290.0
-	settings_panel.offset_top = -210.0
-	settings_panel.offset_right = 290.0
-	settings_panel.offset_bottom = 210.0
-	settings_panel.add_theme_stylebox_override("panel", _panel_style(Color("081326"), Color("4f829e"), 12))
+	settings_panel.offset_left = -UITheme.px(420.0)
+	settings_panel.offset_right = UITheme.px(420.0)
+	settings_panel.offset_top = -UITheme.px(350.0)
+	settings_panel.offset_bottom = UITheme.px(350.0)
+	settings_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	settings_overlay.add_child(settings_panel)
-	var margin := MarginContainer.new()
-	for side in ["margin_left", "margin_top", "margin_right", "margin_bottom"]:
-		margin.add_theme_constant_override(side, 22)
-	settings_panel.add_child(margin)
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 7)
-	margin.add_child(column)
-	settings_title = _make_label(tr("SETTINGS_TITLE"), 25, Color("e8f6ff"))
-	settings_subtitle = _make_label(tr("SETTINGS_SUBTITLE"), 11, Color("6f8ca5"))
+	column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.add_theme_constant_override("separation", int(UITheme.px(12.0)))
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	settings_panel.add_child(column)
+
+	settings_title = _spec_label(tr("SETTINGS_TITLE"), UITheme.sans("medium"), 34.0, UITheme.INK_MAX, -0.01)
+	settings_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(settings_title)
+	settings_subtitle = _spec_label(tr("SETTINGS_SUBTITLE"), UITheme.mono(), 13.0, UITheme.INK_MID, 0.30)
+	settings_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(settings_subtitle)
-	var divider := HSeparator.new()
-	column.add_child(divider)
-	settings_language_label = _make_label(tr("SETTINGS_LANGUAGE"), 14, Color("bdeaff"))
+	column.add_child(_hairline(840.0))
+
+	settings_language_label = _spec_label(tr("SETTINGS_LANGUAGE"), UITheme.mono(), 12.0, UITheme.INK_MID, 0.24)
+	settings_language_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(settings_language_label)
 	language_selector = OptionButton.new()
-	language_selector.custom_minimum_size = Vector2(0, 38)
+	language_selector.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	language_selector.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	language_selector.add_item(tr("SETTINGS_ENGLISH"))
 	language_selector.set_item_metadata(0, "en")
 	language_selector.add_item(tr("SETTINGS_KOREAN"))
 	language_selector.set_item_metadata(1, "ko")
+	_style_text_action(language_selector, 20.0, UITheme.INK_HIGH)
 	language_selector.item_selected.connect(_on_language_selected)
 	column.add_child(language_selector)
-	settings_hint = _make_label(tr("SETTINGS_LANGUAGE_HINT"), 12, Color("829caf"))
+	settings_hint = _spec_label(tr("SETTINGS_LANGUAGE_HINT"), UITheme.sans("light"), 14.0, UITheme.INK_LOW)
+	settings_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	settings_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(settings_hint)
+
 	tutorial_replay_button = Button.new()
 	tutorial_replay_button.text = tr("TUTORIAL_REPLAY")
-	tutorial_replay_button.custom_minimum_size = Vector2(0, 36)
+	tutorial_replay_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_style_text_action(tutorial_replay_button, 18.0, UITheme.INK_HIGH)
 	tutorial_replay_button.pressed.connect(func(): tutorial_replay_requested.emit())
 	column.add_child(tutorial_replay_button)
 	save_management_button = Button.new()
 	save_management_button.text = tr("SETTINGS_SAVE_MANAGEMENT")
-	save_management_button.custom_minimum_size = Vector2(0, 38)
+	save_management_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_style_text_action(save_management_button, 18.0, UITheme.INK_HIGH)
 	save_management_button.pressed.connect(_on_save_management_pressed)
 	column.add_child(save_management_button)
+
 	save_management_container = VBoxContainer.new()
-	save_management_container.add_theme_constant_override("separation", 7)
+	save_management_container.add_theme_constant_override("separation", int(UITheme.px(10.0)))
 	save_management_container.visible = false
 	column.add_child(save_management_container)
-	var save_divider := HSeparator.new()
-	save_management_container.add_child(save_divider)
-	save_section_label = _make_label(tr("SAVE_SECTION_TITLE"), 15, Color("bdeaff"))
+	save_management_container.add_child(_hairline(840.0))
+	save_section_label = _spec_label(tr("SAVE_SECTION_TITLE"), UITheme.mono(), 12.0, UITheme.INK_MID, 0.24)
+	save_section_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	save_management_container.add_child(save_section_label)
 	for slot in range(1, 4):
 		_build_save_slot_row(save_management_container, slot)
-	save_feedback = _make_label(tr("SAVE_SECTION_HINT"), 12, Color("829caf"))
+	save_feedback = _spec_label(tr("SAVE_SECTION_HINT"), UITheme.sans("light"), 13.0, UITheme.INK_LOW)
 	save_feedback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	save_feedback.visible = false
 	save_management_container.add_child(save_feedback)
+
 	settings_close_button = Button.new()
 	settings_close_button.text = tr("SETTINGS_CLOSE")
-	settings_close_button.custom_minimum_size = Vector2(0, 40)
+	settings_close_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_style_text_action(settings_close_button, 20.0, UITheme.BANNER_TITLE)
 	settings_close_button.pressed.connect(close_settings)
 	column.add_child(settings_close_button)
 	overwrite_dialog = ConfirmationDialog.new()
@@ -1565,50 +1700,40 @@ func _build_settings_ui() -> void:
 
 
 func _build_save_slot_row(parent: VBoxContainer, slot: int) -> void:
-	var row_panel := PanelContainer.new()
-	row_panel.custom_minimum_size = Vector2(0, 67)
-	row_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.025, 0.055, 0.10, 0.82), Color(0.20, 0.39, 0.53, 0.55), 8))
-	parent.add_child(row_panel)
-	var row_margin := MarginContainer.new()
-	row_margin.add_theme_constant_override("margin_left", 12)
-	row_margin.add_theme_constant_override("margin_right", 10)
-	row_margin.add_theme_constant_override("margin_top", 7)
-	row_margin.add_theme_constant_override("margin_bottom", 7)
-	row_panel.add_child(row_margin)
+	# A row of type on the sky, separated by a hairline, rather than a card.
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 8)
-	row_margin.add_child(row)
+	row.add_theme_constant_override("separation", int(UITheme.px(18.0)))
+	parent.add_child(row)
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	info.add_theme_constant_override("separation", 1)
+	info.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	info.add_theme_constant_override("separation", int(UITheme.px(3.0)))
 	row.add_child(info)
-	var title := _make_label(tr("SAVE_SLOT_TITLE") % slot, 14, Color("e8f6ff"))
-	var details := _make_label(tr("SAVE_SLOT_EMPTY"), 11, Color("829caf"))
+	var title := _spec_label(tr("SAVE_SLOT_TITLE") % slot, UITheme.sans(), 17.0, UITheme.INK_HIGH)
+	var details := _spec_label(tr("SAVE_SLOT_EMPTY"), UITheme.mono(), 12.0, UITheme.INK_LOW, 0.06)
 	details.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	info.add_child(title)
 	info.add_child(details)
 	var save_button := Button.new()
 	save_button.text = tr("SAVE_ACTION")
-	save_button.custom_minimum_size = Vector2(128, 42)
+	_style_text_action(save_button, 15.0, UITheme.INK_HIGH)
 	save_button.pressed.connect(_on_save_slot_pressed.bind(slot))
 	row.add_child(save_button)
 	var load_button := Button.new()
 	load_button.text = tr("LOAD_ACTION")
-	load_button.custom_minimum_size = Vector2(90, 42)
+	_style_text_action(load_button, 15.0, UITheme.INK_HIGH)
 	load_button.disabled = true
 	load_button.pressed.connect(_on_load_slot_pressed.bind(slot))
 	row.add_child(load_button)
 	var reset_button := Button.new()
 	reset_button.text = tr("SAVE_RESET_ACTION")
-	reset_button.custom_minimum_size = Vector2(72, 42)
-	reset_button.add_theme_font_size_override("font_size", 11)
-	reset_button.add_theme_color_override("font_color", Color("ffc0b8"))
-	reset_button.add_theme_stylebox_override("normal", _panel_style(Color("321b25"), Color("88404a"), 7))
-	reset_button.add_theme_stylebox_override("hover", _panel_style(Color("4a222b"), Color("d66d72"), 7))
-	reset_button.add_theme_stylebox_override("pressed", _panel_style(Color("25151d"), Color("ef8d8a"), 7))
+	# Destructive, so it takes the one saturated ink in the palette instead of a
+	# red box the red-light layer cannot spare.
+	_style_text_action(reset_button, 15.0, UITheme.GAIN)
 	reset_button.pressed.connect(_on_reset_slot_pressed.bind(slot))
 	reset_button.visible = false
 	row.add_child(reset_button)
+	parent.add_child(_hairline(840.0))
 	save_slot_titles.append(title)
 	save_slot_details.append(details)
 	save_slot_buttons.append(save_button)
