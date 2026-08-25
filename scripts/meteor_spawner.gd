@@ -22,6 +22,9 @@ const BURNOUT_JITTER_MAX := 0.82
 const BURNOUT_JITTER_ATTEMPTS := 8
 const PLAN_SPEED_FACTOR_MIN := 0.96
 const PLAN_SPEED_FACTOR_MAX := 1.08
+const MIN_ECHO_PHASE_REMAINING := 2.0
+const LEONID_STORM_DURATION := 7.0
+const LEONID_STORM_REQUIRED_TIME := 9.0
 # Automatic lanes are partial assist: at 7x analysis time the scan duration
 # exceeds every eligible target's lifetime, so completion needs another source.
 const LANE_TIME_MULTIPLIER := 7.0
@@ -36,6 +39,7 @@ var progression: Node
 var rng := RandomNumberGenerator.new()
 var forecast_rng := RandomNumberGenerator.new()
 var warm_contact_rng := RandomNumberGenerator.new()
+var echo_rng := RandomNumberGenerator.new()
 var running: bool = false
 var pause_regular_spawns: bool = false
 var next_spawn_time: float = Balance.FIRST_METEOR_DELAY
@@ -48,6 +52,10 @@ var pending_contacts: Array[Dictionary] = []
 var next_contact_id: int = 1
 var phase_time_remaining: float = INF
 var burnout_cell_cursors: Dictionary = {}
+var leonid_storm_remaining: int = 0
+var leonid_storm_timer: float = 0.0
+var leonid_storm_interval: float = 0.0
+var leonid_storm_spawn_index: int = 0
 
 
 func setup(target_layer: Node2D, progression_controller: Node) -> void:
@@ -56,6 +64,7 @@ func setup(target_layer: Node2D, progression_controller: Node) -> void:
 	rng.randomize()
 	forecast_rng.randomize()
 	warm_contact_rng.randomize()
+	echo_rng.randomize()
 
 
 func start_spawning() -> void:
@@ -81,6 +90,10 @@ func reset() -> void:
 	pending_contacts.clear()
 	phase_time_remaining = INF
 	burnout_cell_cursors.clear()
+	leonid_storm_remaining = 0
+	leonid_storm_timer = 0.0
+	leonid_storm_interval = 0.0
+	leonid_storm_spawn_index = 0
 
 
 func _process(delta: float) -> void:
@@ -91,6 +104,7 @@ func _process(delta: float) -> void:
 		secondary_refresh = 0.35
 		_refresh_secondary_camera()
 	_update_pending_contacts(delta)
+	_update_leonid_storm(delta)
 	if pause_regular_spawns:
 		return
 	next_spawn_time -= delta
@@ -113,7 +127,7 @@ func _process(delta: float) -> void:
 	next_spawn_time = maxf(1.15, base_interval * progression.get_spawn_interval_scale())
 
 
-func spawn_meteor(type_id: String = "common", custom_start := Vector2.INF, custom_velocity := Vector2.INF, lifetime_override: float = -1.0, custom_burnout := Vector2.INF):
+func spawn_meteor(type_id: String = "common", custom_start := Vector2.INF, custom_velocity := Vector2.INF, lifetime_override: float = -1.0, custom_burnout := Vector2.INF, is_observation_echo: bool = false, is_leonid_storm: bool = false):
 	# Shower and fragment paths intentionally bypass the regular progression cap.
 	# Keep one reserved slot for the final major target while bounding all burst
 	# paths so a missed frame cannot turn into an ever-growing render workload.
@@ -135,12 +149,94 @@ func spawn_meteor(type_id: String = "common", custom_start := Vector2.INF, custo
 	var meteor = MeteorScript.new()
 	var features := _current_features(type_id)
 	meteor.configure(spec, type_id, start, move_velocity, lifetime_scale, features, burnout)
+	if is_observation_echo:
+		meteor.set_meta("gemini_echo", true)
+	if is_leonid_storm:
+		meteor.set_meta("leonid_storm", true)
 	meteor.fragment_requested.connect(_on_fragment_requested)
 	meteor_layer.add_child(meteor)
 	meteor_spawned.emit(meteor)
 	if type_id == "fireball" or type_id == "major":
 		rare_spawned.emit(type_id)
 	return meteor
+
+
+func should_trigger_observation_echo(roll: float) -> bool:
+	return (
+		progression != null
+		and progression.get_observation_echo_count() > 0
+		and roll < progression.get_observation_echo_probability()
+	)
+
+
+func try_spawn_observation_echo(trigger_was_manual: bool, trigger_is_echo: bool) -> int:
+	# Echoes reward a fresh manual success. Meteors created by the burst cannot
+	# recursively open another burst, and a near-expired round never rolls an
+	# effect whose targets would be erased by the intermission boundary.
+	if (
+		not running
+		or not trigger_was_manual
+		or trigger_is_echo
+		or phase_time_remaining < MIN_ECHO_PHASE_REMAINING
+		or not should_trigger_observation_echo(echo_rng.randf())
+	):
+		return 0
+	return _spawn_observation_echo_burst()
+
+
+func _spawn_observation_echo_burst() -> int:
+	var spawned := 0
+	for _index in progression.get_observation_echo_count():
+		var meteor = spawn_meteor(
+			_choose_echo_type_with_rng(echo_rng),
+			Vector2.INF, Vector2.INF, -1.0, Vector2.INF, true
+		)
+		if meteor == null:
+			break
+		spawned += 1
+	return spawned
+
+
+func try_start_leonid_storm() -> bool:
+	var storm_count: int = progression.get_leonid_storm_count() if progression != null else 0
+	if (
+		not running
+		or pause_regular_spawns
+		or leonid_storm_remaining > 0
+		or phase_time_remaining < LEONID_STORM_REQUIRED_TIME
+		or storm_count <= 0
+	):
+		return false
+	leonid_storm_remaining = storm_count
+	leonid_storm_interval = LEONID_STORM_DURATION / float(storm_count)
+	leonid_storm_timer = 0.0
+	leonid_storm_spawn_index = 0
+	_update_leonid_storm(0.0)
+	return true
+
+
+func leonid_storm_active() -> bool:
+	return leonid_storm_remaining > 0
+
+
+func _update_leonid_storm(delta: float) -> void:
+	if leonid_storm_remaining <= 0:
+		return
+	leonid_storm_timer -= delta
+	while leonid_storm_remaining > 0 and leonid_storm_timer <= 0.0:
+		var type_id := "common"
+		if progression.has_upgrade("edge_detection") and leonid_storm_spawn_index % 3 == 1:
+			type_id = "fast"
+		var meteor = spawn_meteor(
+			type_id,
+			Vector2.INF, Vector2.INF, -1.0, Vector2.INF, false, true
+		)
+		if meteor == null:
+			leonid_storm_timer = 0.10
+			return
+		leonid_storm_remaining -= 1
+		leonid_storm_spawn_index += 1
+		leonid_storm_timer += leonid_storm_interval
 
 
 func plan_entry(type_id: String) -> Dictionary:
@@ -449,6 +545,19 @@ func _choose_regular_type_with_rng(source_rng: RandomNumberGenerator) -> String:
 	return "common"
 
 
+func _choose_echo_type_with_rng(source_rng: RandomNumberGenerator) -> String:
+	# Echo bursts are immediate meteor entries, not the long-lived deep targets
+	# whose analysis windows depend on forecast lead time.
+	var roll := source_rng.randf()
+	if progression.has_upgrade("rare_detection") and roll < 0.075:
+		return "fireball"
+	if progression.has_upgrade("fragment_analysis") and roll < 0.25:
+		return "fragment"
+	if progression.has_upgrade("edge_detection") and roll < 0.50:
+		return "fast"
+	return "common"
+
+
 func _current_features(type_id: String) -> Dictionary:
 	var spec := Balance.meteor_spec(type_id)
 	var spectral_band := String(spec.get("spectral_band", "blue"))
@@ -513,7 +622,7 @@ func set_bank_unsupported_before_dish(enabled: bool) -> void:
 	)
 
 
-func _on_fragment_requested(origin: Vector2, parent_velocity: Vector2, parent_type: String) -> void:
+func _on_fragment_requested(origin: Vector2, parent_velocity: Vector2, parent_type: String, parent_is_echo: bool) -> void:
 	var piece_count := 4 if parent_type == "major" else 3
 	var spread := 0.34 if parent_type == "major" else 0.25
 	var burst_direction := parent_velocity.normalized()
@@ -530,7 +639,11 @@ func _on_fragment_requested(origin: Vector2, parent_velocity: Vector2, parent_ty
 		var centered := float(index) - float(piece_count - 1) * 0.5
 		var direction := burst_direction.rotated(centered * spread)
 		var speed := burst_speed * rng.randf_range(0.88, 1.18)
-		spawn_meteor("fragment_piece", origin + direction * 7.0, direction * speed, 3.2 if parent_type == "major" else 2.65)
+		spawn_meteor(
+			"fragment_piece", origin + direction * 7.0, direction * speed,
+			3.2 if parent_type == "major" else 2.65, Vector2.INF,
+			parent_is_echo
+		)
 
 
 func _active_count() -> int:

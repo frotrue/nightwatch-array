@@ -5,9 +5,9 @@ signal upgrade_purchased(definition)
 signal purchase_rejected(node_id, reason_key, value)
 
 const Balance = preload("res://scripts/game_balance.gd")
-# The 41-node topology has 40 pacing upgrades. Predictive Dish Control remains
+# The 52-node topology has 51 pacing upgrades. Predictive Dish Control remains
 # interaction-only, so excluding it normalizes the completed tree to 1.0.
-const PACING_NODE_COUNT := 40
+const PACING_NODE_COUNT := 51
 
 var observation_data: float = 0.0
 var success_count: int = 0
@@ -18,6 +18,7 @@ var automatic_successes: int = 0
 var total_data_earned: float = 0.0
 var best_multiplier: float = 1.0
 var manual_streak: int = 0
+var leonid_charge: int = 0
 
 var upgrade_level: int:
 	get:
@@ -34,6 +35,7 @@ func reset() -> void:
 	total_data_earned = 0.0
 	best_multiplier = 1.0
 	manual_streak = 0
+	leonid_charge = 0
 	state_changed.emit()
 
 
@@ -48,6 +50,7 @@ func get_save_data() -> Dictionary:
 		"total_data_earned": total_data_earned,
 		"best_multiplier": best_multiplier,
 		"manual_streak": manual_streak,
+		"leonid_charge": leonid_charge,
 	}
 
 
@@ -59,6 +62,7 @@ func load_save_data(data: Dictionary) -> void:
 	total_data_earned = maxf(0.0, float(data.get("total_data_earned", observation_data)))
 	best_multiplier = maxf(1.0, float(data.get("best_multiplier", 1.0)))
 	manual_streak = maxi(0, int(data.get("manual_streak", 0)))
+	leonid_charge = maxi(0, int(data.get("leonid_charge", 0)))
 	purchased_nodes.clear()
 	purchase_order.clear()
 	var saved_nodes = data.get("purchased_nodes", [])
@@ -77,6 +81,7 @@ func load_save_data(data: Dictionary) -> void:
 		var node_id := String(node_variant)
 		if node_id not in purchase_order:
 			purchase_order.append(node_id)
+	leonid_charge = mini(leonid_charge, get_leonid_trigger_count())
 	state_changed.emit()
 
 
@@ -199,7 +204,7 @@ func debug_purchase_node(node_id: String) -> bool:
 func debug_purchase_all() -> void:
 	# Discovery gates model earned observations. The all-research debug path is
 	# explicitly a completed-tree fixture, so make every discovery root visible.
-	success_count = maxi(success_count, Balance.ANDROMEDA_DISCOVERY_SUCCESSES)
+	success_count = maxi(success_count, Balance.LEO_DISCOVERY_SUCCESSES)
 	observation_data += 100000.0
 	var made_progress := true
 	while made_progress:
@@ -229,6 +234,68 @@ func get_spawn_interval_scale() -> float:
 	if has_upgrade("burst_windowing"):
 		scale *= 0.88
 	return scale
+
+
+func get_observation_echo_probability() -> float:
+	if has_upgrade("echo_correlation_20"):
+		return 0.20
+	if has_upgrade("echo_correlation_10"):
+		return 0.10
+	return 0.0
+
+
+func get_observation_echo_count() -> int:
+	if has_upgrade("triple_echo_array"):
+		return 3
+	if has_upgrade("dual_echo_channel"):
+		return 2
+	if has_upgrade("single_echo_channel"):
+		return 1
+	return 0
+
+
+func get_leonid_trigger_count() -> int:
+	if has_upgrade("leonid_storm"):
+		return 5
+	if has_upgrade("storm_front"):
+		return 6
+	if has_upgrade("rapid_reacquisition"):
+		return 7
+	if has_upgrade("dense_stream"):
+		return 8
+	if has_upgrade("compressed_cadence"):
+		return 9
+	if has_upgrade("leonid_radiant"):
+		return 10
+	return 0
+
+
+func get_leonid_storm_count() -> int:
+	if has_upgrade("leonid_storm"):
+		return 20
+	if has_upgrade("storm_front"):
+		return 16
+	if has_upgrade("dense_stream"):
+		return 12
+	if has_upgrade("leonid_radiant"):
+		return 8
+	return 0
+
+
+func record_leonid_manual_success() -> void:
+	var trigger_count := get_leonid_trigger_count()
+	if trigger_count <= 0:
+		return
+	leonid_charge = mini(trigger_count, leonid_charge + 1)
+
+
+func leonid_storm_ready() -> bool:
+	var trigger_count := get_leonid_trigger_count()
+	return trigger_count > 0 and leonid_charge >= trigger_count
+
+
+func consume_leonid_storm_charge() -> void:
+	leonid_charge = 0
 
 
 func get_observation_duration() -> float:

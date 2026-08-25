@@ -130,6 +130,8 @@ func _run() -> void:
 	var predictive_control_definition: Dictionary = balance.upgrade_definition("predictive_dish_control")
 	var multi_target_definition: Dictionary = balance.upgrade_definition("multi_target_analysis")
 	var observatory_definition: Dictionary = balance.upgrade_definition("observatory_network")
+	var triple_echo_definition: Dictionary = balance.upgrade_definition("triple_echo_array")
+	var leonid_storm_definition: Dictionary = balance.upgrade_definition("leonid_storm")
 	game.settings.set_language("ko", false)
 	await process_frame
 	_check(TranslationServer.get_locale().left(2) == "ko", "Korean locale activates through game settings")
@@ -137,6 +139,8 @@ func _run() -> void:
 	_check(game.upgrade_tree.title_label.text == "관측 데이터", "research chart refreshes with Korean text")
 	_check(game.upgrade_tree.installed_caption.text == "설치 완료", "research chart header names the completion count")
 	_check(TranslationServer.translate("STAR_TSIH") == "감마 카시오페이아", "research inspector uses the factual Tsih star name in Korean")
+	_check(TranslationServer.translate("CONSTELLATION_GEMINI") == "쌍둥이자리  /  공명", "the mapped Gemini figure exposes its Korean research role")
+	_check(TranslationServer.translate("CONSTELLATION_LEO") == "사자자리  /  유성 폭풍", "the mapped Leo figure exposes its Korean research role")
 	_check(TranslationServer.translate("HUD_AUTOSAVED") == "자동 저장됨", "Korean autosave status stays concise")
 	_check(TranslationServer.translate("HUD_OBSERVATION_TIME") % [1, 1, 0] == "1차 관측  •  01:00", "Korean round countdown reads naturally")
 	_check(TranslationServer.translate("TREE_INTERMISSION_SUBTITLE") % [2, 30] == "업그레이드 시간  /  2차 관측은 30초", "Korean upgrade-break guidance explains the next round and duration")
@@ -156,6 +160,16 @@ func _run() -> void:
 		game.upgrade_tree._upgrade_description(observatory_definition)
 		== "전체 관측망을 연결해 유성우 진입 구역을 예측하고 직접 조준하는 두 번째 접시를 추가하며 진행 중인 분석을 가속하는 지원 카메라 채널 두 개를 유지합니다.",
 		"Korean Observatory Network description names the second dish and two support lanes"
+	)
+	_check(
+		game.upgrade_tree._upgrade_description(triple_echo_definition)
+		== "쌍둥이자리 공명으로 진입하는 추가 유성을 2개에서 3개로 늘립니다.",
+		"Korean Triple Echo Array description names the three-meteor burst"
+	)
+	_check(
+		game.upgrade_tree._upgrade_description(leonid_storm_definition)
+		== "필요한 새로운 유성 수동 관측을 5회로 줄이고 7초 동안 진입하는 유성을 16개에서 20개로 늘립니다.",
+		"Korean Leonid Storm description names the five-observation twenty-meteor capstone"
 	)
 	_check(TranslationServer.translate("UPGRADE_ERROR_NEED_DATA") % 12 == "데이터가 12개 더 필요합니다", "Korean shortfall text is a complete sentence")
 	_check(TranslationServer.translate("TREE_NEED_MORE") % [8, 12] == "◇  데이터 8 / 12", "Korean tree affordability text shows current and required Data")
@@ -186,6 +200,16 @@ func _run() -> void:
 		game.upgrade_tree._upgrade_description(observatory_definition)
 		== "Links the whole array; previews shower entry sectors; adds a second steerable dish; and keeps two support camera lanes that accelerate active analysis.",
 		"English Observatory Network description names the second dish and two support lanes"
+	)
+	_check(
+		game.upgrade_tree._upgrade_description(triple_echo_definition)
+		== "Raises each Gemini echo burst from two additional meteors to three.",
+		"English Triple Echo Array description names the three-meteor burst"
+	)
+	_check(
+		game.upgrade_tree._upgrade_description(leonid_storm_definition)
+		== "Reduces the requirement to five fresh manual observations and raises each seven-second storm from 16 meteors to 20.",
+		"English Leonid Storm description names the five-observation twenty-meteor capstone"
 	)
 	_check(
 		String(secondary_camera_definition.description)
@@ -220,7 +244,7 @@ func _run() -> void:
 	_check(balance.FIRST_METEOR_DELAY <= 2.0, "the opening meteor arrives before the sky feels empty")
 	_check(balance.REGULAR_SPAWN_INTERVAL_MIN == 1.6 and balance.REGULAR_SPAWN_INTERVAL_MAX == 2.4, "regular spawn cadence keeps multiple choices in flight")
 	_check(game.progression.get_available_nodes().size() == 3, "only three opening choices are revealed")
-	_check(game.upgrade_tree.systems_readout != null, "the research chart owns the 0..41 completion readout")
+	_check(game.upgrade_tree.systems_readout != null, "the research chart owns the complete system-count readout")
 	_check(not game.hud.root_control.has_node("ArrayCompletionBar"), "the HUD no longer duplicates completion as a bar")
 	_check(not game.hud.tracking_cluster.is_processing(), "the hidden tracking instrument does no frame work before first use")
 	_check(game.progression.get_node_state("long_exposure") == "hidden", "adjacent optics node begins hidden")
@@ -228,9 +252,11 @@ func _run() -> void:
 	_check(is_equal_approx(game.progression.get_lifetime_multiplier(), 1.0), "Perseus exposure is inert before purchase")
 	_check(is_equal_approx(game.progression.get_analysis_speed_multiplier("comet"), 1.0), "Andromeda analysis speed is inert before its capstone")
 	_check(is_equal_approx(game.progression.get_observation_value_multiplier("fragment_piece", 4), 1.0), "new constellation rewards are inert before purchase")
+	_check(is_zero_approx(game.progression.get_observation_echo_probability()) and game.progression.get_observation_echo_count() == 0, "Gemini echoes are inert before purchase")
+	_check(game.progression.get_leonid_trigger_count() == 0 and game.progression.get_leonid_storm_count() == 0 and game.progression.leonid_charge == 0, "Leonid storms are inert before purchase")
 	var research_probe = load("res://scripts/progression_controller.gd").new()
 	var base_probe_scale: float = research_probe.get_spawn_interval_scale()
-	research_probe.success_count = balance.ANDROMEDA_DISCOVERY_SUCCESSES
+	research_probe.success_count = balance.LEO_DISCOVERY_SUCCESSES
 	_check(research_probe.debug_purchase_node("radiant_plotting"), "Perseus discovery root purchases at its observation gate")
 	_check(research_probe.get_spawn_interval_scale() < base_probe_scale, "Radiant Plotting compresses arrivals only after purchase")
 	_check(research_probe.debug_purchase_node("crowd_forecast") and research_probe.get_forecast_lead() > 2.0, "Crowd Forecast extends the warning window")
@@ -248,6 +274,73 @@ func _run() -> void:
 	_check(research_probe.debug_purchase_node("andromeda_deep_survey"), "Andromeda capstone follows the comet arm")
 	_check(research_probe.forecast_classifies("comet") and research_probe.get_forecast_max_error("comet") == 22.0, "Change Detection classifies and tightens deep-target forecasts")
 	_check(research_probe.get_analysis_speed_multiplier("comet") == 1.25 and research_probe.get_observation_value_multiplier("comet", 1) == 1.3, "Andromeda capstone improves long-target analysis without cross-round state")
+	_check(research_probe.debug_purchase_node("echo_correlation_10") and is_equal_approx(research_probe.get_observation_echo_probability(), 0.10), "Gemini correlation opens at a ten-percent manual trigger chance")
+	_check(research_probe.get_observation_echo_count() == 0, "Gemini probability research cannot launch meteors before an echo channel is online")
+	_check(research_probe.debug_purchase_node("single_echo_channel") and research_probe.get_observation_echo_count() == 1, "Gemini's second root opens one echo channel")
+	var echo_layer := Node2D.new()
+	var echo_spawner = load("res://scripts/meteor_spawner.gd").new()
+	root.add_child(echo_layer)
+	root.add_child(echo_spawner)
+	echo_spawner.setup(echo_layer, research_probe)
+	echo_spawner.running = true
+	echo_spawner.set_phase_time_remaining(10.0)
+	_check(echo_spawner.should_trigger_observation_echo(0.099) and not echo_spawner.should_trigger_observation_echo(0.10), "Gemini's first probability tier uses an exact ten-percent boundary")
+	_check(research_probe.debug_purchase_node("echo_correlation_20") and is_equal_approx(research_probe.get_observation_echo_probability(), 0.20), "Gemini correlation rises from ten to twenty percent")
+	_check(research_probe.debug_purchase_node("dual_echo_channel") and research_probe.get_observation_echo_count() == 2, "Gemini's second channel raises each burst to two meteors")
+	_check(research_probe.debug_purchase_node("triple_echo_array") and research_probe.get_observation_echo_count() == 3, "Gemini's final channel raises each burst to three meteors")
+	_check(echo_spawner.should_trigger_observation_echo(0.199) and not echo_spawner.should_trigger_observation_echo(0.20), "Gemini's final probability tier uses an exact twenty-percent boundary")
+	_check(echo_spawner.try_spawn_observation_echo(false, false) == 0, "automatic observations never trigger Gemini echoes")
+	_check(echo_spawner.try_spawn_observation_echo(true, true) == 0, "echo meteors cannot recursively trigger another Gemini burst")
+	var echo_spawned: int = echo_spawner._spawn_observation_echo_burst()
+	var every_echo_tagged := echo_spawned == 3
+	for echo_target in echo_layer.get_children():
+		every_echo_tagged = every_echo_tagged and bool(echo_target.get_meta("gemini_echo", false))
+	_check(every_echo_tagged, "the completed Gemini array launches and tags exactly three additional meteors")
+	var echo_children_before_split := echo_layer.get_child_count()
+	echo_spawner._on_fragment_requested(Vector2(480, 220), Vector2(80, 0), "fragment", true)
+	var echo_descendants_tagged := echo_layer.get_child_count() == echo_children_before_split + 3
+	for child_index in range(echo_children_before_split, echo_layer.get_child_count()):
+		echo_descendants_tagged = echo_descendants_tagged and bool(echo_layer.get_child(child_index).get_meta("gemini_echo", false))
+	_check(echo_descendants_tagged, "fragment pieces inherit the echo tag and cannot reopen the Gemini chain")
+	_check(research_probe.debug_purchase_node("leonid_radiant") and research_probe.get_leonid_trigger_count() == 10 and research_probe.get_leonid_storm_count() == 8, "Leo opens with a ten-observation eight-meteor storm")
+	_check(research_probe.debug_purchase_node("compressed_cadence") and research_probe.get_leonid_trigger_count() == 9 and research_probe.get_leonid_storm_count() == 8, "Leo's second node reduces the trigger to nine")
+	_check(research_probe.debug_purchase_node("dense_stream") and research_probe.get_leonid_trigger_count() == 8 and research_probe.get_leonid_storm_count() == 12, "Leo's third node reaches eight observations and twelve meteors")
+	_check(research_probe.debug_purchase_node("rapid_reacquisition") and research_probe.get_leonid_trigger_count() == 7 and research_probe.get_leonid_storm_count() == 12, "Leo's fourth node reduces the trigger to seven")
+	_check(research_probe.debug_purchase_node("storm_front") and research_probe.get_leonid_trigger_count() == 6 and research_probe.get_leonid_storm_count() == 16, "Leo's fifth node reaches six observations and sixteen meteors")
+	_check(research_probe.debug_purchase_node("leonid_storm") and research_probe.get_leonid_trigger_count() == 5 and research_probe.get_leonid_storm_count() == 20, "Leo's capstone reaches five observations and twenty meteors")
+	for _charge in range(4):
+		research_probe.record_leonid_manual_success()
+	_check(not research_probe.leonid_storm_ready() and research_probe.leonid_charge == 4, "four fresh manual observations do not trigger the completed Leo storm")
+	var leonid_save: Dictionary = research_probe.get_save_data()
+	research_probe.leonid_charge = 0
+	research_probe.load_save_data(leonid_save)
+	_check(research_probe.leonid_charge == 4, "Leonid charge survives save and load between observation rounds")
+	research_probe.record_leonid_manual_success()
+	_check(research_probe.leonid_storm_ready(), "the fifth fresh manual observation arms the completed Leo storm")
+	echo_spawner.set_phase_time_remaining(8.9)
+	_check(not echo_spawner.try_start_leonid_storm(), "Leonid storms defer when fewer than nine round seconds remain")
+	echo_spawner.set_phase_time_remaining(10.0)
+	var leonid_children_before := echo_layer.get_child_count()
+	_check(echo_spawner.try_start_leonid_storm(), "an armed Leonid storm starts with enough round time")
+	_check(not echo_spawner.try_start_leonid_storm(), "an active Leonid storm cannot start a second queue")
+	for _storm_step in range(200):
+		echo_spawner._update_leonid_storm(0.05)
+		if not echo_spawner.leonid_storm_active():
+			break
+	var leonid_children_after := echo_layer.get_child_count()
+	var every_leonid_tagged := leonid_children_after == leonid_children_before + 20
+	for child_index in range(leonid_children_before, leonid_children_after):
+		var leonid_target = echo_layer.get_child(child_index)
+		every_leonid_tagged = (
+			every_leonid_tagged
+			and bool(leonid_target.get_meta("leonid_storm", false))
+			and String(leonid_target.type_id) in ["common", "fast"]
+		)
+	_check(every_leonid_tagged and not echo_spawner.leonid_storm_active(), "the Leo capstone evenly delivers and tags exactly twenty bounded meteors")
+	research_probe.consume_leonid_storm_charge()
+	_check(not research_probe.leonid_storm_ready() and research_probe.leonid_charge == 0, "starting a Leonid storm consumes its manual-observation charge")
+	echo_spawner.free()
+	echo_layer.free()
 	for deep_type in ["satellite", "variable_star", "comet"]:
 		var deep_spec: Dictionary = balance.meteor_spec(deep_type)
 		_check(float(deep_spec.lifetime) >= 20.0 and float(deep_spec.lifetime) <= 40.0, "deep target stays within one round: " + deep_type)
@@ -312,6 +405,28 @@ func _run() -> void:
 		expected_chart_node_ids.append(String(definition.id))
 	var chart_validation_errors: Array[String] = chart_data.validation_errors(expected_chart_node_ids)
 	_check(chart_validation_errors.is_empty(), "research chart maps every upgrade exactly once with valid constellation segments")
+	var gemini_research_stars := 0
+	for gemini_star_variant in chart_data.CONSTELLATIONS.gemini.stars:
+		if not String(Dictionary(gemini_star_variant).get("node_id", "")).is_empty():
+			gemini_research_stars += 1
+	_check(gemini_research_stars == 5, "Gemini presents exactly five research stars while the rest remain background stars")
+	var leo_research_stars := 0
+	for leo_star_variant in chart_data.CONSTELLATIONS.leo.stars:
+		if not String(Dictionary(leo_star_variant).get("node_id", "")).is_empty():
+			leo_research_stars += 1
+	_check(leo_research_stars == 6, "Leo presents exactly six research stars while the rest remain background stars")
+	var deep_sky_marker_kinds := {}
+	for marker_constellation_id in ["orion", "taurus", "andromeda"]:
+		for marker_star_variant in chart_data.CONSTELLATIONS[marker_constellation_id].stars:
+			var marker_star: Dictionary = marker_star_variant
+			deep_sky_marker_kinds[String(marker_star.id)] = String(marker_star.kind)
+	_check(String(deep_sky_marker_kinds.trapezium) == "cluster", "the Trapezium uses a cluster marker instead of a research-state disc")
+	_check(String(deep_sky_marker_kinds.pleiades) == "cluster", "the Pleiades use an asymmetric point cluster instead of a node-like disc")
+	_check(String(deep_sky_marker_kinds.andromeda_galaxy) == "galaxy", "M31 uses an elongated galaxy marker instead of a node-like disc")
+	var leo_mid_visual = game.upgrade_tree.node_hold_bars["storm_front"]
+	var leo_endpoint_visual = game.upgrade_tree.node_hold_bars["leonid_storm"]
+	_check(not leo_mid_visual.branch_endpoint and leo_endpoint_visual.branch_endpoint, "research chart distinguishes a branch endpoint from its preceding installed star")
+	_check(is_equal_approx(leo_mid_visual.purchased_glow_scale(), 2.35) and is_equal_approx(leo_endpoint_visual.purchased_glow_scale(), 2.75), "installed-star glows shrink while branch endpoints retain modest emphasis")
 	var chart_node_stars: Dictionary = chart_data.node_star_map()
 	var adjacent_internal_edges := true
 	var all_prerequisites_internal := true
@@ -977,10 +1092,10 @@ func _run() -> void:
 	game.sky_contacts.reset()
 
 	game.progression.debug_purchase_all()
-	_check(game.progression.upgrade_level == 41, "all tree nodes unlock through prerequisite-safe debug purchase")
+	_check(game.progression.upgrade_level == balance.UPGRADE_NODES.size(), "all tree nodes unlock through prerequisite-safe debug purchase")
 	_check(game.progression.get_max_active() == 6, "research raises dense-sky capacity without removing the six-target performance cap")
-	_check(game.progression.upgrade_level == 41, "the run resolves to the full 41-system array completion")
-	_check(is_equal_approx(game.progression.get_progression_ratio(), 1.0), "41-node topology normalization preserves the completed-tree density endpoint")
+	_check(game.progression.upgrade_level == 52, "the run resolves to the full 52-system array completion")
+	_check(is_equal_approx(game.progression.get_progression_ratio(), 1.0), "52-node topology normalization preserves the completed-tree density endpoint")
 	for legacy_id in ["better_lens", "long_exposure", "wide_field", "trajectory", "precision_multiplier", "secondary_camera", "shower_detector", "automated_tracking"]:
 		_check(game.progression.has_upgrade(legacy_id), "legacy upgrade migrated: " + legacy_id)
 	_check(game.progression.has_upgrade("automated_tracking"), "final automation system is active")
@@ -1264,7 +1379,7 @@ func _run() -> void:
 			for index in range(total_meteor_cap + 6):
 				game.spawner.spawn_for_shower(index)
 			game.spawner.spawn_major_fireball()
-			game.spawner._on_fragment_requested(Vector2(480, 220), Vector2(80, 0), "major")
+			game.spawner._on_fragment_requested(Vector2(480, 220), Vector2(80, 0), "major", false)
 			_check(
 				game.meteor_layer.get_child_count() <= total_meteor_cap,
 				"shower, major, and fragment spawn paths respect the global meteor cap"

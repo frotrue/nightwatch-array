@@ -41,7 +41,7 @@ const CONSTELLATIONS := {
 			{"id": "alnitak", "name_key": "STAR_ALNITAK", "bayer": "ζ Ori", "magnitude": 1.77, "local_position": Vector2(-0.42, -0.02), "node_id": "secondary_camera", "kind": "star"},
 			{"id": "alnilam", "name_key": "STAR_ALNILAM", "bayer": "ε Ori", "magnitude": 1.69, "local_position": Vector2(0.00, 0.02), "node_id": "multi_target_analysis", "kind": "star"},
 			{"id": "mintaka", "name_key": "STAR_MINTAKA", "bayer": "δ Ori", "magnitude": 2.23, "local_position": Vector2(0.43, 0.05), "node_id": "extended_watch_protocol", "kind": "star"},
-			{"id": "trapezium", "name_key": "STAR_TRAPEZIUM", "bayer": "θ¹ Ori C", "magnitude": 5.13, "local_position": Vector2(0.02, 0.48), "node_id": "automated_tracking", "kind": "nebula"},
+			{"id": "trapezium", "name_key": "STAR_TRAPEZIUM", "bayer": "θ¹ Ori C", "magnitude": 5.13, "local_position": Vector2(0.02, 0.48), "node_id": "automated_tracking", "kind": "cluster"},
 			{"id": "hatysa", "name_key": "STAR_HATYSA", "bayer": "ι Ori", "magnitude": 2.75, "local_position": Vector2(0.03, 0.76), "node_id": "observatory_network", "kind": "star"},
 			{"id": "saiph", "name_key": "STAR_SAIPH", "bayer": "κ Ori", "magnitude": 2.06, "local_position": Vector2(-0.62, 1.02), "node_id": "predictive_dish_control", "kind": "star"},
 			{"id": "rigel", "name_key": "STAR_RIGEL", "bayer": "β Ori", "magnitude": 0.13, "local_position": Vector2(0.72, 1.06), "node_id": "continuous_watch_rotation", "kind": "star"}
@@ -62,7 +62,7 @@ const CONSTELLATIONS := {
 			{"id": "mirach", "name_key": "STAR_MIRACH", "bayer": "β And", "magnitude": 2.06, "local_position": Vector2(0.02, 0.14), "node_id": "change_detection", "kind": "star"},
 			{"id": "mu_and", "name_key": "STAR_MU_AND", "bayer": "μ And", "magnitude": 3.86, "local_position": Vector2(-0.14, -0.34), "node_id": "comet_solutions", "kind": "star"},
 			{"id": "nu_and", "name_key": "STAR_NU_AND", "bayer": "ν And", "magnitude": 4.53, "local_position": Vector2(-0.24, -0.62), "node_id": "andromeda_deep_survey", "kind": "star"},
-			{"id": "andromeda_galaxy", "name_key": "STAR_ANDROMEDA_GALAXY", "bayer": "M31", "magnitude": 3.44, "local_position": Vector2(-0.36, -0.94), "node_id": "", "kind": "nebula"},
+			{"id": "andromeda_galaxy", "name_key": "STAR_ANDROMEDA_GALAXY", "bayer": "M31", "magnitude": 3.44, "local_position": Vector2(-0.36, -0.94), "node_id": "", "kind": "galaxy"},
 			{"id": "almach", "name_key": "STAR_ALMACH", "bayer": "γ And", "magnitude": 2.10, "local_position": Vector2(0.62, -0.10), "node_id": "variable_watchlist", "kind": "star"}
 		],
 		"segments": [["alpheratz", "delta_and"], ["delta_and", "mirach"], ["mirach", "almach"], ["mirach", "mu_and"], ["mu_and", "nu_and"], ["nu_and", "andromeda_galaxy"]]
@@ -124,14 +124,15 @@ const CONSTELLATIONS := {
 		"segments": [["polaris", "yildun"], ["yildun", "epsilon_umi"], ["epsilon_umi", "zeta_umi"], ["zeta_umi", "eta_umi"], ["eta_umi", "kochab"], ["kochab", "pherkad"], ["pherkad", "zeta_umi"]]
 	},
 	"leo": {
+		"branch": "leo",
 		"label_key": "CONSTELLATION_LEO",
 		"stars": [
-			{"id": "regulus", "name_key": "STAR_REGULUS", "bayer": "α Leo", "magnitude": 1.40, "local_position": Vector2(-0.72, 0.52), "node_id": "", "kind": "star"},
-			{"id": "eta_leo", "name_key": "STAR_ETA_LEO", "bayer": "η Leo", "magnitude": 3.48, "local_position": Vector2(-0.76, 0.16), "node_id": "", "kind": "star"},
-			{"id": "algieba", "name_key": "STAR_ALGIEBA", "bayer": "γ Leo", "magnitude": 2.08, "local_position": Vector2(-0.70, -0.16), "node_id": "", "kind": "star"},
-			{"id": "zeta_leo", "name_key": "STAR_ZETA_LEO", "bayer": "ζ Leo", "magnitude": 3.44, "local_position": Vector2(-0.78, -0.46), "node_id": "", "kind": "star"},
-			{"id": "mu_leo", "name_key": "STAR_MU_LEO", "bayer": "μ Leo", "magnitude": 3.88, "local_position": Vector2(-0.96, -0.70), "node_id": "", "kind": "star"},
-			{"id": "epsilon_leo", "name_key": "STAR_EPSILON_LEO", "bayer": "ε Leo", "magnitude": 2.98, "local_position": Vector2(-1.00, -0.34), "node_id": "", "kind": "star"},
+			{"id": "regulus", "name_key": "STAR_REGULUS", "bayer": "α Leo", "magnitude": 1.40, "local_position": Vector2(-0.72, 0.52), "node_id": "leonid_radiant", "kind": "star"},
+			{"id": "eta_leo", "name_key": "STAR_ETA_LEO", "bayer": "η Leo", "magnitude": 3.48, "local_position": Vector2(-0.76, 0.16), "node_id": "compressed_cadence", "kind": "star"},
+			{"id": "algieba", "name_key": "STAR_ALGIEBA", "bayer": "γ Leo", "magnitude": 2.08, "local_position": Vector2(-0.70, -0.16), "node_id": "dense_stream", "kind": "star"},
+			{"id": "zeta_leo", "name_key": "STAR_ZETA_LEO", "bayer": "ζ Leo", "magnitude": 3.44, "local_position": Vector2(-0.78, -0.46), "node_id": "rapid_reacquisition", "kind": "star"},
+			{"id": "mu_leo", "name_key": "STAR_MU_LEO", "bayer": "μ Leo", "magnitude": 3.88, "local_position": Vector2(-0.96, -0.70), "node_id": "storm_front", "kind": "star"},
+			{"id": "epsilon_leo", "name_key": "STAR_EPSILON_LEO", "bayer": "ε Leo", "magnitude": 2.98, "local_position": Vector2(-1.00, -0.34), "node_id": "leonid_storm", "kind": "star"},
 			{"id": "chertan", "name_key": "STAR_CHERTAN", "bayer": "θ Leo", "magnitude": 3.32, "local_position": Vector2(0.26, 0.44), "node_id": "", "kind": "star"},
 			{"id": "zosma", "name_key": "STAR_ZOSMA", "bayer": "δ Leo", "magnitude": 2.56, "local_position": Vector2(0.32, -0.06), "node_id": "", "kind": "star"},
 			{"id": "denebola", "name_key": "STAR_DENEBOLA", "bayer": "β Leo", "magnitude": 2.14, "local_position": Vector2(0.96, 0.10), "node_id": "", "kind": "star"}
@@ -139,14 +140,15 @@ const CONSTELLATIONS := {
 		"segments": [["regulus", "eta_leo"], ["eta_leo", "algieba"], ["algieba", "zeta_leo"], ["zeta_leo", "mu_leo"], ["mu_leo", "epsilon_leo"], ["regulus", "chertan"], ["chertan", "zosma"], ["zosma", "denebola"], ["denebola", "chertan"], ["algieba", "zosma"]]
 	},
 	"gemini": {
+		"branch": "gemini",
 		"label_key": "CONSTELLATION_GEMINI",
 		"stars": [
-			{"id": "castor", "name_key": "STAR_CASTOR", "bayer": "α Gem", "magnitude": 1.58, "local_position": Vector2(-0.52, -0.94), "node_id": "", "kind": "star"},
-			{"id": "pollux", "name_key": "STAR_POLLUX", "bayer": "β Gem", "magnitude": 1.14, "local_position": Vector2(0.22, -0.86), "node_id": "", "kind": "star"},
-			{"id": "tau_gem", "name_key": "STAR_TAU_GEM", "bayer": "τ Gem", "magnitude": 4.41, "local_position": Vector2(-0.40, -0.52), "node_id": "", "kind": "star"},
+			{"id": "castor", "name_key": "STAR_CASTOR", "bayer": "α Gem", "magnitude": 1.58, "local_position": Vector2(-0.52, -0.94), "node_id": "echo_correlation_10", "kind": "star"},
+			{"id": "pollux", "name_key": "STAR_POLLUX", "bayer": "β Gem", "magnitude": 1.14, "local_position": Vector2(0.22, -0.86), "node_id": "single_echo_channel", "kind": "star"},
+			{"id": "tau_gem", "name_key": "STAR_TAU_GEM", "bayer": "τ Gem", "magnitude": 4.41, "local_position": Vector2(-0.40, -0.52), "node_id": "echo_correlation_20", "kind": "star"},
 			{"id": "mebsuta", "name_key": "STAR_MEBSUTA", "bayer": "ε Gem", "magnitude": 2.98, "local_position": Vector2(-0.56, -0.06), "node_id": "", "kind": "star"},
-			{"id": "upsilon_gem", "name_key": "STAR_UPSILON_GEM", "bayer": "υ Gem", "magnitude": 4.06, "local_position": Vector2(0.14, -0.34), "node_id": "", "kind": "star"},
-			{"id": "wasat", "name_key": "STAR_WASAT", "bayer": "δ Gem", "magnitude": 3.53, "local_position": Vector2(0.10, 0.22), "node_id": "", "kind": "star"},
+			{"id": "upsilon_gem", "name_key": "STAR_UPSILON_GEM", "bayer": "υ Gem", "magnitude": 4.06, "local_position": Vector2(0.14, -0.34), "node_id": "dual_echo_channel", "kind": "star"},
+			{"id": "wasat", "name_key": "STAR_WASAT", "bayer": "δ Gem", "magnitude": 3.53, "local_position": Vector2(0.10, 0.22), "node_id": "triple_echo_array", "kind": "star"},
 			{"id": "tejat", "name_key": "STAR_TEJAT", "bayer": "μ Gem", "magnitude": 2.87, "local_position": Vector2(-0.86, 0.30), "node_id": "", "kind": "star"},
 			{"id": "propus", "name_key": "STAR_PROPUS", "bayer": "η Gem", "magnitude": 3.28, "local_position": Vector2(-0.90, 0.56), "node_id": "", "kind": "star"},
 			{"id": "alhena", "name_key": "STAR_ALHENA", "bayer": "γ Gem", "magnitude": 1.93, "local_position": Vector2(-0.10, 0.86), "node_id": "", "kind": "star"},
@@ -157,7 +159,7 @@ const CONSTELLATIONS := {
 	"taurus": {
 		"label_key": "CONSTELLATION_TAURUS",
 		"stars": [
-			{"id": "pleiades", "name_key": "STAR_PLEIADES", "bayer": "M45", "magnitude": 1.60, "local_position": Vector2(-1.00, -0.52), "node_id": "", "kind": "nebula"},
+			{"id": "pleiades", "name_key": "STAR_PLEIADES", "bayer": "M45", "magnitude": 1.60, "local_position": Vector2(-1.00, -0.52), "node_id": "", "kind": "cluster"},
 			{"id": "epsilon_tau", "name_key": "STAR_EPSILON_TAU", "bayer": "ε Tau", "magnitude": 3.53, "local_position": Vector2(-0.30, -0.30), "node_id": "", "kind": "star"},
 			{"id": "delta_tau", "name_key": "STAR_DELTA_TAU", "bayer": "δ Tau", "magnitude": 3.76, "local_position": Vector2(-0.38, -0.02), "node_id": "", "kind": "star"},
 			{"id": "hyadum", "name_key": "STAR_HYADUM", "bayer": "γ Tau", "magnitude": 3.65, "local_position": Vector2(-0.44, 0.24), "node_id": "", "kind": "star"},

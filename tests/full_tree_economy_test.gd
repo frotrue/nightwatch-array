@@ -53,7 +53,7 @@ func _run() -> void:
 		push_error("FULL_TREE_ECONOMY_FAIL: at least one deterministic 18-minute run could not purchase all research")
 		quit(1)
 		return
-	print("FULL_TREE_ECONOMY_PASS: all 41 research systems are purchasable before the 18-minute final event")
+	print("FULL_TREE_ECONOMY_PASS: all %d research systems are purchasable before the 18-minute final event" % Balance.UPGRADE_NODES.size())
 	quit(0)
 
 
@@ -73,8 +73,11 @@ func _run_seed(seed: int) -> Dictionary:
 	checkpoint_successes.clear()
 	discovery_times = {
 		"radiant_plotting": -1.0,
+		"echo_correlation_10": -1.0,
+		"single_echo_channel": -1.0,
 		"filter_wheel": -1.0,
 		"ephemeris_marks": -1.0,
+		"leonid_radiant": -1.0,
 	}
 	seen_available_nodes.clear()
 	last_arrival_time = 0.0
@@ -130,6 +133,7 @@ func _prepare(seed: int) -> void:
 	game.spawner.forecast_rng.seed = seed + 1000
 	game.spawner.warm_contact_rng.seed = seed + 2000
 	game.events.rng.seed = seed + 3000
+	game.spawner.echo_rng.seed = seed + 4000
 	game.spawner.next_contact_id = 1
 	var game_spawn_handler := Callable(game, "_on_meteor_spawned")
 	if game.spawner.meteor_spawned.is_connected(game_spawn_handler):
@@ -150,6 +154,8 @@ func _run_round(duration: float) -> void:
 	game.spawner.set_phase_time_remaining(duration)
 	game.spawner.start_spawning()
 	game.events.start()
+	if game.progression.leonid_storm_ready() and game.spawner.try_start_leonid_storm():
+		game.progression.consume_leonid_storm_charge()
 	var round_elapsed := 0.0
 	while round_elapsed < duration:
 		var delta := minf(STEP, duration - round_elapsed)
@@ -211,6 +217,19 @@ func _on_target_observed(target, reward: float, multiplier: float, was_manual: b
 		was_manual,
 		multiplier * research_multiplier
 	)
+	var is_proc_target := (
+		bool(target.get_meta("gemini_echo", false))
+		or bool(target.get_meta("leonid_storm", false))
+	)
+	if was_manual and not is_proc_target and not target.is_major():
+		game.progression.record_leonid_manual_success()
+		if game.progression.leonid_storm_ready() and game.spawner.try_start_leonid_storm():
+			game.progression.consume_leonid_storm_charge()
+	if not target.is_major():
+		game.spawner.try_spawn_observation_echo(
+			was_manual,
+			is_proc_target
+		)
 
 
 func _purchase_affordable_research() -> void:

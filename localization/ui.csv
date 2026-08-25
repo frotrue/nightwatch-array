@@ -173,8 +173,8 @@ CONSTELLATION_PERSEUS,PERSEUS,페르세우스자리
 CONSTELLATION_LYRA,LYRA,거문고자리
 CONSTELLATION_DRACO,DRACO,용자리
 CONSTELLATION_URSA_MINOR,URSA MINOR,작은곰자리
-CONSTELLATION_LEO,LEO,사자자리
-CONSTELLATION_GEMINI,GEMINI,쌍둥이자리
+CONSTELLATION_LEO,LEO  /  METEOR STORM,사자자리  /  유성 폭풍
+CONSTELLATION_GEMINI,GEMINI  /  ECHO,쌍둥이자리  /  공명
 CONSTELLATION_TAURUS,TAURUS,황소자리
 CONSTELLATION_CANIS_MAJOR,CANIS MAJOR,큰개자리
 STAR_ALPHERATZ,Alpheratz,알페라츠
@@ -336,6 +336,28 @@ UPGRADE_COMET_SOLUTIONS_NAME,Comet Solutions,혜성 궤도 해
 UPGRADE_COMET_SOLUTIONS_DESC,Adds long-arc comets that remain in the current observation round for a complete solution.,현재 관측 회차 동안 긴 호를 그리는 혜성을 추가해 완전한 궤도 해를 구합니다.
 UPGRADE_ANDROMEDA_DEEP_SURVEY_NAME,Andromeda Deep Survey,안드로메다 심우주 조사
 UPGRADE_ANDROMEDA_DEEP_SURVEY_DESC,Completes the deep survey and increases the value and analysis speed of long-lived targets.,심우주 조사를 완성해 장시간 표적의 가치와 분석 속도를 높입니다.
+UPGRADE_ECHO_CORRELATION_10_NAME,Echo Correlation I,공명 상관 분석 I
+UPGRADE_ECHO_CORRELATION_10_DESC,Sets a 10% manual-observation chance to open a Gemini echo once an echo channel is online.,공명 채널이 가동 중일 때 수동 관측 성공으로 쌍둥이자리 공명을 열 확률을 10%로 설정합니다.
+UPGRADE_ECHO_CORRELATION_20_NAME,Echo Correlation II,공명 상관 분석 II
+UPGRADE_ECHO_CORRELATION_20_DESC,Raises the manual-observation echo chance from 10% to 20%.,수동 관측 성공으로 공명을 열 확률을 10%에서 20%로 높입니다.
+UPGRADE_SINGLE_ECHO_CHANNEL_NAME,Single Echo Channel,단일 공명 채널
+UPGRADE_SINGLE_ECHO_CHANNEL_DESC,Opens one echo channel that launches one additional meteor when Echo Correlation reacts.,공명 상관 분석이 반응하면 추가 유성 1개를 진입시키는 공명 채널을 엽니다.
+UPGRADE_DUAL_ECHO_CHANNEL_NAME,Dual Echo Channels,이중 공명 채널
+UPGRADE_DUAL_ECHO_CHANNEL_DESC,Raises each Gemini echo burst from one additional meteor to two.,쌍둥이자리 공명으로 진입하는 추가 유성을 1개에서 2개로 늘립니다.
+UPGRADE_TRIPLE_ECHO_ARRAY_NAME,Triple Echo Array,삼중 공명 배열
+UPGRADE_TRIPLE_ECHO_ARRAY_DESC,Raises each Gemini echo burst from two additional meteors to three.,쌍둥이자리 공명으로 진입하는 추가 유성을 2개에서 3개로 늘립니다.
+UPGRADE_LEONID_RADIANT_NAME,Leonid Radiant,사자자리 유성군 복사점
+UPGRADE_LEONID_RADIANT_DESC,After 10 fresh manual observations a seven-second Leonid storm delivers eight meteors.,새로운 유성 수동 관측을 10회 성공하면 7초 동안 사자자리 유성 폭풍이 일어나 유성 8개가 진입합니다.
+UPGRADE_COMPRESSED_CADENCE_NAME,Compressed Cadence,압축 관측 주기
+UPGRADE_COMPRESSED_CADENCE_DESC,Reduces the Leonid storm requirement from 10 fresh manual observations to nine.,사자자리 유성 폭풍에 필요한 새로운 유성 수동 관측을 10회에서 9회로 줄입니다.
+UPGRADE_DENSE_STREAM_NAME,Dense Stream,고밀도 유성류
+UPGRADE_DENSE_STREAM_DESC,Reduces the requirement to eight fresh manual observations and raises each storm from 8 meteors to 12.,필요한 새로운 유성 수동 관측을 8회로 줄이고 폭풍마다 진입하는 유성을 8개에서 12개로 늘립니다.
+UPGRADE_RAPID_REACQUISITION_NAME,Rapid Reacquisition,신속 재포착
+UPGRADE_RAPID_REACQUISITION_DESC,Reduces the Leonid storm requirement from eight fresh manual observations to seven.,사자자리 유성 폭풍에 필요한 새로운 유성 수동 관측을 8회에서 7회로 줄입니다.
+UPGRADE_STORM_FRONT_NAME,Storm Front,폭풍 전선
+UPGRADE_STORM_FRONT_DESC,Reduces the requirement to six fresh manual observations and raises each storm from 12 meteors to 16.,필요한 새로운 유성 수동 관측을 6회로 줄이고 폭풍마다 진입하는 유성을 12개에서 16개로 늘립니다.
+UPGRADE_LEONID_STORM_NAME,Leonid Storm,사자자리 유성 폭풍
+UPGRADE_LEONID_STORM_DESC,Reduces the requirement to five fresh manual observations and raises each seven-second storm from 16 meteors to 20.,필요한 새로운 유성 수동 관측을 5회로 줄이고 7초 동안 진입하는 유성을 16개에서 20개로 늘립니다.
 CONTACT_UNCLASSIFIED,UNCLASSIFIED,미분류 신호
 METEOR_COMMON,COMMON METEOR,일반 유성
 METEOR_FAST,FAST METEOR,고속 유성
@@ -353,6 +375,8 @@ QUALITY_GOOD,GOOD,양호
 BANNER_RESET,ARRAY RESET  •  CLEAR SKIES,관측망 초기화  •  맑은 하늘
 BANNER_DEBUG_DATA,DEBUG  +100 DATA,디버그  데이터 +100
 BANNER_QUALITY,%s OBSERVATION  •  x%.2f,%s 관측  •  x%.2f
+BANNER_GEMINI_ECHO,GEMINI ECHO  •  +%d METEORS,쌍둥이자리 공명  •  유성 +%d
+BANNER_LEONID_STORM,LEONID STORM  •  %d METEORS,사자자리 유성 폭풍  •  유성 %d개
 BANNER_SYSTEM_ONLINE,SYSTEM ONLINE  •  %s,시스템 가동  •  %s
 BANNER_SECONDARY_ALERT,SECONDARY CAMERA ALERT,보조 카메라 경보
 BANNER_UNUSUAL_SIGNATURE,UNUSUAL SIGNATURE,이상 신호
@@ -374,6 +398,7 @@ HUD_PHASE_CLOCK,%02d:%02d,%02d:%02d
 QUALITY_PARTIAL,PARTIAL,부분
 TREE_INSTALLED_CAPTION,INSTALLED,설치 완료
 TREE_NEXT_OBSERVATION,OBSERVATION %d · %dS,%d차 관측 · %d초
+TREE_SUBTITLE,RESEARCH CHART,연구 성도
 TREE_NORTH,NORTH,정북
 TREE_CONTROLS_FULL,WHEEL ROTATE · CTRL+WHEEL ZOOM · HOLD A STAR TO INSTALL,휠 회전 · CTRL+휠 확대 · 별을 길게 눌러 설치
 TREE_TIP_STAR,STAR,별

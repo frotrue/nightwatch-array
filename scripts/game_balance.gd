@@ -12,16 +12,20 @@ const MAX_ACTIVE_METEORS := 6
 const REGULAR_SPAWN_INTERVAL_MIN := 1.6
 const REGULAR_SPAWN_INTERVAL_MAX := 2.4
 const PERSEUS_DISCOVERY_SUCCESSES := 200
+const GEMINI_DISCOVERY_SUCCESSES := 400
 const LYRA_DISCOVERY_SUCCESSES := 600
 const ANDROMEDA_DISCOVERY_SUCCESSES := 980
+const LEO_DISCOVERY_SUCCESSES := 1200
 
 const BRANCHES := {
 	"optics": {"name": "OPTICS / MANUAL", "color": Color("53d6ff")},
 	"detection": {"name": "DETECTION / DISCOVERY", "color": Color("b379ff")},
 	"network": {"name": "OBSERVATION NETWORK", "color": Color("52e0b1")},
 	"perseus": {"name": "PERSEUS / DENSITY", "color": Color("ffb56b")},
+	"gemini": {"name": "GEMINI / ECHO", "color": Color("ffd27d")},
 	"lyra": {"name": "LYRA / SPECTRUM", "color": Color("69a9ff")},
-	"andromeda": {"name": "ANDROMEDA / DEEP SURVEY", "color": Color("ff78c8")}
+	"andromeda": {"name": "ANDROMEDA / DEEP SURVEY", "color": Color("ff78c8")},
+	"leo": {"name": "LEO / METEOR STORM", "color": Color("ff9a66")}
 }
 
 # Existing upgrade ids are preserved so every gameplay consumer migrates without
@@ -312,6 +316,83 @@ const UPGRADE_NODES: Array[Dictionary] = [
 		"description": "Completes the deep survey and increases the value and analysis speed of long-lived targets.",
 		"branch": "andromeda", "prerequisites": ["comet_solutions"],
 		"hidden_until": ["comet_solutions"], "effect_type": "transformation", "effect_parameters": {"deep_speed": 1.25, "deep_value": 1.3},
+		"major": true
+	},
+	{
+		"id": "echo_correlation_10", "name": "Echo Correlation I", "icon": "10%", "cost": 60,
+		"description": "Sets a 10% manual-observation chance to open a Gemini echo once an echo channel is online.",
+		"branch": "gemini", "prerequisites": [],
+		"hidden_until": [{"type": "success_count", "minimum": GEMINI_DISCOVERY_SUCCESSES}], "effect_type": "transformation", "effect_parameters": {"echo_probability": 0.10},
+		"major": false
+	},
+	{
+		"id": "echo_correlation_20", "name": "Echo Correlation II", "icon": "20%", "cost": 230,
+		"description": "Raises the manual-observation echo chance from 10% to 20%.",
+		"branch": "gemini", "prerequisites": ["echo_correlation_10"],
+		"hidden_until": ["echo_correlation_10"], "effect_type": "transformation", "effect_parameters": {"echo_probability": 0.20},
+		"major": true
+	},
+	{
+		"id": "single_echo_channel", "name": "Single Echo Channel", "icon": "+1", "cost": 70,
+		"description": "Opens one echo channel that launches one additional meteor when Echo Correlation reacts.",
+		"branch": "gemini", "prerequisites": [],
+		"hidden_until": [{"type": "success_count", "minimum": GEMINI_DISCOVERY_SUCCESSES}], "effect_type": "unlock", "effect_parameters": {"echo_count": 1},
+		"major": false
+	},
+	{
+		"id": "dual_echo_channel", "name": "Dual Echo Channels", "icon": "+2", "cost": 170,
+		"description": "Raises each Gemini echo burst from one additional meteor to two.",
+		"branch": "gemini", "prerequisites": ["single_echo_channel"],
+		"hidden_until": ["single_echo_channel"], "effect_type": "transformation", "effect_parameters": {"echo_count": 2},
+		"major": false
+	},
+	{
+		"id": "triple_echo_array", "name": "Triple Echo Array", "icon": "+3", "cost": 360,
+		"description": "Raises each Gemini echo burst from two additional meteors to three.",
+		"branch": "gemini", "prerequisites": ["dual_echo_channel"],
+		"hidden_until": ["dual_echo_channel"], "effect_type": "transformation", "effect_parameters": {"echo_count": 3},
+		"major": true
+	},
+	{
+		"id": "leonid_radiant", "name": "Leonid Radiant", "icon": "10", "cost": 90,
+		"description": "After 10 fresh manual observations a seven-second Leonid storm delivers eight meteors.",
+		"branch": "leo", "prerequisites": [],
+		"hidden_until": [{"type": "success_count", "minimum": LEO_DISCOVERY_SUCCESSES}], "effect_type": "unlock", "effect_parameters": {"manual_trigger": 10, "storm_count": 8},
+		"major": true
+	},
+	{
+		"id": "compressed_cadence", "name": "Compressed Cadence", "icon": "9", "cost": 150,
+		"description": "Reduces the Leonid storm requirement from 10 fresh manual observations to nine.",
+		"branch": "leo", "prerequisites": ["leonid_radiant"],
+		"hidden_until": ["leonid_radiant"], "effect_type": "transformation", "effect_parameters": {"manual_trigger": 9, "storm_count": 8},
+		"major": false
+	},
+	{
+		"id": "dense_stream", "name": "Dense Stream", "icon": "8", "cost": 240,
+		"description": "Reduces the requirement to eight fresh manual observations and raises each storm from 8 meteors to 12.",
+		"branch": "leo", "prerequisites": ["compressed_cadence"],
+		"hidden_until": ["compressed_cadence"], "effect_type": "transformation", "effect_parameters": {"manual_trigger": 8, "storm_count": 12},
+		"major": true
+	},
+	{
+		"id": "rapid_reacquisition", "name": "Rapid Reacquisition", "icon": "7", "cost": 350,
+		"description": "Reduces the Leonid storm requirement from eight fresh manual observations to seven.",
+		"branch": "leo", "prerequisites": ["dense_stream"],
+		"hidden_until": ["dense_stream"], "effect_type": "transformation", "effect_parameters": {"manual_trigger": 7, "storm_count": 12},
+		"major": false
+	},
+	{
+		"id": "storm_front", "name": "Storm Front", "icon": "6", "cost": 480,
+		"description": "Reduces the requirement to six fresh manual observations and raises each storm from 12 meteors to 16.",
+		"branch": "leo", "prerequisites": ["rapid_reacquisition"],
+		"hidden_until": ["rapid_reacquisition"], "effect_type": "transformation", "effect_parameters": {"manual_trigger": 6, "storm_count": 16},
+		"major": true
+	},
+	{
+		"id": "leonid_storm", "name": "Leonid Storm", "icon": "5", "cost": 650,
+		"description": "Reduces the requirement to five fresh manual observations and raises each seven-second storm from 16 meteors to 20.",
+		"branch": "leo", "prerequisites": ["storm_front"],
+		"hidden_until": ["storm_front"], "effect_type": "transformation", "effect_parameters": {"manual_trigger": 5, "storm_count": 20},
 		"major": true
 	}
 ]

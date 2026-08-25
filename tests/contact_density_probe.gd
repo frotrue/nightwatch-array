@@ -26,7 +26,7 @@ const ROWS := [
 		"modes": [MODE_NO_INPUT, MODE_BASELINE_ENGAGED],
 	},
 	{
-		# The completed 41-node tree has 40 pacing upgrades; Predictive Dish
+		# The completed 52-node tree has 51 pacing upgrades; Predictive Dish
 		# Control is the sole interaction-only exclusion from density.
 		"name": "duration-ladder-end",
 		"upgrades": [
@@ -44,6 +44,10 @@ const ROWS := [
 			"blue_band", "amber_band", "violet_band", "lyrid_spectrograph",
 			"ephemeris_marks", "satellite_catalog", "change_detection",
 			"variable_watchlist", "comet_solutions", "andromeda_deep_survey",
+			"echo_correlation_10", "echo_correlation_20",
+			"single_echo_channel", "dual_echo_channel", "triple_echo_array",
+			"leonid_radiant", "compressed_cadence", "dense_stream",
+			"rapid_reacquisition", "storm_front", "leonid_storm",
 		],
 		"modes": [MODE_NO_INPUT, MODE_SCRIPTED_ENGAGED],
 	},
@@ -316,9 +320,12 @@ func _prepare_row(row: Dictionary, mode: String) -> void:
 	game.spawner.rng.seed = spawn_seed
 	game.spawner.forecast_rng.seed = spawn_seed + 1
 	game.spawner.warm_contact_rng.seed = spawn_seed + 2
+	game.spawner.echo_rng.seed = spawn_seed + 3
 	game.spawner.next_contact_id = 1
 	game.spawner.set_phase_time_remaining(PROBE_DURATION)
 	game.spawner.start_spawning()
+	if game.progression.leonid_storm_ready() and game.spawner.try_start_leonid_storm():
+		game.progression.consume_leonid_storm_charge()
 
 
 func _on_contact_announced(contact: Dictionary) -> void:
@@ -418,6 +425,19 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 	if opportunistic_acquired_ids.has(meteor_id):
 		opportunistic_completed_ids[meteor_id] = type_id
 	data_earned += game.progression.add_observation(reward, was_manual, multiplier)
+	var is_proc_meteor := (
+		bool(meteor.get_meta("gemini_echo", false))
+		or bool(meteor.get_meta("leonid_storm", false))
+	)
+	if was_manual and not is_proc_meteor and not meteor.is_major():
+		game.progression.record_leonid_manual_success()
+		if game.progression.leonid_storm_ready() and game.spawner.try_start_leonid_storm():
+			game.progression.consume_leonid_storm_charge()
+	if not meteor.is_major():
+		game.spawner.try_spawn_observation_echo(
+			was_manual,
+			is_proc_meteor
+		)
 
 
 func _is_fast_capacity_mode() -> bool:
