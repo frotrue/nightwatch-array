@@ -16,47 +16,12 @@ const UITheme = preload("res://scripts/ui_theme.gd")
 class TrackingCluster:
 	extends Control
 
+	# Text only. The gauge ring moved onto the software cursor, which is drawn at
+	# the observation radius and already sat at this same point — two rings a few
+	# pixels apart, both centred on the cursor, showing the same number.
+	# ring_radius is kept because the text block is placed clear of it.
 	var cursor := Vector2.ZERO
-	var progress: float = 0.0
 	var ring_radius: float = 50.0
-	var arc_width: float = 2.0
-	var diffusion: float = 0.0
-
-
-	func _process(delta: float) -> void:
-		diffusion = fmod(diffusion + delta / 1.5, 1.0)
-		queue_redraw()
-
-
-	func _draw() -> void:
-		if not visible:
-			return
-		draw_arc(cursor, ring_radius, 0.0, TAU, 96, Color(UITheme.INSTRUMENT_RING, 0.28), 1.0, true)
-		# The expanding ring is the only motion on this screen that is not a meteor,
-		# so it reads as "the instrument is live" without competing for attention.
-		var eased := 1.0 - pow(1.0 - diffusion, 3.0)
-		draw_arc(
-			cursor,
-			ring_radius * lerpf(1.0, 1.5, eased),
-			0.0,
-			TAU,
-			96,
-			Color(UITheme.INSTRUMENT_ARC, 0.30 * (1.0 - eased)),
-			1.0,
-			true
-		)
-		if progress > 0.0:
-			draw_arc(
-				cursor,
-				ring_radius,
-				-PI * 0.5,
-				-PI * 0.5 + TAU * progress,
-				64,
-				UITheme.INSTRUMENT_ARC,
-				arc_width,
-				true
-			)
-		draw_circle(cursor, UITheme.px(1.5), UITheme.INSTRUMENT_ARC)
 
 
 
@@ -311,15 +276,18 @@ func set_tracking(
 	target_type: String,
 	multiplier: float,
 	target_count: int = 1,
-	cursor_position: Vector2 = Vector2.ZERO
+	cursor_position: Vector2 = Vector2.ZERO,
+	ring_radius: float = -1.0
 ) -> void:
 	if not tracking_cluster.visible:
 		tracking_cluster.visible = true
-		tracking_cluster.set_process(true)
 	var cursor_changed := not tracking_cluster.cursor.is_equal_approx(cursor_position)
 	tracking_cluster.cursor = cursor_position
-	tracking_cluster.progress = clampf(progress, 0.0, 1.0)
-	tracking_cluster.queue_redraw()
+	# The ring now belongs to the software cursor and grows with Better Lens, so
+	# the text block clears whatever radius the cursor is currently drawing.
+	if ring_radius >= 0.0 and not is_equal_approx(tracking_cluster.ring_radius, ring_radius):
+		tracking_cluster.ring_radius = ring_radius
+		cursor_changed = true
 	var progress_percent := int(progress * 100.0)
 	var multiplier_hundredths := int(round(multiplier * 100.0))
 	if progress_percent != last_tracking_progress_percent:
@@ -366,7 +334,6 @@ func _tracking_quality_key(progress: float) -> String:
 func hide_tracking() -> void:
 	if tracking_cluster != null and tracking_cluster.visible:
 		tracking_cluster.visible = false
-		tracking_cluster.set_process(false)
 		_invalidate_tracking_cache()
 
 
@@ -1241,10 +1208,8 @@ func _build_tracking_cluster() -> void:
 	tracking_cluster.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	tracking_cluster.process_mode = Node.PROCESS_MODE_PAUSABLE
 	tracking_cluster.ring_radius = UITheme.px(84.0)
-	tracking_cluster.arc_width = UITheme.px(3.4)
 	tracking_cluster.visible = false
 	root_control.add_child(tracking_cluster)
-	tracking_cluster.set_process(false)
 
 	tracking_percent = _spec_label("0%", UITheme.mono_tabular(), 26.0, UITheme.INSTRUMENT_ARC)
 	tracking_percent.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -1269,9 +1234,8 @@ func _layout_tracking_cluster() -> void:
 	tracking_layout_passes += 1
 	var cursor := tracking_cluster.cursor
 	var width := UITheme.px(420.0)
-	# The text block clears the 84px stroke so glyphs never sit on the meteor the
-	# player is currently tracking.
-	var percent_top := cursor.y + UITheme.px(102.0)
+	# Clear of the cursor ring so glyphs never sit on the meteor being tracked.
+	var percent_top := cursor.y + tracking_cluster.ring_radius + UITheme.px(18.0)
 	if tracking_metrics_dirty:
 		tracking_percent.size.x = width
 		tracking_target.size.x = width
