@@ -1,5 +1,7 @@
 extends Node2D
 
+const UITheme = preload("res://scripts/ui_theme.gd")
+
 signal packet_landed(amount: float)
 
 const MAX_PARTICLES := 220
@@ -160,7 +162,8 @@ func add_kick(from_point: Vector2, amount: float) -> void:
 
 
 func spawn_upgrade_pulse() -> void:
-	flash_color = Color("79d9ff")
+	# A system coming online is an instrument event, not a meteor.
+	flash_color = UITheme.ACCENT_PIP
 	flash_strength = maxf(flash_strength, 0.07)
 	add_shake(0.18)
 	set_process(true)
@@ -195,7 +198,7 @@ func spawn_forecast(entry_points: Array) -> void:
 			"p": point,
 			"dir": (center - point).normalized(),
 			"life": 3.0,
-			"color": Color("c3a9ff"),
+			"color": UITheme.ACCENT_TEXT,
 			"forecast": true
 		})
 	set_process(true)

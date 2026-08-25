@@ -1,5 +1,6 @@
 extends Node2D
 
+const UITheme = preload("res://scripts/ui_theme.gd")
 const Balance = preload("res://scripts/game_balance.gd")
 const SoundSynth = preload("res://scripts/sound_synth.gd")
 const AUTOSAVE_INTERVAL_SECONDS := 60.0
@@ -161,7 +162,7 @@ func reset_run() -> void:
 	_close_upgrade_tree_without_transition()
 	get_tree().paused = false
 	observer.reset()
-	sky_contacts.reset(true)
+	sky_contacts.reset()
 	effects.reset()
 	events.reset()
 	spawner.reset()
@@ -171,7 +172,7 @@ func reset_run() -> void:
 	hud.reset_tutorial()
 	start_run()
 	_autosave_active_slot()
-	hud.show_banner(tr("BANNER_RESET"), Color("9bcde5"), 2.0)
+	hud.show_banner(tr("BANNER_RESET"), UITheme.BANNER_SUB, 2.0)
 
 
 func _process(delta: float) -> void:
@@ -361,7 +362,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	match event.keycode:
 		KEY_D:
 			progression.add_debug_data(100.0)
-			hud.show_banner(tr("BANNER_DEBUG_DATA"), Color("d8c6ff"), 1.2)
+			hud.show_banner(tr("BANNER_DEBUG_DATA"), UITheme.INK_MID, 1.2)
 		KEY_N:
 			var available: Array[String] = progression.get_available_nodes()
 			if not available.is_empty():
@@ -389,7 +390,11 @@ func _on_meteor_spawned(meteor) -> void:
 	meteor.observed.connect(_on_meteor_observed)
 	meteor.expired.connect(_on_meteor_expired)
 	if progression.has_upgrade("wide_field"):
-		effects.spawn_incoming(meteor.global_position, meteor.velocity, meteor.get_visual_color())
+		# The edge marker is an instrument annotation, not the object, so it takes
+		# red light. The meteor keeps its own colour: the sky is what is being
+		# observed and the instrument is what does the observing.
+		var marker_ink: Color = UITheme.INK_MAX if meteor.type_id in ["fireball", "major"] else UITheme.ACCENT_PIP
+		effects.spawn_incoming(meteor.global_position, meteor.velocity, marker_ink)
 
 
 func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: bool, quality_grade: String) -> void:
@@ -498,7 +503,7 @@ func _on_upgrade_purchased(definition: Dictionary) -> void:
 		upgrade_tree.set_intermission_context(observation_round + 1, int(_observation_duration()))
 	effects.spawn_upgrade_pulse()
 	sound.play_upgrade()
-	hud.show_banner(tr("BANNER_SYSTEM_ONLINE") % _upgrade_name(definition), Color("80e6d2"), 2.4)
+	hud.show_banner(tr("BANNER_SYSTEM_ONLINE") % _upgrade_name(definition), UITheme.BANNER_TITLE, 2.4)
 	starfield.set_activity(progression.get_progression_ratio() * 0.16)
 	_autosave_active_slot()
 
@@ -507,7 +512,7 @@ func _on_rare_spawned(type_id: String) -> void:
 	if type_id == "major":
 		return
 	var prefix_key := "BANNER_SECONDARY_ALERT" if progression.has_upgrade("rare_detection") and progression.has_upgrade("secondary_camera") else "BANNER_UNUSUAL_SIGNATURE"
-	hud.show_banner("%s  •  %s" % [tr(prefix_key), tr("METEOR_%s" % type_id.to_upper())], Color("ffc58c"), 2.0)
+	hud.show_banner("%s  •  %s" % [tr(prefix_key), tr("METEOR_%s" % type_id.to_upper())], UITheme.ACCENT_TEXT, 2.0)
 	sound.play_warning()
 
 
@@ -573,23 +578,23 @@ func _on_save_slot_requested(slot: int) -> void:
 		active_save_slot = slot
 		autosave_elapsed = 0.0
 		hud.set_active_save_slot(slot)
-		hud.show_save_feedback(tr("SAVE_SUCCESS") % slot, Color("7ee9dc"))
+		hud.show_save_feedback(tr("SAVE_SUCCESS") % slot, UITheme.BANNER_TITLE)
 		sound.play_upgrade()
 	else:
-		hud.show_save_feedback(tr("SAVE_FAILURE") % slot, Color("ff9a86"))
+		hud.show_save_feedback(tr("SAVE_FAILURE") % slot, UITheme.ALERT)
 
 
 func _on_load_slot_requested(slot: int) -> void:
 	var data: Dictionary = save_games.load_slot(slot)
 	if data.is_empty():
-		hud.show_save_feedback(tr("LOAD_FAILURE") % slot, Color("ff9a86"))
+		hud.show_save_feedback(tr("LOAD_FAILURE") % slot, UITheme.ALERT)
 		return
 	active_save_slot = slot
 	autosave_elapsed = 0.0
 	hud.set_active_save_slot(slot)
 	_apply_save_data(data)
 	hud.close_settings()
-	hud.show_banner(tr("BANNER_SLOT_LOADED") % slot, Color("80e6d2"), 2.2)
+	hud.show_banner(tr("BANNER_SLOT_LOADED") % slot, UITheme.BANNER_TITLE, 2.2)
 	sound.play_upgrade()
 
 
@@ -614,7 +619,7 @@ func _on_startup_slot_selected(slot: int) -> void:
 		_autosave_active_slot()
 	hud.close_startup_slots()
 	if exists:
-		hud.show_banner(tr("BANNER_SLOT_LOADED") % slot, Color("80e6d2"), 2.2)
+		hud.show_banner(tr("BANNER_SLOT_LOADED") % slot, UITheme.BANNER_TITLE, 2.2)
 	_start_tutorial_after_slot_if_needed()
 
 
@@ -631,16 +636,16 @@ func _on_reset_slot_requested(slot: int) -> void:
 	var was_active: bool = slot == active_save_slot
 	var error: Error = save_games.reset_slot(slot)
 	if error != OK:
-		hud.show_slot_reset_feedback(tr("SAVE_RESET_FAILURE") % slot, Color("ff9a86"))
+		hud.show_slot_reset_feedback(tr("SAVE_RESET_FAILURE") % slot, UITheme.ALERT)
 		return
 	if reset_from_startup:
 		if was_active:
 			active_save_slot = 0
 			hud.set_active_save_slot(0)
-		hud.show_slot_reset_feedback(tr("SAVE_RESET_SUCCESS") % slot, Color("7ee9dc"))
+		hud.show_slot_reset_feedback(tr("SAVE_RESET_SUCCESS") % slot, UITheme.BANNER_TITLE)
 		return
 	if not was_active:
-		hud.show_slot_reset_feedback(tr("SAVE_RESET_SUCCESS") % slot, Color("7ee9dc"))
+		hud.show_slot_reset_feedback(tr("SAVE_RESET_SUCCESS") % slot, UITheme.BANNER_TITLE)
 		return
 	hud.close_settings()
 	get_tree().paused = false
@@ -653,7 +658,7 @@ func _start_fresh_slot() -> void:
 	completed = false
 	_close_upgrade_tree_without_transition()
 	observer.reset()
-	sky_contacts.reset(true)
+	sky_contacts.reset()
 	effects.reset()
 	events.reset()
 	spawner.reset()
@@ -676,7 +681,7 @@ func _autosave_active_slot() -> bool:
 	if error == OK:
 		hud.show_autosaved(active_save_slot)
 		return true
-	hud.show_banner(tr("AUTOSAVE_FAILURE") % active_save_slot, Color("ff9a86"), 2.0)
+	hud.show_banner(tr("AUTOSAVE_FAILURE") % active_save_slot, UITheme.ALERT, 2.0)
 	return false
 
 
@@ -708,7 +713,7 @@ func _build_save_data() -> Dictionary:
 func _apply_save_data(data: Dictionary) -> void:
 	_close_upgrade_tree_without_transition()
 	observer.reset()
-	sky_contacts.reset(true)
+	sky_contacts.reset()
 	effects.reset()
 	events.reset()
 	spawner.reset()

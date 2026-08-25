@@ -417,6 +417,7 @@ func _refresh_in_round_readouts() -> void:
 	var covered := is_phase_summary_open()
 	covered = covered or (end_overlay != null and end_overlay.visible)
 	covered = covered or (settings_overlay != null and settings_overlay.visible)
+	covered = covered or (startup_overlay != null and startup_overlay.visible)
 	if covered:
 		_stash_in_round_readouts()
 	else:
@@ -566,11 +567,12 @@ func open_startup_slots() -> void:
 		return
 	startup_overlay.visible = true
 	startup_overlay.move_to_front()
+	_refresh_in_round_readouts()
 	paused_by_startup = not get_tree().paused
 	get_tree().paused = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	startup_hint.text = tr("STARTUP_SAVE_HINT")
-	startup_hint.add_theme_color_override("font_color", Color("8ba7b9"))
+	startup_hint.add_theme_color_override("font_color", UITheme.HINT)
 	_refresh_startup_slots()
 
 
@@ -578,6 +580,7 @@ func close_startup_slots() -> void:
 	if startup_overlay == null or not startup_overlay.visible:
 		return
 	startup_overlay.visible = false
+	_refresh_in_round_readouts()
 	if reset_dialog != null and reset_dialog.visible:
 		reset_dialog.hide()
 		pending_reset_slot = 0
@@ -611,7 +614,7 @@ func _refresh_save_mode_label(just_saved: bool) -> void:
 	if not save_mode_label.visible:
 		return
 	save_mode_label.text = tr("HUD_AUTOSAVED")
-	save_mode_label.add_theme_color_override("font_color", Color("8fffe5"))
+	save_mode_label.add_theme_color_override("font_color", UITheme.GAIN)
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
@@ -720,7 +723,7 @@ func _show_data_gain(amount: float) -> void:
 	data_gain_label.text = tr("HUD_DATA_GAIN") % int(round(amount))
 	data_gain_label.modulate = Color.WHITE
 	data_gain_label.visible = true
-	data_label.modulate = Color("8fffe5")
+	data_label.modulate = UITheme.GAIN
 	data_gain_tween = create_tween()
 	data_gain_tween.set_parallel(true)
 	data_gain_tween.tween_property(data_label, "modulate", Color.WHITE, 0.48)
@@ -1127,7 +1130,7 @@ func _build_phase_clock() -> void:
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root_control.add_child(column)
 
-	phase_round_label = _spec_label("", UITheme.mono(), 12.0, Color("937260"), 0.30)
+	phase_round_label = _spec_label("", UITheme.mono(), 12.0, UITheme.INK_MID, 0.30)
 	phase_round_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(phase_round_label)
 
@@ -1222,7 +1225,7 @@ func _build_tracking_cluster() -> void:
 	tracking_quality = _spec_label("", UITheme.mono(), 13.0, UITheme.INSTRUMENT_QUALITY, 0.12)
 	tracking_cluster.add_child(tracking_quality)
 	tracking_divider = ColorRect.new()
-	tracking_divider.color = Color("7D6A5E")
+	tracking_divider.color = UITheme.TOOLTIP_LABEL
 	tracking_divider.size = Vector2(1.0, UITheme.px(11.0))
 	tracking_divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	tracking_cluster.add_child(tracking_divider)
@@ -1276,89 +1279,100 @@ func _build_startup_slots_ui() -> void:
 	startup_overlay.visible = false
 	root_control.add_child(startup_overlay)
 	var dim := ColorRect.new()
-	dim.color = Color(0.002, 0.007, 0.02, 0.94)
+	dim.color = Color(UITheme.SCRIM, 0.96)
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	startup_overlay.add_child(dim)
-	var panel := PanelContainer.new()
-	panel.set_anchors_preset(Control.PRESET_CENTER)
-	panel.offset_left = -335.0
-	panel.offset_top = -235.0
-	panel.offset_right = 335.0
-	panel.offset_bottom = 235.0
-	panel.add_theme_stylebox_override("panel", _panel_style(Color("071426"), Color("4c8aa8"), 14))
-	startup_overlay.add_child(panel)
-	var margin := MarginContainer.new()
-	for side in ["margin_left", "margin_top", "margin_right", "margin_bottom"]:
-		margin.add_theme_constant_override(side, 24)
-	panel.add_child(margin)
+	var frame := Control.new()
+	frame.name = "StartupColumn"
+	frame.set_anchors_preset(Control.PRESET_CENTER)
+	frame.offset_left = -UITheme.px(560.0)
+	frame.offset_right = UITheme.px(560.0)
+	frame.offset_top = -UITheme.px(390.0)
+	frame.offset_bottom = UITheme.px(390.0)
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	startup_overlay.add_child(frame)
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 10)
-	margin.add_child(column)
-	startup_title = _make_label(tr("STARTUP_SAVE_TITLE"), 28, Color("e8f6ff"))
+	column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.add_theme_constant_override("separation", int(UITheme.px(12.0)))
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame.add_child(column)
+	startup_title = _spec_label(tr("STARTUP_SAVE_TITLE"), UITheme.sans("medium"), 40.0, UITheme.INK_MAX, -0.01)
 	startup_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	startup_subtitle = _make_label(tr("STARTUP_SAVE_SUBTITLE"), 11, Color("6f9ab2"))
-	startup_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(startup_title)
+	startup_subtitle = _spec_label(tr("STARTUP_SAVE_SUBTITLE"), UITheme.mono(), 13.0, UITheme.INK_MID, 0.30)
+	startup_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(startup_subtitle)
-	var divider := HSeparator.new()
-	column.add_child(divider)
+	column.add_child(_hairline(1120.0))
 	for slot in range(1, 4):
 		_build_startup_slot_row(column, slot)
-	startup_hint = _make_label(tr("STARTUP_SAVE_HINT"), 12, Color("8ba7b9"))
+	startup_hint = _spec_label(tr("STARTUP_SAVE_HINT"), UITheme.sans("light"), 14.0, UITheme.HINT)
 	startup_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	startup_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(startup_hint)
 
 
 func _build_startup_slot_row(parent: VBoxContainer, slot: int) -> void:
-	var row_panel := PanelContainer.new()
-	row_panel.custom_minimum_size = Vector2(0, 84)
-	row_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.025, 0.065, 0.11, 0.9), Color(0.20, 0.43, 0.58, 0.66), 9))
-	parent.add_child(row_panel)
-	var row_margin := MarginContainer.new()
-	row_margin.add_theme_constant_override("margin_left", 16)
-	row_margin.add_theme_constant_override("margin_right", 12)
-	row_margin.add_theme_constant_override("margin_top", 10)
-	row_margin.add_theme_constant_override("margin_bottom", 10)
-	row_panel.add_child(row_margin)
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 12)
-	row_margin.add_child(row)
+	row.add_theme_constant_override("separation", int(UITheme.px(24.0)))
+	parent.add_child(row)
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	info.add_theme_constant_override("separation", 3)
+	info.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	info.add_theme_constant_override("separation", int(UITheme.px(4.0)))
 	row.add_child(info)
-	var title := _make_label(tr("SAVE_SLOT_TITLE") % slot, 17, Color("e8f6ff"))
-	var details := _make_label(tr("SAVE_SLOT_EMPTY"), 11, Color("829caf"))
+	var title := _spec_label(tr("SAVE_SLOT_TITLE") % slot, UITheme.sans(), 20.0, UITheme.INK_HIGH)
+	var details := _spec_label(tr("SAVE_SLOT_EMPTY"), UITheme.mono(), 13.0, UITheme.INK_LOW, 0.06)
 	details.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	info.add_child(title)
 	info.add_child(details)
 	var select_button := Button.new()
 	select_button.text = tr("STARTUP_NEW_GAME")
-	select_button.custom_minimum_size = Vector2(168, 52)
-	select_button.add_theme_font_size_override("font_size", 13)
-	select_button.add_theme_color_override("font_color", Color("d9f7ff"))
-	select_button.add_theme_stylebox_override("normal", _panel_style(Color("12405c"), Color("387794"), 7))
-	select_button.add_theme_stylebox_override("hover", _panel_style(Color("185b79"), Color("68b4d2"), 7))
-	select_button.add_theme_stylebox_override("pressed", _panel_style(Color("0d3047"), Color("78d9ef"), 7))
+	_style_text_action(select_button, 18.0, UITheme.BANNER_TITLE)
 	select_button.pressed.connect(_on_startup_slot_pressed.bind(slot))
 	row.add_child(select_button)
 	var reset_button := Button.new()
 	reset_button.text = tr("SAVE_RESET_ACTION")
-	reset_button.custom_minimum_size = Vector2(82, 52)
-	reset_button.add_theme_font_size_override("font_size", 12)
-	reset_button.add_theme_color_override("font_color", Color("ffc0b8"))
-	reset_button.add_theme_stylebox_override("normal", _panel_style(Color("321b25"), Color("88404a"), 7))
-	reset_button.add_theme_stylebox_override("hover", _panel_style(Color("4a222b"), Color("d66d72"), 7))
-	reset_button.add_theme_stylebox_override("pressed", _panel_style(Color("25151d"), Color("ef8d8a"), 7))
+	_style_text_action(reset_button, 16.0, UITheme.ALERT)
 	reset_button.pressed.connect(_on_reset_slot_pressed.bind(slot))
 	reset_button.visible = false
 	row.add_child(reset_button)
+	parent.add_child(_hairline(1120.0))
 	startup_slot_titles.append(title)
 	startup_slot_details.append(details)
 	startup_slot_buttons.append(select_button)
 	startup_reset_buttons.append(reset_button)
+
+
+func _style_confirm_dialog(dialog: ConfirmationDialog) -> void:
+	# These were the last two surfaces still wearing Godot's default theme, so a
+	# save prompt looked like an OS window dropped onto the observatory.
+	dialog.transient = false
+	dialog.exclusive = false
+	var panel := StyleBoxFlat.new()
+	panel.bg_color = Color(UITheme.SCRIM, 0.98)
+	panel.border_width_top = 1
+	panel.border_width_bottom = 1
+	panel.border_width_left = 1
+	panel.border_width_right = 1
+	panel.border_color = UITheme.ACCENT_DEEP
+	for side in ["content_margin_left", "content_margin_right"]:
+		panel.set(side, UITheme.px(34.0))
+	panel.content_margin_top = UITheme.px(26.0)
+	panel.content_margin_bottom = UITheme.px(22.0)
+	dialog.add_theme_stylebox_override("panel", panel)
+	dialog.add_theme_font_override("font", UITheme.sans())
+	dialog.add_theme_font_size_override("font_size", UITheme.size_px(19.0))
+	dialog.add_theme_color_override("font_color", UITheme.INK_HIGH)
+	var label := dialog.get_label()
+	if label != null:
+		label.add_theme_font_override("font", UITheme.sans())
+		label.add_theme_font_size_override("font_size", UITheme.size_px(19.0))
+		label.add_theme_color_override("font_color", UITheme.INK_HIGH)
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_style_text_action(dialog.get_ok_button(), 18.0, UITheme.ALERT)
+	_style_text_action(dialog.get_cancel_button(), 18.0, UITheme.INK_MID)
 
 
 func _build_reset_dialog() -> void:
@@ -1369,6 +1383,7 @@ func _build_reset_dialog() -> void:
 	reset_dialog.confirmed.connect(_on_reset_confirmed)
 	reset_dialog.canceled.connect(_on_reset_canceled)
 	root_control.add_child(reset_dialog)
+	_style_confirm_dialog(reset_dialog)
 
 
 func _build_debug_panel() -> void:
@@ -1386,7 +1401,7 @@ func _build_debug_panel() -> void:
 	debug_label = _make_label(
 		"\n\n".join([tr("HUD_DEBUG_TITLE"), "\n".join([tr("HUD_DEBUG_DATA"), tr("HUD_DEBUG_NEXT"), tr("HUD_DEBUG_ALL"), tr("HUD_DEBUG_METEOR"), tr("HUD_DEBUG_RARE"), tr("HUD_DEBUG_SHOWER"), tr("HUD_DEBUG_FINAL"), tr("HUD_DEBUG_RESET")])]),
 		13,
-		Color("d8c6ff")
+		UITheme.INK_MID
 	)
 	debug_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 12)
 	debug_panel.add_child(debug_label)
@@ -1661,6 +1676,7 @@ func _build_settings_ui() -> void:
 	overwrite_dialog.cancel_button_text = tr("SAVE_CANCEL")
 	overwrite_dialog.confirmed.connect(_on_overwrite_confirmed)
 	settings_overlay.add_child(overwrite_dialog)
+	_style_confirm_dialog(overwrite_dialog)
 
 
 func _build_save_slot_row(parent: VBoxContainer, slot: int) -> void:

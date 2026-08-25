@@ -1,5 +1,7 @@
 extends Node
 
+const UITheme = preload("res://scripts/ui_theme.gd")
+
 signal banner_requested(text, color)
 signal sky_activity_changed(value)
 signal forecast_requested(entry_points)
@@ -96,7 +98,7 @@ func trigger_shower() -> bool:
 	spawner.pause_regular_spawns = true
 	next_shower_time = -1.0
 	shower_started.emit()
-	banner_requested.emit("EVENT_SHOWER_INCOMING", Color("b9a7ff"))
+	banner_requested.emit("EVENT_SHOWER_INCOMING", UITheme.ACCENT_TEXT)
 	if progression.has_upgrade("observatory_network"):
 		var size := get_viewport().get_visible_rect().size
 		forecast_requested.emit([
@@ -125,7 +127,7 @@ func trigger_final() -> void:
 	shower_state = "idle"
 	next_shower_time = -1.0
 	spawner.pause_regular_spawns = true
-	banner_requested.emit("EVENT_ATMOSPHERIC_BLOOM", Color("ff9a66"))
+	banner_requested.emit("EVENT_ATMOSPHERIC_BLOOM", UITheme.ACCENT_PIP)
 	sky_activity_changed.emit(1.0)
 
 
@@ -144,7 +146,7 @@ func _update_shower(delta: float) -> void:
 				shower_state = "active"
 				shower_timer = Balance.SHOWER_DURATION
 				shower_spawn_timer = 0.0
-				banner_requested.emit("EVENT_SHOWER", Color("d8ccff"))
+				banner_requested.emit("EVENT_SHOWER", UITheme.BANNER_TITLE)
 				sky_activity_changed.emit(1.0)
 		"active":
 			shower_timer -= delta
@@ -158,7 +160,7 @@ func _update_shower(delta: float) -> void:
 				spawner.pause_regular_spawns = false
 				next_shower_time = run_time + rng.randf_range(40.0, 58.0)
 				sky_activity_changed.emit(0.16)
-				banner_requested.emit("EVENT_SHOWER_PASSED", Color("7ee9dc"))
+				banner_requested.emit("EVENT_SHOWER_PASSED", UITheme.BANNER_SUB)
 
 
 func _update_final(delta: float) -> void:
@@ -167,5 +169,5 @@ func _update_final(delta: float) -> void:
 	final_timer -= delta
 	if final_timer <= 0.0:
 		final_state = "active"
-		banner_requested.emit("EVENT_MAJOR_FIREBALL", Color("ffcb82"))
+		banner_requested.emit("EVENT_MAJOR_FIREBALL", UITheme.INK_MAX)
 		spawner.spawn_major_fireball()

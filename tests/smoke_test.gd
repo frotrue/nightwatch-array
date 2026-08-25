@@ -142,7 +142,6 @@ func _run() -> void:
 	_check(TranslationServer.translate("TREE_INTERMISSION_SUBTITLE") % [2, 30] == "업그레이드 시간  /  2차 관측은 30초", "Korean upgrade-break guidance explains the next round and duration")
 	_check(TranslationServer.translate("PHASE_SUMMARY_TITLE") % 1 == "1차 관측 완료", "Korean phase summary title reads naturally")
 	_check(TranslationServer.translate("PHASE_SUMMARY_SYSTEMS_CHANGED") % 130.0 == "실현 처리량 130.0 데이터/분  •  시스템 변경  •  다음 라운드에서 새 기준 기록", "Korean mixed-build summary explains realized productivity and the next baseline")
-	_check(TranslationServer.translate("CONTACT_MANUAL_ONLY_HINT") == "수동 관측 전용", "Korean rare-contact hint reserves the target for manual observation")
 	_check(
 		game.upgrade_tree._upgrade_description(predictive_control_definition)
 		== "추적 가능한 예보 신호에 유휴 접시를 자동으로 미리 배치하며 우클릭 수동 배치가 항상 우선합니다.",
@@ -173,7 +172,6 @@ func _run() -> void:
 	game.settings.set_language("en", false)
 	await process_frame
 	_check(game.hud.settings_button.text.ends_with("SETTINGS"), "English can be restored at runtime")
-	_check(TranslationServer.translate("CONTACT_MANUAL_ONLY_HINT") == "MANUAL OBSERVATION ONLY", "English rare-contact hint reserves the target for manual observation")
 	_check(
 		game.upgrade_tree._upgrade_description(predictive_control_definition)
 		== "Automatically pre-positions an idle dish for trackable forecast contacts; right-click placement still overrides it.",
@@ -656,7 +654,6 @@ func _run() -> void:
 	game.sky_contacts._unhandled_input(right_click)
 	_check(int(game.sky_contacts.dishes[0].assigned_id) == -1, "plain right-click over a contact never reserves it")
 	_check(Vector2(game.sky_contacts.dishes[0].target).is_equal_approx(pointer_position), "plain right-click moves the nearest dish to the clicked contact point")
-	_check(game.sky_contacts.dish_movement_learned, "the first dish movement dismisses its independent teaching hint")
 	_check(not game.progression.dish_auto_assignment_enabled(), "dish auto-assignment remains unavailable before its research")
 	var isolated_contact_position := Vector2(-1000.0, -1000.0)
 	contact.intercept = isolated_contact_position

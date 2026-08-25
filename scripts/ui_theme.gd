@@ -30,6 +30,18 @@ const BANNER_SUB := Color("A57C67")
 const BANNER_RULE := Color("A15D3E")
 const HINT := Color("A18E81")
 
+# The palette's one attention ink. A red-light layer cannot say "bad" with a red
+# colour, so failures and destructive actions take the hottest, most saturated
+# warm in the set instead. GAIN is reserved for data arriving and must stay a
+# separate value or the two meanings collapse.
+const ALERT := Color("FF7043")
+
+# Warm near-blacks. Anything backing red-light ink is warm-biased: a cold
+# shadow under warm strokes reads as a different rendering pass.
+const SHADOW := Color(0.03, 0.012, 0.008, 0.94)
+const GROUND := Color("090604")
+const SCRIM := Color(0.016, 0.008, 0.006, 0.9)
+
 # Instrument white. Only the live tracking gauge leaves the red-light palette,
 # which is what tells the player where their hand currently is.
 const INSTRUMENT_ARC := Color("F8F5EE")
