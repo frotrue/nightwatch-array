@@ -245,7 +245,7 @@ func _run() -> void:
 	_check(game.progression.get_max_active() == 4, "the opening sky supports four concurrent targets so attention starts scarce")
 	_check(balance.FIRST_METEOR_DELAY <= 2.0, "the opening meteor arrives before the sky feels empty")
 	_check(balance.REGULAR_SPAWN_INTERVAL_MIN == 1.6 and balance.REGULAR_SPAWN_INTERVAL_MAX == 2.4, "regular spawn cadence keeps multiple choices in flight")
-	_check(game.progression.get_available_nodes().size() == 3, "only three opening choices are revealed")
+	_check(game.progression.get_available_nodes().size() == 11, "all eleven prerequisite-free research roots are available from the opening sky")
 	_check(game.upgrade_tree.systems_readout != null, "the research chart owns the complete system-count readout")
 	_check(not game.hud.root_control.has_node("ArrayCompletionBar"), "the HUD no longer duplicates completion as a bar")
 	_check(not game.hud.tracking_cluster.is_processing(), "the hidden tracking instrument does no frame work before first use")
@@ -259,8 +259,7 @@ func _run() -> void:
 	_check(is_equal_approx(game.progression.get_manual_analysis_speed_multiplier(), 1.0) and is_zero_approx(game.progression.get_taurus_tracking_radius_bonus()), "Taurus Momentum is inert before its discovery root")
 	var research_probe = load("res://scripts/progression_controller.gd").new()
 	var base_probe_scale: float = research_probe.get_spawn_interval_scale()
-	research_probe.success_count = balance.LEO_DISCOVERY_SUCCESSES
-	_check(research_probe.debug_purchase_node("momentum_acquisition"), "Taurus Momentum opens at its independent observation gate")
+	_check(research_probe.debug_purchase_node("momentum_acquisition"), "Taurus Momentum is available from the opening sky")
 	for _combo_step in range(4):
 		research_probe.add_observation(1.0, true, 1.0)
 	_check(research_probe.manual_combo_count == 4 and research_probe.get_taurus_combo_cap() == 4 and is_equal_approx(research_probe.get_manual_combo_window(), 3.0), "Taurus opens with a three-second four-stack combo")
@@ -281,7 +280,7 @@ func _run() -> void:
 	_check(combo_save_probe.has_upgrade("taurus_full_gallop") and combo_save_probe.manual_combo_count == 0, "Taurus research persists while live Momentum never crosses a save or round boundary")
 	combo_save_probe.free()
 	research_probe.reset_manual_combo()
-	_check(research_probe.debug_purchase_node("radiant_plotting"), "Perseus discovery root purchases at its observation gate")
+	_check(research_probe.debug_purchase_node("radiant_plotting"), "Perseus discovery root purchases without a hidden observation gate")
 	_check(research_probe.get_spawn_interval_scale() < base_probe_scale, "Radiant Plotting compresses arrivals only after purchase")
 	_check(research_probe.debug_purchase_node("crowd_forecast") and research_probe.get_forecast_lead() > 2.0, "Crowd Forecast extends the warning window")
 	_check(research_probe.debug_purchase_node("burst_windowing"), "Perseus density chain advances through Burst Windowing")
@@ -297,14 +296,13 @@ func _run() -> void:
 	_check(research_probe.debug_purchase_node("comet_solutions"), "Comet Solutions opens its long-arc target family")
 	_check(research_probe.debug_purchase_node("andromeda_deep_survey"), "Andromeda capstone follows the comet arm")
 	_check(research_probe.forecast_classifies("comet") and research_probe.get_forecast_max_error("comet") == 22.0, "Change Detection classifies and tightens deep-target forecasts")
-	_check(research_probe.get_analysis_speed_multiplier("comet") == 1.25 and research_probe.get_observation_value_multiplier("comet", 1) == 1.3, "Andromeda capstone improves long-target analysis without cross-round state")
-	research_probe.success_count = balance.GALAXY_IMAGING_SUCCESSES
-	_check(research_probe.debug_purchase_node("perseid_outburst"), "Perseid Outburst arrives after the completed Perseus survey and its late success gate")
-	_check(research_probe.debug_purchase_node("filter_wheel"), "Lyra classifier opens before the late double-star side branch")
-	_check(research_probe.debug_purchase_node("double_star_resolution"), "Double-Star Resolution follows Vega and its late success gate")
-	_check(research_probe.debug_purchase_node("galaxy_imaging"), "Galaxy Imaging follows the completed Andromeda survey and its late success gate")
+	_check(research_probe.get_analysis_speed_multiplier("comet") == 1.25 and is_equal_approx(research_probe.get_observation_value_multiplier("comet", 1), 2.6), "Andromeda's conditional value bonus stacks over Taurus's global x2 growth")
+	_check(research_probe.debug_purchase_node("perseid_outburst"), "Perseid Outburst arrives after the completed Perseus survey")
+	_check(research_probe.debug_purchase_node("filter_wheel"), "Lyra classifier opens before the double-star side branch")
+	_check(research_probe.debug_purchase_node("double_star_resolution"), "Double-Star Resolution follows Vega without a hidden success gate")
+	_check(research_probe.debug_purchase_node("galaxy_imaging"), "Galaxy Imaging follows the completed Andromeda survey")
 	_check(research_probe.forecast_classifies("binary_star") and research_probe.get_forecast_max_error("binary_star") == 22.0, "Double-Star Resolution classifies and tightens binary-star forecasts")
-	_check(research_probe.get_analysis_speed_multiplier("galaxy") == 1.25 and research_probe.get_observation_value_multiplier("galaxy", 1) == 1.3, "Galaxy fields inherit the completed Andromeda survey analysis")
+	_check(research_probe.get_analysis_speed_multiplier("galaxy") == 1.25 and is_equal_approx(research_probe.get_observation_value_multiplier("galaxy", 1), 20.8), "Galaxy fields combine the four purchased global x2 leaves with Andromeda's conditional value bonus")
 	_check(research_probe.debug_purchase_node("echo_correlation_10") and is_equal_approx(research_probe.get_observation_echo_probability(), 0.10), "Gemini correlation opens at a ten-percent manual trigger chance")
 	_check(research_probe.get_observation_echo_count() == 0, "Gemini probability research cannot launch meteors before an echo channel is online")
 	_check(research_probe.debug_purchase_node("single_echo_channel") and research_probe.get_observation_echo_count() == 1, "Gemini's second root opens one echo channel")
@@ -342,7 +340,7 @@ func _run() -> void:
 		balance.meteor_spec("fast"), "fast", Vector2(100.0, 120.0),
 		Vector2(390.0, 70.0), 1.0, {}, Vector2(echo_view_size.x - 180.0, echo_view_size.y - 140.0)
 	)
-	_check(research_probe.debug_purchase_node("echo_signature_lock"), "Echo Signature Lock follows Tau Geminorum and its late success gate")
+	_check(research_probe.debug_purchase_node("echo_signature_lock"), "Echo Signature Lock follows Tau Geminorum through prerequisites alone")
 	var echo_trigger_snapshot: Dictionary = echo_spawner._echo_trigger_snapshot(echo_trigger)
 	_check(echo_spawner._echo_type_for_trigger(echo_trigger_snapshot) == "fast", "Echo Signature Lock copies the fresh manual target class")
 	_check(research_probe.debug_purchase_node("mirror_echo_solution"), "Mirror Echo Solution follows Mebsuta along the lower Castor body")
@@ -431,7 +429,7 @@ func _run() -> void:
 	legacy_leo_probe.load_save_data(research_probe.get_save_data())
 	_check(legacy_leo_probe.has_upgrade("leonid_storm") and not legacy_leo_probe.has_upgrade("split_radiant_model") and legacy_leo_probe.get_leonid_storm_count() == 20, "a completed legacy Leo save keeps its original storm without gaining new composition research")
 	legacy_leo_probe.free()
-	_check(research_probe.debug_purchase_node("split_radiant_model"), "Split Radiant Model follows Regulus and its late success gate")
+	_check(research_probe.debug_purchase_node("split_radiant_model"), "Split Radiant Model follows Regulus through prerequisites alone")
 	_check(research_probe.debug_purchase_node("fragment_front"), "Fragment Front follows Chertan along the Leo body")
 	_check(research_probe.debug_purchase_node("fireball_tail"), "Fireball Tail follows Zosma and completes the Leo body")
 	_check(research_probe.get_leonid_trigger_count() == 5 and research_probe.get_leonid_storm_count() == 20, "Leo composition research changes storm shape without adding hidden count multipliers")
@@ -502,15 +500,19 @@ func _run() -> void:
 	calibrated_probe.free()
 	capstone_spectral_probe.free()
 	_check(not balance.upgrade_definition("observation_scheduling").is_empty(), "duration research is present in the tree")
-	_check(int(balance.upgrade_definition("observation_scheduling").cost) == 60, "the mandatory first duration gate stays inexpensive")
-	_check(int(balance.upgrade_definition("thermal_management").cost) == 180, "the second duration step uses its measured price")
-	_check(int(balance.upgrade_definition("extended_watch_protocol").cost) == 280, "the third duration step uses its measured price")
-	_check(int(balance.upgrade_definition("continuous_watch_rotation").cost) == 380, "the fourth duration step uses its measured price")
+	_check(int(balance.upgrade_definition("observation_scheduling").cost) == 150, "the first duration step uses the measured full-tree economy price")
+	_check(int(balance.upgrade_definition("thermal_management").cost) == 450, "the second duration step uses the measured full-tree economy price")
+	_check(int(balance.upgrade_definition("extended_watch_protocol").cost) == 700, "the third duration step uses the measured full-tree economy price")
+	_check(int(balance.upgrade_definition("continuous_watch_rotation").cost) == 1000, "the fourth duration step uses the measured full-tree economy price")
 	_check(balance.upgrade_definition("wide_field").prerequisites == ["edge_detection"], "Wide Field stays inside the detection constellation")
 	_check(balance.upgrade_definition("thermal_management").prerequisites == ["observation_scheduling"], "Thermal Management stays inside Orion's duration arm")
 	_check(balance.upgrade_definition("continuous_watch_rotation").prerequisites == ["extended_watch_protocol"], "Continuous Watch Rotation stays inside Orion")
-	_check(game.progression.is_reveal_gate_met({"type": "success_count", "minimum": game.progression.success_count}), "success-count discovery gates open at their threshold")
-	_check(not game.progression.is_reveal_gate_met({"type": "success_count", "minimum": game.progression.success_count + 1}), "success-count discovery gates stay closed below their threshold")
+	var has_success_count_reveal_gate := false
+	for research_definition in balance.UPGRADE_NODES:
+		for reveal_gate in research_definition.hidden_until:
+			if reveal_gate is Dictionary and String(reveal_gate.get("type", "")) == "success_count":
+				has_success_count_reveal_gate = true
+	_check(not has_success_count_reveal_gate, "the research graph has no hidden success-count reveal gates")
 	var closed_tree_style_id: int = game.upgrade_tree.node_buttons["better_lens"].get_theme_stylebox("normal").get_instance_id()
 	var closed_tree_optics_position: Vector2 = game.upgrade_tree.node_buttons["better_lens"].position
 	var data_before_rejected_purchase: float = game.progression.observation_data
@@ -1240,6 +1242,13 @@ func _run() -> void:
 
 	game.progression.debug_purchase_all()
 	_check(game.progression.upgrade_level == balance.UPGRADE_NODES.size(), "all tree nodes unlock through prerequisite-safe debug purchase")
+	_check(game.progression.is_research_complete(), "the progression controller recognizes the complete research graph")
+	_check(is_equal_approx(game.progression.get_observation_value_multiplier("common", 1), 256.0), "the eight selected branch leaves produce exact unconditional x256 observation value growth")
+	_check(not game.events.final_started, "research completed during a live round waits for the round boundary before the finale")
+	var completed_save_probe = load("res://scripts/progression_controller.gd").new()
+	completed_save_probe.load_save_data(game.progression.get_save_data())
+	_check(completed_save_probe.is_research_complete() and is_equal_approx(completed_save_probe.get_observation_value_multiplier("common", 1), 256.0), "ID-based completed saves retain every purchased node and intentionally gain the new x256 effects")
+	completed_save_probe.free()
 	game.upgrade_tree._refresh()
 	await process_frame
 	var installed_research_segments := 0
@@ -1591,6 +1600,28 @@ func _run() -> void:
 			)
 	game.effects.reset()
 
+	var finale_boundary_game = packed.instantiate()
+	finale_boundary_game.startup_slot_prompt_enabled = false
+	finale_boundary_game.get_node("Tutorial").auto_start_enabled = false
+	root.add_child(finale_boundary_game)
+	await process_frame
+	await process_frame
+	finale_boundary_game.set_process(false)
+	finale_boundary_game.events.run_time = 999999.0
+	finale_boundary_game.events._process(0.05)
+	_check(not finale_boundary_game.events.final_started, "elapsed run time cannot trigger the finale before research completion")
+	finale_boundary_game.progression.debug_purchase_all()
+	_check(not finale_boundary_game.events.final_started, "completing research inside a live observation round does not interrupt that round")
+	finale_boundary_game._end_observation_phase()
+	_check(not finale_boundary_game.events.final_started and not finale_boundary_game.observation_phase_active, "the completed tree waits through the round summary boundary")
+	finale_boundary_game._on_phase_summary_continue_requested()
+	await process_frame
+	finale_boundary_game.upgrade_tree.close_tree()
+	await process_frame
+	_check(finale_boundary_game.events.final_started and finale_boundary_game.observation_phase_active and finale_boundary_game.observation_round == 2, "closing the completed research tree starts the finale with the next live observation round")
+	finale_boundary_game.queue_free()
+	await process_frame
+
 	# Let short procedural audio voices and delayed chord tones release cleanly.
 	await create_timer(0.85).timeout
 	_cleanup_smoke_saves(smoke_save_directory)
@@ -1642,10 +1673,8 @@ func _run_survey_regressions(packed: PackedScene, balance) -> void:
 	_check(not survey_game.survey.scanning and dormant_spawned == 0 and is_zero_approx(survey_game.survey.charge_distance), "blank-sky sweeping is fully dormant before its research is purchased")
 	_check(survey_game.spawner.rng.state == spawner_rng_before, "dormant survey setup does not consume the meteor RNG")
 	_check(survey_game.survey.rng.state == survey_rng_before, "dormant survey setup does not consume its own roll stream")
-	_check(survey_game.progression.get_node_state("polar_survey") == "hidden", "Polar Survey stays hidden before forty successful observations")
-	survey_game.progression.success_count = balance.URSA_MINOR_DISCOVERY_SUCCESSES
-	_check(survey_game.progression.get_node_state("polar_survey") == "available", "Polar Survey appears at the forty-observation discovery gate")
-	_check(survey_game.progression.debug_purchase_node("polar_survey"), "Polar Survey can be purchased after its discovery gate")
+	_check(survey_game.progression.get_node_state("polar_survey") == "available", "Polar Survey is available from time zero without a success-count gate")
+	_check(survey_game.progression.debug_purchase_node("polar_survey"), "Polar Survey can be purchased from its prerequisite-free root")
 	_check(is_equal_approx(survey_game.progression.get_progression_ratio(), pacing_ratio_before), "survey research does not change meteor-density pacing")
 	spawner_rng_before = survey_game.spawner.rng.state
 	survey_game.survey.begin_round(2)

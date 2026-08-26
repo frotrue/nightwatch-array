@@ -90,8 +90,6 @@ func _process(delta: float) -> void:
 	if not running:
 		return
 	run_time += delta
-	if not final_started and run_time >= Balance.FINAL_EVENT_TIME:
-		trigger_final()
 
 	if progression.has_upgrade("shower_detector") and next_shower_time < 0.0 and shower_state == "idle" and outburst_state == "idle":
 		next_shower_time = run_time + 14.0

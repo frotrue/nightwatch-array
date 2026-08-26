@@ -2,6 +2,12 @@
 
 > Frozen pre-Gemini snapshot. The live graph has 78 systems; the measurements
 > below intentionally preserve the 41-system state they recorded.
+>
+> **Stale after the 2026-08-26 economy/finale redesign.** The live graph has no
+> success-count reveal gates or 1,080-second finale, has eight unconditional
+> `×2` value leaves, and uses measured prices totaling 3,625,070. None of the
+> completion times, costs, or discovery-gate conclusions below are current
+> acceptance targets.
 
 Candidate measurement recorded 2026-08-24 for the constellation-grouped
 research expansion. This does **not** replace

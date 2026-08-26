@@ -205,10 +205,10 @@ func debug_purchase_node(node_id: String) -> bool:
 
 
 func debug_purchase_all() -> void:
-	# Discovery gates model earned observations. The all-research debug path is
-	# explicitly a completed-tree fixture, so make every discovery root visible.
-	success_count = maxi(success_count, Balance.GALAXY_IMAGING_SUCCESSES)
-	observation_data += 100000.0
+	var debug_budget := 0.0
+	for definition in Balance.UPGRADE_NODES:
+		debug_budget += float(definition.cost)
+	observation_data += debug_budget
 	var made_progress := true
 	while made_progress:
 		made_progress = false
@@ -503,6 +503,11 @@ func get_analysis_speed_multiplier(type_id: String) -> float:
 
 func get_observation_value_multiplier(type_id: String, active_target_count: int) -> float:
 	var multiplier := 1.0
+	for definition in Balance.UPGRADE_NODES:
+		if not has_upgrade(String(definition.id)):
+			continue
+		var parameters: Dictionary = definition.get("effect_parameters", {})
+		multiplier *= maxf(1.0, float(parameters.get("observation_value_multiplier", 1.0)))
 	if type_id == "fragment_piece" and has_upgrade("companion_resolution"):
 		multiplier *= 1.35
 	if type_id in ["fragment", "fragment_piece"] and has_upgrade("debris_correlation"):
@@ -512,6 +517,10 @@ func get_observation_value_multiplier(type_id: String, active_target_count: int)
 	if active_target_count >= 3 and has_upgrade("perseid_survey"):
 		multiplier *= 1.18
 	return multiplier
+
+
+func is_research_complete() -> bool:
+	return upgrade_level == Balance.UPGRADE_NODES.size()
 
 
 func get_secondary_slots() -> int:

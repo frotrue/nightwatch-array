@@ -25,7 +25,6 @@ func _run() -> void:
 		game.spawner.set_process(false)
 		game.events.set_process(false)
 		game.sky_contacts.set_process(false)
-		game.progression.success_count = 40
 		game.progression.debug_purchase_node("polar_survey")
 		game.survey.begin_round(3)
 		var sweep_cursor := Vector2(560.0, 420.0)

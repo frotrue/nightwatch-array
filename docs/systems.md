@@ -49,7 +49,7 @@ content.
 | `observation_controller.gd` | Cursor sampling, the tracking-versus-survey input latch, manual tracking, swept-path hit detection, tracking and hover rings, and the software cursor. |
 | `sky_contacts.gd` | Low-chrome forecast contact rendering and steerable dishes. Right-click moves the nearest dish; Predictive Dish Control automatically pre-positions an idle dish. Contact Ledger narrows the uncertainty ring instead of adding value/time text. |
 | `survey_controller.gd` | Round-local blank-sky sweep charge, the 150 px live-meteor guard, isolated deterministic summon rolls, custom-start spawner calls, cooldown, and the cursor-local red-light arc. |
-| `event_controller.gd` | Meteor showers and the 18-minute finale, including round-boundary deferral. |
+| `event_controller.gd` | Meteor showers, Perseid outbursts, and the research-completion finale sequence. |
 | `effects_layer.gd` | Success bursts, data packets, incoming markers, forecast markers, screen kick and shake. |
 | `hud.gd` | All in-round UI, round summary, settings, save-slot dialogs, banners. |
 | `upgrade_tree.gd` | Research tree rendering and purchase interaction. |
@@ -121,6 +121,7 @@ intermission. `game.gd` drives it.
 _begin_observation_phase()
     duration = progression.get_observation_duration()   (20s base, 60s max)
     spawner.start_spawning(); survey.begin_round(); events.start()
+    if progression.is_research_complete(): events.trigger_final()
     ↓  _process() counts down; elapsed_time accrues
 _end_observation_phase()
     _build_round_result()   → data, rate, manual/automatic split, build signature
@@ -133,9 +134,12 @@ _on_phase_summary_continue_requested() → upgrade_tree.open_tree()
 _on_upgrade_tree_closed() → _begin_observation_phase(advance_round = true)
 ```
 
-The run ends when `elapsed_time` reaches `Balance.FINAL_EVENT_TIME` (1080s).
-`EventController` fires the finale, and observing or losing the major fireball
-resolves the run through `_complete_prototype()`.
+The run has no fixed-time finale. Installing all 78 research systems marks the
+tree complete, but does not interrupt the active observation round. After the
+round summary, closing the research tree starts the next live observation
+round; `_begin_observation_phase()` then asks `EventController` to fire the
+finale. Observing or losing the major fireball resolves the run through
+`_complete_prototype()`.
 
 ### Time invariants
 
@@ -145,8 +149,9 @@ These are load-bearing. Breaking them silently corrupts the Data/min series.
   intermission costs no run time.
 - `_process` divides by `Engine.time_scale` to convert back to real seconds, so
   a hitstop freeze cannot buy the player extra observation time.
-- The finale is checked in **both** `game.gd` and `event_controller.gd` so that
-  parent/child process order cannot insert an intermission exactly at 18:00.
+- Research completion is checked only at `_begin_observation_phase()`, after the
+  tree closes. Purchases can never inject the finale into the middle of a live
+  round, and elapsed wall-clock time cannot start it.
 - Every round clears unfinished objects and pending forecasts at zero rather
   than letting them leak into the next sample.
 - Long Andromeda targets are announced only while their own centered manual
@@ -199,7 +204,7 @@ centre, then starts its cooldown. The survey RNG is round-seeded and independent
 from every spawner RNG stream.
 
 Summoned meteors carry `polar_summoned` metadata. They use normal observation
-rewards, success counts, discovery gates, and Taurus momentum, but the proc tag
+rewards, success counts, and Taurus momentum, but the proc tag
 prevents them from charging Leo or opening Gemini echoes. Base partial charge is
 lost on release; `sustained_sweep` preserves it only inside the current round.
 The charge/cooldown arc stays red and cursor-local; neutral white still belongs
@@ -210,6 +215,12 @@ only to live meteor tracking.
 `upgrade_tree.gd` → `progression.request_purchase(node_id)` validates state and
 cost, then emits `upgrade_purchased`. `game._on_upgrade_purchased` refreshes
 dishes and spawner features, plays feedback, and autosaves.
+
+All prerequisite-free roots are visible from time zero. Internal nodes reveal
+only from prerequisite IDs; the live graph contains no success-count reveal
+gates. Eight approved branch leaves contribute unconditional `×2` observation
+value each, so a completed tree has exact global `×256` growth before the four
+existing target-conditional multipliers are applied.
 
 Upgrade effects are **never** read from `game_balance.gd` by gameplay code.
 They go through named accessors on `progression_controller.gd`

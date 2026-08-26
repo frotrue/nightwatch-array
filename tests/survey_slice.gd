@@ -22,7 +22,6 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	game.active_save_slot = 0
-	game.progression.success_count = 40
 	game.progression.debug_purchase_node("polar_survey")
 	game.survey.begin_round(1)
 	game.survey.meteor_summoned.connect(_on_meteor_summoned)
