@@ -410,7 +410,7 @@ func get_observation_duration() -> float:
 		var node_id := String(definition.id)
 		if not has_upgrade(node_id):
 			continue
-		var parameters: Dictionary = definition.get("effect_parameters", {})
+		var parameters: Dictionary = definition.get("runtime_parameters", {})
 		duration += float(parameters.get("observation_duration_bonus", 0.0))
 	return minf(duration, Balance.MAX_OBSERVATION_DURATION)
 
@@ -502,7 +502,7 @@ func get_observation_value_multiplier(type_id: String, active_target_count: int)
 	for definition in Balance.UPGRADE_NODES:
 		if not has_upgrade(String(definition.id)):
 			continue
-		var parameters: Dictionary = definition.get("effect_parameters", {})
+		var parameters: Dictionary = definition.get("runtime_parameters", {})
 		multiplier *= maxf(1.0, float(parameters.get("observation_value_multiplier", 1.0)))
 	if type_id == "fragment_piece" and has_upgrade("companion_resolution"):
 		multiplier *= 1.35

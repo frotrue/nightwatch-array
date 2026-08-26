@@ -1,9 +1,10 @@
 # Tests and Probes
 
 Every file in `tests/` is a `SceneTree` script run through `--script`, not a
-GUT/gdUnit suite. There is no test runner to install. Twelve files: two
+GUT/gdUnit suite. There is no test runner to install. Fourteen files: four
 pass/fail gates, seven measurement probes, two visual capture utilities, and
-one human-driven survey slice.
+one human-driven survey slice. The full-tree economy gate is documented with
+the pacing probes below because it reports both acceptance and diagnostic data.
 
 Commands are PowerShell, matching the rest of the repo. `$godot` below is the
 console build:
@@ -20,7 +21,7 @@ whether the game is fun, and none of them can. `tests/probe_layer2_test.gd`
 says so in its own header. Fun decisions are made by playing a build. See
 [design.md](design.md).
 
-The two gates below are different: they are mechanical correctness checks, not
+The correctness gates are different: they are mechanical checks, not feel
 measurements.
 
 ### Blank-sky survey slice — `survey_slice.gd`
@@ -37,6 +38,30 @@ feel rather than correctness.
 ```
 
 ## Gates
+
+### Research contract test
+
+Checks all 78 research definitions against the three-layer effect schema. It
+requires every literal `has_upgrade("id")` reference to resolve, every research
+node to have one declared implementation connection, and the only production
+parameter keys to have live consumers. Sixteen nodes have executable contracts:
+eight global observation-value multipliers, four duration bonuses, and four
+regular active-contact capacity deltas. The other 62 ids are held as an exact
+unverified baseline that may shrink but cannot silently grow or exchange ids.
+
+For each executable contract, the test compares independent expected behavior
+against a public runtime accessor. It also checks English and Korean player
+claims in both directions: every contract must be advertised, and every
+advertised numeric claim must have a contract. The reverse check exists because
+a 2026-08-26 copy audit verified all eight real `×2` claims but missed a ninth
+false claim on Storm Zenith.
+
+```powershell
+& $godot --headless --path . --script res://tests/research_contract_test.gd
+```
+
+- Pass: `RESEARCH_CONTRACT_PASS: 78 nodes, 16 executable contracts, 62 exact unverified ids, and bidirectional en/ko claims`
+- Fail: `RESEARCH_CONTRACT:` error lines, then `RESEARCH_CONTRACT_FAIL: N failure(s)`
 
 ### Smoke test
 

@@ -175,7 +175,7 @@ func _run() -> void:
 	)
 	_check(
 		game.upgrade_tree._upgrade_description(leonid_storm_definition)
-		== "이제 새로운 유성을 수동으로 5회 관측하면 7초 동안 유성 20개가 진입합니다. 자동 완료를 포함한 모든 관측 데이터를 2배로 늘립니다. 여덟 개의 ×2 시스템을 모두 설치하면 ×256입니다.",
+		== "이제 새로운 유성을 수동으로 5회 관측하면 7초 동안 유성 20개가 진입합니다.",
 		"Korean Leonid Storm description names the five-observation twenty-meteor capstone"
 	)
 	for multiplier_id in global_x2_ids:
@@ -219,7 +219,7 @@ func _run() -> void:
 	)
 	_check(
 		game.upgrade_tree._upgrade_description(leonid_storm_definition)
-		== "Five fresh manual observations now launch 20 meteors over seven seconds. Doubles all observation Data, including automatic completions. All eight ×2 systems combine to ×256.",
+		== "Five fresh manual observations now launch 20 meteors over seven seconds.",
 		"English Leonid Storm description names the five-observation twenty-meteor capstone"
 	)
 	for definition_variant in balance.UPGRADE_NODES:
