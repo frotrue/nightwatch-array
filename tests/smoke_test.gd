@@ -132,6 +132,7 @@ func _run() -> void:
 	var observatory_definition: Dictionary = balance.upgrade_definition("observatory_network")
 	var triple_echo_definition: Dictionary = balance.upgrade_definition("triple_echo_array")
 	var leonid_storm_definition: Dictionary = balance.upgrade_definition("leonid_storm")
+	await _run_survey_regressions(packed, balance)
 	game.settings.set_language("ko", false)
 	await process_frame
 	_check(TranslationServer.get_locale().left(2) == "ko", "Korean locale activates through game settings")
@@ -141,6 +142,7 @@ func _run() -> void:
 	_check(TranslationServer.translate("STAR_TSIH") == "감마 카시오페이아", "research inspector uses the factual Tsih star name in Korean")
 	_check(TranslationServer.translate("CONSTELLATION_GEMINI") == "쌍둥이자리  /  공명", "the mapped Gemini figure exposes its Korean research role")
 	_check(TranslationServer.translate("CONSTELLATION_LEO") == "사자자리  /  유성 폭풍", "the mapped Leo figure exposes its Korean research role")
+	_check(TranslationServer.translate("CONSTELLATION_URSA_MINOR") == "작은곰자리  /  하늘 조사", "the mapped Ursa Minor figure exposes its Korean research role")
 	_check(TranslationServer.translate("HUD_AUTOSAVED") == "자동 저장됨", "Korean autosave status stays concise")
 	_check(TranslationServer.translate("HUD_OBSERVATION_TIME") % [1, 1, 0] == "1차 관측  •  01:00", "Korean round countdown reads naturally")
 	_check(TranslationServer.translate("TREE_INTERMISSION_SUBTITLE") % [2, 30] == "업그레이드 시간  /  2차 관측은 30초", "Korean upgrade-break guidance explains the next round and duration")
@@ -1257,7 +1259,7 @@ func _run() -> void:
 				and installed_states[1] == "purchased"
 				and game.upgrade_tree._segment_color(installed_states) == Color(chart_ui_theme.LINE_INSTALLED, 0.42)
 			)
-	_check(installed_research_segments == 67 and all_research_segments_installed, "all sixty-seven research-constellation segments reach the installed color at full completion")
+	_check(installed_research_segments == 74 and all_research_segments_installed, "all seventy-four research-constellation segments reach the installed color at full completion")
 	_check(game.progression.get_max_active() == 6, "research raises dense-sky capacity without removing the six-target performance cap")
 	_check(game.progression.upgrade_level == balance.UPGRADE_NODES.size(), "the run resolves to the full research array completion")
 	_check(is_equal_approx(game.progression.get_progression_ratio(), 1.0), "the original pacing topology preserves the completed-tree density endpoint")
@@ -1597,7 +1599,7 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	if failures.is_empty():
-		print("SMOKE_TEST_PASS: tutorial, saves, localization, phase summary, compact HUD, observation, progression, events, performance caps, stale references, and reset")
+		print("SMOKE_TEST_PASS: tutorial, saves, localization, phase summary, compact HUD, observation, blank-sky survey, progression, events, performance caps, stale references, and reset")
 		quit(0)
 	else:
 		print("SMOKE_TEST_FAIL: %d failure(s)" % failures.size())
@@ -1613,6 +1615,150 @@ func _decorative_controls_ignore_mouse(node: Node) -> bool:
 		if not _decorative_controls_ignore_mouse(child):
 			return false
 	return true
+
+
+func _run_survey_regressions(packed: PackedScene, balance) -> void:
+	var survey_game = packed.instantiate()
+	survey_game.startup_slot_prompt_enabled = false
+	survey_game.get_node("Tutorial").auto_start_enabled = false
+	root.add_child(survey_game)
+	await process_frame
+	await process_frame
+	survey_game.set_process(false)
+	survey_game.spawner.set_process(false)
+	survey_game.events.set_process(false)
+	survey_game.sky_contacts.set_process(false)
+	survey_game.observer.set_process(false)
+	survey_game.progression.reset()
+	survey_game.spawner.reset()
+	survey_game.survey.reset()
+
+	var pacing_ratio_before: float = survey_game.progression.get_progression_ratio()
+	var spawner_rng_before: int = survey_game.spawner.rng.state
+	survey_game.survey.begin_round(1)
+	_check(survey_game.survey.samples.is_empty(), "blank-sky survey is fully dormant before its research is purchased")
+	_check(survey_game.spawner.rng.state == spawner_rng_before, "dormant survey setup does not consume the meteor RNG")
+	_check(survey_game.progression.get_node_state("polar_survey") == "hidden", "Polar Survey stays hidden before forty successful observations")
+	survey_game.progression.success_count = balance.URSA_MINOR_DISCOVERY_SUCCESSES
+	_check(survey_game.progression.get_node_state("polar_survey") == "available", "Polar Survey appears at the forty-observation discovery gate")
+	_check(survey_game.progression.debug_purchase_node("polar_survey"), "Polar Survey can be purchased after its discovery gate")
+	_check(is_equal_approx(survey_game.progression.get_progression_ratio(), pacing_ratio_before), "survey research does not change meteor-density pacing")
+	spawner_rng_before = survey_game.spawner.rng.state
+	survey_game.survey.begin_round(2)
+	_check(survey_game.survey.samples.size() == 3, "Polar Survey seeds three stationary samples per round")
+	_check(survey_game.spawner.rng.state == spawner_rng_before, "survey sample placement uses RNG isolated from meteor spawning")
+
+	var observer = survey_game.observer
+	var survey = survey_game.survey
+	var target_position := Vector2(420.0, 260.0)
+	var intent_target = survey_game.spawner.spawn_meteor("common", target_position, Vector2.ZERO, 20.0)
+	observer.reset()
+	observer.previous_cursor_position = target_position
+	observer.cursor_position = target_position
+	observer.interaction_mode = observer.InteractionMode.NONE
+	observer._update_survey_interaction(0.016)
+	_check(observer.interaction_mode == observer.InteractionMode.TRACKING and observer.selected_meteor == intent_target, "pressing on a meteor latches tracking before blank-sky scanning")
+	survey_game.spawner.reset()
+	observer.reset()
+	observer.previous_cursor_position = Vector2(180.0, 160.0)
+	observer.cursor_position = Vector2(200.0, 160.0)
+	observer._update_survey_interaction(0.016)
+	_check(observer.interaction_mode == observer.InteractionMode.SCANNING and survey.scanning, "fourteen pixels of blank drag latches the survey gesture")
+	var crossed_target = survey_game.spawner.spawn_meteor("common", Vector2(220.0, 160.0), Vector2.ZERO, 20.0)
+	observer.previous_cursor_position = Vector2(200.0, 160.0)
+	observer.cursor_position = Vector2(240.0, 160.0)
+	observer._update_survey_interaction(0.016)
+	_check(observer.interaction_mode == observer.InteractionMode.SCANNING and observer.selected_meteor == null and crossed_target.can_be_tracked(), "a latched survey stroke crosses a meteor without being hijacked into tracking")
+	observer._clear_interaction_mode()
+	_check(observer.interaction_mode == observer.InteractionMode.NONE and not survey.scanning, "releasing the survey gesture clears its latch")
+	survey_game.spawner.reset()
+
+	var sample_center: Vector2 = survey.samples[0].center
+	survey.set_scanning(true, sample_center)
+	var data_before: float = survey_game.progression.observation_data
+	var earned_before: float = survey_game.progression.total_data_earned
+	var successes_before: int = survey_game.progression.success_count
+	var manual_before: int = survey_game.progression.manual_successes
+	var automatic_before: int = survey_game.progression.automatic_successes
+	var combo_before: int = survey_game.progression.manual_combo_count
+	var leonid_before: int = survey_game.progression.leonid_charge
+	survey.apply_scan_segment(sample_center, sample_center)
+	_check(is_zero_approx(survey.get_sample_coverage(0)), "holding still in blank sky paints no survey area")
+	survey.apply_scan_segment(sample_center + Vector2(-72.0, 0.0), sample_center + Vector2(72.0, 0.0))
+	_check(survey.get_sample_coverage(0) > 0.0 and survey.get_sample_coverage(0) < 1.0, "one survey line paints part of a field but cannot resolve the whole area")
+	_paint_survey_sample(survey, sample_center)
+	_check(survey.get_completed_count() == 1, "area coverage resolves a stationary sky sample")
+	_check(is_equal_approx(survey_game.progression.observation_data - data_before, 36.0) and is_equal_approx(survey_game.progression.total_data_earned - earned_before, 36.0), "a base survey sample earns its separate Data reward")
+	_check(
+		survey_game.progression.success_count == successes_before
+		and survey_game.progression.manual_successes == manual_before
+		and survey_game.progression.automatic_successes == automatic_before
+		and survey_game.progression.manual_combo_count == combo_before
+		and survey_game.progression.leonid_charge == leonid_before,
+		"survey rewards do not impersonate meteor observations or charge their combo systems"
+	)
+
+	survey.begin_round(3)
+	sample_center = survey.samples[0].center
+	survey.set_scanning(true, sample_center)
+	survey.apply_scan_segment(sample_center + Vector2(-72.0, 0.0), sample_center + Vector2(72.0, 0.0))
+	_check(survey.get_sample_coverage(0) > 0.0, "partial survey coverage exists before its memory window expires")
+	survey.advance_time(survey.CELL_EXPIRY_SECONDS + 0.01)
+	_check(is_zero_approx(survey.get_sample_coverage(0)), "partial survey coverage fades before Persistent Plate is installed")
+	for node_id in ["field_brush", "four_field_rotation", "persistent_plate"]:
+		_check(survey_game.progression.debug_purchase_node(node_id), "survey prerequisite installs: " + node_id)
+	survey.begin_round(4)
+	_check(survey.samples.size() == 4, "Four-Field Rotation adds one round-local sample")
+	sample_center = survey.samples[0].center
+	survey.set_scanning(true, sample_center)
+	survey.apply_scan_segment(sample_center + Vector2(-72.0, 0.0), sample_center + Vector2(72.0, 0.0))
+	var persistent_coverage: float = survey.get_sample_coverage(0)
+	survey.advance_time(survey.CELL_EXPIRY_SECONDS + 0.01)
+	_check(is_equal_approx(survey.get_sample_coverage(0), persistent_coverage), "Persistent Plate keeps partial coverage for the current round")
+	for node_id in ["background_photometry", "five_field_rotation", "polar_catalog"]:
+		_check(survey_game.progression.debug_purchase_node(node_id), "survey capstone path installs: " + node_id)
+	survey.begin_round(5)
+	_check(survey.samples.size() == 5 and is_equal_approx(survey_game.progression.get_survey_reward(), 42.0), "late Ursa Minor research adds a fifth field and raises sample value")
+	_check(survey_game.progression.get_survey_reward() / survey.MIN_SAMPLE_SCAN_SECONDS < 17.7, "even upgraded survey yield stays below the lowest active meteor-tracking rate")
+	var catalog_before: int = survey_game.progression.survey_catalog_count
+	sample_center = survey.samples[0].center
+	survey.set_scanning(true, sample_center)
+	_paint_survey_sample(survey, sample_center)
+	_check(survey_game.progression.survey_catalog_count == catalog_before + 1 and bool(survey.samples[0].completed), "Polar Catalog records and retains a resolved sample for its round")
+	var saved_survey_state: Dictionary = survey.get_round_state()
+	survey.begin_round(5)
+	survey.load_round_state(saved_survey_state, 5)
+	_check(survey.get_completed_count() == 1, "loading an active round restores completed survey slots without paying them twice")
+	var catalog_after_load: int = survey_game.progression.survey_catalog_count
+	survey.load_round_state(saved_survey_state, 5)
+	_check(survey_game.progression.survey_catalog_count == catalog_after_load, "restoring survey state cannot duplicate its catalog reward")
+	survey.end_round()
+	_check(survey.samples.is_empty() and survey.completed_slot_mask == 0, "round cleanup removes stationary samples and incomplete coverage")
+
+	var legacy_ids: Array[String] = []
+	for definition in balance.UPGRADE_NODES:
+		if String(definition.branch) != "ursa_minor":
+			legacy_ids.append(String(definition.id))
+	_check(legacy_ids.size() == 71, "the pre-survey research graph remains an exact 71-ID compatibility fixture")
+	survey_game.progression.load_save_data({
+		"purchased_nodes": legacy_ids,
+		"purchase_order": legacy_ids,
+		"survey_catalog_count": 0,
+	})
+	_check(survey_game.progression.upgrade_level == 71 and survey_game.progression.survey_catalog_count == 0, "a 71-node save loads without inventing Ursa Minor progress")
+
+	survey_game.queue_free()
+	await process_frame
+	await process_frame
+
+
+func _paint_survey_sample(survey, center: Vector2) -> void:
+	for row in range(7):
+		var offset_y := (float(row) - 3.0) * 20.5
+		var from := center + Vector2(-76.0, offset_y)
+		var to := center + Vector2(76.0, offset_y)
+		survey.set_scanning(true, to)
+		survey.apply_scan_segment(from, to, 0.4)
 
 
 func _cleanup_smoke_saves(directory: String) -> void:

@@ -5,10 +5,19 @@ const UITheme = preload("res://scripts/ui_theme.gd")
 const TRACKING_BREAK_MULTIPLIER := 1.72
 const TRACKING_GRACE_SECONDS := 0.14
 const DEFAULT_TRACKING_RADIUS := 36.0
+const SCAN_INTENT_DISTANCE := 14.0
+
+enum InteractionMode {
+	NONE,
+	PENDING,
+	TRACKING,
+	SCANNING,
+}
 
 var meteor_layer: Node2D
 var progression: Node
 var hud: CanvasLayer
+var survey: Node2D
 var selected_meteor = null
 var hovered_meteor = null
 var tracked_meteors: Array = []
@@ -19,12 +28,15 @@ var was_holding: bool = false
 var tracking_grace_remaining: float = 0.0
 var tracking_visual_active_last_frame: bool = false
 var native_cursor_visible: bool = false
+var interaction_mode: InteractionMode = InteractionMode.NONE
+var pending_blank_distance: float = 0.0
 
 
-func setup(target_layer: Node2D, progression_controller: Node, hud_layer: CanvasLayer) -> void:
+func setup(target_layer: Node2D, progression_controller: Node, hud_layer: CanvasLayer, survey_controller: Node2D = null) -> void:
 	meteor_layer = target_layer
 	progression = progression_controller
 	hud = hud_layer
+	survey = survey_controller
 	# Keep the engine-side mouse state coalesced. Gameplay samples that state once
 	# per rendered frame and does not subscribe to raw mouse-motion callbacks.
 	Input.set_use_accumulated_input(true)
@@ -48,6 +60,10 @@ func reset() -> void:
 	tracking_grace_remaining = 0.0
 	was_holding = false
 	tracking_visual_active_last_frame = false
+	interaction_mode = InteractionMode.NONE
+	pending_blank_distance = 0.0
+	if survey != null:
+		survey.set_scanning(false, cursor_position)
 	if hud != null:
 		hud.hide_tracking()
 	queue_redraw()
@@ -69,11 +85,12 @@ func _process(delta: float) -> void:
 	_set_native_cursor_visible(cursor_on_ui)
 	if holding and not cursor_on_ui:
 		hovered_meteor = null
-		_update_manual_tracking(delta)
+		if _survey_input_enabled():
+			_update_survey_interaction(delta)
+		else:
+			_update_manual_tracking(delta)
 	else:
-		selected_meteor = null
-		tracked_meteors.clear()
-		tracking_grace_remaining = 0.0
+		_clear_interaction_mode()
 		hovered_meteor = null if cursor_on_ui else _find_target_under_cursor()
 
 	if _selection_is_valid():
@@ -104,6 +121,56 @@ func _process(delta: float) -> void:
 		queue_redraw()
 	tracking_visual_active_last_frame = tracking_visual_active
 	was_holding = holding
+
+
+func _survey_input_enabled() -> bool:
+	return survey != null and progression != null and progression.survey_enabled()
+
+
+func _update_survey_interaction(delta: float) -> void:
+	if interaction_mode == InteractionMode.NONE:
+		interaction_mode = InteractionMode.PENDING
+		pending_blank_distance = 0.0
+		selected_meteor = null
+		tracked_meteors.clear()
+		tracking_grace_remaining = 0.0
+
+	match interaction_mode:
+		InteractionMode.PENDING:
+			var target = _find_target_under_cursor()
+			if _target_is_valid(target):
+				selected_meteor = target
+				tracking_grace_remaining = TRACKING_GRACE_SECONDS
+				interaction_mode = InteractionMode.TRACKING
+				survey.set_scanning(false, cursor_position)
+				_update_manual_tracking(delta)
+				return
+			pending_blank_distance += previous_cursor_position.distance_to(cursor_position)
+			if pending_blank_distance >= SCAN_INTENT_DISTANCE:
+				interaction_mode = InteractionMode.SCANNING
+				survey.set_scanning(true, cursor_position)
+				survey.apply_scan_segment(previous_cursor_position, cursor_position, delta / maxf(Engine.time_scale, 0.001))
+			else:
+				survey.set_scanning(false, cursor_position)
+		InteractionMode.TRACKING:
+			survey.set_scanning(false, cursor_position)
+			_update_manual_tracking(delta)
+		InteractionMode.SCANNING:
+			selected_meteor = null
+			tracked_meteors.clear()
+			tracking_grace_remaining = 0.0
+			survey.set_scanning(true, cursor_position)
+			survey.apply_scan_segment(previous_cursor_position, cursor_position, delta / maxf(Engine.time_scale, 0.001))
+
+
+func _clear_interaction_mode() -> void:
+	selected_meteor = null
+	tracked_meteors.clear()
+	tracking_grace_remaining = 0.0
+	interaction_mode = InteractionMode.NONE
+	pending_blank_distance = 0.0
+	if survey != null:
+		survey.set_scanning(false, cursor_position)
 
 
 func _update_manual_tracking(delta: float) -> void:
@@ -211,6 +278,10 @@ func release_target(target = null) -> void:
 		selected_meteor = null
 		if target == null:
 			tracked_meteors.clear()
+			interaction_mode = InteractionMode.NONE
+			pending_blank_distance = 0.0
+			if survey != null:
+				survey.set_scanning(false, cursor_position)
 		tracking_grace_remaining = 0.0
 		hud.hide_tracking()
 		queue_redraw()

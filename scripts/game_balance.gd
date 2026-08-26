@@ -11,6 +11,7 @@ const BASE_MAX_ACTIVE_METEORS := 4
 const MAX_ACTIVE_METEORS := 6
 const REGULAR_SPAWN_INTERVAL_MIN := 1.6
 const REGULAR_SPAWN_INTERVAL_MAX := 2.4
+const URSA_MINOR_DISCOVERY_SUCCESSES := 40
 const PERSEUS_DISCOVERY_SUCCESSES := 200
 const GEMINI_DISCOVERY_SUCCESSES := 400
 const LYRA_DISCOVERY_SUCCESSES := 600
@@ -33,6 +34,7 @@ const BRANCHES := {
 	"optics": {"name": "OPTICS / MANUAL", "color": Color("53d6ff")},
 	"detection": {"name": "DETECTION / DISCOVERY", "color": Color("b379ff")},
 	"network": {"name": "OBSERVATION NETWORK", "color": Color("52e0b1")},
+	"ursa_minor": {"name": "URSA MINOR / SKY SURVEY", "color": Color("ff9f7a")},
 	"perseus": {"name": "PERSEUS / DENSITY", "color": Color("ffb56b")},
 	"gemini": {"name": "GEMINI / ECHO", "color": Color("ffd27d")},
 	"taurus": {"name": "TAURUS / MOMENTUM", "color": Color("ffbd7a")},
@@ -204,6 +206,55 @@ const UPGRADE_NODES: Array[Dictionary] = [
 		"branch": "detection", "prerequisites": ["fragment_analysis"],
 		"hidden_until": ["fragment_analysis"], "effect_type": "transformation", "effect_parameters": {"fragment_piece_value_multiplier": 1.35},
 		"major": true
+	},
+	{
+		"id": "polar_survey", "name": "Polar Survey", "icon": "✣", "cost": 18,
+		"description": "Opens blank-sky surveying: drag across a quiet field to resolve three stationary samples in each observation round.",
+		"branch": "ursa_minor", "prerequisites": [],
+		"hidden_until": [{"type": "success_count", "minimum": URSA_MINOR_DISCOVERY_SUCCESSES}], "effect_type": "unlock", "effect_parameters": {"survey_samples": 3},
+		"major": true, "affects_pacing": false
+	},
+	{
+		"id": "field_brush", "name": "Field Brush", "icon": "◌", "cost": 36,
+		"description": "Widens each survey stroke so a quiet field resolves with fewer passes.",
+		"branch": "ursa_minor", "prerequisites": ["polar_survey"],
+		"hidden_until": ["polar_survey"], "effect_type": "passive", "effect_parameters": {"survey_brush_radius": 26.0},
+		"major": false, "affects_pacing": false
+	},
+	{
+		"id": "four_field_rotation", "name": "Four-Field Rotation", "icon": "4", "cost": 70,
+		"description": "Adds a fourth stationary sky sample to every observation round.",
+		"branch": "ursa_minor", "prerequisites": ["field_brush"],
+		"hidden_until": ["field_brush"], "effect_type": "passive", "effect_parameters": {"survey_samples": 4},
+		"major": false, "affects_pacing": false
+	},
+	{
+		"id": "persistent_plate", "name": "Persistent Plate", "icon": "▧", "cost": 120,
+		"description": "Keeps partial sky coverage for the rest of the current observation round instead of letting it fade.",
+		"branch": "ursa_minor", "prerequisites": ["four_field_rotation"],
+		"hidden_until": ["four_field_rotation"], "effect_type": "transformation", "effect_parameters": {"persistent_survey_coverage": true},
+		"major": true, "affects_pacing": false
+	},
+	{
+		"id": "background_photometry", "name": "Background Photometry", "icon": "+", "cost": 190,
+		"description": "Raises the Data recovered from each resolved stationary sky sample.",
+		"branch": "ursa_minor", "prerequisites": ["persistent_plate"],
+		"hidden_until": ["persistent_plate"], "effect_type": "passive", "effect_parameters": {"survey_reward": 42.0},
+		"major": false, "affects_pacing": false
+	},
+	{
+		"id": "five_field_rotation", "name": "Five-Field Rotation", "icon": "5", "cost": 285,
+		"description": "Adds a fifth stationary sky sample to every observation round.",
+		"branch": "ursa_minor", "prerequisites": ["background_photometry"],
+		"hidden_until": ["background_photometry"], "effect_type": "passive", "effect_parameters": {"survey_samples": 5},
+		"major": false, "affects_pacing": false
+	},
+	{
+		"id": "polar_catalog", "name": "Polar Catalog", "icon": "✦", "cost": 420,
+		"description": "Leaves every resolved sample visible for the rest of its observation round and records it in the survey catalog.",
+		"branch": "ursa_minor", "prerequisites": ["five_field_rotation"],
+		"hidden_until": ["five_field_rotation"], "effect_type": "transformation", "effect_parameters": {"catalog_survey_samples": true},
+		"major": true, "affects_pacing": false
 	},
 	{
 		"id": "radiant_plotting", "name": "Radiant Plotting", "icon": "✺", "cost": 18,

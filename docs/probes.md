@@ -1,8 +1,9 @@
 # Tests and Probes
 
 Every file in `tests/` is a `SceneTree` script run through `--script`, not a
-GUT/gdUnit suite. There is no test runner to install. Eleven files: two
-pass/fail gates, seven measurement probes, and two visual capture utilities.
+GUT/gdUnit suite. There is no test runner to install. Twelve files: two
+pass/fail gates, seven measurement probes, two visual capture utilities, and
+one human-driven survey slice.
 
 Commands are PowerShell, matching the rest of the repo. `$godot` below is the
 console build:
@@ -21,6 +22,18 @@ says so in its own header. Fun decisions are made by playing a build. See
 
 The two gates below are different: they are mechanical correctness checks, not
 measurements.
+
+### Blank-sky survey slice — `survey_slice.gd`
+
+Runs one save-free, human-driven 60-second window with only Polar Survey added
+to the opening sky. Track meteors and paint stationary fields with the same
+left button; release before changing intent. It prints `SURVEY_SLICE_READY` and
+one `SURVEY_SLICE_RESULT` line, but does not pass or fail because it measures
+feel rather than correctness.
+
+```powershell
+& $godot --path . --script res://tests/survey_slice.gd
+```
 
 ## Gates
 
@@ -101,14 +114,16 @@ Header: `DURATION_PRICING_ENV`.
 
 ### Full-tree economy gate — `full_tree_economy_test.gd`
 
-Pass/fail gate for the expanded 71-system graph. It runs three deterministic
+Pass/fail gate for the expanded 78-system graph. It runs three deterministic
 18-minute scripted-engaged watches at `0.05s` steps, buys the cheapest currently
 available research at each intermission, applies purchased Lyra calibration
 automatically, reproduces purchased Taurus combo speed, Gemini echo bursts, and Leo storm charge,
 and uses predictive dishes when installed. Every seed must reach
-71/71 before the final-event clock. It also reports the 270/540/810-second
-success curve, each constellation's discovery time, and the longest interval
-without a newly available node.
+78/78 before the final-event clock. The engaged driver sweeps stationary sky
+samples only while no manual meteor target is available. It also reports the
+270/540/810-second success curve, each constellation's discovery time, the
+first survey round's Data share, and the longest interval without a newly
+available node.
 
 ```powershell
 & $godot --headless --path . --script res://tests/full_tree_economy_test.gd
@@ -283,4 +298,13 @@ $env:NIGHTWATCH_PRICING_SEEDS = "20"; & $godot --headless --path . --script res:
 
 ```powershell
 & "C:\Users\user\AppData\Local\Temp\codex-godot-4.7.2\Godot_v4.7.2-stable_win64_console.exe" --path . --script res://tests/hud_preview.gd
+```
+
+같은 스크립트에 `NIGHTWATCH_SURVEY_PREVIEW=1`을 설정하면 북극권 조사를 구매하고
+부분적으로 훑은 화면을 `build/survey_preview.png`에 저장한다.
+
+```powershell
+$env:NIGHTWATCH_SURVEY_PREVIEW = "1"
+& "C:\Users\user\AppData\Local\Temp\codex-godot-4.7.2\Godot_v4.7.2-stable_win64_console.exe" --path . --script res://tests/hud_preview.gd
+Remove-Item Env:NIGHTWATCH_SURVEY_PREVIEW -ErrorAction SilentlyContinue
 ```
