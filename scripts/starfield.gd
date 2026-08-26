@@ -25,12 +25,16 @@ func set_activity(value: float) -> void:
 func _rebuild_stars() -> void:
 	cached_size = get_viewport_rect().size
 	stars.clear()
-	var count := maxi(160, int(cached_size.x * cached_size.y / 4800.0))
+	# Density is measured per megapixel against the design capture. The twinkle
+	# layer draws its own stars on top, so this divisor is set for the pair
+	# rather than for this layer alone, and the floor stays under it so a small
+	# viewport is not proportionally denser than the reference.
+	var count := maxi(24, int(cached_size.x * cached_size.y / 17000.0))
 	for index in range(count):
 		var normalized := Vector2(rng.randf(), pow(rng.randf(), 1.1) * 0.88)
 		stars.append({
 			"p": normalized,
-			"size": rng.randf_range(0.55, 1.75),
+			"size": rng.randf_range(0.45, 1.30),
 			"phase": rng.randf_range(0.0, TAU),
 			"speed": rng.randf_range(0.35, 1.2),
 			"blue": rng.randf_range(0.0, 1.0)
@@ -65,11 +69,14 @@ func _draw() -> void:
 		var star_color := Color("d9dee6").lerp(Color("ffffff"), float(star.blue))
 		star_color.a = clampf(pulse, 0.22, 1.0)
 		var radius := float(star.size)
+		# No cross rays. They were the reason a background star could occupy more
+		# pixels than a meteor's head, and the sky has to stay quieter than the
+		# thing the player is trying to see in it.
 		draw_circle(p, radius, star_color)
-		if radius > 1.35 and pulse > 0.72:
-			draw_line(p - Vector2(radius * 2.2, 0), p + Vector2(radius * 2.2, 0), Color(star_color, pulse * 0.2), 0.7)
 
-	# A quiet, low-contrast horizon and small observatory establish scale.
+	# A quiet, low-contrast horizon line, and nothing on it. The observatory that
+	# used to sit here read as a foreground object in a frame whose whole subject
+	# is the empty sky above it.
 	var horizon_y := size.y * 0.91
 	var ridge := PackedVector2Array([
 		Vector2(0, horizon_y + 8), Vector2(size.x * 0.12, horizon_y - 5),
@@ -78,8 +85,3 @@ func _draw() -> void:
 		Vector2(size.x, horizon_y + 4), Vector2(size.x, size.y), Vector2(0, size.y)
 	])
 	draw_colored_polygon(ridge, Color("03050A"))
-	var dome_center := Vector2(size.x * 0.16, horizon_y - 3)
-	draw_circle(dome_center, 23.0, Color("06080F"))
-	draw_rect(Rect2(dome_center.x - 25.0, dome_center.y, 50.0, 25.0), Color("06080F"))
-	draw_line(dome_center + Vector2(0, -22), dome_center + Vector2(14, -36), Color("1A1712"), 3.0)
-	draw_circle(dome_center + Vector2(15, -37), 2.0, Color("A15D3E"))
