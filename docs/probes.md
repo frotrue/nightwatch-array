@@ -166,6 +166,10 @@ Counts what is on screen over a 30-second phase: pending forecast contacts,
 live meteors, and combined workload, per type. Behind
 [legacy-density-be11e42.md](legacy-density-be11e42.md).
 
+The live completed-tree regular capacity is eight as of the 2026-08-26
+description/action audit. The linked legacy baseline froze a four/six-cap tree
+and is not a current density or performance acceptance target.
+
 ```powershell
 & $godot --headless --path . --script res://tests/contact_density_probe.gd
 ```
