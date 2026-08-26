@@ -285,7 +285,7 @@ UPGRADE_THERMAL_MANAGEMENT_DESC,Controls sensor heat during longer shifts and ad
 UPGRADE_EXTENDED_WATCH_PROTOCOL_NAME,Extended Watch Protocol,장시간 관측 프로토콜
 UPGRADE_EXTENDED_WATCH_PROTOCOL_DESC,Coordinates a long-watch protocol and extends each future observation window by 10 seconds.,장시간 관측 절차를 확립해 다음 관측부터 관측 시간을 10초 더 늘립니다.
 UPGRADE_CONTINUOUS_WATCH_ROTATION_NAME,Continuous Watch Rotation,연속 관측 교대
-UPGRADE_CONTINUOUS_WATCH_ROTATION_DESC,Coordinates uninterrupted handoffs and extends future observation windows to their 60-second maximum.,빈틈없는 교대 절차를 마련해 다음 관측부터 관측 시간을 최대 60초로 늘립니다.
+UPGRADE_CONTINUOUS_WATCH_ROTATION_DESC,"Coordinates uninterrupted handoffs and adds 10 seconds to future observation windows, reaching their 60-second maximum.",빈틈없는 교대 절차를 마련해 다음 관측부터 관측 시간을 10초 더 늘려 최대 60초에 도달합니다.
 UPGRADE_SECONDARY_CAMERA_NAME,Secondary Camera,보조 카메라
 UPGRADE_SECONDARY_CAMERA_DESC,Forecasts incoming objects and gives you a dish. Right-click anywhere to move the nearest dish.,진입할 천체를 미리 예보하고 직접 배치할 수 있는 접시 1대를 제공합니다. 하늘을 우클릭하면 가장 가까운 접시가 이동합니다.
 UPGRADE_PREDICTIVE_DISH_CONTROL_NAME,Predictive Dish Control,예측 접시 제어
@@ -357,7 +357,7 @@ UPGRADE_RAPID_REACQUISITION_DESC,Seven fresh manual observations now relaunch th
 UPGRADE_STORM_FRONT_NAME,Storm Front,폭풍 전선
 UPGRADE_STORM_FRONT_DESC,Six fresh manual observations now launch a 16-meteor Leonid storm.,이제 새로운 유성을 수동으로 6회 관측하면 유성 16개의 사자자리 폭풍이 시작됩니다.
 UPGRADE_LEONID_STORM_NAME,Storm Zenith,폭풍 정점
-UPGRADE_LEONID_STORM_DESC,"Five fresh manual observations now launch 20 meteors over seven seconds. Doubles all observation Data, including automatic completions. All eight ×2 systems combine to ×256.",이제 새로운 유성을 수동으로 5회 관측하면 7초 동안 유성 20개가 진입합니다. 자동 완료를 포함한 모든 관측 데이터를 2배로 늘립니다. 여덟 개의 ×2 시스템을 모두 설치하면 ×256입니다.
+UPGRADE_LEONID_STORM_DESC,Five fresh manual observations now launch 20 meteors over seven seconds.,이제 새로운 유성을 수동으로 5회 관측하면 7초 동안 유성 20개가 진입합니다.
 UPGRADE_PERSEID_OUTBURST_NAME,Perseid Outburst,페르세우스 유성군 돌발
 UPGRADE_PERSEID_OUTBURST_DESC,"Unlocks short warned Perseid outbursts with their own radiant cadence. Doubles all observation Data, including automatic completions. All eight ×2 systems combine to ×256.",고유한 복사점 주기로 짧게 예고되는 페르세우스 유성군 돌발을 해금합니다. 자동 완료를 포함한 모든 관측 데이터를 2배로 늘립니다. 여덟 개의 ×2 시스템을 모두 설치하면 ×256입니다.
 UPGRADE_DOUBLE_STAR_RESOLUTION_NAME,Double-Star Resolution,쌍성 분해

@@ -227,10 +227,30 @@ Analysis, Cascade Sampling, and Perseid Survey each add one permanent slot, so
 the completed regular-spawn cap is eight. Event, echo, storm, fragment, and
 finale paths still share the separate global `MAX_TOTAL_METEORS = 32` cap.
 
-Upgrade effects are **never** read from `game_balance.gd` by gameplay code.
-They go through named accessors on `progression_controller.gd`
-(`get_tracking_radius`, `get_max_active`, `get_dish_count`,
-`get_automation_strength`, and so on). Add new effects as accessors there.
+Research metadata has three deliberately separate layers in `game_balance.gd`:
+
+- `runtime_parameters` is production input. Only
+  `observation_duration_bonus` and `observation_value_multiplier` are currently
+  data-driven, and both are consumed by `progression_controller.gd`.
+- `effect_notes` records non-executing design context. Gameplay code must never
+  read it.
+- `effect_contract` is an independent test oracle. Gameplay code must never
+  read it or derive expected values from `runtime_parameters`.
+
+The remaining effects go through named accessors on
+`progression_controller.gd` (`get_tracking_radius`, `get_max_active`,
+`get_dish_count`, `get_automation_strength`, and so on) or through bespoke
+consumers. `tests/research_contract_test.gd` verifies every node has a literal
+upgrade reference, a runtime parameter, a declared dynamic-id connection, or a
+declared prerequisite-only role. Calibration Framework is intentionally the
+last kind: it opens downstream band and binary-star research without a direct
+runtime toggle.
+
+The first executable contract kinds cover the three numeric families that have
+already drifted: eight global value multipliers, four observation-duration
+bonuses, and four regular active-contact capacity increases. The exact 62-node
+unverified set is a hard baseline, not a wildcard; follow-up work may shrink it,
+and adding or exchanging an id requires an explicit test diff.
 
 ## Save format
 

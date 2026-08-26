@@ -41,6 +41,16 @@ C:\Users\user\AppData\Local\Temp\codex-godot-4.7.2\Godot_v4.7.2-stable_win64_con
 
 명령은 PowerShell 기준이다. 저장소의 다른 문서도 PowerShell 호출 구문을 쓴다.
 
+연구 계약 테스트는 78개 연구 노드의 실행 데이터·비실행 메모·독립 검증 계약이
+섞이지 않았는지 확인하고, 16개 수치 계약의 실제 동작과 영·한 설명을 양방향으로
+검증한다.
+
+```powershell
+& "C:\Users\user\AppData\Local\Temp\codex-godot-4.7.2\Godot_v4.7.2-stable_win64_console.exe" --headless --path . --script res://tests/research_contract_test.gd
+```
+
+통과하면 `RESEARCH_CONTRACT_PASS:` 한 줄이 나온다.
+
 스모크 테스트는 튜토리얼, 세이브, 로컬라이제이션, 라운드 정산, HUD, 관측,
 진행, 이벤트, 성능 상한, 리셋을 한 번에 검증한다.
 
@@ -100,7 +110,7 @@ Windows `.exe` 내보내기. `build/`는 `.gitignore`에 있으므로 산출물�
 ```
 scenes/          main.tscn (게임 본편), probe_layer2.tscn (2층 실험용 테스트베드)
 scripts/         게임 로직. scripts/probe/ 는 probe_layer2 전용
-tests/           통과/실패 2개 + 계측 7개 + 시각 캡처 2개 + 수동 슬라이스 1개, 총 12개 (모두 SceneTree 스크립트)
+tests/           통과/실패 4개 + 계측 7개 + 시각 캡처 2개 + 수동 슬라이스 1개, 총 14개 (모두 SceneTree 스크립트)
 localization/    ui.csv 에서 생성된 en/ko 번역
 docs/            설계와 계측 문서
 build/           내보낸 exe (gitignore)
