@@ -191,11 +191,6 @@ func _process(delta: float) -> void:
 		if autosave_elapsed >= AUTOSAVE_INTERVAL_SECONDS:
 			autosave_elapsed = fmod(autosave_elapsed, AUTOSAVE_INTERVAL_SECONDS)
 			_autosave_active_slot()
-	# The finale is the sole terminal exception to an observation window. Trigger
-	# it here as well as in EventController so parent/child process order cannot
-	# insert a research break at exactly 18:00.
-	if elapsed_time >= Balance.FINAL_EVENT_TIME and not events.final_started:
-		events.trigger_final()
 	if observation_phase_remaining <= 0.0 and not events.final_started:
 		_end_observation_phase()
 
@@ -227,6 +222,11 @@ func _begin_observation_phase(advance_round: bool = false, remaining_override: f
 	survey.begin_round(observation_round)
 	events.run_time = elapsed_time
 	events.start()
+	# Research completion is committed while the chart has the tree paused. The
+	# finale begins only after the chart closes and a live observation round has
+	# started, preserving the round boundary and giving its target a real sky.
+	if progression.is_research_complete():
+		events.trigger_final()
 	var pending_leonid_count := _try_start_leonid_storm()
 	if pending_leonid_count > 0:
 		hud.show_banner(tr("BANNER_LEONID_STORM") % pending_leonid_count, UITheme.INK_MAX, 1.8)

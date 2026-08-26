@@ -16,6 +16,10 @@ const ROTATION_STEP := deg_to_rad(6.0)
 const DEFAULT_ROTATION := 0.0
 const STAR_HIT_SIZE := Vector2(44.0, 44.0)
 const TOOLTIP_SIZE := Vector2(318.0, 0.0)
+# custom_minimum_size only sets a floor. A long branch or star line still
+# widens the panel past it, and the clamp below then measures an already
+# oversized box and cannot pull it back on screen.
+const TOOLTIP_MAX_WIDTH := 318.0
 const TOOLTIP_CURSOR_OFFSET := 18.0
 const TOOLTIP_SCREEN_MARGIN := 10.0
 # The field is a disc around the horizon pivot rather than a rectangle over the
@@ -783,7 +787,7 @@ func _show_node_tooltip(node_id: String) -> void:
 		var was_visible := tooltip_panel.visible
 		tooltip_panel.visible = true
 		if not was_visible:
-			tooltip_panel.reset_size()
+			_resize_tooltip()
 			_request_tooltip_refit()
 		_position_node_tooltip(overlay.get_local_mouse_position())
 		return
@@ -825,7 +829,7 @@ func _show_node_tooltip(node_id: String) -> void:
 	tooltip_branch.add_theme_color_override("font_color", UITheme.TOOLTIP_LABEL)
 	tooltip_meta.add_theme_color_override("font_color", UITheme.TOOLTIP_ACTION if visual_state == "available" and progression.can_purchase(node_id) else UITheme.TOOLTIP_VALUE)
 	tooltip_panel.visible = true
-	tooltip_panel.reset_size()
+	_resize_tooltip()
 	_position_node_tooltip(overlay.get_local_mouse_position())
 	# Container minimum sizes settle after the text changes. Coalesce their
 	# notifications so one content refresh schedules at most one deferred refit.
@@ -1029,6 +1033,8 @@ func _build_node_tooltip() -> void:
 	column.add_theme_constant_override("separation", 5)
 	margin.add_child(column)
 	tooltip_branch = _make_label("", 10, UITheme.TOOLTIP_LABEL)
+	tooltip_branch.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	tooltip_branch.custom_minimum_size.x = 290.0
 	column.add_child(tooltip_branch)
 	tooltip_name = _make_label("", 18, UITheme.TOOLTIP_NAME)
 	tooltip_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1036,6 +1042,7 @@ func _build_node_tooltip() -> void:
 	column.add_child(tooltip_name)
 	tooltip_star = _make_label("", 10, UITheme.TOOLTIP_VALUE)
 	tooltip_star.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	tooltip_star.custom_minimum_size.x = 290.0
 	column.add_child(tooltip_star)
 	var divider := HSeparator.new()
 	divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1061,8 +1068,21 @@ func _refit_node_tooltip() -> void:
 	tooltip_refit_pending = false
 	if tooltip_panel == null or not tooltip_panel.visible or overlay == null:
 		return
-	tooltip_panel.reset_size()
+	_resize_tooltip()
 	_position_node_tooltip(overlay.get_local_mouse_position())
+
+
+func _resize_tooltip() -> void:
+	if tooltip_panel == null:
+		return
+	tooltip_panel.reset_size()
+	var limit := TOOLTIP_MAX_WIDTH
+	if overlay != null:
+		limit = minf(limit, maxf(120.0, overlay.size.x - TOOLTIP_SCREEN_MARGIN * 2.0))
+	if tooltip_panel.size.x > limit:
+		# Fixing the width re-wraps every autowrap label; the resulting height
+		# change comes back through minimum_size_changed and refits once.
+		tooltip_panel.size.x = limit
 
 
 func _position_node_tooltip(cursor_position: Vector2) -> void:

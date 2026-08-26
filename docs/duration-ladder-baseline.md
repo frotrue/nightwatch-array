@@ -1,5 +1,11 @@
 # Observation Duration Ladder Baseline
 
+> **Stale after the 2026-08-26 economy redesign.** This file preserves the old
+> duration prices and prerequisite topology as historical evidence. The live
+> graph's prices changed with the `×256` value curve, its success-count reveal
+> gates were removed, and the fixed 1,080-second finale no longer exists. Use
+> `full_tree_economy_test.gd` for current acceptance.
+
 This is the deterministic engineering baseline for the 20 → 30 → 40 → 50 →
 60-second observation ladder. It is scripted simulation, not player telemetry.
 The historical `be11e42` evidence remains frozen in

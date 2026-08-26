@@ -116,15 +116,23 @@ Header: `DURATION_PRICING_ENV`.
 ### Full-tree economy gate — `full_tree_economy_test.gd`
 
 Pass/fail gate for the expanded 78-system graph. It runs three deterministic
-18-minute scripted-engaged watches at `0.05s` steps, buys the cheapest currently
-available research at each intermission, applies purchased Lyra calibration
-automatically, reproduces purchased Taurus combo speed, Gemini echo bursts, and Leo storm charge,
-and uses predictive dishes when installed. Every seed must reach
-78/78 before the final-event clock. The engaged driver sweeps blank sky only
-while no manual meteor target is available. It also reports the 270/540/810-second
-success curve, each constellation's discovery time, and the longest interval
-without a newly available node. For the summon redesign this gate is run only
-as a pass/fail compatibility check; it is not used to tune or report balance.
+scripted-engaged watches at `0.05s` steps until all research is purchased. It
+buys the cheapest currently available research at each intermission, applies
+purchased Lyra calibration automatically, reproduces purchased Taurus combo
+speed, Gemini echo bursts, and Leo storm charge, and uses predictive dishes
+when installed. The engaged driver sweeps blank sky only while no manual meteor
+target is available.
+
+Every seed must reach 78/78, finish with exact unconditional `×256` observation
+value, and keep the longest pre-completion interval without a newly available
+node at or below `2 × MAX_OBSERVATION_DURATION` (currently 120 seconds).
+Completion time is reported, not asserted. A 14,400-second watchdog catches a
+stalled simulation without turning a target duration into design policy. Output
+also includes total earned/banked Data, 270/540/810-second success checkpoints,
+the purchase time of each `×2` leaf, the longest interval between those leaves,
+purchase batches, and arrival gaps. Multiplier spacing and purchase-batch size
+are playtest diagnostics, not automated pass/fail thresholds. This is the
+authoritative economy-tuning gate for the live graph.
 
 ```powershell
 & $godot --headless --path . --script res://tests/full_tree_economy_test.gd
@@ -132,15 +140,15 @@ as a pass/fail compatibility check; it is not used to tune or report balance.
 
 Header: `FULL_TREE_ECONOMY_ENV`. Pass line: `FULL_TREE_ECONOMY_PASS`.
 
-[`constellation-research-baseline.md`](constellation-research-baseline.md)
-records the accepted candidate results without overwriting the historical
-21-system duration baseline.
+[`constellation-research-baseline.md`](constellation-research-baseline.md) is a
+stale historical 41-system snapshot; it is not a live acceptance target.
 
 ### Duration matrix — `duration_matrix_probe.gd`
 
-Sweeps all five durations against a full 1080-second timeline for several
-builds. Slower than the ladder; use it when a change could affect the shape of
-the whole run rather than one rung.
+Sweeps all five durations against a synthetic 1080-second timeline for several
+builds. This is a historical comparison horizon, not the live finale condition.
+The live run now ends from research completion at a round boundary. Use this
+probe only when a change needs comparison with the old duration matrix.
 
 ```powershell
 & $godot --headless --path . --script res://tests/duration_matrix_probe.gd

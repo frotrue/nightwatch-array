@@ -2,10 +2,21 @@ extends SceneTree
 
 const Balance = preload("res://scripts/game_balance.gd")
 
-const RUN_SECONDS := 1080.0
 const STEP := 0.05
 const SEEDS := [20260821, 20260837, 20260853]
 const SURVEY_DRIVER_SPEED := 720.0
+const WATCHDOG_SECONDS := 14400.0
+const MAX_NO_ARRIVAL_SECONDS := Balance.MAX_OBSERVATION_DURATION * 2.0
+const MULTIPLIER_NODES := [
+	"perfect_observation",
+	"shower_detector",
+	"taurus_full_gallop",
+	"double_star_resolution",
+	"perseid_outburst",
+	"echo_delay_line",
+	"galaxy_imaging",
+	"fireball_tail",
+]
 
 var game
 var active_elapsed: float = 0.0
@@ -13,10 +24,13 @@ var completion_time: float = -1.0
 var completion_successes: int = -1
 var completion_earned: float = -1.0
 var checkpoint_successes: Dictionary = {}
-var discovery_times: Dictionary = {}
+var multiplier_purchase_times: Dictionary = {}
 var seen_available_nodes: Dictionary = {}
 var last_arrival_time: float = 0.0
 var longest_no_arrival: float = 0.0
+var purchase_batches: Array[Dictionary] = []
+var max_purchase_batch: int = 0
+var arrival_gaps: Array[Dictionary] = []
 var simulated_round_index: int = 0
 var survey_driver_direction: int = 1
 var survey_driver_cursor := Vector2(240.0, 420.0)
@@ -30,34 +44,46 @@ func _run() -> void:
 	var total_cost := 0
 	for definition in Balance.UPGRADE_NODES:
 		total_cost += int(definition.cost)
-	print("FULL_TREE_ECONOMY_ENV engine=%s run_seconds=%.0f step_seconds=%.2f seeds=%s nodes=%d total_cost=%d" % [
-		Engine.get_version_info(), RUN_SECONDS, STEP, str(SEEDS),
-		Balance.UPGRADE_NODES.size(), total_cost,
+	print("FULL_TREE_ECONOMY_ENV engine=%s watchdog_seconds=%.0f max_no_arrival_seconds=%.0f step_seconds=%.2f seeds=%s nodes=%d total_cost=%d" % [
+		Engine.get_version_info(), WATCHDOG_SECONDS, MAX_NO_ARRIVAL_SECONDS, STEP,
+		str(SEEDS), Balance.UPGRADE_NODES.size(), total_cost,
 	])
 	var failed := false
 	for seed in SEEDS:
 		var result: Dictionary = await _run_seed(seed)
-		print("FULL_TREE_ECONOMY_RESULT seed=%d purchased=%d/%d final_successes=%d final_earned=%.0f bank=%.0f completion_seconds=%.1f completion_successes=%d completion_earned=%.0f checkpoints=%s discoveries=%s longest_no_arrival=%.1f" % [
+		print("FULL_TREE_ECONOMY_RESULT seed=%d purchased=%d/%d completion_seconds=%.1f successes=%d earned=%.0f bank=%.0f value_multiplier=%.2f next_node=%s next_cost=%.0f checkpoints=%s multiplier_times=%s longest_multiplier_gap=%.1f arrival_gaps=%s purchase_batches=%s max_purchase_batch=%d longest_no_arrival=%.1f" % [
 			seed,
 			int(result.purchased),
 			Balance.UPGRADE_NODES.size(),
+			float(result.completion_time),
 			int(result.successes),
 			float(result.earned),
 			float(result.bank),
-			float(result.completion_time),
-			int(result.completion_successes),
-			float(result.completion_earned),
+			float(result.value_multiplier),
+			String(result.next_node),
+			float(result.next_cost),
 			str(result.checkpoints),
-			str(result.discoveries),
+			str(result.multiplier_times),
+			float(result.longest_multiplier_gap),
+			str(result.arrival_gaps),
+			str(result.purchase_batches),
+			int(result.max_purchase_batch),
 			float(result.longest_no_arrival),
 		])
-		if int(result.purchased) != Balance.UPGRADE_NODES.size() or float(result.completion_time) < 0.0:
+		if (
+			int(result.purchased) != Balance.UPGRADE_NODES.size()
+			or float(result.completion_time) < 0.0
+			or float(result.longest_no_arrival) > MAX_NO_ARRIVAL_SECONDS + STEP
+			or not is_equal_approx(float(result.value_multiplier), 256.0)
+		):
 			failed = true
 	if failed:
-		push_error("FULL_TREE_ECONOMY_FAIL: at least one deterministic 18-minute run could not purchase all research")
+		push_error("FULL_TREE_ECONOMY_FAIL: completion, multiplier, or no-arrival invariant failed")
 		quit(1)
 		return
-	print("FULL_TREE_ECONOMY_PASS: all %d research systems are purchasable before the 18-minute final event" % Balance.UPGRADE_NODES.size())
+	print("FULL_TREE_ECONOMY_PASS: all %d research systems complete with x256 value growth and no arrival gap above %.0f seconds" % [
+		Balance.UPGRADE_NODES.size(), MAX_NO_ARRIVAL_SECONDS,
+	])
 	quit(0)
 
 
@@ -75,35 +101,32 @@ func _run_seed(seed: int) -> Dictionary:
 	completion_successes = -1
 	completion_earned = -1.0
 	checkpoint_successes.clear()
-	discovery_times = {
-		"polar_survey": -1.0,
-		"radiant_plotting": -1.0,
-		"echo_correlation_10": -1.0,
-		"single_echo_channel": -1.0,
-		"filter_wheel": -1.0,
-		"momentum_acquisition": -1.0,
-		"ephemeris_marks": -1.0,
-		"leonid_radiant": -1.0,
-	}
+	multiplier_purchase_times.clear()
+	for node_id in MULTIPLIER_NODES:
+		multiplier_purchase_times[node_id] = -1.0
 	seen_available_nodes.clear()
 	last_arrival_time = 0.0
 	longest_no_arrival = 0.0
+	purchase_batches.clear()
+	max_purchase_batch = 0
+	arrival_gaps.clear()
 	simulated_round_index = 0
 	_reset_survey_driver()
 	_record_available_arrivals()
-	while active_elapsed < RUN_SECONDS:
-		var round_duration: float = minf(
-			game.progression.get_observation_duration(),
-			RUN_SECONDS - active_elapsed
-		)
+	while not game.progression.is_research_complete() and active_elapsed < WATCHDOG_SECONDS:
+		var round_duration: float = game.progression.get_observation_duration()
 		await _run_round(round_duration)
 		_record_available_arrivals()
 		_purchase_affordable_research()
-		if completion_time < 0.0 and game.progression.upgrade_level == Balance.UPGRADE_NODES.size():
+		if game.progression.is_research_complete():
 			completion_time = active_elapsed
 			completion_successes = game.progression.success_count
 			completion_earned = game.progression.total_data_earned
-	longest_no_arrival = maxf(longest_no_arrival, RUN_SECONDS - last_arrival_time)
+			break
+		longest_no_arrival = maxf(longest_no_arrival, active_elapsed - last_arrival_time)
+	if completion_time >= 0.0:
+		longest_no_arrival = maxf(longest_no_arrival, completion_time - last_arrival_time)
+	var next_candidate := _cheapest_available_research()
 	var result := {
 		"purchased": game.progression.upgrade_level,
 		"successes": game.progression.success_count,
@@ -113,7 +136,14 @@ func _run_seed(seed: int) -> Dictionary:
 		"completion_successes": completion_successes,
 		"completion_earned": completion_earned,
 		"checkpoints": checkpoint_successes.duplicate(true),
-		"discoveries": discovery_times.duplicate(true),
+		"value_multiplier": game.progression.get_observation_value_multiplier("common", 1),
+		"next_node": String(next_candidate.get("id", "")),
+		"next_cost": float(next_candidate.get("cost", 0.0)),
+		"multiplier_times": multiplier_purchase_times.duplicate(true),
+		"longest_multiplier_gap": _longest_multiplier_gap(),
+		"purchase_batches": purchase_batches.duplicate(true),
+		"max_purchase_batch": max_purchase_batch,
+		"arrival_gaps": arrival_gaps.duplicate(true),
 		"longest_no_arrival": longest_no_arrival,
 	}
 	game.queue_free()
@@ -121,6 +151,19 @@ func _run_seed(seed: int) -> Dictionary:
 	await process_frame
 	await process_frame
 	return result
+
+
+func _longest_multiplier_gap() -> float:
+	var purchase_times: Array[float] = []
+	for node_id in MULTIPLIER_NODES:
+		var purchase_time := float(multiplier_purchase_times.get(node_id, -1.0))
+		if purchase_time >= 0.0:
+			purchase_times.append(purchase_time)
+	purchase_times.sort()
+	var longest_gap := 0.0
+	for index in range(1, purchase_times.size()):
+		longest_gap = maxf(longest_gap, purchase_times[index] - purchase_times[index - 1])
+	return longest_gap
 
 
 func _prepare(seed: int) -> void:
@@ -281,6 +324,9 @@ func _on_target_observed(target, reward: float, multiplier: float, was_manual: b
 
 
 func _purchase_affordable_research() -> void:
+	var batch_size := 0
+	var batch_nodes: Array[String] = []
+	var bank_before: float = game.progression.observation_data
 	var purchased_one := true
 	while purchased_one:
 		purchased_one = false
@@ -294,10 +340,35 @@ func _purchase_affordable_research() -> void:
 				candidate_cost = cost
 		if not candidate_id.is_empty():
 			game.progression.request_purchase(candidate_id)
+			batch_size += 1
+			batch_nodes.append(candidate_id)
+			if candidate_id in MULTIPLIER_NODES:
+				multiplier_purchase_times[candidate_id] = active_elapsed
 			game.sky_contacts.refresh_dishes()
 			game.spawner.refresh_active_features()
 			_record_available_arrivals()
 			purchased_one = true
+	if batch_size > 0:
+		purchase_batches.append({
+			"time": active_elapsed,
+			"count": batch_size,
+			"bank_before": bank_before,
+			"bank_after": game.progression.observation_data,
+			"nodes": batch_nodes,
+		})
+		max_purchase_batch = maxi(max_purchase_batch, batch_size)
+
+
+func _cheapest_available_research() -> Dictionary:
+	var candidate: Dictionary = {}
+	var candidate_cost := INF
+	for definition in Balance.UPGRADE_NODES:
+		var node_id := String(definition.id)
+		var cost := float(definition.cost)
+		if game.progression.get_node_state(node_id) == "available" and cost < candidate_cost:
+			candidate = {"id": node_id, "cost": cost}
+			candidate_cost = cost
+	return candidate
 
 
 func _record_success_checkpoints() -> void:
@@ -307,12 +378,17 @@ func _record_success_checkpoints() -> void:
 
 
 func _record_available_arrivals() -> void:
+	var arriving_nodes: Array[String] = []
 	for definition in Balance.UPGRADE_NODES:
 		var node_id := String(definition.id)
-		if discovery_times.has(node_id) and float(discovery_times[node_id]) < 0.0 and game.progression.is_node_revealed(node_id):
-			discovery_times[node_id] = active_elapsed
 		if seen_available_nodes.has(node_id) or game.progression.get_node_state(node_id) != "available":
 			continue
 		seen_available_nodes[node_id] = true
-		longest_no_arrival = maxf(longest_no_arrival, active_elapsed - last_arrival_time)
-		last_arrival_time = active_elapsed
+		arriving_nodes.append(node_id)
+	if arriving_nodes.is_empty():
+		return
+	var arrival_gap := active_elapsed - last_arrival_time
+	longest_no_arrival = maxf(longest_no_arrival, arrival_gap)
+	if arrival_gap > Balance.MAX_OBSERVATION_DURATION + STEP:
+		arrival_gaps.append({"time": active_elapsed, "gap": arrival_gap, "nodes": arriving_nodes})
+	last_arrival_time = active_elapsed
