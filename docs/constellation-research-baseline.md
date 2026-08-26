@@ -5,7 +5,7 @@
 >
 > **Stale after the 2026-08-26 economy/finale redesign.** The live graph has no
 > success-count reveal gates or 1,080-second finale, has eight unconditional
-> `×2` value leaves, and uses measured prices totaling 3,625,070. None of the
+> `×2` value leaves, and uses measured prices totaling 3,621,070. None of the
 > completion times, costs, or discovery-gate conclusions below are current
 > acceptance targets.
 

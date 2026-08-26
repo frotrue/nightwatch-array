@@ -310,11 +310,9 @@ func get_manual_analysis_speed_multiplier() -> float:
 	var stacks := get_taurus_combo_stack_count()
 	if stacks <= 0:
 		return 1.0
-	var speed_per_stack := 0.02
-	if has_upgrade("accelerated_analysis"):
-		speed_per_stack = 0.04
-	elif has_upgrade("rapid_focus"):
-		speed_per_stack = 0.03
+	var speed_per_stack := 0.04 if has_upgrade("accelerated_analysis") else 0.02
+	if has_upgrade("rapid_focus"):
+		speed_per_stack += 0.01
 	return 1.0 + float(stacks) * speed_per_stack
 
 
@@ -322,11 +320,9 @@ func get_taurus_tracking_radius_bonus() -> float:
 	var stacks := get_taurus_combo_stack_count()
 	if stacks <= 0:
 		return 0.0
-	var radius_per_stack := 1.0
-	if has_upgrade("expanded_sweep"):
-		radius_per_stack = 2.0
-	elif has_upgrade("wide_pursuit"):
-		radius_per_stack = 1.5
+	var radius_per_stack := 2.0 if has_upgrade("expanded_sweep") else 1.0
+	if has_upgrade("wide_pursuit"):
+		radius_per_stack += 0.5
 	return float(stacks) * radius_per_stack
 
 

@@ -132,6 +132,11 @@ func _run() -> void:
 	var observatory_definition: Dictionary = balance.upgrade_definition("observatory_network")
 	var triple_echo_definition: Dictionary = balance.upgrade_definition("triple_echo_array")
 	var leonid_storm_definition: Dictionary = balance.upgrade_definition("leonid_storm")
+	var global_x2_ids := [
+		"perfect_observation", "shower_detector", "taurus_full_gallop",
+		"double_star_resolution", "perseid_outburst", "echo_delay_line",
+		"galaxy_imaging", "fireball_tail",
+	]
 	await _run_survey_regressions(packed, balance)
 	game.settings.set_language("ko", false)
 	await process_frame
@@ -155,12 +160,12 @@ func _run() -> void:
 	)
 	_check(
 		game.upgrade_tree._upgrade_description(multi_target_definition)
-		== "수동 관측 범위 안의 모든 유성을 함께 분석합니다. 진행 중인 분석을 가속하는 지원 카메라 채널 하나와 파편 분석 지원도 추가합니다.",
-		"Korean Multi-Target Analysis description names one support lane"
+		== "수동 관측 범위 안의 모든 유성을 함께 분석하고 하늘에 동시에 유지되는 일반 표적의 상한을 1개 늘립니다. 지원 카메라 채널 하나를 추가하며 파편 분석을 설치했다면 파편 조각도 지원합니다.",
+		"Korean Multi-Target Analysis description names capacity and both support effects"
 	)
 	_check(
 		game.upgrade_tree._upgrade_description(observatory_definition)
-		== "전체 관측망을 연결해 유성우 진입 구역을 예측하고 직접 조준하는 두 번째 접시를 추가하며 진행 중인 분석을 가속하는 지원 카메라 채널 두 개를 유지합니다.",
+		== "전체 관측망을 연결하고 유성우 진입 구역을 예측합니다. 직접 조준하는 두 번째 접시를 추가하고 자동 지원 채널을 1개에서 2개로 늘립니다.",
 		"Korean Observatory Network description names the second dish and two support lanes"
 	)
 	_check(
@@ -170,9 +175,13 @@ func _run() -> void:
 	)
 	_check(
 		game.upgrade_tree._upgrade_description(leonid_storm_definition)
-		== "필요한 새로운 유성 수동 관측을 5회로 줄이고 7초 동안 진입하는 유성을 16개에서 20개로 늘립니다.",
+		== "이제 새로운 유성을 수동으로 5회 관측하면 7초 동안 유성 20개가 진입합니다. 자동 완료를 포함한 모든 관측 데이터를 2배로 늘립니다. 여덟 개의 ×2 시스템을 모두 설치하면 ×256입니다.",
 		"Korean Leonid Storm description names the five-observation twenty-meteor capstone"
 	)
+	for multiplier_id in global_x2_ids:
+		var multiplier_definition: Dictionary = balance.upgrade_definition(multiplier_id)
+		var multiplier_description: String = game.upgrade_tree._upgrade_description(multiplier_definition)
+		_check("2배" in multiplier_description and "×256" in multiplier_description, "%s exposes its global multiplier in Korean" % multiplier_id)
 	_check(TranslationServer.translate("UPGRADE_ERROR_NEED_DATA") % 12 == "데이터가 12개 더 필요합니다", "Korean shortfall text is a complete sentence")
 	_check(TranslationServer.translate("TREE_NEED_MORE") % [8, 12] == "◇  데이터 8 / 12", "Korean tree affordability text shows current and required Data")
 	_check(TranslationServer.translate("SAVE_RESET_PROMPT") % 2 == "슬롯 2의 모든 진행 상황을 삭제합니다. 이 작업은 되돌릴 수 없습니다.", "Korean reset warning clearly explains permanent deletion")
@@ -195,12 +204,12 @@ func _run() -> void:
 	)
 	_check(
 		game.upgrade_tree._upgrade_description(multi_target_definition)
-		== "All meteors inside the manual tracking field advance together; also adds one support camera lane that accelerates active analysis and fragment assistance.",
-		"English Multi-Target Analysis description names one support lane"
+		== "Advances every meteor inside the manual tracking field together and raises regular active-sky capacity by one. Adds one support camera lane; with Fragment Analysis, it also assists fragment pieces.",
+		"English Multi-Target Analysis description names capacity and both support effects"
 	)
 	_check(
 		game.upgrade_tree._upgrade_description(observatory_definition)
-		== "Links the whole array; previews shower entry sectors; adds a second steerable dish; and keeps two support camera lanes that accelerate active analysis.",
+		== "Links the array and previews shower entry sectors. Adds a second steerable dish and expands automatic support from one lane to two.",
 		"English Observatory Network description names the second dish and two support lanes"
 	)
 	_check(
@@ -210,9 +219,23 @@ func _run() -> void:
 	)
 	_check(
 		game.upgrade_tree._upgrade_description(leonid_storm_definition)
-		== "Reduces the requirement to five fresh manual observations and raises each seven-second storm from 16 meteors to 20.",
+		== "Five fresh manual observations now launch 20 meteors over seven seconds. Doubles all observation Data, including automatic completions. All eight ×2 systems combine to ×256.",
 		"English Leonid Storm description names the five-observation twenty-meteor capstone"
 	)
+	for definition_variant in balance.UPGRADE_NODES:
+		var localized_definition: Dictionary = definition_variant
+		_check(
+			game.upgrade_tree._upgrade_name(localized_definition) == String(localized_definition.name),
+			"%s fallback name stays in sync with English localization" % String(localized_definition.id)
+		)
+		_check(
+			game.upgrade_tree._upgrade_description(localized_definition) == String(localized_definition.description),
+			"%s fallback description stays in sync with English localization" % String(localized_definition.id)
+		)
+	for multiplier_id in global_x2_ids:
+		var multiplier_definition: Dictionary = balance.upgrade_definition(multiplier_id)
+		var multiplier_description: String = game.upgrade_tree._upgrade_description(multiplier_definition)
+		_check("Doubles all observation Data" in multiplier_description and "×256" in multiplier_description, "%s exposes its global multiplier in English" % multiplier_id)
 	_check(
 		String(secondary_camera_definition.description)
 		== game.upgrade_tree._upgrade_description(secondary_camera_definition),
@@ -257,6 +280,17 @@ func _run() -> void:
 	_check(is_zero_approx(game.progression.get_observation_echo_probability()) and game.progression.get_observation_echo_count() == 0, "Gemini echoes are inert before purchase")
 	_check(game.progression.get_leonid_trigger_count() == 0 and game.progression.get_leonid_storm_count() == 0 and game.progression.leonid_charge == 0, "Leonid storms are inert before purchase")
 	_check(is_equal_approx(game.progression.get_manual_analysis_speed_multiplier(), 1.0) and is_zero_approx(game.progression.get_taurus_tracking_radius_bonus()), "Taurus Momentum is inert before its discovery root")
+	var capacity_probe = load("res://scripts/progression_controller.gd").new()
+	_check(capacity_probe.get_max_active() == 4, "regular active-sky capacity begins at four")
+	for capacity_step in [
+		["array_planning", 5],
+		["multi_target_analysis", 6],
+		["cascade_sampling", 7],
+		["perseid_survey", 8],
+	]:
+		capacity_probe.purchased_nodes[String(capacity_step[0])] = true
+		_check(capacity_probe.get_max_active() == int(capacity_step[1]), "%s contributes its permanent active-sky slot" % String(capacity_step[0]))
+	capacity_probe.free()
 	var research_probe = load("res://scripts/progression_controller.gd").new()
 	var base_probe_scale: float = research_probe.get_spawn_interval_scale()
 	_check(research_probe.debug_purchase_node("momentum_acquisition"), "Taurus Momentum is available from the opening sky")
@@ -269,12 +303,15 @@ func _run() -> void:
 	research_probe.update_manual_combo(3.01)
 	_check(research_probe.manual_combo_count == 0, "Momentum expires when its observation window elapses")
 	_check(research_probe.debug_purchase_node("wide_pursuit") and research_probe.debug_purchase_node("rapid_focus"), "Taurus side stars refine range and speed from the shared root")
+	for _side_combo_step in range(4):
+		research_probe.add_observation(1.0, true, 1.0)
+	_check(is_equal_approx(research_probe.get_manual_analysis_speed_multiplier(), 1.12) and is_equal_approx(research_probe.get_taurus_tracking_radius_bonus(), 6.0), "Taurus side stars independently add one percent speed and half a pixel per stack")
 	_check(research_probe.debug_purchase_node("cadence_memory") and research_probe.debug_purchase_node("expanded_sweep") and research_probe.debug_purchase_node("accelerated_analysis"), "Taurus follows its central figure through the mid-combo refinements")
 	_check(research_probe.debug_purchase_node("sustained_charge") and research_probe.debug_purchase_node("taurus_full_gallop"), "Taurus completes its five-second ten-stack Momentum path")
 	for _full_combo_step in range(10):
 		research_probe.add_observation(1.0, true, 1.0)
 	_check(research_probe.get_taurus_combo_stack_count() == 10 and is_equal_approx(research_probe.get_manual_combo_window(), 5.0), "completed Taurus holds ten effective stacks for five seconds")
-	_check(is_equal_approx(research_probe.get_manual_analysis_speed_multiplier(), 1.4) and is_equal_approx(research_probe.get_taurus_tracking_radius_bonus(), 20.0), "completed Taurus reaches the declared 40-percent speed and 20-pixel range ceiling")
+	_check(is_equal_approx(research_probe.get_manual_analysis_speed_multiplier(), 1.5) and is_equal_approx(research_probe.get_taurus_tracking_radius_bonus(), 25.0), "completed Taurus cumulatively reaches the declared 50-percent speed and 25-pixel range ceiling")
 	var combo_save_probe = load("res://scripts/progression_controller.gd").new()
 	combo_save_probe.load_save_data(research_probe.get_save_data())
 	_check(combo_save_probe.has_upgrade("taurus_full_gallop") and combo_save_probe.manual_combo_count == 0, "Taurus research persists while live Momentum never crosses a save or round boundary")
@@ -287,7 +324,7 @@ func _run() -> void:
 	_check(research_probe.debug_purchase_node("adaptive_exposure_grid") and research_probe.get_lifetime_multiplier() > 1.0, "Adaptive Exposure Grid lengthens target visibility")
 	_check(research_probe.debug_purchase_node("debris_correlation"), "Perseus debris branch opens from its real Mirfak segment")
 	_check(research_probe.debug_purchase_node("cascade_sampling") and research_probe.get_max_active() == 5, "Cascade Sampling opens one bounded crowded-sky channel")
-	_check(research_probe.debug_purchase_node("perseid_survey") and research_probe.get_max_active() == 6, "Perseid Survey reaches the six-target performance cap")
+	_check(research_probe.debug_purchase_node("perseid_survey") and research_probe.get_max_active() == 6, "Perseid Survey adds its slot to this two-upgrade capacity build")
 	_check(research_probe.get_observation_value_multiplier("fragment", 3) > 1.0, "Perseus survey rewards dense fragment observations")
 	_check(research_probe.debug_purchase_node("ephemeris_marks") and research_probe.forecast_visible(), "Ephemeris Marks independently opens the deep-sky forecast")
 	_check(research_probe.debug_purchase_node("satellite_catalog"), "Satellite Catalog opens its same-round target family")
@@ -298,7 +335,7 @@ func _run() -> void:
 	_check(research_probe.forecast_classifies("comet") and research_probe.get_forecast_max_error("comet") == 22.0, "Change Detection classifies and tightens deep-target forecasts")
 	_check(research_probe.get_analysis_speed_multiplier("comet") == 1.25 and is_equal_approx(research_probe.get_observation_value_multiplier("comet", 1), 2.6), "Andromeda's conditional value bonus stacks over Taurus's global x2 growth")
 	_check(research_probe.debug_purchase_node("perseid_outburst"), "Perseid Outburst arrives after the completed Perseus survey")
-	_check(research_probe.debug_purchase_node("filter_wheel"), "Lyra classifier opens before the double-star side branch")
+	_check(research_probe.debug_purchase_node("filter_wheel"), "Lyra calibration framework opens before the double-star side branch")
 	_check(research_probe.debug_purchase_node("double_star_resolution"), "Double-Star Resolution follows Vega without a hidden success gate")
 	_check(research_probe.debug_purchase_node("galaxy_imaging"), "Galaxy Imaging follows the completed Andromeda survey")
 	_check(research_probe.forecast_classifies("binary_star") and research_probe.get_forecast_max_error("binary_star") == 22.0, "Double-Star Resolution classifies and tightens binary-star forecasts")
@@ -504,15 +541,22 @@ func _run() -> void:
 	_check(int(balance.upgrade_definition("thermal_management").cost) == 450, "the second duration step uses the measured full-tree economy price")
 	_check(int(balance.upgrade_definition("extended_watch_protocol").cost) == 700, "the third duration step uses the measured full-tree economy price")
 	_check(int(balance.upgrade_definition("continuous_watch_rotation").cost) == 1000, "the fourth duration step uses the measured full-tree economy price")
+	_check(int(balance.upgrade_definition("filter_wheel").cost) == 10000, "Calibration Framework remains cheaper than its Double-Star Resolution successor")
 	_check(balance.upgrade_definition("wide_field").prerequisites == ["edge_detection"], "Wide Field stays inside the detection constellation")
 	_check(balance.upgrade_definition("thermal_management").prerequisites == ["observation_scheduling"], "Thermal Management stays inside Orion's duration arm")
 	_check(balance.upgrade_definition("continuous_watch_rotation").prerequisites == ["extended_watch_protocol"], "Continuous Watch Rotation stays inside Orion")
 	var has_success_count_reveal_gate := false
+	var has_prerequisite_price_inversion := false
 	for research_definition in balance.UPGRADE_NODES:
 		for reveal_gate in research_definition.hidden_until:
 			if reveal_gate is Dictionary and String(reveal_gate.get("type", "")) == "success_count":
 				has_success_count_reveal_gate = true
+		for prerequisite_variant in research_definition.prerequisites:
+			var prerequisite_definition: Dictionary = balance.upgrade_definition(String(prerequisite_variant))
+			if int(research_definition.cost) < int(prerequisite_definition.cost):
+				has_prerequisite_price_inversion = true
 	_check(not has_success_count_reveal_gate, "the research graph has no hidden success-count reveal gates")
+	_check(not has_prerequisite_price_inversion, "no research node costs less than its direct prerequisite")
 	var closed_tree_style_id: int = game.upgrade_tree.node_buttons["better_lens"].get_theme_stylebox("normal").get_instance_id()
 	var closed_tree_optics_position: Vector2 = game.upgrade_tree.node_buttons["better_lens"].position
 	var data_before_rejected_purchase: float = game.progression.observation_data
@@ -1269,7 +1313,7 @@ func _run() -> void:
 				and game.upgrade_tree._segment_color(installed_states) == Color(chart_ui_theme.LINE_INSTALLED, 0.42)
 			)
 	_check(installed_research_segments == 74 and all_research_segments_installed, "all seventy-four research-constellation segments reach the installed color at full completion")
-	_check(game.progression.get_max_active() == 6, "research raises dense-sky capacity without removing the six-target performance cap")
+	_check(game.progression.get_max_active() == 8, "all four capacity systems raise the regular active-sky cap from four to eight")
 	_check(game.progression.upgrade_level == balance.UPGRADE_NODES.size(), "the run resolves to the full research array completion")
 	_check(is_equal_approx(game.progression.get_progression_ratio(), 1.0), "the original pacing topology preserves the completed-tree density endpoint")
 	for legacy_id in ["better_lens", "long_exposure", "wide_field", "trajectory", "precision_multiplier", "secondary_camera", "shower_detector", "automated_tracking"]:

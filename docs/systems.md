@@ -222,6 +222,11 @@ gates. Eight approved branch leaves contribute unconditional `×2` observation
 value each, so a completed tree has exact global `×256` growth before the four
 existing target-conditional multipliers are applied.
 
+Regular active-sky capacity begins at four. Array Planning, Multi-Target
+Analysis, Cascade Sampling, and Perseid Survey each add one permanent slot, so
+the completed regular-spawn cap is eight. Event, echo, storm, fragment, and
+finale paths still share the separate global `MAX_TOTAL_METEORS = 32` cap.
+
 Upgrade effects are **never** read from `game_balance.gd` by gameplay code.
 They go through named accessors on `progression_controller.gd`
 (`get_tracking_radius`, `get_max_active`, `get_dish_count`,

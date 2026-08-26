@@ -6,6 +6,10 @@
 > are **not acceptance criteria** for later density, capacity, completion, data,
 > forced-choice, or pacing work and must not be quoted as if they describe the
 > current game after that ramp lands.
+>
+> **Further superseded on 2026-08-26:** the completed live graph now raises the
+> regular active cap from four to eight through four permanent +1 systems. The
+> frozen four/six-cap rows below remain historical evidence only.
 
 ## Manifest
 
