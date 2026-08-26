@@ -137,6 +137,7 @@ func _run() -> void:
 		"double_star_resolution", "perseid_outburst", "echo_delay_line",
 		"galaxy_imaging", "fireball_tail",
 	]
+	await _run_feedback_regressions(packed, global_x2_ids)
 	await _run_survey_regressions(packed, balance)
 	game.settings.set_language("ko", false)
 	await process_frame
@@ -1690,6 +1691,150 @@ func _decorative_controls_ignore_mouse(node: Node) -> bool:
 		if not _decorative_controls_ignore_mouse(child):
 			return false
 	return true
+
+
+func _run_feedback_regressions(packed: PackedScene, global_x2_ids: Array) -> void:
+	var feedback_game = packed.instantiate()
+	feedback_game.startup_slot_prompt_enabled = false
+	feedback_game.get_node("Tutorial").auto_start_enabled = false
+	root.add_child(feedback_game)
+	await process_frame
+	await process_frame
+	feedback_game.set_process(false)
+	feedback_game.spawner.set_process(false)
+	feedback_game.events.set_process(false)
+	feedback_game.sky_contacts.set_process(false)
+	feedback_game.observer.set_process(false)
+	feedback_game.progression.reset()
+	feedback_game.effects.reset()
+
+	# The same common observation must keep the same presentation at x1 and
+	# x256 even though the second Data packet carries 256 times the amount.
+	var x1_target = feedback_game.spawner.spawn_meteor(
+		"common", Vector2(420.0, 240.0), Vector2.ZERO, 4.0
+	)
+	x1_target.set_meta("gemini_echo", true)
+	feedback_game._on_meteor_observed(x1_target, 22.0, 1.55, true, "GOOD")
+	var x1_particle_count: int = feedback_game.effects.particles.size()
+	var x1_flash_strength: float = feedback_game.effects.flash_strength
+	var x1_kick_amplitude: float = feedback_game.effects.kick_amplitude
+	x1_target.free()
+	feedback_game.effects.reset()
+	feedback_game.progression.reset_manual_combo()
+	for multiplier_id in global_x2_ids:
+		feedback_game.progression.purchased_nodes[String(multiplier_id)] = true
+	var x256_data_before: float = feedback_game.progression.observation_data
+	var x256_target = feedback_game.spawner.spawn_meteor(
+		"common", Vector2(420.0, 240.0), Vector2.ZERO, 4.0
+	)
+	x256_target.set_meta("gemini_echo", true)
+	feedback_game._on_meteor_observed(x256_target, 22.0, 1.55, true, "GOOD")
+	var x256_data_gain: float = feedback_game.progression.observation_data - x256_data_before
+	var x256_popup: Dictionary = feedback_game.effects.popups.back()
+	var last_voice_index := posmod(
+		feedback_game.sound.next_voice - 1,
+		feedback_game.sound.voice_pool.size()
+	)
+	var intrinsic_success_pitch: float = feedback_game.sound.voice_pool[last_voice_index].pitch_scale
+	_check(is_equal_approx(x256_data_gain, 22.0 * 256.0), "x256 research still multiplies the actual observation Data")
+	_check(
+		feedback_game.effects.particles.size() == x1_particle_count
+		and is_equal_approx(feedback_game.effects.flash_strength, x1_flash_strength)
+		and is_equal_approx(feedback_game.effects.kick_amplitude, x1_kick_amplitude),
+		"the same target keeps identical feedback strength at x1 and x256"
+	)
+	_check("x1.55" in String(x256_popup.text) and "x396.80" not in String(x256_popup.text), "the Data packet suffix reports intrinsic observation technique instead of research economy")
+	_check(is_equal_approx(intrinsic_success_pitch, 1.0 + 0.55 * 0.045), "the success pitch reads the intrinsic observation multiplier")
+	_check(is_equal_approx(feedback_game.progression.best_multiplier, 1.55), "the best manual multiplier excludes x256 research economy")
+	x256_target.free()
+
+	# Automatic completions can deliver economic Data but cannot rewrite a stat
+	# whose player-facing label explicitly says it is manual.
+	feedback_game.effects.reset()
+	var automatic_target = feedback_game.spawner.spawn_meteor(
+		"common", Vector2(420.0, 240.0), Vector2.ZERO, 4.0
+	)
+	automatic_target.set_meta("gemini_echo", true)
+	feedback_game._on_meteor_observed(automatic_target, 10.0, 0.68, false, "AUTOMATIC")
+	_check(is_equal_approx(feedback_game.progression.best_multiplier, 1.55), "automatic observations never update the best manual multiplier")
+	automatic_target.free()
+
+	# Shake and hitstop diverge on non-impact targets. View motion is allowed to
+	# be earned, because a player reads it as accumulation; a halt is not,
+	# because a chain of halts is the freeze the type gate exists to prevent.
+	feedback_game.effects.reset()
+	feedback_game.progression.reset_manual_combo()
+	var galaxy_target = feedback_game.spawner.spawn_meteor(
+		"galaxy", Vector2(420.0, 240.0), Vector2.ZERO, 8.0
+	)
+	galaxy_target.set_meta("gemini_echo", true)
+	feedback_game._on_meteor_observed(galaxy_target, 220.0, 1.0, true, "PERFECT")
+	_check(not feedback_game.hitstop_active, "non-impact targets never freeze the view even at maximum strength")
+	_check(feedback_game.effects.shake_trauma > 0.0, "a non-impact target that reaches the shake floor still moves the view")
+	galaxy_target.free()
+
+	# The chain is what a common earns its feedback with. One is quiet; an
+	# unbroken run of them crosses the shake floor without a Perfect grade.
+	feedback_game.effects.reset()
+	feedback_game.progression.reset_manual_combo()
+	var lone_common = feedback_game.spawner.spawn_meteor(
+		"common", Vector2(420.0, 240.0), Vector2.ZERO, 4.0
+	)
+	lone_common.set_meta("gemini_echo", true)
+	feedback_game._on_meteor_observed(lone_common, 24.0, 1.0, true, "GOOD")
+	_check(is_zero_approx(feedback_game.effects.shake_trauma), "a single common observation leaves the view still")
+	lone_common.free()
+
+	# The chain has to be built through the real path. Writing the count alone
+	# leaves the window at zero, and the next success reads that as a broken
+	# chain and starts over at one.
+	feedback_game.effects.reset()
+	feedback_game.progression.reset_manual_combo()
+	for _link in range(11):
+		feedback_game.progression.record_manual_combo_success()
+	var chained_common = feedback_game.spawner.spawn_meteor(
+		"common", Vector2(420.0, 240.0), Vector2.ZERO, 4.0
+	)
+	chained_common.set_meta("gemini_echo", true)
+	feedback_game._on_meteor_observed(chained_common, 24.0, 1.0, true, "GOOD")
+	_check(feedback_game.effects.shake_trauma > 0.0, "a full manual chain lets a common reach the shake floor")
+	_check(not feedback_game.hitstop_active, "a full manual chain still never freezes the view on a common")
+	chained_common.free()
+	feedback_game.progression.reset_manual_combo()
+
+	feedback_game.effects.reset()
+	feedback_game.progression.reset_manual_combo()
+	feedback_game.hitstop_cooldown_until_msec = 0
+	var fireball_target = feedback_game.spawner.spawn_meteor(
+		"fireball", Vector2(420.0, 240.0), Vector2.ZERO, 8.0
+	)
+	fireball_target.set_meta("gemini_echo", true)
+	feedback_game._on_meteor_observed(fireball_target, 82.0, 1.0, true, "PERFECT")
+	_check(feedback_game.effects.shake_trauma > 0.0 and feedback_game.hitstop_active, "a strong manual fireball still owns shake and hitstop")
+	feedback_game._release_hitstop()
+	var cooldown_deadline: int = feedback_game.hitstop_cooldown_until_msec
+	feedback_game._apply_hitstop(0.05)
+	_check(cooldown_deadline > Time.get_ticks_msec() and not feedback_game.hitstop_active, "hitstop cannot restart during its 400 ms real-time cooldown")
+	fireball_target.free()
+
+	var legacy_multiplier_save: Dictionary = feedback_game.progression.get_save_data()
+	legacy_multiplier_save.best_multiplier = 871.21
+	var legacy_multiplier_probe = load("res://scripts/progression_controller.gd").new()
+	legacy_multiplier_probe.load_save_data(legacy_multiplier_save)
+	_check(
+		is_equal_approx(
+			legacy_multiplier_probe.best_multiplier,
+			legacy_multiplier_probe.MAX_INTRINSIC_OBSERVATION_MULTIPLIER
+		),
+		"legacy economy-contaminated best multipliers migrate to the intrinsic ceiling"
+	)
+	legacy_multiplier_probe.free()
+
+	feedback_game.hitstop_cooldown_until_msec = 0
+	Engine.time_scale = 1.0
+	feedback_game.queue_free()
+	await process_frame
+	await process_frame
 
 
 func _run_survey_regressions(packed: PackedScene, balance) -> void:
