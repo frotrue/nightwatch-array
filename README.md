@@ -73,6 +73,7 @@ Windows `.exe` 내보내기. `build/`는 `.gitignore`에 있으므로 산출물�
 | 입력 | 동작 |
 |---|---|
 | 좌클릭 홀드 | 유성 관측. 커서 중심에 가깝게 유지할수록 빨리 채워지고 등급이 오른다 |
+| 빈 하늘 좌클릭 드래그 | `polar_survey` 이후 정지 하늘 표본을 훑는다. 한 번 훑기로 들어가면 버튼을 놓을 때까지 유성 추적으로 바뀌지 않는다 |
 | 우클릭 | 가장 가까운 접시를 그 지점으로 이동 (`secondary_camera` 필요) |
 | Shift+우클릭 | 예보 접촉에 접시를 예약 (`predictive_dish_control` 필요) |
 | `U` | 연구 트리 열기 / 라운드 정산에서 계속하기 |
@@ -99,7 +100,7 @@ Windows `.exe` 내보내기. `build/`는 `.gitignore`에 있으므로 산출물�
 ```
 scenes/          main.tscn (게임 본편), probe_layer2.tscn (2층 실험용 테스트베드)
 scripts/         게임 로직. scripts/probe/ 는 probe_layer2 전용
-tests/           통과/실패 2개 + 계측 7개 + 시각 캡처 2개, 총 11개 (모두 SceneTree 스크립트)
+tests/           통과/실패 2개 + 계측 7개 + 시각 캡처 2개 + 수동 슬라이스 1개, 총 12개 (모두 SceneTree 스크립트)
 localization/    ui.csv 에서 생성된 en/ko 번역
 docs/            설계와 계측 문서
 build/           내보낸 exe (gitignore)

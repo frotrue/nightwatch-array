@@ -23,6 +23,7 @@ const SHAKE_TRAUMA_CEILING := 0.88
 @onready var effects: Node2D = $EffectsLayer
 @onready var observer: Node2D = $ObservationController
 @onready var sky_contacts: Node2D = $SkyContacts
+@onready var survey: Node2D = $SurveyController
 @onready var progression: Node = $ProgressionController
 @onready var spawner: Node = $MeteorSpawner
 @onready var events: Node = $EventController
@@ -84,7 +85,8 @@ func _ready() -> void:
 	upgrade_tree.tree_opened.connect(tutorial.notify_upgrade_tree_opened)
 	upgrade_tree.tree_closed.connect(_on_upgrade_tree_closed)
 	sky_contacts.setup(meteor_layer, progression)
-	observer.setup(meteor_layer, progression, hud)
+	survey.setup(progression)
+	observer.setup(meteor_layer, progression, hud, survey)
 	spawner.setup(meteor_layer, progression)
 	events.setup(spawner, progression)
 
@@ -157,6 +159,7 @@ func reset_run() -> void:
 	get_tree().paused = false
 	observer.reset()
 	sky_contacts.reset()
+	survey.reset()
 	effects.reset()
 	events.reset()
 	spawner.reset()
@@ -182,6 +185,7 @@ func _process(delta: float) -> void:
 	hud.set_runtime(elapsed_time)
 	hud.set_observation_phase(observation_round, observation_phase_remaining, observation_phase_duration)
 	progression.update_manual_combo(real_delta)
+	survey.advance_time(real_delta)
 	if active_save_slot > 0:
 		autosave_elapsed += real_delta
 		if autosave_elapsed >= AUTOSAVE_INTERVAL_SECONDS:
@@ -220,6 +224,7 @@ func _begin_observation_phase(advance_round: bool = false, remaining_override: f
 	hud.hide_phase_summary()
 	hud.set_observation_phase(observation_round, observation_phase_remaining, observation_phase_duration)
 	spawner.start_spawning()
+	survey.begin_round(observation_round)
 	events.run_time = elapsed_time
 	events.start()
 	var pending_leonid_count := _try_start_leonid_storm()
@@ -258,6 +263,7 @@ func _end_observation_phase() -> void:
 	events.pause_for_intermission()
 	observer.reset()
 	sky_contacts.reset()
+	survey.end_round()
 	effects.reset()
 	spawner.reset()
 	starfield.set_activity(progression.get_progression_ratio() * 0.16)
@@ -565,6 +571,7 @@ func _complete_prototype(success: bool) -> void:
 	hud.hide_phase_summary()
 	events.finish_final()
 	observer.release_target()
+	survey.end_round()
 	if success:
 		sound.play_complete()
 	_autosave_active_slot()
@@ -680,6 +687,7 @@ func _start_fresh_slot() -> void:
 	_close_upgrade_tree_without_transition()
 	observer.reset()
 	sky_contacts.reset()
+	survey.reset()
 	effects.reset()
 	events.reset()
 	spawner.reset()
@@ -728,6 +736,7 @@ func _build_save_data() -> Dictionary:
 		"last_clean_round_result": last_clean_round_result.duplicate(true),
 		"best_round_rate": best_round_rate,
 		"progression": progression.get_save_data(),
+		"survey": survey.get_round_state(),
 	}
 
 
@@ -735,6 +744,7 @@ func _apply_save_data(data: Dictionary) -> void:
 	_close_upgrade_tree_without_transition()
 	observer.reset()
 	sky_contacts.reset()
+	survey.reset()
 	effects.reset()
 	events.reset()
 	spawner.reset()
@@ -766,6 +776,7 @@ func _apply_save_data(data: Dictionary) -> void:
 			_observation_duration()
 		))
 		_begin_observation_phase(false, saved_remaining)
+		survey.load_round_state(data.get("survey", {}), observation_round)
 		phase_start_successes = maxi(0, int(data.get("phase_start_successes", progression.success_count)))
 		phase_start_manual_successes = maxi(0, int(data.get("phase_start_manual_successes", progression.manual_successes)))
 		phase_start_automatic_successes = maxi(0, int(data.get("phase_start_automatic_successes", progression.automatic_successes)))
@@ -776,6 +787,7 @@ func _apply_save_data(data: Dictionary) -> void:
 	else:
 		observation_phase_active = false
 		observation_phase_remaining = 0.0
+		survey.end_round()
 		hud.set_upgrade_phase(observation_round)
 		var next_round := observation_round + 1
 		upgrade_tree.set_intermission_context(next_round, int(_observation_duration()))
@@ -834,6 +846,8 @@ func get_debug_snapshot() -> Dictionary:
 		"upgrade_level": progression.upgrade_level,
 		"purchased_nodes": progression.purchased_nodes.keys(),
 		"meteor_count": meteor_layer.get_child_count(),
+		"survey_sample_count": survey.samples.size(),
+		"survey_completed": survey.get_completed_count(),
 		"shower_state": events.shower_state,
 		"final_started": events.final_started,
 		"observation_round": observation_round,

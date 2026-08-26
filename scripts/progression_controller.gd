@@ -22,6 +22,7 @@ var best_multiplier: float = 1.0
 var manual_combo_count: int = 0
 var manual_combo_remaining: float = 0.0
 var leonid_charge: int = 0
+var survey_catalog_count: int = 0
 
 var upgrade_level: int:
 	get:
@@ -39,6 +40,7 @@ func reset() -> void:
 	best_multiplier = 1.0
 	reset_manual_combo()
 	leonid_charge = 0
+	survey_catalog_count = 0
 	state_changed.emit()
 
 
@@ -53,6 +55,7 @@ func get_save_data() -> Dictionary:
 		"total_data_earned": total_data_earned,
 		"best_multiplier": best_multiplier,
 		"leonid_charge": leonid_charge,
+		"survey_catalog_count": survey_catalog_count,
 	}
 
 
@@ -68,6 +71,7 @@ func load_save_data(data: Dictionary) -> void:
 	# timed interaction bonus across a load or an intermission.
 	reset_manual_combo()
 	leonid_charge = maxi(0, int(data.get("leonid_charge", 0)))
+	survey_catalog_count = maxi(0, int(data.get("survey_catalog_count", 0)))
 	purchased_nodes.clear()
 	purchase_order.clear()
 	var saved_nodes = data.get("purchased_nodes", [])
@@ -112,6 +116,22 @@ func add_observation(amount: float, was_manual: bool, multiplier: float) -> floa
 func add_debug_data(amount: float) -> void:
 	observation_data += amount
 	total_data_earned += amount
+	state_changed.emit()
+
+
+func add_survey_data(amount: float) -> float:
+	# Blank-sky samples are not meteor observations. Keeping their reward path
+	# separate prevents a survey from advancing discovery gates, manual momentum,
+	# or Leonid charge through add_observation().
+	var final_amount: float = round(maxf(0.0, amount))
+	observation_data += final_amount
+	total_data_earned += final_amount
+	state_changed.emit()
+	return final_amount
+
+
+func record_survey_catalog_entry() -> void:
+	survey_catalog_count += 1
 	state_changed.emit()
 
 
@@ -222,6 +242,34 @@ func debug_purchase_all() -> void:
 func get_tracking_radius() -> float:
 	var base_radius := 52.0 if has_upgrade("better_lens") else 36.0
 	return base_radius + get_taurus_tracking_radius_bonus()
+
+
+func survey_enabled() -> bool:
+	return has_upgrade("polar_survey")
+
+
+func get_survey_sample_count() -> int:
+	if has_upgrade("five_field_rotation"):
+		return 5
+	if has_upgrade("four_field_rotation"):
+		return 4
+	return 3 if survey_enabled() else 0
+
+
+func get_survey_brush_radius() -> float:
+	return 26.0 if has_upgrade("field_brush") else 18.0
+
+
+func get_survey_reward() -> float:
+	return 42.0 if has_upgrade("background_photometry") else 36.0
+
+
+func survey_coverage_persists() -> bool:
+	return has_upgrade("persistent_plate")
+
+
+func survey_catalog_enabled() -> bool:
+	return has_upgrade("polar_catalog")
 
 
 func record_manual_combo_success() -> void:

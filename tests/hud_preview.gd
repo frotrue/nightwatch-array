@@ -5,8 +5,11 @@ func _initialize() -> void:
 	_run.call_deferred()
 
 func _run() -> void:
+	var survey_preview := OS.get_environment("NIGHTWATCH_SURVEY_PREVIEW") == "1"
 	var scene: PackedScene = load("res://scenes/main.tscn")
 	var game: Node = scene.instantiate()
+	game.startup_slot_prompt_enabled = false
+	game.get_node("Tutorial").auto_start_enabled = false
 	root.add_child(game)
 	await process_frame
 	await process_frame
@@ -17,10 +20,35 @@ func _run() -> void:
 	# Freeze the gameplay controller so it cannot hide the synthetic tracking
 	# readout before the capture settles.
 	game.observer.set_process(false)
-	var centre: Vector2 = root.get_visible_rect().size * Vector2(0.5, 0.62)
-	game.hud.set_tracking(0.67, "fast", 1.34, 1, centre)
+	if survey_preview:
+		game.set_process(false)
+		game.spawner.set_process(false)
+		game.events.set_process(false)
+		game.sky_contacts.set_process(false)
+		game.progression.success_count = 40
+		game.progression.debug_purchase_node("polar_survey")
+		game.survey.begin_round(3)
+		var sample_center: Vector2 = game.survey.samples[0].center
+		game.survey.set_scanning(true, sample_center + Vector2(50.0, 0.0))
+		for row in range(4):
+			var offset_y := (float(row) - 3.0) * 20.5
+			game.survey.apply_scan_segment(
+				sample_center + Vector2(-76.0, offset_y),
+				sample_center + Vector2(76.0, offset_y),
+				0.4
+			)
+		game.observer.cursor_position = sample_center + Vector2(50.0, 0.0)
+		game.observer.previous_cursor_position = game.observer.cursor_position
+		game.observer.was_holding = true
+		game.observer.interaction_mode = game.observer.InteractionMode.SCANNING
+		game.observer.queue_redraw()
+		game.hud.hide_tracking()
+	else:
+		var centre: Vector2 = root.get_visible_rect().size * Vector2(0.5, 0.62)
+		game.hud.set_tracking(0.67, "fast", 1.34, 1, centre)
 	for _index in range(8):
 		await process_frame
 	var image := root.get_texture().get_image()
-	print("PREVIEW_SAVED" if image.save_png("res://build/hud_preview.png") == OK else "PREVIEW_FAILED")
+	var output_path := "res://build/survey_preview.png" if survey_preview else "res://build/hud_preview.png"
+	print("PREVIEW_SAVED" if image.save_png(output_path) == OK else "PREVIEW_FAILED")
 	quit()
