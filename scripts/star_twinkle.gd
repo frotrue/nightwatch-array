@@ -1,7 +1,7 @@
 extends Node2D
 
 const TWINKLE_FPS := 30.0
-const TWINKLE_COUNT := 28
+const TWINKLE_COUNT := 16
 
 var stars: Array[Dictionary] = []
 var time: float = 0.0
@@ -36,6 +36,6 @@ func _draw() -> void:
 		var alpha := clampf(pulse, 0.08, 0.86)
 		var position: Vector2 = star.p * viewport_size
 		var radius := float(star.size)
+		# Rays removed with the starfield's, for the same reason: a background
+		# star must never take up more of the frame than a meteor does.
 		draw_circle(position, radius, Color(0.76, 0.89, 1.0, alpha))
-		if pulse > 0.72:
-			draw_line(position - Vector2(radius * 2.0, 0), position + Vector2(radius * 2.0, 0), Color(0.75, 0.9, 1.0, alpha * 0.18), 0.7)
