@@ -18,12 +18,8 @@ var seen_available_nodes: Dictionary = {}
 var last_arrival_time: float = 0.0
 var longest_no_arrival: float = 0.0
 var simulated_round_index: int = 0
-var survey_driver_slot: int = -1
-var survey_driver_row: int = 0
 var survey_driver_direction: int = 1
-var survey_driver_cursor := Vector2.ZERO
-var current_round_survey_data: float = 0.0
-var first_survey_round: Dictionary = {}
+var survey_driver_cursor := Vector2(240.0, 420.0)
 
 
 func _initialize() -> void:
@@ -41,7 +37,7 @@ func _run() -> void:
 	var failed := false
 	for seed in SEEDS:
 		var result: Dictionary = await _run_seed(seed)
-		print("FULL_TREE_ECONOMY_RESULT seed=%d purchased=%d/%d final_successes=%d final_earned=%.0f bank=%.0f completion_seconds=%.1f completion_successes=%d completion_earned=%.0f checkpoints=%s discoveries=%s first_survey_round=%s longest_no_arrival=%.1f" % [
+		print("FULL_TREE_ECONOMY_RESULT seed=%d purchased=%d/%d final_successes=%d final_earned=%.0f bank=%.0f completion_seconds=%.1f completion_successes=%d completion_earned=%.0f checkpoints=%s discoveries=%s longest_no_arrival=%.1f" % [
 			seed,
 			int(result.purchased),
 			Balance.UPGRADE_NODES.size(),
@@ -53,7 +49,6 @@ func _run() -> void:
 			float(result.completion_earned),
 			str(result.checkpoints),
 			str(result.discoveries),
-			str(result.first_survey_round),
 			float(result.longest_no_arrival),
 		])
 		if int(result.purchased) != Balance.UPGRADE_NODES.size() or float(result.completion_time) < 0.0:
@@ -95,7 +90,6 @@ func _run_seed(seed: int) -> Dictionary:
 	longest_no_arrival = 0.0
 	simulated_round_index = 0
 	_reset_survey_driver()
-	first_survey_round.clear()
 	_record_available_arrivals()
 	while active_elapsed < RUN_SECONDS:
 		var round_duration: float = minf(
@@ -120,7 +114,6 @@ func _run_seed(seed: int) -> Dictionary:
 		"completion_earned": completion_earned,
 		"checkpoints": checkpoint_successes.duplicate(true),
 		"discoveries": discovery_times.duplicate(true),
-		"first_survey_round": first_survey_round.duplicate(true),
 		"longest_no_arrival": longest_no_arrival,
 	}
 	game.queue_free()
@@ -150,7 +143,6 @@ func _prepare(seed: int) -> void:
 	game.events.rng.seed = seed + 3000
 	game.spawner.echo_rng.seed = seed + 4000
 	game.spawner.next_contact_id = 1
-	game.survey.sample_completed.connect(_on_survey_sample_completed)
 	var game_spawn_handler := Callable(game, "_on_meteor_spawned")
 	if game.spawner.meteor_spawned.is_connected(game_spawn_handler):
 		game.spawner.meteor_spawned.disconnect(game_spawn_handler)
@@ -168,8 +160,6 @@ func _prepare(seed: int) -> void:
 
 func _run_round(duration: float) -> void:
 	simulated_round_index += 1
-	var round_data_start: float = game.progression.total_data_earned
-	current_round_survey_data = 0.0
 	game.progression.reset_manual_combo()
 	game.survey.begin_round(simulated_round_index)
 	_reset_survey_driver()
@@ -198,14 +188,6 @@ func _run_round(duration: float) -> void:
 		active_elapsed += delta
 		_record_success_checkpoints()
 	game.events.pause_for_intermission()
-	var round_total_data: float = game.progression.total_data_earned - round_data_start
-	if first_survey_round.is_empty() and game.progression.survey_enabled() and round_total_data > 0.0:
-		first_survey_round = {
-			"start_second": active_elapsed - duration,
-			"total_data": round(round_total_data),
-			"survey_data": round(current_round_survey_data),
-			"survey_share": snappedf(current_round_survey_data / round_total_data, 0.001),
-		}
 	game.spawner.reset()
 	game.sky_contacts.reset()
 	game.survey.end_round()
@@ -243,53 +225,24 @@ func _first_uncovered_target():
 
 
 func _process_survey_gap(delta: float) -> void:
-	if not game.progression.survey_enabled() or game.survey.samples.is_empty():
+	if not game.progression.survey_enabled():
 		return
-	var sample: Dictionary = {}
-	if survey_driver_slot >= 0:
-		for candidate in game.survey.samples:
-			if int(candidate.slot) == survey_driver_slot and not bool(candidate.completed):
-				sample = candidate
-				break
-	if sample.is_empty():
-		for candidate in game.survey.samples:
-			if not bool(candidate.completed):
-				sample = candidate
-				break
-		if sample.is_empty():
-			return
-		survey_driver_slot = int(sample.slot)
-		survey_driver_row = 0
-		survey_driver_direction = 1
-		survey_driver_cursor = Vector2(sample.center) + Vector2(-76.0, -61.5)
-	var center: Vector2 = sample.center
-	var endpoint_x := center.x + 76.0 * float(survey_driver_direction)
+	var endpoint_x := 930.0 if survey_driver_direction > 0 else 220.0
 	var travel := SURVEY_DRIVER_SPEED * delta * float(survey_driver_direction)
 	var next_x := survey_driver_cursor.x + travel
 	if (survey_driver_direction > 0 and next_x >= endpoint_x) or (survey_driver_direction < 0 and next_x <= endpoint_x):
 		next_x = endpoint_x
-	var next_cursor := Vector2(next_x, center.y + (float(survey_driver_row) - 3.0) * 20.5)
+	var next_cursor := Vector2(next_x, survey_driver_cursor.y)
 	game.survey.set_scanning(true, next_cursor)
 	game.survey.apply_scan_segment(survey_driver_cursor, next_cursor, delta)
 	survey_driver_cursor = next_cursor
 	if is_equal_approx(next_x, endpoint_x):
-		survey_driver_row += 1
 		survey_driver_direction *= -1
-		if survey_driver_row >= 7 or bool(sample.completed):
-			_reset_survey_driver()
-		else:
-			survey_driver_cursor.y = center.y + (float(survey_driver_row) - 3.0) * 20.5
 
 
 func _reset_survey_driver() -> void:
-	survey_driver_slot = -1
-	survey_driver_row = 0
 	survey_driver_direction = 1
-	survey_driver_cursor = Vector2.ZERO
-
-
-func _on_survey_sample_completed(_slot: int, _position: Vector2, reward: float, _catalogued: bool) -> void:
-	current_round_survey_data += reward
+	survey_driver_cursor = Vector2(240.0, 420.0)
 
 
 func _on_target_spawned(target) -> void:
@@ -313,6 +266,7 @@ func _on_target_observed(target, reward: float, multiplier: float, was_manual: b
 		bool(target.get_meta("gemini_echo", false))
 		or bool(target.get_meta("leonid_storm", false))
 		or bool(target.get_meta("perseid_outburst", false))
+		or bool(target.get_meta("polar_summoned", false))
 	)
 	if was_manual and not is_proc_target and not target.is_major():
 		game.progression.record_leonid_manual_success()

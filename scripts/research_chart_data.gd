@@ -115,12 +115,12 @@ const CONSTELLATIONS := {
 		"label_key": "CONSTELLATION_URSA_MINOR",
 		"stars": [
 			{"id": "polaris", "name_key": "STAR_POLARIS", "bayer": "α UMi", "magnitude": 1.98, "local_position": Vector2(1.00, -0.62), "node_id": "polar_survey", "kind": "star"},
-			{"id": "yildun", "name_key": "STAR_YILDUN", "bayer": "δ UMi", "magnitude": 4.35, "local_position": Vector2(0.62, -0.34), "node_id": "field_brush", "kind": "star"},
-			{"id": "epsilon_umi", "name_key": "STAR_EPSILON_UMI", "bayer": "ε UMi", "magnitude": 4.21, "local_position": Vector2(0.22, -0.08), "node_id": "four_field_rotation", "kind": "star"},
-			{"id": "zeta_umi", "name_key": "STAR_ZETA_UMI", "bayer": "ζ UMi", "magnitude": 4.29, "local_position": Vector2(-0.14, 0.14), "node_id": "persistent_plate", "kind": "star"},
-			{"id": "eta_umi", "name_key": "STAR_ETA_UMI", "bayer": "η UMi", "magnitude": 4.95, "local_position": Vector2(-0.30, 0.54), "node_id": "background_photometry", "kind": "star"},
-			{"id": "kochab", "name_key": "STAR_KOCHAB", "bayer": "β UMi", "magnitude": 2.07, "local_position": Vector2(-0.70, 0.20), "node_id": "five_field_rotation", "kind": "star"},
-			{"id": "pherkad", "name_key": "STAR_PHERKAD", "bayer": "γ UMi", "magnitude": 3.00, "local_position": Vector2(-0.74, -0.20), "node_id": "polar_catalog", "kind": "star"}
+			{"id": "yildun", "name_key": "STAR_YILDUN", "bayer": "δ UMi", "magnitude": 4.35, "local_position": Vector2(0.62, -0.34), "node_id": "sweep_gain", "kind": "star"},
+			{"id": "epsilon_umi", "name_key": "STAR_EPSILON_UMI", "bayer": "ε UMi", "magnitude": 4.21, "local_position": Vector2(0.22, -0.08), "node_id": "faint_recovery", "kind": "star"},
+			{"id": "zeta_umi", "name_key": "STAR_ZETA_UMI", "bayer": "ζ UMi", "magnitude": 4.29, "local_position": Vector2(-0.14, 0.14), "node_id": "sustained_sweep", "kind": "star"},
+			{"id": "eta_umi", "name_key": "STAR_ETA_UMI", "bayer": "η UMi", "magnitude": 4.95, "local_position": Vector2(-0.30, 0.54), "node_id": "deep_exposure", "kind": "star"},
+			{"id": "kochab", "name_key": "STAR_KOCHAB", "bayer": "β UMi", "magnitude": 2.07, "local_position": Vector2(-0.70, 0.20), "node_id": "rapid_scan", "kind": "star"},
+			{"id": "pherkad", "name_key": "STAR_PHERKAD", "bayer": "γ UMi", "magnitude": 3.00, "local_position": Vector2(-0.74, -0.20), "node_id": "polar_cascade", "kind": "star"}
 		],
 		"segments": [["polaris", "yildun"], ["yildun", "epsilon_umi"], ["epsilon_umi", "zeta_umi"], ["zeta_umi", "eta_umi"], ["eta_umi", "kochab"], ["kochab", "pherkad"], ["pherkad", "zeta_umi"]]
 	},

@@ -28,16 +28,10 @@ func _run() -> void:
 		game.progression.success_count = 40
 		game.progression.debug_purchase_node("polar_survey")
 		game.survey.begin_round(3)
-		var sample_center: Vector2 = game.survey.samples[0].center
-		game.survey.set_scanning(true, sample_center + Vector2(50.0, 0.0))
-		for row in range(4):
-			var offset_y := (float(row) - 3.0) * 20.5
-			game.survey.apply_scan_segment(
-				sample_center + Vector2(-76.0, offset_y),
-				sample_center + Vector2(76.0, offset_y),
-				0.4
-			)
-		game.observer.cursor_position = sample_center + Vector2(50.0, 0.0)
+		var sweep_cursor := Vector2(560.0, 420.0)
+		game.survey.set_scanning(true, sweep_cursor)
+		game.survey.apply_scan_segment(sweep_cursor - Vector2(210.0, 0.0), sweep_cursor)
+		game.observer.cursor_position = sweep_cursor
 		game.observer.previous_cursor_position = game.observer.cursor_position
 		game.observer.was_holding = true
 		game.observer.interaction_mode = game.observer.InteractionMode.SCANNING
