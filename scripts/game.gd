@@ -5,9 +5,12 @@ const Balance = preload("res://scripts/game_balance.gd")
 const SoundSynth = preload("res://scripts/sound_synth.gd")
 const AUTOSAVE_INTERVAL_SECONDS := 60.0
 const HITSTOP_TIME_SCALE := 0.06
+const HITSTOP_COOLDOWN_MSEC := 400
+const COMBO_STRENGTH_STEP := 0.045
+const IMPACT_TARGET_TYPES := ["fireball", "major"]
 # Every manual observation gets a directional kick; the rumble and the freeze
-# are reserved for the top of the value range so a big hit still has something
-# quieter to stand out against.
+# are reserved for rare fireballs and the finale so the game's repeated core
+# action never becomes a chain of camera motion and freezes.
 const KICK_MIN_PIXELS := 1.3
 const KICK_MAX_PIXELS := 3.0
 const SHAKE_STRENGTH_FLOOR := 0.50
@@ -56,6 +59,7 @@ var last_clean_round_result: Dictionary = {}
 var best_round_rate: float = 0.0
 var suppress_phase_transition: bool = false
 var hitstop_active: bool = false
+var hitstop_cooldown_until_msec: int = 0
 
 
 func _ready() -> void:
@@ -155,6 +159,7 @@ func start_run() -> void:
 func reset_run() -> void:
 	completed = false
 	_release_hitstop()
+	hitstop_cooldown_until_msec = 0
 	_close_upgrade_tree_without_transition()
 	get_tree().paused = false
 	observer.reset()
@@ -399,6 +404,10 @@ func _on_meteor_spawned(meteor) -> void:
 
 func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: bool, quality_grade: String) -> void:
 	observer.release_target(meteor)
+	# Observation technique belongs to feedback and the end-of-run manual stat;
+	# research value growth belongs only to the economy. Keeping the two values
+	# separate prevents an x2 research leaf from changing how the same hit feels.
+	var intrinsic_multiplier := multiplier
 	# The emitting target marks itself inactive immediately before this signal;
 	# count it explicitly so a three-contact finish means the player saw three.
 	var active_target_count := 1
@@ -409,8 +418,7 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 		String(meteor.type_id), active_target_count
 	)
 	reward = round(reward * research_multiplier)
-	multiplier *= research_multiplier
-	var final_reward: float = progression.add_observation(reward, was_manual, multiplier)
+	var final_reward: float = progression.add_observation(reward, was_manual, intrinsic_multiplier)
 	var is_proc_meteor := (
 		bool(meteor.get_meta("gemini_echo", false))
 		or bool(meteor.get_meta("leonid_storm", false))
@@ -428,18 +436,20 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 			is_proc_meteor,
 			meteor
 		)
-	var strength := _observation_strength(final_reward, was_manual, quality_grade)
+	# Base value is target identity, not economy. Quality and the live manual
+	# chain remain explicit feedback inputs inside _observation_strength.
+	var strength := _observation_strength(float(meteor.base_value), was_manual, quality_grade)
 	effects.spawn_success(
 		meteor.global_position,
 		final_reward,
 		meteor.get_visual_color(),
-		multiplier,
+		intrinsic_multiplier,
 		strength,
 		quality_grade,
 		hud.get_data_anchor()
 	)
 	if was_manual:
-		sound.play_success(multiplier, progression.manual_combo_count, strength)
+		sound.play_success(intrinsic_multiplier, progression.manual_combo_count, strength)
 	else:
 		# Automation gets its own quiet voice. Routing it through the manual
 		# ladder would hold the chain at the top note for free and erase the one
@@ -449,19 +459,22 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 	# completion is the payoff of a research decision made minutes ago, not an
 	# action taken now, and once the array is built they fire continuously: a
 	# permanently moving screen would leave a real hit nothing to stand against.
-	# The audio channels split on the same line. Automatic strength peaks at 0.45
-	# and could not reach either floor today, but that is arithmetic, not intent,
-	# and it would break silently the first time either number is tuned.
+	# The audio channels split on the same line. Shake and hitstop part ways
+	# here: shake is view motion the player reads as accumulation, so a long
+	# manual chain is allowed to earn it on any target. Hitstop halts the game,
+	# and a chain of halts is the freeze this split was made to end, so it stays
+	# with punctuation targets.
 	if was_manual:
 		effects.add_kick(meteor.global_position, lerpf(KICK_MIN_PIXELS, KICK_MAX_PIXELS, strength))
+		var is_impact_target := String(meteor.type_id) in IMPACT_TARGET_TYPES
 		if strength >= SHAKE_STRENGTH_FLOOR:
 			var weight := clampf((strength - SHAKE_STRENGTH_FLOOR) / (1.0 - SHAKE_STRENGTH_FLOOR), 0.0, 1.0)
 			effects.add_shake(lerpf(SHAKE_TRAUMA_FLOOR, SHAKE_TRAUMA_CEILING, weight))
-		if strength >= HITSTOP_STRENGTH_FLOOR:
+		if is_impact_target and strength >= HITSTOP_STRENGTH_FLOOR:
 			var freeze_weight := clampf((strength - HITSTOP_STRENGTH_FLOOR) / (1.0 - HITSTOP_STRENGTH_FLOOR), 0.0, 1.0)
 			_apply_hitstop(lerpf(0.05, 0.11, freeze_weight))
 	if progression.has_upgrade("perfect_observation") and was_manual and quality_grade in ["EXCELLENT", "PERFECT"]:
-		hud.show_banner(tr("BANNER_QUALITY") % [tr("QUALITY_%s" % quality_grade), multiplier], meteor.get_visual_color(), 1.5)
+		hud.show_banner(tr("BANNER_QUALITY") % [tr("QUALITY_%s" % quality_grade), intrinsic_multiplier], meteor.get_visual_color(), 1.5)
 	if echo_spawn_count > 0:
 		hud.show_banner(tr("BANNER_GEMINI_ECHO") % echo_spawn_count, UITheme.INK_MAX, 1.5)
 	if leonid_spawn_count > 0:
@@ -483,12 +496,12 @@ func _try_start_leonid_storm() -> int:
 	return storm_count
 
 
-func _observation_strength(reward: float, was_manual: bool, quality_grade: String) -> float:
-	# One scalar drives every feedback channel so they cannot drift apart. Log
+func _observation_strength(base_value: float, was_manual: bool, quality_grade: String) -> float:
+	# One economy-independent scalar keeps feedback amplitudes in agreement. Log
 	# scaled: a 14-point common sits near the floor and a 650-point major at the
-	# ceiling, which is the spread the reward table actually has.
+	# ceiling, which is the target-identity spread in the base reward table.
 	var span: float = log(300.0) - log(10.0)
-	var strength := clampf((log(maxf(reward, 10.0)) - log(10.0)) / span, 0.0, 1.0)
+	var strength := clampf((log(maxf(base_value, 10.0)) - log(10.0)) / span, 0.0, 1.0)
 	if not was_manual:
 		return strength * 0.45
 	match quality_grade:
@@ -496,11 +509,15 @@ func _observation_strength(reward: float, was_manual: bool, quality_grade: Strin
 			strength = minf(1.0, strength + 0.30)
 		"EXCELLENT":
 			strength = minf(1.0, strength + 0.15)
-	return minf(1.0, strength + minf(float(progression.manual_combo_count), 12.0) * 0.015)
+	# A single common stays quiet; an unbroken chain is what earns the screen.
+	# A 14-point common starts at 0.10, so twelve links at 0.045 carry it to
+	# 0.64 and cross the shake floor on the ninth. Persistence reaches the
+	# screen on its own, and a Perfect grade gets there in about half as many.
+	return minf(1.0, strength + minf(float(progression.manual_combo_count), 12.0) * COMBO_STRENGTH_STEP)
 
 
 func _apply_hitstop(duration: float) -> void:
-	if hitstop_active:
+	if hitstop_active or Time.get_ticks_msec() < hitstop_cooldown_until_msec:
 		return
 	hitstop_active = true
 	Engine.time_scale = HITSTOP_TIME_SCALE
@@ -509,6 +526,8 @@ func _apply_hitstop(duration: float) -> void:
 
 
 func _release_hitstop() -> void:
+	if hitstop_active:
+		hitstop_cooldown_until_msec = Time.get_ticks_msec() + HITSTOP_COOLDOWN_MSEC
 	hitstop_active = false
 	Engine.time_scale = 1.0
 

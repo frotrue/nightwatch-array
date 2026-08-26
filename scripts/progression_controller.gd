@@ -10,6 +10,10 @@ const Balance = preload("res://scripts/game_balance.gd")
 const PACING_NODE_COUNT := 51
 const BASE_MANUAL_COMBO_WINDOW := 2.6
 const MAX_MANUAL_COMBO_COUNT := 12
+# Spectral capstone x maximum precision factor x Perfect grade. Legacy saves
+# may contain the research economy multiplier in this stat; values above the
+# intrinsic ceiling cannot be a truthful manual-observation multiplier.
+const MAX_INTRINSIC_OBSERVATION_MULTIPLIER := 1.35 * 3.0 * 1.55
 
 var observation_data: float = 0.0
 var success_count: int = 0
@@ -62,7 +66,11 @@ func load_save_data(data: Dictionary) -> void:
 	manual_successes = maxi(0, int(data.get("manual_successes", 0)))
 	automatic_successes = maxi(0, int(data.get("automatic_successes", 0)))
 	total_data_earned = maxf(0.0, float(data.get("total_data_earned", observation_data)))
-	best_multiplier = maxf(1.0, float(data.get("best_multiplier", 1.0)))
+	best_multiplier = clampf(
+		float(data.get("best_multiplier", 1.0)),
+		1.0,
+		MAX_INTRINSIC_OBSERVATION_MULTIPLIER
+	)
 	# Manual momentum belongs to the live observation rhythm. Old saves may
 	# still contain `manual_streak`; deliberately ignore it instead of carrying a
 	# timed interaction bonus across a load or an intermission.
@@ -90,7 +98,7 @@ func load_save_data(data: Dictionary) -> void:
 	state_changed.emit()
 
 
-func add_observation(amount: float, was_manual: bool, multiplier: float) -> float:
+func add_observation(amount: float, was_manual: bool, intrinsic_multiplier: float) -> float:
 	var final_amount := amount
 	if was_manual:
 		record_manual_combo_success()
@@ -102,9 +110,9 @@ func add_observation(amount: float, was_manual: bool, multiplier: float) -> floa
 	success_count += 1
 	if was_manual:
 		manual_successes += 1
+		best_multiplier = maxf(best_multiplier, intrinsic_multiplier)
 	else:
 		automatic_successes += 1
-	best_multiplier = maxf(best_multiplier, multiplier)
 	state_changed.emit()
 	return final_amount
 

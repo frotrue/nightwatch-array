@@ -41,7 +41,7 @@ content.
 
 | Script | Owns |
 |---|---|
-| `game.gd` | Round lifecycle, save/load orchestration, feedback dispatch (kick/shake/hitstop), debug keys. The only node that knows about all the others. |
+| `game.gd` | Round lifecycle, save/load orchestration, economy-independent feedback dispatch (kick/shake/hitstop), debug keys. The only node that knows about all the others. |
 | `progression_controller.gd` | Data balance, purchased nodes, discovery gates, transient Taurus manual combo, persistent Leo storm charge, and systemic derived upgrade effects. Single source of truth: consumers ask it, not `game_balance.gd`. |
 | `game_balance.gd` | Static data only: the 78 upgrade definitions and the meteor/deep-target spec table. `RefCounted`, no state. |
 | `meteor_spawner.gd` | Spawn cadence, type rolls (including same-round satellites, variable stars, comets, binary stars, and galaxy fields), delayed/forecast Gemini observation echoes, paced Leo meteor-storm queues, sky-wide burnout endpoint planning, forecast contact announcements, fragment spawning, survey-requested custom-start spawns, shower and finale spawns, support-lane assignment. |
@@ -179,9 +179,20 @@ These are load-bearing. Breaking them silently corrupts the Data/min series.
    `tracking_speed` from `0.72` to `1.42` and feeds `quality_integral`, which
    produces the `PERFECT` / `EXCELLENT` grade.
 5. At progress `>= 1.0` the meteor emits `observed`, and
-   `game._on_meteor_observed` computes one `strength` scalar that drives every
-   feedback channel — particles, audio, kick, shake, hitstop — so they cannot
-   drift apart.
+   `game._on_meteor_observed` computes one economy-independent `strength` from
+   the target's base value, manual grade, and combo. It drives particle, audio,
+   kick, shake, and hitstop amplitudes without reading the research value
+   multiplier. Shake and hitstop additionally require a `fireball` or `major`
+   target, and hitstop has a 400 ms real-time cooldown after release so burst
+   completions cannot chain freezes.
+
+The observation's intrinsic multiplier is likewise kept separate from the
+research economy multiplier. The actual Data packet reports the full awarded
+amount, while its suffix, the success pitch, the quality banner, and the saved
+best-manual-multiplier statistic report only observation technique. Legacy
+best-multiplier values are clamped to the maximum possible intrinsic value on
+load because old saves did not retain enough information to reconstruct which
+part came from research.
 
 Successful manual observations also advance one transient combo in
 `progression_controller.gd`. Taurus research lengthens its window and turns its
