@@ -142,7 +142,7 @@ func _run() -> void:
 	_check(TranslationServer.translate("STAR_TSIH") == "감마 카시오페이아", "research inspector uses the factual Tsih star name in Korean")
 	_check(TranslationServer.translate("CONSTELLATION_GEMINI") == "쌍둥이자리  /  공명", "the mapped Gemini figure exposes its Korean research role")
 	_check(TranslationServer.translate("CONSTELLATION_LEO") == "사자자리  /  유성 폭풍", "the mapped Leo figure exposes its Korean research role")
-	_check(TranslationServer.translate("CONSTELLATION_URSA_MINOR") == "작은곰자리  /  하늘 조사", "the mapped Ursa Minor figure exposes its Korean research role")
+	_check(TranslationServer.translate("CONSTELLATION_URSA_MINOR") == "작은곰자리  /  빈 하늘 훑기", "the mapped Ursa Minor figure exposes its Korean research role")
 	_check(TranslationServer.translate("HUD_AUTOSAVED") == "자동 저장됨", "Korean autosave status stays concise")
 	_check(TranslationServer.translate("HUD_OBSERVATION_TIME") % [1, 1, 0] == "1차 관측  •  01:00", "Korean round countdown reads naturally")
 	_check(TranslationServer.translate("TREE_INTERMISSION_SUBTITLE") % [2, 30] == "업그레이드 시간  /  2차 관측은 30초", "Korean upgrade-break guidance explains the next round and duration")
@@ -1635,9 +1635,13 @@ func _run_survey_regressions(packed: PackedScene, balance) -> void:
 
 	var pacing_ratio_before: float = survey_game.progression.get_progression_ratio()
 	var spawner_rng_before: int = survey_game.spawner.rng.state
+	var survey_rng_before: int = survey_game.survey.rng.state
 	survey_game.survey.begin_round(1)
-	_check(survey_game.survey.samples.is_empty(), "blank-sky survey is fully dormant before its research is purchased")
+	survey_game.survey.set_scanning(true, Vector2(500.0, 400.0))
+	var dormant_spawned: int = survey_game.survey.apply_scan_segment(Vector2.ZERO, Vector2(500.0, 400.0))
+	_check(not survey_game.survey.scanning and dormant_spawned == 0 and is_zero_approx(survey_game.survey.charge_distance), "blank-sky sweeping is fully dormant before its research is purchased")
 	_check(survey_game.spawner.rng.state == spawner_rng_before, "dormant survey setup does not consume the meteor RNG")
+	_check(survey_game.survey.rng.state == survey_rng_before, "dormant survey setup does not consume its own roll stream")
 	_check(survey_game.progression.get_node_state("polar_survey") == "hidden", "Polar Survey stays hidden before forty successful observations")
 	survey_game.progression.success_count = balance.URSA_MINOR_DISCOVERY_SUCCESSES
 	_check(survey_game.progression.get_node_state("polar_survey") == "available", "Polar Survey appears at the forty-observation discovery gate")
@@ -1645,8 +1649,8 @@ func _run_survey_regressions(packed: PackedScene, balance) -> void:
 	_check(is_equal_approx(survey_game.progression.get_progression_ratio(), pacing_ratio_before), "survey research does not change meteor-density pacing")
 	spawner_rng_before = survey_game.spawner.rng.state
 	survey_game.survey.begin_round(2)
-	_check(survey_game.survey.samples.size() == 3, "Polar Survey seeds three stationary samples per round")
-	_check(survey_game.spawner.rng.state == spawner_rng_before, "survey sample placement uses RNG isolated from meteor spawning")
+	_check(survey_game.survey.active_round == 2 and is_zero_approx(survey_game.survey.charge_distance), "Polar Survey opens with empty round-local sweep charge")
+	_check(survey_game.spawner.rng.state == spawner_rng_before, "survey round setup uses RNG isolated from meteor spawning")
 
 	var observer = survey_game.observer
 	var survey = survey_game.survey
@@ -1667,73 +1671,76 @@ func _run_survey_regressions(packed: PackedScene, balance) -> void:
 	var crossed_target = survey_game.spawner.spawn_meteor("common", Vector2(220.0, 160.0), Vector2.ZERO, 20.0)
 	observer.previous_cursor_position = Vector2(200.0, 160.0)
 	observer.cursor_position = Vector2(240.0, 160.0)
+	var charge_before_crossing: float = survey.charge_distance
 	observer._update_survey_interaction(0.016)
 	_check(observer.interaction_mode == observer.InteractionMode.SCANNING and observer.selected_meteor == null and crossed_target.can_be_tracked(), "a latched survey stroke crosses a meteor without being hijacked into tracking")
+	_check(is_equal_approx(survey.charge_distance, charge_before_crossing), "a nearby live meteor pauses sweep charge while scanning stays latched")
 	observer._clear_interaction_mode()
-	_check(observer.interaction_mode == observer.InteractionMode.NONE and not survey.scanning, "releasing the survey gesture clears its latch")
+	_check(observer.interaction_mode == observer.InteractionMode.NONE and not survey.scanning and is_zero_approx(survey.charge_distance), "releasing the base survey gesture clears its latch and partial charge")
 	survey_game.spawner.reset()
 
-	var sample_center: Vector2 = survey.samples[0].center
-	survey.set_scanning(true, sample_center)
-	var data_before: float = survey_game.progression.observation_data
-	var earned_before: float = survey_game.progression.total_data_earned
-	var successes_before: int = survey_game.progression.success_count
-	var manual_before: int = survey_game.progression.manual_successes
-	var automatic_before: int = survey_game.progression.automatic_successes
-	var combo_before: int = survey_game.progression.manual_combo_count
-	var leonid_before: int = survey_game.progression.leonid_charge
-	survey.apply_scan_segment(sample_center, sample_center)
-	_check(is_zero_approx(survey.get_sample_coverage(0)), "holding still in blank sky paints no survey area")
-	survey.apply_scan_segment(sample_center + Vector2(-72.0, 0.0), sample_center + Vector2(72.0, 0.0))
-	_check(survey.get_sample_coverage(0) > 0.0 and survey.get_sample_coverage(0) < 1.0, "one survey line paints part of a field but cannot resolve the whole area")
-	_paint_survey_sample(survey, sample_center)
-	_check(survey.get_completed_count() == 1, "area coverage resolves a stationary sky sample")
-	_check(is_equal_approx(survey_game.progression.observation_data - data_before, 36.0) and is_equal_approx(survey_game.progression.total_data_earned - earned_before, 36.0), "a base survey sample earns its separate Data reward")
-	_check(
-		survey_game.progression.success_count == successes_before
-		and survey_game.progression.manual_successes == manual_before
-		and survey_game.progression.automatic_successes == automatic_before
-		and survey_game.progression.manual_combo_count == combo_before
-		and survey_game.progression.leonid_charge == leonid_before,
-		"survey rewards do not impersonate meteor observations or charge their combo systems"
-	)
-
 	survey.begin_round(3)
-	sample_center = survey.samples[0].center
-	survey.set_scanning(true, sample_center)
-	survey.apply_scan_segment(sample_center + Vector2(-72.0, 0.0), sample_center + Vector2(72.0, 0.0))
-	_check(survey.get_sample_coverage(0) > 0.0, "partial survey coverage exists before its memory window expires")
-	survey.advance_time(survey.CELL_EXPIRY_SECONDS + 0.01)
-	_check(is_zero_approx(survey.get_sample_coverage(0)), "partial survey coverage fades before Persistent Plate is installed")
-	for node_id in ["field_brush", "four_field_rotation", "persistent_plate"]:
-		_check(survey_game.progression.debug_purchase_node(node_id), "survey prerequisite installs: " + node_id)
+	var blocked_position := Vector2(560.0, 400.0)
+	var blocker = survey_game.spawner.spawn_meteor("common", blocked_position, Vector2.ZERO, 20.0)
+	survey.set_scanning(true, blocked_position)
+	var blocked_rolls_before: int = survey.roll_count
+	survey.apply_scan_segment(Vector2(40.0, 400.0), blocked_position)
+	_check(not survey.is_blank_sky(blocked_position) and is_zero_approx(survey.charge_distance) and survey.roll_count == blocked_rolls_before, "a live meteor inside 150 px prevents both sweep charge and probability rolls")
+	blocker.queue_free()
+	await process_frame
+
+	var summon_position := Vector2(560.0, 400.0)
+	survey.rng.seed = _rng_seed_with_first_roll_below(survey_game.progression.get_survey_spawn_probability())
+	spawner_rng_before = survey_game.spawner.rng.state
+	survey.set_scanning(true, summon_position)
+	var summoned_count: int = survey.apply_scan_segment(
+		summon_position - Vector2(survey_game.progression.get_survey_required_distance(), 0.0),
+		summon_position
+	)
+	var summoned_meteor = survey_game.meteor_layer.get_child(0) if survey_game.meteor_layer.get_child_count() > 0 else null
+	_check(summoned_count == 1 and is_instance_valid(summoned_meteor), "a successful blank-sky roll calls one meteor at the cursor")
+	_check(is_instance_valid(summoned_meteor) and bool(summoned_meteor.get_meta("polar_summoned", false)) and summoned_meteor.type_id == "common", "a base survey summon is tagged against recursive procs and uses the unlocked common type")
+	_check(is_instance_valid(summoned_meteor) and summoned_meteor.global_position.is_equal_approx(summon_position), "a survey meteor begins at the cursor position")
+	_check(survey_game.spawner.rng.state == spawner_rng_before, "survey rolls and custom summons do not advance the regular meteor RNG")
+	var recursive_rolls_before: int = survey.roll_count
+	var recursive_count_before: int = survey_game.meteor_layer.get_child_count()
+	survey.cooldown_remaining = 0.0
+	survey.apply_scan_segment(summon_position - Vector2(500.0, 0.0), summon_position + Vector2(100.0, 0.0))
+	_check(survey.roll_count == recursive_rolls_before and survey_game.meteor_layer.get_child_count() == recursive_count_before, "a summoned live meteor blocks another nearby summon instead of forming a recursive chain")
+	survey_game.spawner.reset()
+	await process_frame
+
 	survey.begin_round(4)
-	_check(survey.samples.size() == 4, "Four-Field Rotation adds one round-local sample")
-	sample_center = survey.samples[0].center
-	survey.set_scanning(true, sample_center)
-	survey.apply_scan_segment(sample_center + Vector2(-72.0, 0.0), sample_center + Vector2(72.0, 0.0))
-	var persistent_coverage: float = survey.get_sample_coverage(0)
-	survey.advance_time(survey.CELL_EXPIRY_SECONDS + 0.01)
-	_check(is_equal_approx(survey.get_sample_coverage(0), persistent_coverage), "Persistent Plate keeps partial coverage for the current round")
-	for node_id in ["background_photometry", "five_field_rotation", "polar_catalog"]:
-		_check(survey_game.progression.debug_purchase_node(node_id), "survey capstone path installs: " + node_id)
+	survey.set_scanning(true, Vector2(400.0, 420.0))
+	survey.apply_scan_segment(Vector2(200.0, 420.0), Vector2(400.0, 420.0))
+	_check(survey.charge_distance > 0.0, "a partial sweep accumulates travel before release")
+	survey.set_scanning(false, Vector2(400.0, 420.0))
+	_check(is_zero_approx(survey.charge_distance), "base Polar Survey discards partial charge on release")
+	for node_id in ["sweep_gain", "faint_recovery", "sustained_sweep"]:
+		_check(survey_game.progression.debug_purchase_node(node_id), "survey prerequisite installs: " + node_id)
+	_check(is_equal_approx(survey_game.progression.get_survey_required_distance(), 380.0) and is_equal_approx(survey_game.progression.get_survey_spawn_probability(), 0.42), "early Ursa Minor research reduces sweep distance and raises summon chance")
 	survey.begin_round(5)
-	_check(survey.samples.size() == 5 and is_equal_approx(survey_game.progression.get_survey_reward(), 42.0), "late Ursa Minor research adds a fifth field and raises sample value")
-	_check(survey_game.progression.get_survey_reward() / survey.MIN_SAMPLE_SCAN_SECONDS < 17.7, "even upgraded survey yield stays below the lowest active meteor-tracking rate")
-	var catalog_before: int = survey_game.progression.survey_catalog_count
-	sample_center = survey.samples[0].center
-	survey.set_scanning(true, sample_center)
-	_paint_survey_sample(survey, sample_center)
-	_check(survey_game.progression.survey_catalog_count == catalog_before + 1 and bool(survey.samples[0].completed), "Polar Catalog records and retains a resolved sample for its round")
-	var saved_survey_state: Dictionary = survey.get_round_state()
-	survey.begin_round(5)
-	survey.load_round_state(saved_survey_state, 5)
-	_check(survey.get_completed_count() == 1, "loading an active round restores completed survey slots without paying them twice")
-	var catalog_after_load: int = survey_game.progression.survey_catalog_count
-	survey.load_round_state(saved_survey_state, 5)
-	_check(survey_game.progression.survey_catalog_count == catalog_after_load, "restoring survey state cannot duplicate its catalog reward")
+	survey.set_scanning(true, Vector2(390.0, 420.0))
+	survey.apply_scan_segment(Vector2(200.0, 420.0), Vector2(390.0, 420.0))
+	var retained_charge: float = survey.charge_distance
+	survey.set_scanning(false, Vector2(390.0, 420.0))
+	_check(retained_charge > 0.0 and is_equal_approx(survey.charge_distance, retained_charge), "Sustained Sweep preserves partial charge across button releases within a round")
 	survey.end_round()
-	_check(survey.samples.is_empty() and survey.completed_slot_mask == 0, "round cleanup removes stationary samples and incomplete coverage")
+	_check(is_zero_approx(survey.charge_distance) and is_zero_approx(survey.cooldown_remaining), "round cleanup removes unfinished sweep charge and cooldown")
+
+	for node_id in ["deep_exposure", "rapid_scan", "polar_cascade"]:
+		_check(survey_game.progression.debug_purchase_node(node_id), "survey capstone path installs: " + node_id)
+	_check(is_equal_approx(survey_game.progression.get_survey_spawn_probability(), 0.55) and is_equal_approx(survey_game.progression.get_survey_cooldown_seconds(), 0.9) and survey_game.progression.get_survey_spawn_count() == 2, "late Ursa Minor research raises chance, shortens cooldown, and arms the two-meteor capstone")
+	survey.begin_round(6)
+	survey.rng.seed = _rng_seed_with_first_roll_below(survey_game.progression.get_survey_spawn_probability())
+	survey.set_scanning(true, Vector2(600.0, 430.0))
+	var cascade_count: int = survey.apply_scan_segment(Vector2(220.0, 430.0), Vector2(600.0, 430.0))
+	var every_cascade_target_tagged := cascade_count == 2
+	for target in survey_game.meteor_layer.get_children():
+		every_cascade_target_tagged = every_cascade_target_tagged and bool(target.get_meta("polar_summoned", false))
+	_check(every_cascade_target_tagged and is_equal_approx(survey.cooldown_remaining, 0.9), "Polar Cascade calls exactly two tagged meteors and starts the upgraded cooldown")
+	survey_game.spawner.reset()
+	survey.end_round()
 
 	var legacy_ids: Array[String] = []
 	for definition in balance.UPGRADE_NODES:
@@ -1743,22 +1750,22 @@ func _run_survey_regressions(packed: PackedScene, balance) -> void:
 	survey_game.progression.load_save_data({
 		"purchased_nodes": legacy_ids,
 		"purchase_order": legacy_ids,
-		"survey_catalog_count": 0,
+		"survey_catalog_count": 99,
 	})
-	_check(survey_game.progression.upgrade_level == 71 and survey_game.progression.survey_catalog_count == 0, "a 71-node save loads without inventing Ursa Minor progress")
+	_check(survey_game.progression.upgrade_level == 71 and not survey_game.progression.survey_enabled(), "a 71-node save loads without inventing Ursa Minor progress or retaining removed survey state")
 
 	survey_game.queue_free()
 	await process_frame
 	await process_frame
 
 
-func _paint_survey_sample(survey, center: Vector2) -> void:
-	for row in range(7):
-		var offset_y := (float(row) - 3.0) * 20.5
-		var from := center + Vector2(-76.0, offset_y)
-		var to := center + Vector2(76.0, offset_y)
-		survey.set_scanning(true, to)
-		survey.apply_scan_segment(from, to, 0.4)
+func _rng_seed_with_first_roll_below(limit: float) -> int:
+	for seed in range(1, 10000):
+		var probe := RandomNumberGenerator.new()
+		probe.seed = seed
+		if probe.randf() < limit:
+			return seed
+	return 1
 
 
 func _cleanup_smoke_saves(directory: String) -> void:

@@ -85,9 +85,9 @@ func _ready() -> void:
 	upgrade_tree.tree_opened.connect(tutorial.notify_upgrade_tree_opened)
 	upgrade_tree.tree_closed.connect(_on_upgrade_tree_closed)
 	sky_contacts.setup(meteor_layer, progression)
-	survey.setup(progression)
-	observer.setup(meteor_layer, progression, hud, survey)
 	spawner.setup(meteor_layer, progression)
+	survey.setup(progression, spawner, meteor_layer)
+	observer.setup(meteor_layer, progression, hud, survey)
 	events.setup(spawner, progression)
 
 	spawner.meteor_spawned.connect(_on_meteor_spawned)
@@ -415,6 +415,7 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 		bool(meteor.get_meta("gemini_echo", false))
 		or bool(meteor.get_meta("leonid_storm", false))
 		or bool(meteor.get_meta("perseid_outburst", false))
+		or bool(meteor.get_meta("polar_summoned", false))
 	)
 	var leonid_spawn_count := 0
 	if was_manual and not is_proc_meteor and not meteor.is_major():
@@ -736,7 +737,6 @@ func _build_save_data() -> Dictionary:
 		"last_clean_round_result": last_clean_round_result.duplicate(true),
 		"best_round_rate": best_round_rate,
 		"progression": progression.get_save_data(),
-		"survey": survey.get_round_state(),
 	}
 
 
@@ -776,7 +776,6 @@ func _apply_save_data(data: Dictionary) -> void:
 			_observation_duration()
 		))
 		_begin_observation_phase(false, saved_remaining)
-		survey.load_round_state(data.get("survey", {}), observation_round)
 		phase_start_successes = maxi(0, int(data.get("phase_start_successes", progression.success_count)))
 		phase_start_manual_successes = maxi(0, int(data.get("phase_start_manual_successes", progression.manual_successes)))
 		phase_start_automatic_successes = maxi(0, int(data.get("phase_start_automatic_successes", progression.automatic_successes)))
@@ -846,8 +845,8 @@ func get_debug_snapshot() -> Dictionary:
 		"upgrade_level": progression.upgrade_level,
 		"purchased_nodes": progression.purchased_nodes.keys(),
 		"meteor_count": meteor_layer.get_child_count(),
-		"survey_sample_count": survey.samples.size(),
-		"survey_completed": survey.get_completed_count(),
+		"survey_summoned": survey.summoned_this_round,
+		"survey_charge": survey.get_charge_progress(),
 		"shower_state": events.shower_state,
 		"final_started": events.final_started,
 		"observation_round": observation_round,

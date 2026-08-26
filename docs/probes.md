@@ -26,8 +26,9 @@ measurements.
 ### Blank-sky survey slice — `survey_slice.gd`
 
 Runs one save-free, human-driven 60-second window with only Polar Survey added
-to the opening sky. Track meteors and paint stationary fields with the same
-left button; release before changing intent. It prints `SURVEY_SLICE_READY` and
+to the opening sky. Track meteors and sweep empty sky with the same left button;
+successful distance rolls call a meteor at the cursor. Release before changing
+intent. It prints `SURVEY_SLICE_READY` and
 one `SURVEY_SLICE_RESULT` line, but does not pass or fail because it measures
 feel rather than correctness.
 
@@ -119,11 +120,11 @@ Pass/fail gate for the expanded 78-system graph. It runs three deterministic
 available research at each intermission, applies purchased Lyra calibration
 automatically, reproduces purchased Taurus combo speed, Gemini echo bursts, and Leo storm charge,
 and uses predictive dishes when installed. Every seed must reach
-78/78 before the final-event clock. The engaged driver sweeps stationary sky
-samples only while no manual meteor target is available. It also reports the
-270/540/810-second success curve, each constellation's discovery time, the
-first survey round's Data share, and the longest interval without a newly
-available node.
+78/78 before the final-event clock. The engaged driver sweeps blank sky only
+while no manual meteor target is available. It also reports the 270/540/810-second
+success curve, each constellation's discovery time, and the longest interval
+without a newly available node. For the summon redesign this gate is run only
+as a pass/fail compatibility check; it is not used to tune or report balance.
 
 ```powershell
 & $godot --headless --path . --script res://tests/full_tree_economy_test.gd
@@ -301,7 +302,7 @@ $env:NIGHTWATCH_PRICING_SEEDS = "20"; & $godot --headless --path . --script res:
 ```
 
 같은 스크립트에 `NIGHTWATCH_SURVEY_PREVIEW=1`을 설정하면 북극권 조사를 구매하고
-부분적으로 훑은 화면을 `build/survey_preview.png`에 저장한다.
+부분 충전된 커서 호를 `build/survey_preview.png`에 저장한다.
 
 ```powershell
 $env:NIGHTWATCH_SURVEY_PREVIEW = "1"

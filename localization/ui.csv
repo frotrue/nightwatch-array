@@ -172,7 +172,7 @@ CONSTELLATION_ANDROMEDA,ANDROMEDA,안드로메다자리
 CONSTELLATION_PERSEUS,PERSEUS,페르세우스자리
 CONSTELLATION_LYRA,LYRA,거문고자리
 CONSTELLATION_DRACO,DRACO,용자리
-CONSTELLATION_URSA_MINOR,URSA MINOR  /  SKY SURVEY,작은곰자리  /  하늘 조사
+CONSTELLATION_URSA_MINOR,URSA MINOR  /  BLANK-SKY SWEEP,작은곰자리  /  빈 하늘 훑기
 CONSTELLATION_LEO,LEO  /  METEOR STORM,사자자리  /  유성 폭풍
 CONSTELLATION_GEMINI,GEMINI  /  ECHO,쌍둥이자리  /  공명
 CONSTELLATION_TAURUS,TAURUS  /  MOMENTUM,황소자리  /  관측 가속
@@ -397,19 +397,19 @@ UPGRADE_SUSTAINED_CHARGE_DESC,Extends the Momentum window to four seconds and le
 UPGRADE_TAURUS_FULL_GALLOP_NAME,Full Gallop,전력 질주
 UPGRADE_TAURUS_FULL_GALLOP_DESC,Extends Momentum to five seconds and lets ten stacks grant up to 40% manual-analysis speed and 20 px of tracking range.,모멘텀 제한 시간을 5초로 늘리고 최대 10중첩으로 수동 분석 속도 40%와 추적 범위 20px를 얻습니다.
 UPGRADE_POLAR_SURVEY_NAME,Polar Survey,북극권 조사
-UPGRADE_POLAR_SURVEY_DESC,Opens blank-sky surveying: drag across a quiet field to resolve three stationary samples in each observation round.,빈 하늘 조사를 엽니다. 조용한 하늘을 드래그해 관측 회차마다 정지 표본 3개를 분해합니다.
-UPGRADE_FIELD_BRUSH_NAME,Field Brush,시야 브러시
-UPGRADE_FIELD_BRUSH_DESC,Widens each survey stroke so a quiet field resolves with fewer passes.,조사 스트로크를 넓혀 더 적은 횟수로 조용한 하늘을 분해합니다.
-UPGRADE_FOUR_FIELD_ROTATION_NAME,Four-Field Rotation,4시야 순환
-UPGRADE_FOUR_FIELD_ROTATION_DESC,Adds a fourth stationary sky sample to every observation round.,모든 관측 회차에 네 번째 정지 하늘 표본을 추가합니다.
-UPGRADE_PERSISTENT_PLATE_NAME,Persistent Plate,지속 감광판
-UPGRADE_PERSISTENT_PLATE_DESC,Keeps partial sky coverage for the rest of the current observation round instead of letting it fade.,부분 하늘 피복이 사라지지 않고 현재 관측 회차 동안 유지됩니다.
-UPGRADE_BACKGROUND_PHOTOMETRY_NAME,Background Photometry,배경 측광
-UPGRADE_BACKGROUND_PHOTOMETRY_DESC,Raises the Data recovered from each resolved stationary sky sample.,분해한 정지 하늘 표본에서 회수하는 데이터를 높입니다.
-UPGRADE_FIVE_FIELD_ROTATION_NAME,Five-Field Rotation,5시야 순환
-UPGRADE_FIVE_FIELD_ROTATION_DESC,Adds a fifth stationary sky sample to every observation round.,모든 관측 회차에 다섯 번째 정지 하늘 표본을 추가합니다.
-UPGRADE_POLAR_CATALOG_NAME,Polar Catalog,북극권 목록
-UPGRADE_POLAR_CATALOG_DESC,Leaves every resolved sample visible for the rest of its observation round and records it in the survey catalog.,분해한 표본을 현재 관측 회차 동안 하늘에 남기고 조사 목록에 기록합니다.
+UPGRADE_POLAR_SURVEY_DESC,Opens blank-sky sweeping: every 460 px through quiet sky rolls a 30% chance to call a meteor at the cursor.,빈 하늘 훑기를 엽니다. 조용한 하늘에서 460px 움직일 때마다 커서 위치에 유성을 부를 30% 확률을 굴립니다.
+UPGRADE_SWEEP_GAIN_NAME,Sweep Gain,훑기 증폭
+UPGRADE_SWEEP_GAIN_DESC,Reduces the blank-sky travel needed for each summon roll from 460 px to 380 px.,소환 확률을 굴리는 데 필요한 빈 하늘 이동 거리를 460px에서 380px로 줄입니다.
+UPGRADE_FAINT_RECOVERY_NAME,Faint Recovery,희미한 회수
+UPGRADE_FAINT_RECOVERY_DESC,Raises each blank-sky summon chance from 30% to 42%.,빈 하늘 소환 확률을 30%에서 42%로 높입니다.
+UPGRADE_SUSTAINED_SWEEP_NAME,Sustained Sweep,지속 훑기
+UPGRADE_SUSTAINED_SWEEP_DESC,Keeps partial sweep charge when the button is released until the current observation round ends.,버튼을 놓아도 부분 훑기 충전을 현재 관측 회차가 끝날 때까지 유지합니다.
+UPGRADE_DEEP_EXPOSURE_NAME,Deep Exposure,심층 노출
+UPGRADE_DEEP_EXPOSURE_DESC,Raises each blank-sky summon chance from 42% to 55%.,빈 하늘 소환 확률을 42%에서 55%로 높입니다.
+UPGRADE_RAPID_SCAN_NAME,Rapid Scan,고속 탐색
+UPGRADE_RAPID_SCAN_DESC,Reduces the cooldown after a successful summon from 1.5 seconds to 0.9 seconds.,소환 성공 뒤 재사용 대기시간을 1.5초에서 0.9초로 줄입니다.
+UPGRADE_POLAR_CASCADE_NAME,Polar Cascade,북극 연쇄
+UPGRADE_POLAR_CASCADE_DESC,Calls two meteors from one successful blank-sky summon roll.,빈 하늘 소환 확률 굴림에 한 번 성공하면 유성 두 개를 부릅니다.
 CONTACT_UNCLASSIFIED,UNCLASSIFIED,미분류 신호
 METEOR_COMMON,COMMON METEOR,일반 유성
 METEOR_FAST,FAST METEOR,고속 유성

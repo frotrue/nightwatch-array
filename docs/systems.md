@@ -42,13 +42,13 @@ content.
 | Script | Owns |
 |---|---|
 | `game.gd` | Round lifecycle, save/load orchestration, feedback dispatch (kick/shake/hitstop), debug keys. The only node that knows about all the others. |
-| `progression_controller.gd` | Data balance, purchased nodes, discovery gates, transient Taurus manual combo, persistent Leo storm charge, survey catalog count, and systemic derived upgrade effects. Single source of truth: consumers ask it, not `game_balance.gd`. |
+| `progression_controller.gd` | Data balance, purchased nodes, discovery gates, transient Taurus manual combo, persistent Leo storm charge, and systemic derived upgrade effects. Single source of truth: consumers ask it, not `game_balance.gd`. |
 | `game_balance.gd` | Static data only: the 78 upgrade definitions and the meteor/deep-target spec table. `RefCounted`, no state. |
-| `meteor_spawner.gd` | Spawn cadence, type rolls (including same-round satellites, variable stars, comets, binary stars, and galaxy fields), delayed/forecast Gemini observation echoes, paced Leo meteor-storm queues, sky-wide burnout endpoint planning, forecast contact announcements, fragment spawning, shower and finale spawns, support-lane assignment. |
+| `meteor_spawner.gd` | Spawn cadence, type rolls (including same-round satellites, variable stars, comets, binary stars, and galaxy fields), delayed/forecast Gemini observation echoes, paced Leo meteor-storm queues, sky-wide burnout endpoint planning, forecast contact announcements, fragment spawning, survey-requested custom-start spawns, shower and finale spawns, support-lane assignment. |
 | `meteor.gd` | One object's burn-progress motion, trail and terminal fade, observation progress, quality grading, split behaviour, and passive spectral calibration result. |
 | `observation_controller.gd` | Cursor sampling, the tracking-versus-survey input latch, manual tracking, swept-path hit detection, tracking and hover rings, and the software cursor. |
 | `sky_contacts.gd` | Low-chrome forecast contact rendering and steerable dishes. Right-click moves the nearest dish; Predictive Dish Control automatically pre-positions an idle dish. Contact Ledger narrows the uncertainty ring instead of adding value/time text. |
-| `survey_controller.gd` | Round-local stationary sky samples, isolated deterministic placement, 7x7 coverage timestamps, survey reward completion, and red-light field rendering. It never calls the meteor spawner. |
+| `survey_controller.gd` | Round-local blank-sky sweep charge, the 150 px live-meteor guard, isolated deterministic summon rolls, custom-start spawner calls, cooldown, and the cursor-local red-light arc. |
 | `event_controller.gd` | Meteor showers and the 18-minute finale, including round-boundary deferral. |
 | `effects_layer.gd` | Success bursts, data packets, incoming markers, forecast markers, screen kick and shake. |
 | `hud.gd` | All in-round UI, round summary, settings, save-slot dialogs, banners. |
@@ -68,9 +68,9 @@ hud.bind_settings(settings)            upgrade_tree.bind_settings(settings)
 hud.bind_save_games(save_games)        tutorial.setup(settings, progression)
 
 sky_contacts.setup(meteor_layer, progression)
-survey.setup(progression)
-observer.setup(meteor_layer, progression, hud, survey)
 spawner.setup(meteor_layer, progression)
+survey.setup(progression, spawner, meteor_layer)
+observer.setup(meteor_layer, progression, hud, survey)
 events.setup(spawner, progression)
 ```
 
@@ -124,7 +124,7 @@ _begin_observation_phase()
     ↓  _process() counts down; elapsed_time accrues
 _end_observation_phase()
     _build_round_result()   → data, rate, manual/automatic split, build signature
-    clears meteors, contacts, survey fields, effects, pending forecasts
+    clears meteors, contacts, survey charge/cooldown, effects, pending forecasts
     autosave, get_tree().paused = true
     hud.show_phase_summary(...)
     ↓  player presses U / Enter / Space
@@ -191,11 +191,19 @@ at the reward and feedback layer, not at the progress layer.
 
 After `polar_survey`, one left-button press is latched as `PENDING`, then as
 either `TRACKING` or `SCANNING`. A meteor swept hit wins while pending; otherwise
-14 px of blank travel selects scanning until release. `SurveyController` samples
-that cursor segment over only the round's stationary fields. Its 7x7 cell ages
-and 2.4-second active integration requirement are independent from meteor
-observation progress. Completion calls `progression.add_survey_data()`, which
-deliberately does not increment meteor success, combo, discovery, or storm state.
+14 px of blank travel selects scanning until release. While no live meteor is
+within 150 px, `SurveyController` accumulates cursor distance and rolls a summon
+chance at the purchased threshold. A success calls `MeteorSpawner.spawn_meteor`
+with the cursor as `custom_start` and a velocity within 60 degrees of the screen
+centre, then starts its cooldown. The survey RNG is round-seeded and independent
+from every spawner RNG stream.
+
+Summoned meteors carry `polar_summoned` metadata. They use normal observation
+rewards, success counts, discovery gates, and Taurus momentum, but the proc tag
+prevents them from charging Leo or opening Gemini echoes. Base partial charge is
+lost on release; `sustained_sweep` preserves it only inside the current round.
+The charge/cooldown arc stays red and cursor-local; neutral white still belongs
+only to live meteor tracking.
 
 ## Purchase flow
 
@@ -212,16 +220,14 @@ They go through named accessors on `progression_controller.gd`
 
 `game.gd::_build_save_data()` writes a flat dictionary containing run timing,
 round bookkeeping, the clean-round baseline, and a nested
-`progression.get_save_data()`, plus the active survey round's completed-slot
-mask. Loading routes through `_apply_save_data`, which
+`progression.get_save_data()`. Loading routes through `_apply_save_data`, which
 sanitizes every field: unknown upgrade ids are dropped by
 `_validated_signature`, and `_sanitize_round_result` clamps a restored round
 result into legal ranges.
 
-Unfinished survey coverage is live round state and is discarded on load like
-live meteors. The completed-slot mask prevents a saved reward from being paid
-again; `survey_catalog_count` is optional progression data so pre-survey saves
-default cleanly to zero.
+Sweep charge, cooldown, and live summoned meteors are round state and are
+discarded on load. Removed stationary-survey fields in an old same-day fixture
+are ignored; the required 71-node pre-Ursa-Minor saves still validate normally.
 
 A resumed round sets `phase_resumed_from_save`, which makes that round its own
 comparison baseline instead of presenting pre-load installs as fresh growth.

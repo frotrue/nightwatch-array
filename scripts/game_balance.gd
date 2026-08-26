@@ -209,51 +209,51 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "polar_survey", "name": "Polar Survey", "icon": "✣", "cost": 18,
-		"description": "Opens blank-sky surveying: drag across a quiet field to resolve three stationary samples in each observation round.",
+		"description": "Opens blank-sky sweeping: travel 460 px through quiet sky for a 30% chance to call a meteor at the cursor.",
 		"branch": "ursa_minor", "prerequisites": [],
-		"hidden_until": [{"type": "success_count", "minimum": URSA_MINOR_DISCOVERY_SUCCESSES}], "effect_type": "unlock", "effect_parameters": {"survey_samples": 3},
+		"hidden_until": [{"type": "success_count", "minimum": URSA_MINOR_DISCOVERY_SUCCESSES}], "effect_type": "unlock", "effect_parameters": {"survey_distance": 460.0, "survey_probability": 0.30},
 		"major": true, "affects_pacing": false
 	},
 	{
-		"id": "field_brush", "name": "Field Brush", "icon": "◌", "cost": 36,
-		"description": "Widens each survey stroke so a quiet field resolves with fewer passes.",
+		"id": "sweep_gain", "name": "Sweep Gain", "icon": "⌁", "cost": 36,
+		"description": "Reduces the blank-sky travel needed for each summon roll from 460 px to 380 px.",
 		"branch": "ursa_minor", "prerequisites": ["polar_survey"],
-		"hidden_until": ["polar_survey"], "effect_type": "passive", "effect_parameters": {"survey_brush_radius": 26.0},
+		"hidden_until": ["polar_survey"], "effect_type": "passive", "effect_parameters": {"survey_distance": 380.0},
 		"major": false, "affects_pacing": false
 	},
 	{
-		"id": "four_field_rotation", "name": "Four-Field Rotation", "icon": "4", "cost": 70,
-		"description": "Adds a fourth stationary sky sample to every observation round.",
-		"branch": "ursa_minor", "prerequisites": ["field_brush"],
-		"hidden_until": ["field_brush"], "effect_type": "passive", "effect_parameters": {"survey_samples": 4},
+		"id": "faint_recovery", "name": "Faint Recovery", "icon": "◌", "cost": 70,
+		"description": "Raises each blank-sky summon chance from 30% to 42%.",
+		"branch": "ursa_minor", "prerequisites": ["sweep_gain"],
+		"hidden_until": ["sweep_gain"], "effect_type": "passive", "effect_parameters": {"survey_probability": 0.42},
 		"major": false, "affects_pacing": false
 	},
 	{
-		"id": "persistent_plate", "name": "Persistent Plate", "icon": "▧", "cost": 120,
-		"description": "Keeps partial sky coverage for the rest of the current observation round instead of letting it fade.",
-		"branch": "ursa_minor", "prerequisites": ["four_field_rotation"],
-		"hidden_until": ["four_field_rotation"], "effect_type": "transformation", "effect_parameters": {"persistent_survey_coverage": true},
+		"id": "sustained_sweep", "name": "Sustained Sweep", "icon": "▧", "cost": 120,
+		"description": "Keeps partial sweep charge when the button is released, until the current observation round ends.",
+		"branch": "ursa_minor", "prerequisites": ["faint_recovery"],
+		"hidden_until": ["faint_recovery"], "effect_type": "transformation", "effect_parameters": {"persistent_survey_charge": true},
 		"major": true, "affects_pacing": false
 	},
 	{
-		"id": "background_photometry", "name": "Background Photometry", "icon": "+", "cost": 190,
-		"description": "Raises the Data recovered from each resolved stationary sky sample.",
-		"branch": "ursa_minor", "prerequisites": ["persistent_plate"],
-		"hidden_until": ["persistent_plate"], "effect_type": "passive", "effect_parameters": {"survey_reward": 42.0},
+		"id": "deep_exposure", "name": "Deep Exposure", "icon": "+", "cost": 190,
+		"description": "Raises each blank-sky summon chance from 42% to 55%.",
+		"branch": "ursa_minor", "prerequisites": ["sustained_sweep"],
+		"hidden_until": ["sustained_sweep"], "effect_type": "passive", "effect_parameters": {"survey_probability": 0.55},
 		"major": false, "affects_pacing": false
 	},
 	{
-		"id": "five_field_rotation", "name": "Five-Field Rotation", "icon": "5", "cost": 285,
-		"description": "Adds a fifth stationary sky sample to every observation round.",
-		"branch": "ursa_minor", "prerequisites": ["background_photometry"],
-		"hidden_until": ["background_photometry"], "effect_type": "passive", "effect_parameters": {"survey_samples": 5},
+		"id": "rapid_scan", "name": "Rapid Scan", "icon": "↻", "cost": 285,
+		"description": "Reduces the cooldown after a successful summon from 1.5 seconds to 0.9 seconds.",
+		"branch": "ursa_minor", "prerequisites": ["deep_exposure"],
+		"hidden_until": ["deep_exposure"], "effect_type": "passive", "effect_parameters": {"survey_cooldown": 0.9},
 		"major": false, "affects_pacing": false
 	},
 	{
-		"id": "polar_catalog", "name": "Polar Catalog", "icon": "✦", "cost": 420,
-		"description": "Leaves every resolved sample visible for the rest of its observation round and records it in the survey catalog.",
-		"branch": "ursa_minor", "prerequisites": ["five_field_rotation"],
-		"hidden_until": ["five_field_rotation"], "effect_type": "transformation", "effect_parameters": {"catalog_survey_samples": true},
+		"id": "polar_cascade", "name": "Polar Cascade", "icon": "✦", "cost": 420,
+		"description": "Calls two meteors from one successful blank-sky summon roll.",
+		"branch": "ursa_minor", "prerequisites": ["rapid_scan"],
+		"hidden_until": ["rapid_scan"], "effect_type": "transformation", "effect_parameters": {"survey_spawn_count": 2},
 		"major": true, "affects_pacing": false
 	},
 	{
