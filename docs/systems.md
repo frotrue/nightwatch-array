@@ -43,16 +43,16 @@ content.
 |---|---|
 | `game.gd` | Round lifecycle, save/load orchestration, economy-independent feedback dispatch (kick/shake/hitstop), debug keys. The only node that knows about all the others. |
 | `progression_controller.gd` | Data balance, purchased nodes, discovery gates, transient Taurus manual combo, persistent Leo storm charge, and systemic derived upgrade effects. Single source of truth: consumers ask it, not `game_balance.gd`. |
-| `game_balance.gd` | Static data only: the 95 upgrade definitions and the meteor/deep-target spec table. `RefCounted`, no state. |
-| `meteor_spawner.gd` | Spawn cadence, type rolls (including same-round satellites, variable stars, comets, binary stars, and galaxy fields), delayed/forecast Gemini observation echoes, paced Leo meteor-storm queues, sky-wide burnout endpoint planning, forecast contact announcements, fragment spawning, survey-requested custom-start spawns, shower and round-guarded Canis Major spawns, support-lane assignment. |
+| `game_balance.gd` | Static data only: the 95 upgrade definitions and the meteor/long-watch-target spec table. `RefCounted`, no state. |
+| `meteor_spawner.gd` | Spawn cadence, type rolls (including same-round satellites, variable stars, comets, binary stars, and distant galaxies), delayed/forecast Gemini observation echoes, paced Leo meteor-storm queues, sky-wide burnout endpoint planning, forecast contact announcements, fragment spawning, survey-requested custom-start spawns, shower and round-guarded Canis Major spawns, support-lane assignment. |
 | `meteor.gd` | One object's burn-progress motion, trail and terminal fade, observation progress, quality grading, split behaviour, and passive spectral calibration result. |
 | `observation_controller.gd` | Cursor sampling, the tracking-versus-survey input latch, manual tracking, swept-path hit detection, tracking and hover rings, and the software cursor. |
-| `sky_contacts.gd` | Low-chrome forecast contact rendering and steerable dishes. Right-click moves the nearest dish; Predictive Dish Control automatically pre-positions an idle dish. Contact Ledger narrows the uncertainty ring instead of adding value/time text. |
+| `sky_contacts.gd` | Low-chrome forecast contact rendering and steerable dishes. Right-click moves the nearest dish; Predictive Dish Control automatically pre-positions an idle dish. Forecast Log narrows the expected-position ring instead of adding value/time text. |
 | `survey_controller.gd` | Round-local blank-sky sweep charge, the 150 px live-meteor guard, isolated deterministic summon rolls, custom-start spawner calls, cooldown, and the cursor-local red-light arc. |
 | `event_controller.gd` | Meteor showers, Perseid outbursts, and the randomized warned Canis Major event schedule. |
 | `effects_layer.gd` | Success bursts, data packets, incoming markers, forecast markers, screen kick and shake. |
 | `hud.gd` | All in-round UI, round summary, settings, save-slot dialogs, banners. |
-| `upgrade_tree.gd` | Research tree rendering and purchase interaction. |
+| `upgrade_tree.gd` | Research Chart rendering and purchase interaction. |
 | `tutorial_controller.gd` | Four-step first-run guidance. |
 | `save_game_controller.gd` | Three save slots under `user://saves`, versioned at `SAVE_VERSION = 1`. |
 | `game_settings.gd` | Locale and tutorial-completed flag in `user://settings.cfg`. |
@@ -204,7 +204,7 @@ part came from research.
 
 Successful manual observations also advance one transient combo in
 `progression_controller.gd`. Taurus research lengthens its window and turns its
-effective stacks into manual-only analysis speed and tracking-radius bonuses.
+effective stacks into manual-only observation speed and tracking-radius bonuses.
 Automatic completions neither advance nor clear it; elapsed observation time,
 round transitions, and save loads do. The software cursor renders its timer arc
 and stack count directly around the changing observation radius.
@@ -235,7 +235,7 @@ only to live meteor tracking.
 cost, then emits `upgrade_purchased`. `game._on_upgrade_purchased` refreshes
 dishes and spawner features, plays feedback, and autosaves.
 
-Galactic Reference Frame is the presentation exception. If its purchase occurs
+Galaxy Map is the presentation exception. If its purchase occurs
 while the chart is open, `game.gd` asks the chart to begin the pull-back before
 the progression refresh. A deliberate key, mouse-button, joypad-button, or
 wheel press skips to the same final state; the mouse release that completed the
@@ -251,14 +251,14 @@ research, so a completed 95-node tree has exact global `×8192` growth before
 the four existing target-conditional multipliers are applied.
 
 Regular active-sky capacity begins at four. Array Planning, Multi-Target
-Analysis, Cascade Sampling, and Perseid Survey each add one permanent slot, so
+Tracking, Cascade Sampling, and Perseid Watch each add one permanent slot, so
 the completed legacy cap is eight. Canis Major then raises it 8 → 9 → 10 →
 12 while lowering the regular-arrival floor 1.15 → 1.00 → 0.85 → 0.70
 seconds. Draco's final-power sequence raises the endpoint to 18 and lowers the
 floor to 0.45 seconds. The scheduler charges only live
 atmospheric targets (`common`, `fast`, `fragment`, `fragment_piece`, and
 `fireball`) against that budget. Pending forecasts are future information and
-same-round deep targets are long-dwell catalog work, so neither suppresses the
+same-round long-watch targets are long-dwell catalog work, so neither suppresses the
 regular arrival stream. Atmospheric objects created by events, echoes, storms,
 and fragments do count once live; every source still shares the separate global
 `MAX_TOTAL_METEORS = 32` cap.

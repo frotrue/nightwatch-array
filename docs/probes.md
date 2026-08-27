@@ -26,7 +26,7 @@ measurements.
 
 ### Blank-sky survey slice — `survey_slice.gd`
 
-Runs one save-free, human-driven 60-second window with only Polar Survey added
+Runs one save-free, human-driven 60-second window with only Sky Sweep added
 to the opening sky. Track meteors and sweep empty sky with the same left button;
 successful distance rolls call a meteor at the cursor. Release before changing
 intent. It prints `SURVEY_SLICE_READY` and
@@ -300,7 +300,7 @@ Header: `LAYER2_FRAME_PROBE_ENV`.
 
 Measures the research chart in five automated phases: open idle, an
 eight-wheel-event burst on every rendered frame, cursor motion over a tooltip,
-the 3.6-second Galactic Reference Frame pull-back, and the static final galaxy
+the 3.6-second Galaxy Map pull-back, and the static final galaxy
 frame. It reports frame-time percentiles, the synchronous workload time, and
 the number of chart layout passes. The burst deliberately sends more wheel
 events than a frame should commit; `layout_passes` should stay at roughly one
@@ -359,7 +359,7 @@ Remove-Item Env:NIGHTWATCH_GALACTIC_RESEARCH_PREVIEW -ErrorAction SilentlyContin
 & "C:\Users\user\AppData\Local\Temp\codex-godot-4.7.2\Godot_v4.7.2-stable_win64_console.exe" --path . --script res://tests/hud_preview.gd
 ```
 
-같은 스크립트에 `NIGHTWATCH_SURVEY_PREVIEW=1`을 설정하면 북극권 조사를 구매하고
+같은 스크립트에 `NIGHTWATCH_SURVEY_PREVIEW=1`을 설정하면 하늘 훑기를 구매하고
 부분 충전된 커서 호를 `build/survey_preview.png`에 저장한다.
 
 ```powershell
@@ -368,7 +368,7 @@ $env:NIGHTWATCH_SURVEY_PREVIEW = "1"
 Remove-Item Env:NIGHTWATCH_SURVEY_PREVIEW -ErrorAction SilentlyContinue
 ```
 
-`NIGHTWATCH_GALACTIC_PREVIEW=1`은 전체 연구를 설치하고 은하 기준계가 열린 메인
+`NIGHTWATCH_GALACTIC_PREVIEW=1`은 전체 연구를 설치하고 은하 지도가 열린 메인
 하늘을 `build/galactic_preview.png`에 저장한다.
 
 ```powershell
