@@ -275,6 +275,7 @@ Use headless for regression comparison between two headless runs only.
 | Variable | Default | Effect |
 |---|---|---|
 | `NIGHTWATCH_PROBE_SECONDS` | `24` | Probe duration |
+| `NIGHTWATCH_RENDER_STRESS_OBJECTS` | `18` | Visible stress objects; set to `32` to exercise the global ceiling, including one Major Fireball |
 
 Header: `FRAME_PROBE_ENV`.
 
