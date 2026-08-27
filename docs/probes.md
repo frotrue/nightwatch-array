@@ -89,7 +89,9 @@ performance caps, stale references, and reset.
 
 Runs identical fixed-seed atmospheric plans at span `1.0` and `1.05`, requiring
 exact serialized equality. It also checks the expanded visible rectangle,
-screen-fixed input/effect/meteor budgets, and background/flash coverage.
+screen-fixed input/effect/meteor budgets, background/flash coverage, and that
+the sky gradient and horizon span the visible frame rather than stopping at the
+fixed atmospheric boundary.
 
 ```powershell
 & $godot --headless --path . --script res://tests/observation_span_probe.gd

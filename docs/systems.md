@@ -283,7 +283,9 @@ product. `ProgressionController.get_observation_span()` counts eight stable
 galaxy ids and compounds exact five-percent steps up to `1.4774554`.
 `ObservationView` owns that span and routes world/screen rectangles and lengths;
 starfield, twinkle, input, effects, and spawner consumers continue to derive
-their geometry from it.
+their geometry from it. The starfield's gradient bands and horizon ridge follow
+the current visible-world frame, so the fixed atmospheric rectangle remains a
+simulation boundary and never appears as a rendered edge.
 
 `HostStarLayer` is a separate `HostStarController`, not a child of
 `MeteorLayer`. LMC starts with one `HostStar` and one active window; M32 raises

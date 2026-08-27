@@ -87,6 +87,8 @@ func _rebuild_stars() -> void:
 func _draw() -> void:
 	var atmospheric := _atmospheric_rect()
 	var size := atmospheric.size
+	var sky_frame := _sky_frame_rect()
+	var sky_size := sky_frame.size
 	# The camera is still identity-scaled in stage 0, so this reserve is outside
 	# the shipped frame. It prevents later pull-back steps from exposing an
 	# unpainted border without changing today's sky.
@@ -95,11 +97,11 @@ func _draw() -> void:
 	# A radial well centred just below the frame, so the sky is darkest overhead
 	# and the red-light information layer never competes with a blue field.
 	var bands := 120
-	var origin := Vector2(size.x * 0.5, size.y * 1.08)
-	var reach := Vector2(size.x * 1.2, size.y * 0.9).length() * 0.5
+	var origin := sky_frame.position + Vector2(sky_size.x * 0.5, sky_size.y * 1.08)
+	var reach := Vector2(sky_size.x * 1.2, sky_size.y * 0.9).length() * 0.5
 	for index in range(bands):
 		var t := float(index) / float(bands - 1)
-		var band_y := (1.0 - t) * size.y
+		var band_y := sky_frame.position.y + (1.0 - t) * sky_size.y
 		var distance := clampf(absf(band_y - origin.y) / maxf(reach, 1.0), 0.0, 1.0)
 		var sky := Color("05070C")
 		if distance <= 0.34:
@@ -107,7 +109,7 @@ func _draw() -> void:
 		elif distance <= 0.72:
 			sky = Color("050911").lerp(Color("05070C"), smoothstep(0.0, 1.0, (distance - 0.34) / 0.38))
 		sky = sky.lerp(Color("2A1A1E"), activity * (0.06 + (1.0 - t) * 0.10))
-		draw_rect(Rect2(0.0, band_y - size.y / bands, size.x, size.y / bands + 2.0), sky)
+		draw_rect(Rect2(sky_frame.position.x, band_y - sky_size.y / bands, sky_size.x, sky_size.y / bands + 2.0), sky)
 
 	for star in stars:
 		_draw_star(Vector2(star.p) * size, star)
@@ -117,14 +119,7 @@ func _draw() -> void:
 	# A quiet, low-contrast horizon line, and nothing on it. The observatory that
 	# used to sit here read as a foreground object in a frame whose whole subject
 	# is the empty sky above it.
-	var horizon_y := size.y * 0.91
-	var ridge := PackedVector2Array([
-		Vector2(0, horizon_y + 8), Vector2(size.x * 0.12, horizon_y - 5),
-		Vector2(size.x * 0.27, horizon_y + 2), Vector2(size.x * 0.44, horizon_y - 12),
-		Vector2(size.x * 0.62, horizon_y + 3), Vector2(size.x * 0.81, horizon_y - 7),
-		Vector2(size.x, horizon_y + 4), Vector2(size.x, size.y), Vector2(0, size.y)
-	])
-	draw_colored_polygon(ridge, Color("03050A"))
+	draw_colored_polygon(_horizon_ridge(sky_frame), Color("03050A"))
 
 
 func _draw_star(point: Vector2, star: Dictionary) -> void:
@@ -148,6 +143,27 @@ func _background_coverage_rect() -> Rect2:
 	var atmospheric := _atmospheric_rect()
 	var coverage_size := atmospheric.size * BACKGROUND_COVERAGE_SPAN
 	return Rect2(atmospheric.get_center() - coverage_size * 0.5, coverage_size)
+
+
+func _sky_frame_rect() -> Rect2:
+	if observation_view != null:
+		return observation_view.visible_world_rect()
+	return _atmospheric_rect()
+
+
+func _horizon_ridge(frame: Rect2) -> PackedVector2Array:
+	var horizon_y := frame.position.y + frame.size.y * 0.91
+	return PackedVector2Array([
+		Vector2(frame.position.x, horizon_y + 8.0),
+		Vector2(frame.position.x + frame.size.x * 0.12, horizon_y - 5.0),
+		Vector2(frame.position.x + frame.size.x * 0.27, horizon_y + 2.0),
+		Vector2(frame.position.x + frame.size.x * 0.44, horizon_y - 12.0),
+		Vector2(frame.position.x + frame.size.x * 0.62, horizon_y + 3.0),
+		Vector2(frame.position.x + frame.size.x * 0.81, horizon_y - 7.0),
+		Vector2(frame.end.x, horizon_y + 4.0),
+		frame.end,
+		Vector2(frame.position.x, frame.end.y),
+	])
 
 
 func _sample_outer_point(coverage: Rect2) -> Vector2:

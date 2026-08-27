@@ -75,6 +75,21 @@ func _run() -> void:
 		and game.effects._visible_world_rect().is_equal_approx(visible_at_test),
 		"background and full-screen feedback cover the expanded visible world"
 	)
+	var sky_frame: Rect2 = game.starfield._sky_frame_rect()
+	var horizon_ridge: PackedVector2Array = game.starfield._horizon_ridge(sky_frame)
+	_check(
+		sky_frame.is_equal_approx(visible_at_test)
+		and sky_frame.position.x < atmospheric_at_test.position.x
+		and sky_frame.end.x > atmospheric_at_test.end.x,
+		"sky gradient follows the visible frame instead of exposing the atmospheric boundary"
+	)
+	_check(
+		is_equal_approx(horizon_ridge[0].x, sky_frame.position.x)
+		and is_equal_approx(horizon_ridge[6].x, sky_frame.end.x)
+		and horizon_ridge[7].is_equal_approx(sky_frame.end)
+		and is_equal_approx(horizon_ridge[8].x, sky_frame.position.x),
+		"horizon ridge spans the full visible frame"
+	)
 	_check(
 		is_equal_approx(Balance.GALACTIC_OBSERVATION_SPAN_STEP, TEST_SPAN)
 		and is_equal_approx(Balance.GALACTIC_FINAL_OBSERVATION_SPAN, pow(TEST_SPAN, 8)),
@@ -84,7 +99,7 @@ func _run() -> void:
 	game.queue_free()
 	await process_frame
 	if failures.is_empty():
-		print("OBSERVATION_SPAN_PASS: atmospheric plans, two rectangles, screen budgets, meteor visuals, and outer coverage")
+		print("OBSERVATION_SPAN_PASS: atmospheric plans, two rectangles, screen budgets, meteor visuals, and continuous outer sky")
 		quit(0)
 		return
 	print("OBSERVATION_SPAN_FAIL: %d failure(s)" % failures.size())
