@@ -60,6 +60,7 @@ var best_round_rate: float = 0.0
 var suppress_phase_transition: bool = false
 var hitstop_active: bool = false
 var hitstop_cooldown_until_msec: int = 0
+var galactic_pullback_seen: bool = false
 
 
 func _ready() -> void:
@@ -88,6 +89,7 @@ func _ready() -> void:
 	hud.tutorial_replay_requested.connect(_on_tutorial_replay_requested)
 	upgrade_tree.tree_opened.connect(tutorial.notify_upgrade_tree_opened)
 	upgrade_tree.tree_closed.connect(_on_upgrade_tree_closed)
+	upgrade_tree.galactic_pullback_finished.connect(_on_galactic_pullback_finished)
 	sky_contacts.setup(meteor_layer, progression)
 	spawner.setup(meteor_layer, progression)
 	survey.setup(progression, spawner, meteor_layer)
@@ -148,12 +150,14 @@ func start_run() -> void:
 	observation_round = 1
 	last_clean_round_result.clear()
 	best_round_rate = 0.0
+	galactic_pullback_seen = false
 	hud.hide_end()
 	hud.hide_phase_summary()
 	hud.reset_tutorial()
 	hud.set_runtime(0.0)
 	starfield.set_activity(0.0)
 	starfield.set_galactic_mode(progression.galaxy_unlocked())
+	upgrade_tree.configure_galactic_state(progression.galaxy_unlocked(), galactic_pullback_seen)
 	_begin_observation_phase()
 
 
@@ -546,10 +550,18 @@ func _on_upgrade_purchased(definition: Dictionary) -> void:
 	sound.play_upgrade()
 	if String(definition.id) == "galactic_reference_frame":
 		hud.show_banner(tr("BANNER_GALACTIC_FRAME"), UITheme.INK_MAX, 3.2)
+		upgrade_tree.begin_galactic_pullback()
 	else:
 		hud.show_banner(tr("BANNER_SYSTEM_ONLINE") % _upgrade_name(definition), UITheme.BANNER_TITLE, 2.4)
 	starfield.set_activity(progression.get_progression_ratio() * 0.16)
 	starfield.set_galactic_mode(progression.galaxy_unlocked())
+	_autosave_active_slot()
+
+
+func _on_galactic_pullback_finished() -> void:
+	if galactic_pullback_seen:
+		return
+	galactic_pullback_seen = true
 	_autosave_active_slot()
 
 
@@ -725,6 +737,7 @@ func _build_save_data() -> Dictionary:
 		"canis_major_spawned_this_round": spawner.canis_major_spawned_this_round,
 		"last_clean_round_result": last_clean_round_result.duplicate(true),
 		"best_round_rate": best_round_rate,
+		"galactic_pullback_seen": galactic_pullback_seen,
 		"progression": progression.get_save_data(),
 	}
 
@@ -744,6 +757,8 @@ func _apply_save_data(data: Dictionary) -> void:
 	observation_round = maxi(1, int(data.get("observation_round", 1)))
 	var progression_data = data.get("progression", {})
 	progression.load_save_data(progression_data if progression_data is Dictionary else {})
+	galactic_pullback_seen = progression.galaxy_unlocked() and bool(data.get("galactic_pullback_seen", false))
+	upgrade_tree.configure_galactic_state(progression.galaxy_unlocked(), galactic_pullback_seen)
 	last_clean_round_result = _sanitize_round_result(data.get(
 		"last_clean_round_result",
 		data.get("last_round_result", {})

@@ -1,10 +1,12 @@
 extends SceneTree
 
-# Windowed frame-time probe for the research chart. The middle phase injects a
-# burst of wheel events every rendered frame; the final phase exercises the
-# cursor-following tooltip. This is a measurement probe, not a pass/fail gate.
+# Windowed frame-time probe for the research chart. It covers normal idle,
+# coalesced wheel bursts, cursor-following tooltips, the Galactic Reference
+# Frame pull-back, and its static final frame. This remains a measurement probe,
+# not a pass/fail gate; the documented candidate acceptance is p95 < 16.7 ms.
 
 const PHASE_SECONDS := 3.0
+const PULLBACK_MEASURE_SECONDS := 3.8
 const WHEEL_EVENTS_PER_FRAME := 8
 
 var game
@@ -27,6 +29,7 @@ func _run() -> void:
 	game.startup_slot_prompt_enabled = false
 	game.get_node("Tutorial").auto_start_enabled = false
 	root.add_child(game)
+	DisplayServer.window_move_to_foreground()
 	await process_frame
 	await process_frame
 	tree = game.upgrade_tree
@@ -36,7 +39,7 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 
-	print("RESEARCH_UI_PROBE_ENV engine=%s renderer=%s viewport=%s window=%s refresh_hz=%.2f vsync=%d wheel_events_per_frame=%d phase_seconds=%.1f" % [
+	print("RESEARCH_UI_PROBE_ENV engine=%s renderer=%s viewport=%s window=%s refresh_hz=%.2f vsync=%d wheel_events_per_frame=%d phase_seconds=%.1f galactic_transition_stars=%d galactic_final_stars=%d pullback_seconds=%.1f target_p95_ms=16.7" % [
 		Engine.get_version_info(),
 		RenderingServer.get_current_rendering_method(),
 		root.get_visible_rect().size,
@@ -45,6 +48,9 @@ func _run() -> void:
 		DisplayServer.window_get_vsync_mode(),
 		WHEEL_EVENTS_PER_FRAME,
 		PHASE_SECONDS,
+		int(tree.GALACTIC_TRANSITION_STAR_COUNT),
+		int(tree.GALACTIC_FINAL_STAR_COUNT),
+		float(tree.PULLBACK_DURATION),
 	])
 	await _measure_phase("idle", Callable())
 	await _measure_phase("wheel_burst", _inject_wheel_burst)
@@ -53,6 +59,10 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	await _measure_phase("tooltip_motion", _inject_tooltip_motion)
+	tree._hide_node_tooltip()
+	game.progression.debug_purchase_all()
+	await _measure_phase("galactic_transition", Callable(), PULLBACK_MEASURE_SECONDS)
+	await _measure_phase("galactic_final", Callable())
 
 	# Wheel input mutates the in-memory setting without writing it until close.
 	# Restore the player's value first so this measurement has no persistent side effect.
@@ -65,13 +75,13 @@ func _run() -> void:
 	quit(0)
 
 
-func _measure_phase(label: String, workload: Callable) -> void:
+func _measure_phase(label: String, workload: Callable, duration: float = PHASE_SECONDS) -> void:
 	frame_times.clear()
 	workload_times.clear()
 	var layout_passes_before: int = tree.chart_layout_passes
 	phase_start_usec = Time.get_ticks_usec()
 	last_frame_usec = phase_start_usec
-	while float(Time.get_ticks_usec() - phase_start_usec) / 1000000.0 < PHASE_SECONDS:
+	while float(Time.get_ticks_usec() - phase_start_usec) / 1000000.0 < duration:
 		await process_frame
 		var now := Time.get_ticks_usec()
 		frame_times.append(float(now - last_frame_usec) / 1000.0)
