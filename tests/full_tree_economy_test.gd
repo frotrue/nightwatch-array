@@ -7,6 +7,7 @@ const SEEDS := [20260821, 20260837, 20260853]
 const SURVEY_DRIVER_SPEED := 720.0
 const WATCHDOG_SECONDS := 14400.0
 const MAX_NO_ARRIVAL_SECONDS := Balance.MAX_OBSERVATION_DURATION * 2.0
+const EXPECTED_FINAL_VALUE_MULTIPLIER := 8192.0
 const MULTIPLIER_NODES := [
 	"perfect_observation",
 	"shower_detector",
@@ -16,6 +17,8 @@ const MULTIPLIER_NODES := [
 	"echo_delay_line",
 	"galaxy_imaging",
 	"fireball_tail",
+	"draco_synthesis",
+	"draco_apotheosis",
 ]
 
 var game
@@ -74,14 +77,14 @@ func _run() -> void:
 			int(result.purchased) != Balance.UPGRADE_NODES.size()
 			or float(result.completion_time) < 0.0
 			or float(result.longest_no_arrival) > MAX_NO_ARRIVAL_SECONDS + STEP
-			or not is_equal_approx(float(result.value_multiplier), 256.0)
+			or not is_equal_approx(float(result.value_multiplier), EXPECTED_FINAL_VALUE_MULTIPLIER)
 		):
 			failed = true
 	if failed:
 		push_error("FULL_TREE_ECONOMY_FAIL: completion, multiplier, or no-arrival invariant failed")
 		quit(1)
 		return
-	print("FULL_TREE_ECONOMY_PASS: all %d research systems complete with x256 value growth and no arrival gap above %.0f seconds" % [
+	print("FULL_TREE_ECONOMY_PASS: all %d research systems complete with x8192 value growth and no arrival gap above %.0f seconds" % [
 		Balance.UPGRADE_NODES.size(), MAX_NO_ARRIVAL_SECONDS,
 	])
 	quit(0)

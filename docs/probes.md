@@ -41,13 +41,13 @@ feel rather than correctness.
 
 ### Research contract test
 
-Checks all 86 research definitions against the three-layer effect schema. It
+Checks all 95 research definitions against the three-layer effect schema. It
 requires every literal `has_upgrade("id")` reference to resolve, every research
 node to have one declared implementation connection, and the only production
-parameter keys to have live consumers. Twenty-two nodes have executable contracts:
-eight global observation-value multipliers, four duration bonuses, and four
-legacy plus three Canis regular active-contact capacity deltas, plus three Canis
-regular-arrival floors. The other 64 ids are held as an exact
+parameter keys to have live consumers. Twenty-six nodes have executable contracts:
+ten global observation-value multipliers, four duration bonuses, four legacy
+plus three Canis plus one Draco regular active-contact capacity deltas, and
+three Canis plus one Draco regular-arrival floors. The other 69 ids are held as an exact
 unverified baseline that may shrink but cannot silently grow or exchange ids.
 
 For each executable contract, the test compares independent expected behavior
@@ -61,7 +61,7 @@ false claim on Storm Zenith.
 & $godot --headless --path . --script res://tests/research_contract_test.gd
 ```
 
-- Pass: `RESEARCH_CONTRACT_PASS: 86 nodes, 22 executable contracts, 64 exact unverified ids, and bidirectional en/ko claims`
+- Pass: `RESEARCH_CONTRACT_PASS: 95 nodes, 26 executable contracts, 69 exact unverified ids, and bidirectional en/ko claims`
 - Fail: `RESEARCH_CONTRACT:` error lines, then `RESEARCH_CONTRACT_FAIL: N failure(s)`
 
 ### Smoke test
@@ -141,7 +141,7 @@ Header: `DURATION_PRICING_ENV`.
 
 ### Full-tree economy gate — `full_tree_economy_test.gd`
 
-Pass/fail gate for the expanded 86-system graph. It runs three deterministic
+Pass/fail gate for the expanded 95-system graph. It runs three deterministic
 scripted-engaged watches at `0.05s` steps until all research is purchased. It
 buys the cheapest currently available research at each intermission, applies
 purchased Lyra calibration automatically, reproduces purchased Taurus combo
@@ -149,7 +149,7 @@ speed, Gemini echo bursts, and Leo storm charge, and uses predictive dishes
 when installed. The engaged driver sweeps blank sky only while no manual meteor
 target is available.
 
-Every seed must reach 86/86, finish with exact unconditional `×256` observation
+Every seed must reach 95/95, finish with exact unconditional `×8192` observation
 value, and keep the longest pre-completion interval without a newly available
 node at or below `2 × MAX_OBSERVATION_DURATION` (currently 120 seconds).
 Completion time is reported, not asserted. A 14,400-second watchdog catches a
@@ -194,7 +194,8 @@ live meteors, and combined workload, per type. Behind
 
 The legacy completed-tree regular capacity is eight. Canis Major raises the
 live endpoint to twelve and lowers the regular-arrival floor from 1.15 to 0.70
-seconds. The linked legacy baseline froze a four/six-cap tree and is not a
+seconds; Draco raises the final endpoint to eighteen and lowers the floor to
+0.45 seconds. The linked legacy baseline froze a four/six-cap tree and is not a
 current density or performance acceptance target. The probe deliberately keeps
 `EventController` stopped, so its completed row isolates the new regular
 floor/cap and excludes the once-per-round Major Fireball.
@@ -350,4 +351,13 @@ $env:NIGHTWATCH_PRICING_SEEDS = "20"; & $godot --headless --path . --script res:
 $env:NIGHTWATCH_SURVEY_PREVIEW = "1"
 & "C:\Users\user\AppData\Local\Temp\codex-godot-4.7.2\Godot_v4.7.2-stable_win64_console.exe" --path . --script res://tests/hud_preview.gd
 Remove-Item Env:NIGHTWATCH_SURVEY_PREVIEW -ErrorAction SilentlyContinue
+```
+
+`NIGHTWATCH_GALACTIC_PREVIEW=1`은 전체 연구를 설치하고 은하 기준계가 열린 메인
+하늘을 `build/galactic_preview.png`에 저장한다.
+
+```powershell
+$env:NIGHTWATCH_GALACTIC_PREVIEW = "1"
+& "C:\Users\user\AppData\Local\Temp\codex-godot-4.7.2\Godot_v4.7.2-stable_win64_console.exe" --path . --script res://tests/hud_preview.gd
+Remove-Item Env:NIGHTWATCH_GALACTIC_PREVIEW -ErrorAction SilentlyContinue
 ```

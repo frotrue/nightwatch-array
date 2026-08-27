@@ -7,7 +7,7 @@ const SHOWER_DURATION := 9.0
 const BASE_OBSERVATION_DURATION := 20.0
 const MAX_OBSERVATION_DURATION := 60.0
 const BASE_MAX_ACTIVE_METEORS := 4
-const MAX_ACTIVE_METEORS := 12
+const MAX_ACTIVE_METEORS := 18
 const CANIS_FINAL_ACTIVE_CAPACITY_DELTA := 2
 const CANIS_FINAL_REGULAR_SPAWN_INTERVAL_FLOOR := 0.70
 const REGULAR_SPAWN_INTERVAL_MIN := 1.6
@@ -23,7 +23,8 @@ const BRANCHES := {
 	"lyra": {"name": "LYRA / SPECTRUM", "color": Color("69a9ff")},
 	"andromeda": {"name": "ANDROMEDA / DEEP SURVEY", "color": Color("ff78c8")},
 	"leo": {"name": "LEO / METEOR STORM", "color": Color("ff9a66")},
-	"canis_major": {"name": "CANIS MAJOR / CADENCE", "color": Color("8ad9ff")}
+	"canis_major": {"name": "CANIS MAJOR / CADENCE", "color": Color("8ad9ff")},
+	"draco": {"name": "DRACO / CULMINATION", "color": Color("e8a6ff")}
 }
 
 # Existing upgrade ids are preserved so every gameplay consumer migrates without
@@ -679,6 +680,76 @@ const UPGRADE_NODES: Array[Dictionary] = [
 		"description": "Warns of and releases one Major Fireball at most once during each viable observation round.",
 		"branch": "canis_major", "prerequisites": ["canis_capacity_ii", "canis_cadence_i", "canis_capacity_iii"],
 		"hidden_until": ["canis_capacity_ii", "canis_cadence_i", "canis_capacity_iii"], "effect_type": "unlock", "effect_notes": {"major_fireball_per_round": 1},
+		"major": true, "affects_pacing": false
+	},
+	{
+		"id": "draco_synthesis", "name": "All-Sky Synthesis", "icon": "×4", "cost": 2000000,
+		"description": "Multiplies all observation Data by 4, including automatic completions.",
+		"branch": "draco", "prerequisites": [],
+		"hidden_until": [{"type": "other_constellations_complete", "excluded_branch": "draco"}],
+		"effect_type": "transformation", "effect_notes": {"culmination_gate": true},
+		"runtime_parameters": {"observation_value_multiplier": 4.0},
+		"effect_contract": {"kind": "observation_value_multiplier", "value": 4.0, "scope": "all_observation_data"},
+		"major": true, "affects_pacing": false
+	},
+	{
+		"id": "draco_cadence", "name": "Circumpolar Cadence", "icon": "0.45s", "cost": 8000000,
+		"description": "Lowers the regular meteor interval floor to 0.45 seconds.",
+		"branch": "draco", "prerequisites": ["draco_synthesis"],
+		"hidden_until": ["draco_synthesis"], "effect_type": "transformation", "effect_notes": {"regular_spawn_interval_floor": 0.45},
+		"effect_contract": {"kind": "regular_spawn_interval_floor", "value": 0.45, "scope": "regular_meteor_arrivals"},
+		"major": true, "affects_pacing": false
+	},
+	{
+		"id": "draco_capacity", "name": "Dragon-Spine Array", "icon": "+6", "cost": 30000000,
+		"description": "Raises regular active-sky capacity by six, from twelve to eighteen.",
+		"branch": "draco", "prerequisites": ["draco_cadence"],
+		"hidden_until": ["draco_cadence"], "effect_type": "transformation", "effect_notes": {"max_active_delta": 6},
+		"effect_contract": {"kind": "max_active_delta", "value": 6, "scope": "regular_active_contacts"},
+		"major": true, "affects_pacing": false
+	},
+	{
+		"id": "draco_sweep", "name": "Coiled-Sky Sweep", "icon": "4×", "cost": 40000000,
+		"description": "Overcharges blank-sky sweeping: 190 px per roll, guaranteed success, four meteors, and a 0.45-second cooldown.",
+		"branch": "draco", "prerequisites": ["draco_capacity"],
+		"hidden_until": ["draco_capacity"], "effect_type": "transformation", "effect_notes": {"survey_distance": 190.0, "survey_probability": 1.0, "survey_count": 4, "survey_cooldown": 0.45},
+		"major": true, "affects_pacing": false
+	},
+	{
+		"id": "draco_echo", "name": "Polar Resonance", "icon": "6×", "cost": 55000000,
+		"description": "Raises manual-observation echo chance to 65% and launches six echoes at once.",
+		"branch": "draco", "prerequisites": ["draco_sweep"],
+		"hidden_until": ["draco_sweep"], "effect_type": "transformation", "effect_notes": {"echo_probability": 0.65, "echo_count": 6},
+		"major": true, "affects_pacing": false
+	},
+	{
+		"id": "draco_storm", "name": "Radiant Convergence", "icon": "30", "cost": 70000000,
+		"description": "Arms a 30-object Leonid storm after two eligible manual observations.",
+		"branch": "draco", "prerequisites": ["draco_echo"],
+		"hidden_until": ["draco_echo"], "effect_type": "transformation", "effect_notes": {"manual_trigger": 2, "storm_count": 30},
+		"major": true, "affects_pacing": false
+	},
+	{
+		"id": "draco_array", "name": "Total Array", "icon": "4+4", "cost": 70000000,
+		"description": "Expands the observatory to four steerable dishes and four automatic support lanes.",
+		"branch": "draco", "prerequisites": ["draco_storm"],
+		"hidden_until": ["draco_storm"], "effect_type": "transformation", "effect_notes": {"dish_count": 4, "support_lanes": 4},
+		"major": true, "affects_pacing": false
+	},
+	{
+		"id": "draco_apotheosis", "name": "Dragon's Eye", "icon": "×8", "cost": 85000000,
+		"description": "Multiplies all observation Data by 8, including automatic completions.",
+		"branch": "draco", "prerequisites": ["draco_array"],
+		"hidden_until": ["draco_array"], "effect_type": "transformation", "effect_notes": {"culmination_multiplier": true},
+		"runtime_parameters": {"observation_value_multiplier": 8.0},
+		"effect_contract": {"kind": "observation_value_multiplier", "value": 8.0, "scope": "all_observation_data"},
+		"major": true, "affects_pacing": false
+	},
+	{
+		"id": "galactic_reference_frame", "name": "Galactic Reference Frame", "icon": "MW", "cost": 400000000,
+		"description": "Unlocks galactic observation, converts the completed celestial map to a galactic reference frame, and deepens the background star field.",
+		"branch": "draco", "prerequisites": ["draco_apotheosis"],
+		"hidden_until": ["draco_apotheosis"], "effect_type": "unlock", "effect_notes": {"galactic_survey": true},
 		"major": true, "affects_pacing": false
 	}
 ]

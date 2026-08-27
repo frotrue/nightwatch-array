@@ -2,6 +2,7 @@ extends Node2D
 
 var stars: Array[Dictionary] = []
 var activity: float = 0.0
+var galactic_mode: bool = false
 var rng := RandomNumberGenerator.new()
 var cached_size := Vector2.ZERO
 
@@ -22,6 +23,13 @@ func set_activity(value: float) -> void:
 	queue_redraw()
 
 
+func set_galactic_mode(enabled: bool) -> void:
+	if galactic_mode == enabled:
+		return
+	galactic_mode = enabled
+	_rebuild_stars()
+
+
 func _rebuild_stars() -> void:
 	cached_size = get_viewport_rect().size
 	stars.clear()
@@ -29,7 +37,8 @@ func _rebuild_stars() -> void:
 	# layer draws its own stars on top, so this divisor is set for the pair
 	# rather than for this layer alone, and the floor stays under it so a small
 	# viewport is not proportionally denser than the reference.
-	var count := maxi(24, int(cached_size.x * cached_size.y / 17000.0))
+	var base_count := maxi(24, int(cached_size.x * cached_size.y / 17000.0))
+	var count := int(round(float(base_count) * 1.65)) if galactic_mode else base_count
 	for index in range(count):
 		var normalized := Vector2(rng.randf(), pow(rng.randf(), 1.1) * 0.88)
 		stars.append({

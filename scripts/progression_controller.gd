@@ -156,9 +156,23 @@ func is_reveal_gate_met(gate) -> bool:
 		match String(condition.get("type", "")):
 			"success_count":
 				return success_count >= maxi(0, int(condition.get("minimum", 0)))
+			"other_constellations_complete":
+				return _all_research_outside_branch_purchased(String(condition.get("excluded_branch", "")))
 			_:
 				return false
 	return has_upgrade(String(gate))
+
+
+func _all_research_outside_branch_purchased(excluded_branch: String) -> bool:
+	if excluded_branch.is_empty():
+		return false
+	for definition_variant in Balance.UPGRADE_NODES:
+		var definition: Dictionary = definition_variant
+		if String(definition.get("branch", "")) == excluded_branch:
+			continue
+		if not has_upgrade(String(definition.id)):
+			return false
+	return true
 
 
 func can_purchase(node_id: String) -> bool:
@@ -237,10 +251,14 @@ func survey_enabled() -> bool:
 
 
 func get_survey_required_distance() -> float:
+	if has_upgrade("draco_sweep"):
+		return 190.0
 	return 380.0 if has_upgrade("sweep_gain") else 460.0
 
 
 func get_survey_spawn_probability() -> float:
+	if has_upgrade("draco_sweep"):
+		return 1.0
 	if has_upgrade("deep_exposure"):
 		return 0.55
 	if has_upgrade("faint_recovery"):
@@ -253,10 +271,14 @@ func survey_charge_persists() -> bool:
 
 
 func get_survey_cooldown_seconds() -> float:
+	if has_upgrade("draco_sweep"):
+		return 0.45
 	return 0.9 if has_upgrade("rapid_scan") else 1.5
 
 
 func get_survey_spawn_count() -> int:
+	if has_upgrade("draco_sweep"):
+		return 4
 	return 2 if has_upgrade("polar_cascade") else 1
 
 
@@ -351,6 +373,8 @@ func get_spawn_interval_scale() -> float:
 
 
 func get_regular_spawn_interval_floor() -> float:
+	if has_upgrade("draco_cadence"):
+		return 0.45
 	if has_upgrade("canis_cadence_iii"):
 		return Balance.CANIS_FINAL_REGULAR_SPAWN_INTERVAL_FLOOR
 	if has_upgrade("canis_cadence_ii"):
@@ -361,6 +385,8 @@ func get_regular_spawn_interval_floor() -> float:
 
 
 func get_observation_echo_probability() -> float:
+	if has_upgrade("draco_echo"):
+		return 0.65
 	if has_upgrade("echo_correlation_20"):
 		return 0.20
 	if has_upgrade("echo_correlation_10"):
@@ -369,6 +395,8 @@ func get_observation_echo_probability() -> float:
 
 
 func get_observation_echo_count() -> int:
+	if has_upgrade("draco_echo"):
+		return 6
 	if has_upgrade("triple_echo_array"):
 		return 3
 	if has_upgrade("dual_echo_channel"):
@@ -379,6 +407,8 @@ func get_observation_echo_count() -> int:
 
 
 func get_leonid_trigger_count() -> int:
+	if has_upgrade("draco_storm"):
+		return 2
 	if has_upgrade("leonid_storm"):
 		return 5
 	if has_upgrade("storm_front"):
@@ -395,6 +425,8 @@ func get_leonid_trigger_count() -> int:
 
 
 func get_leonid_storm_count() -> int:
+	if has_upgrade("draco_storm"):
+		return 30
 	if has_upgrade("leonid_storm"):
 		return 20
 	if has_upgrade("storm_front"):
@@ -444,6 +476,7 @@ func get_max_active() -> int:
 		+ int(has_upgrade("canis_capacity_i"))
 		+ int(has_upgrade("canis_capacity_ii"))
 		+ Balance.CANIS_FINAL_ACTIVE_CAPACITY_DELTA * int(has_upgrade("canis_capacity_iii"))
+		+ 6 * int(has_upgrade("draco_capacity"))
 	)
 
 
@@ -452,6 +485,8 @@ func get_max_active() -> int:
 # The network nodes keep their automatic lanes, one fewer each, while the final
 # Observatory Network deliberately adds late-game dish capacity.
 func get_dish_count() -> int:
+	if has_upgrade("draco_array"):
+		return 4
 	if has_upgrade("observatory_network"):
 		return 2
 	return 1 if has_upgrade("secondary_camera") else 0
@@ -540,7 +575,13 @@ func is_research_complete() -> bool:
 	return upgrade_level == Balance.UPGRADE_NODES.size()
 
 
+func galaxy_unlocked() -> bool:
+	return has_upgrade("galactic_reference_frame")
+
+
 func get_secondary_slots() -> int:
+	if has_upgrade("draco_array"):
+		return 4
 	if has_upgrade("observatory_network"):
 		return 2
 	if has_upgrade("multi_target_analysis"):

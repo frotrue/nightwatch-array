@@ -56,7 +56,11 @@ func refresh_dishes() -> void:
 		return
 	var size := get_viewport_rect().size
 	while dishes.size() < wanted:
-		var home := Vector2(size.x * (0.42 + 0.2 * float(dishes.size())), size.y * 0.55)
+		var dish_index := dishes.size()
+		var home_x := 0.42 + 0.2 * float(dish_index)
+		if wanted > 2:
+			home_x = 0.5 + (float(dish_index) - float(wanted - 1) * 0.5) * 0.16
+		var home := Vector2(size.x * home_x, size.y * 0.55)
 		dishes.append({
 			"position": home,
 			"target": home,
@@ -64,6 +68,17 @@ func refresh_dishes() -> void:
 			"locked_id": 0,
 			"arrived": true,
 		})
+	if wanted > 2:
+		for dish_index in range(wanted):
+			var dish: Dictionary = dishes[dish_index]
+			var home_x := 0.5 + (float(dish_index) - float(wanted - 1) * 0.5) * 0.16
+			var home := Vector2(size.x * home_x, size.y * 0.55)
+			dish.position = home
+			dish.target = home
+			dish.assigned_id = -1
+			dish.locked_id = 0
+			dish.arrived = true
+			dishes[dish_index] = dish
 	queue_redraw()
 
 

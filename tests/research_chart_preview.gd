@@ -25,18 +25,17 @@ func _run() -> void:
 	await process_frame
 
 	# Hover a node so the cursor tooltip is part of the capture. The script has no
-	# real pointer, so the tooltip is placed at the hovered star by hand. Keep
-	# Canis Major above the horizon so its four-root figure and Sirius terminus
-	# can be reviewed in one capture.
+	# real pointer, so the tooltip is placed at the hovered star by hand. Centre
+	# completed Draco so its nine-step culmination and galactic field are visible.
 	var tree = game.upgrade_tree
 	tree._reset_view(false)
-	tree.rotation_offset = -1.27
+	tree.rotation_offset = 0.58
 	tree._layout_chart()
-	tree._on_node_hovered("sirius_fireball")
+	tree._on_node_hovered("galactic_reference_frame")
 	for _index in range(4):
 		await process_frame
-	# Park the tooltip in the sparse upper-left so it names Sirius without
-	# covering the small Canis figure it is meant to review.
+	# Park the tooltip in the sparse upper-left so it names the transition without
+	# covering Draco itself.
 	tree._position_node_tooltip(Vector2(24.0, 100.0))
 	# Fix animated pulse state and wait for the renderer so baseline comparisons
 	# are deterministic instead of occasionally capturing a partially drawn frame.

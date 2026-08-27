@@ -153,6 +153,7 @@ func start_run() -> void:
 	hud.reset_tutorial()
 	hud.set_runtime(0.0)
 	starfield.set_activity(0.0)
+	starfield.set_galactic_mode(progression.galaxy_unlocked())
 	_begin_observation_phase()
 
 
@@ -543,8 +544,12 @@ func _on_upgrade_purchased(definition: Dictionary) -> void:
 		upgrade_tree.set_intermission_context(observation_round + 1, int(_observation_duration()))
 	effects.spawn_upgrade_pulse()
 	sound.play_upgrade()
-	hud.show_banner(tr("BANNER_SYSTEM_ONLINE") % _upgrade_name(definition), UITheme.BANNER_TITLE, 2.4)
+	if String(definition.id) == "galactic_reference_frame":
+		hud.show_banner(tr("BANNER_GALACTIC_FRAME"), UITheme.INK_MAX, 3.2)
+	else:
+		hud.show_banner(tr("BANNER_SYSTEM_ONLINE") % _upgrade_name(definition), UITheme.BANNER_TITLE, 2.4)
 	starfield.set_activity(progression.get_progression_ratio() * 0.16)
+	starfield.set_galactic_mode(progression.galaxy_unlocked())
 	_autosave_active_slot()
 
 
@@ -753,6 +758,7 @@ func _apply_save_data(data: Dictionary) -> void:
 	hud.restore_tutorial(progression.success_count > 0)
 	hud.set_runtime(elapsed_time)
 	starfield.set_activity(progression.get_progression_ratio() * 0.16)
+	starfield.set_galactic_mode(progression.galaxy_unlocked())
 	var saved_phase_active := bool(data.get("observation_phase_active", true))
 	if saved_phase_active:
 		var saved_remaining := float(data.get(
