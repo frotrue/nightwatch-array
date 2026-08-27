@@ -117,6 +117,26 @@ func add_observation(amount: float, was_manual: bool, intrinsic_multiplier: floa
 	return final_amount
 
 
+func record_transit_confirmation(was_manual: bool, intrinsic_multiplier: float) -> void:
+	success_count += 1
+	if was_manual:
+		manual_successes += 1
+		best_multiplier = maxf(best_multiplier, intrinsic_multiplier)
+	else:
+		automatic_successes += 1
+	state_changed.emit()
+
+
+func add_transit_harvest(amount: float) -> float:
+	# Galactic harvest value is its own economy lane. It deliberately bypasses
+	# the meteor-wide x8192 research product and the short manual-combo timer.
+	var final_amount := maxf(1.0, round(amount))
+	observation_data += final_amount
+	total_data_earned += final_amount
+	state_changed.emit()
+	return final_amount
+
+
 func add_debug_data(amount: float) -> void:
 	observation_data += amount
 	total_data_earned += amount
@@ -168,7 +188,12 @@ func _all_research_outside_branch_purchased(excluded_branch: String) -> bool:
 		return false
 	for definition_variant in Balance.UPGRADE_NODES:
 		var definition: Dictionary = definition_variant
-		if String(definition.get("branch", "")) == excluded_branch:
+		var branch := String(definition.get("branch", ""))
+		if branch == excluded_branch:
+			continue
+		# Local Group research is downstream of Draco's galactic culmination and
+		# cannot participate in the older "all other constellations" reveal gate.
+		if excluded_branch == "draco" and branch == "local_group":
 			continue
 		if not has_upgrade(String(definition.id)):
 			return false
@@ -577,6 +602,55 @@ func is_research_complete() -> bool:
 
 func galaxy_unlocked() -> bool:
 	return has_upgrade("galactic_reference_frame")
+
+
+func host_stars_unlocked() -> bool:
+	return has_upgrade("large_magellanic_cloud")
+
+
+func get_transit_value_multiplier() -> float:
+	return 1.5 if has_upgrade("small_magellanic_cloud") else 1.0
+
+
+func get_host_star_capacity() -> int:
+	return 2 if has_upgrade("messier_32") else 1
+
+
+func get_active_transit_capacity() -> int:
+	return 2 if has_upgrade("messier_110") else 1
+
+
+func get_galactic_feature_ids() -> Array[String]:
+	var result: Array[String] = []
+	for node_id_variant in Balance.GALACTIC_FEATURES.keys():
+		var node_id := String(node_id_variant)
+		if has_upgrade(node_id):
+			result.append(node_id)
+	return result
+
+
+func get_galactic_host_profile_ids() -> Array[String]:
+	var result: Array[String] = []
+	for node_id in get_galactic_feature_ids():
+		if bool(Dictionary(Balance.GALACTIC_FEATURES[node_id]).get("host_profile", false)):
+			result.append(node_id)
+	return result
+
+
+func has_weak_reference_chain() -> bool:
+	return has_upgrade("ngc_147")
+
+
+func get_observation_span() -> float:
+	var purchased_steps := 0
+	for node_id in Balance.GALACTIC_SPAN_NODE_IDS:
+		if has_upgrade(node_id):
+			purchased_steps += 1
+	return clampf(
+		pow(Balance.GALACTIC_OBSERVATION_SPAN_STEP, purchased_steps),
+		1.0,
+		Balance.GALACTIC_FINAL_OBSERVATION_SPAN
+	)
 
 
 func get_secondary_slots() -> int:

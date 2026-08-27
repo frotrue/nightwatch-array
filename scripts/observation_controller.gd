@@ -15,6 +15,7 @@ enum InteractionMode {
 }
 
 var meteor_layer: Node2D
+var secondary_target_layer: Node2D
 var progression: Node
 var hud: CanvasLayer
 var survey: Node2D
@@ -33,8 +34,9 @@ var interaction_mode: InteractionMode = InteractionMode.NONE
 var pending_blank_distance: float = 0.0
 
 
-func setup(target_layer: Node2D, progression_controller: Node, hud_layer: CanvasLayer, survey_controller: Node2D = null, view: Camera2D = null) -> void:
+func setup(target_layer: Node2D, progression_controller: Node, hud_layer: CanvasLayer, survey_controller: Node2D = null, view: Camera2D = null, extra_target_layer: Node2D = null) -> void:
 	meteor_layer = target_layer
+	secondary_target_layer = extra_target_layer
 	progression = progression_controller
 	hud = hud_layer
 	survey = survey_controller
@@ -208,9 +210,7 @@ func _update_manual_tracking(delta: float) -> void:
 
 
 func _observe_additional_targets(delta: float, primary) -> void:
-	var child_count := meteor_layer.get_child_count()
-	for child_index in range(child_count):
-		var child := meteor_layer.get_child(child_index)
+	for child in _target_children():
 		if child == primary or not _target_is_valid(child):
 			continue
 		if _apply_manual_contact(child, delta):
@@ -292,9 +292,7 @@ func release_target(target = null) -> void:
 func _find_target_under_cursor():
 	var closest = null
 	var closest_distance := INF
-	var child_count := meteor_layer.get_child_count()
-	for child_index in range(child_count):
-		var child := meteor_layer.get_child(child_index)
+	for child in _target_children():
 		if not child.has_method("can_be_tracked") or not child.can_be_tracked():
 			continue
 		var tracking_radius: float = child.get_tracking_radius(_world_px(progression.get_tracking_radius()))
@@ -305,6 +303,15 @@ func _find_target_under_cursor():
 			closest = child
 			closest_distance = distance
 	return closest
+
+
+func _target_children() -> Array:
+	var targets: Array = []
+	if meteor_layer != null:
+		targets.append_array(meteor_layer.get_children())
+	if secondary_target_layer != null:
+		targets.append_array(secondary_target_layer.get_children())
+	return targets
 
 
 func _distance_to_cursor_path(point: Vector2) -> float:

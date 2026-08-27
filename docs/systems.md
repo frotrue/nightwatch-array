@@ -43,9 +43,9 @@ content.
 | Script | Owns |
 |---|---|
 | `game.gd` | Round lifecycle, save/load orchestration, economy-independent feedback dispatch (kick/shake/hitstop), debug keys. The only node that knows about all the others. |
-| `observation_view.gd` | The fixed atmospheric playfield, the camera-visible world rectangle, screen/world point conversion, screen-length conversion, and the Camera2D feedback offset. Stage 0 keeps its span at exactly 1.0. |
+| `observation_view.gd` | The fixed atmospheric playfield, dynamic camera-visible world rectangle, screen/world point conversion, screen-length conversion, and the Camera2D feedback offset. Eight Local Group steps expand its span from 1.0 to the 1.4774554 ceiling. |
 | `progression_controller.gd` | Data balance, purchased nodes, discovery gates, transient Taurus manual combo, persistent Leo storm charge, and systemic derived upgrade effects. Single source of truth: consumers ask it, not `game_balance.gd`. |
-| `game_balance.gd` | Static data only: the 95 upgrade definitions, the meteor/long-watch-target spec table, and the single final galactic observation-span ceiling. `RefCounted`, no state. |
+| `game_balance.gd` | Static data only: the 124 upgrade definitions, six Local Group rule-family profiles, the meteor/long-watch-target spec table, and the final galactic observation-span ceiling. `RefCounted`, no state. |
 | `meteor_spawner.gd` | Spawn cadence, type rolls (including same-round satellites, variable stars, comets, binary stars, and distant galaxies), delayed/forecast Gemini observation echoes, paced Leo meteor-storm queues, sky-wide burnout endpoint planning, forecast contact announcements, fragment spawning, survey-requested custom-start spawns, shower and round-guarded Canis Major spawns, support-lane assignment. |
 | `meteor.gd` | One object's burn-progress motion, trail and terminal fade, observation progress, quality grading, split behaviour, and passive spectral calibration result. |
 | `observation_controller.gd` | Cursor sampling, the tracking-versus-survey input latch, manual tracking, swept-path hit detection, tracking and hover rings, and the software cursor. |
@@ -160,14 +160,15 @@ _on_upgrade_tree_closed() → _begin_observation_phase(advance_round = true)
 ```
 
 The run currently has no ending. Installing the 86 non-Draco systems reveals
-Draco's root; installing all 95 systems opens the saved Galactic Reference
-Frame state and its denser background-star presentation. On the
-`feat/galactic-pullback` candidate branch, the open chart also performs one
+Draco's root; installing all 95 original systems opens the saved Galactic
+Reference Frame state and its denser background-star presentation. The open
+chart also performs one
 saved 3.6-second pull-back into a deterministic spiral-galaxy frame. It is a
 non-terminal presentation state: it does not interrupt the active observation
 round or a later one, and Ctrl+wheel travels between the galaxy and completed
-chart scales after the one-time sequence. New galactic object families are not
-yet part of that state. Sirius Bloom still schedules one warned Major Fireball
+chart scales after the one-time sequence. Twenty-nine Local Group nodes extend
+that chart to 124 systems and build the host-star/transit layer from six reusable
+rule families. Sirius Bloom still schedules one warned Major Fireball
 at a randomized viable time in each subsequent round. Observing or losing it
 does not stop the night.
 
@@ -273,8 +274,48 @@ All prerequisite-free roots are visible from time zero. Internal nodes reveal
 only from prerequisite IDs; the live graph contains no success-count reveal
 gates. Eight approved branch leaves contribute unconditional `×2` observation
 value each. Draco adds unconditional `×4` and `×8` steps after all other
-research, so a completed 95-node tree has exact global `×8192` growth before
+research, so the original 95-node Galactic Reference Frame endpoint has exact
+global `×8192` growth before
 the four existing target-conditional multipliers are applied.
+
+The 29 Local Group nodes extend the live graph to 124 without changing that
+product. `ProgressionController.get_observation_span()` counts eight stable
+galaxy ids and compounds exact five-percent steps up to `1.4774554`.
+`ObservationView` owns that span and routes world/screen rectangles and lengths;
+starfield, twinkle, input, effects, and spawner consumers continue to derive
+their geometry from it.
+
+`HostStarLayer` is a separate `HostStarController`, not a child of
+`MeteorLayer`. LMC starts with one `HostStar` and one active window; M32 raises
+the stationary-host cap to two and M110 independently raises the overlapping-
+window cap to two. It schedules an 8–12 second transit, then 4–6 and 3–5 second
+follow-up transits, and gives each one an 8-second manual window. A miss returns
+the same host to idle without erasing confirmations. A catch records one of
+three confirmations and returns it to idle. After the
+player releases and explicitly holds the idle star, harvest pays the current
+1/2/3-confirmation tier; the third confirmation schedules no further transit.
+Harvest schedules a 6–8 second respawn. Completed confirmations persist across
+round boundaries, while an active transit at the boundary becomes a miss. The
+observer combines children from both layers only for pointing and manual tracking. Host
+objects never consume the atmospheric `MAX_TOTAL_METEORS = 32` budget.
+
+The later hosts rotate through profiles assembled from six verbs: R1 reference
+placement, R2 brightening-decoy rejection, R3 comparison-star baseline lock,
+R4 blank-sky sweep reveal, R5 transit forecast notches, and R6 multi-host
+priority. The final ten contracts all combine two learned rules. NGC 147 is the
+non-host profile: its three permanent reference anchors pay only `×1.10`, below
+a live host's `×1.25`. Leo II re-hides after 12 seconds, clears its old sweep
+directions, and is always recoverable with a fresh sweep.
+
+Completed meteor rewards ask `HostStarController` for one reference match
+before the global meteor multiplier is applied. The resolver uses a 132-screen-
+pixel radius, closest normalized distance, and stable-id tie break, so reference
+benefits cannot stack. A nearest live host pays `×1.25`; an NGC 147 permanent
+anchor pays `×1.10`. Transit rewards use
+`record_transit_confirmation()` without paying Data, then explicit harvest uses
+`add_transit_harvest()` and the SMC-only `get_transit_value_multiplier()`.
+Harvest tiers are `×1.0/×1.35/×1.65` of the quality-adjusted base, and they
+deliberately bypass global `×8192` and manual meteor combo growth.
 
 Regular active-sky capacity begins at four. Array Planning, Multi-Target
 Tracking, Cascade Sampling, and Perseid Watch each add one permanent slot, so
@@ -308,18 +349,23 @@ declared prerequisite-only role. Calibration Framework is intentionally the
 last kind: it opens downstream band and binary-star research without a direct
 runtime toggle.
 
-The executable contract kinds cover the numeric families that have already
-drifted: ten global value multipliers, four observation-duration bonuses,
-eight regular active-contact capacity increases, and four regular-arrival
-floors. The exact 69-node unverified set is a hard baseline, not a wildcard;
-follow-up work may shrink it, and adding or exchanging an id requires an
-explicit test diff.
+The 55 executable contracts cover ten global value multipliers, four
+observation-duration bonuses, eight regular active-contact capacity increases,
+four regular-arrival floors, the LMC unlock, SMC transit multiplier, six later
+span steps, the M32/M110 capacities, and 19 Local Group rule profiles. The exact
+69-node unverified set is a hard baseline, not a wildcard; follow-up work may
+shrink it, and adding or exchanging an id requires an explicit test diff.
 
 ## Save format
 
 `game.gd::_build_save_data()` writes a flat dictionary containing run timing,
-round bookkeeping, the clean-round baseline, and a nested
-`progression.get_save_data()`. Loading routes through `_apply_save_data`, which
+round bookkeeping, the clean-round baseline, and nested progression and host-
+star payloads. Each saved host retains its stable id, lifecycle/profile state,
+position, observation and comparison state, transit/respawn/re-hide clocks,
+confirmation count, accumulated quality, and measurements, so active windows
+resume rather than being rerolled and completed evidence is not lost. The loader
+also accepts the previous single-host payload. Loading routes through
+`_apply_save_data`, which
 sanitizes every field: unknown upgrade ids are dropped by
 `_validated_signature`, and `_sanitize_round_result` clamps a restored round
 result into legal ranges.
@@ -332,7 +378,8 @@ stationary-survey fields in an old same-day fixture are ignored; the required
 
 Because purchases are saved by stable id, an 86-node completed save remains
 valid and resumes with Draco's first node revealed rather than receiving any
-of the nine new nodes automatically.
+of the eleven later nodes automatically. A 95-node Galactic Reference Frame
+save likewise receives none of the 29 Local Group nodes automatically.
 
 A resumed round sets `phase_resumed_from_save`, which makes that round its own
 comparison baseline instead of presenting pre-load installs as fresh growth.

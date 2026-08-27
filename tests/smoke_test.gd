@@ -330,7 +330,7 @@ func _run() -> void:
 	var draco_probe = load("res://scripts/progression_controller.gd").new()
 	for draco_gate_definition_variant in balance.UPGRADE_NODES:
 		var draco_gate_definition: Dictionary = draco_gate_definition_variant
-		if String(draco_gate_definition.branch) != "draco":
+		if String(draco_gate_definition.branch) not in ["draco", "local_group"]:
 			draco_probe.purchased_nodes[String(draco_gate_definition.id)] = true
 	_check(draco_probe.upgrade_level == 86 and draco_probe.get_node_state("draco_synthesis") == "available", "completing the other eleven constellations reveals Draco's first star")
 	_check(draco_probe.get_node_state("draco_cadence") == "hidden", "Draco still reveals only one internal step at a time")
@@ -344,7 +344,14 @@ func _run() -> void:
 	_check(draco_probe.debug_purchase_node("draco_array") and draco_probe.get_dish_count() == 4 and draco_probe.get_secondary_slots() == 4, "Total Array expands both steerable dishes and automatic lanes to four")
 	_check(draco_probe.debug_purchase_node("draco_apotheosis") and is_equal_approx(draco_probe.get_observation_value_multiplier("common", 1), 8192.0), "Dragon's Eye raises the completed constellation economy to x8192")
 	_check(not draco_probe.galaxy_unlocked() and draco_probe.debug_purchase_node("galactic_reference_frame") and draco_probe.galaxy_unlocked(), "the final Draco node unlocks the galactic reference frame")
-	_check(draco_probe.is_research_complete(), "the nine Draco systems complete the expanded research graph")
+	_check(not draco_probe.is_research_complete(), "the Draco culmination leaves the 29-node Local Group route uninstalled")
+	var purchased_local_group_nodes := 0
+	for local_definition_variant in balance.UPGRADE_NODES:
+		var local_definition: Dictionary = local_definition_variant
+		if String(local_definition.branch) == "local_group" and draco_probe.debug_purchase_node(String(local_definition.id)):
+			purchased_local_group_nodes += 1
+	_check(purchased_local_group_nodes == 29, "the prerequisite-safe Local Group route installs all 29 research nodes")
+	_check(draco_probe.is_research_complete(), "Draco plus the full Local Group route complete the 124-node research graph")
 	var draco_save_probe = load("res://scripts/progression_controller.gd").new()
 	draco_save_probe.load_save_data(draco_probe.get_save_data())
 	_check(draco_save_probe.galaxy_unlocked() and is_equal_approx(draco_save_probe.get_observation_value_multiplier("common", 1), 8192.0), "Draco culmination and galaxy state survive ID-based saves")
@@ -694,7 +701,10 @@ func _run() -> void:
 			var prerequisite_node_id := String(prerequisite_variant)
 			var prerequisite_location: Dictionary = chart_node_stars[prerequisite_node_id]
 			if String(prerequisite_location.constellation_id) != String(target_location.constellation_id):
-				all_prerequisites_internal = false
+				if not (prerequisite_node_id == "galactic_reference_frame" and target_node_id == "large_magellanic_cloud"):
+					all_prerequisites_internal = false
+				continue
+			if String(target_location.constellation_id) == "local_group":
 				continue
 			var constellation: Dictionary = chart_data.CONSTELLATIONS[target_location.constellation_id]
 			var prerequisite_star_id := String(prerequisite_location.star.id)
@@ -708,7 +718,7 @@ func _run() -> void:
 			if not edge_matches_segment:
 				adjacent_internal_edges = false
 	_check(adjacent_internal_edges, "same-constellation prerequisites follow declared figure segments instead of cutting across them")
-	_check(all_prerequisites_internal, "research prerequisites never cross constellation boundaries")
+	_check(all_prerequisites_internal, "research prerequisites stay within figures except the explicit Milky Way-to-Local-Group edge")
 	_check(opening_optics.position != opening_detection.position and opening_detection.position != opening_network.position, "opening research nodes occupy distinct constellation positions")
 	var optics_center_before := opening_optics.position + opening_optics.size * 0.5
 	var optics_radius_before := optics_center_before.distance_to(game.upgrade_tree.CHART_ORIGIN)
@@ -1797,7 +1807,7 @@ func _run() -> void:
 	for galactic_button_variant in open_night_game.upgrade_tree.node_buttons.values():
 		if galactic_button_variant.visible:
 			visible_galactic_buttons += 1
-	_check(visible_galactic_buttons == 0, "the final galaxy frame exposes no node hit targets that imply an empty content tier")
+	_check(visible_galactic_buttons == 29, "the final galaxy frame exposes all 29 Local Group research nodes")
 	open_night_game.upgrade_tree._zoom_at(open_night_game.upgrade_tree.content_clip.global_position + open_night_game.upgrade_tree.content_clip.size * 0.5, 4.0)
 	var readable_chart_buttons := 0
 	for chart_button_variant in open_night_game.upgrade_tree.node_buttons.values():
@@ -2142,7 +2152,7 @@ func _run_survey_regressions(packed: PackedScene, balance) -> void:
 
 	var legacy_ids: Array[String] = []
 	for definition in balance.UPGRADE_NODES:
-		if String(definition.branch) not in ["ursa_minor", "canis_major", "draco"]:
+		if String(definition.branch) not in ["ursa_minor", "canis_major", "draco", "local_group"]:
 			legacy_ids.append(String(definition.id))
 	_check(legacy_ids.size() == 71, "the pre-survey research graph remains an exact 71-ID compatibility fixture")
 	survey_game.progression.load_save_data({

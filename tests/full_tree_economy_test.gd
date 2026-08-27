@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Balance = preload("res://scripts/game_balance.gd")
+const ComparisonStar = preload("res://scripts/comparison_star.gd")
 
 const STEP := 0.05
 const SEEDS := [20260821, 20260837, 20260853]
@@ -8,6 +9,7 @@ const SURVEY_DRIVER_SPEED := 720.0
 const WATCHDOG_SECONDS := 14400.0
 const MAX_NO_ARRIVAL_SECONDS := Balance.MAX_OBSERVATION_DURATION * 2.0
 const EXPECTED_FINAL_VALUE_MULTIPLIER := 8192.0
+const HOST_HARVEST_CONFIRMATIONS := 3
 const MULTIPLIER_NODES := [
 	"perfect_observation",
 	"shower_detector",
@@ -29,6 +31,8 @@ var completion_earned: float = -1.0
 var checkpoint_successes: Dictionary = {}
 var multiplier_purchase_times: Dictionary = {}
 var seen_available_nodes: Dictionary = {}
+var availability_times: Dictionary = {}
+var purchase_times: Dictionary = {}
 var last_arrival_time: float = 0.0
 var longest_no_arrival: float = 0.0
 var purchase_batches: Array[Dictionary] = []
@@ -37,6 +41,15 @@ var arrival_gaps: Array[Dictionary] = []
 var simulated_round_index: int = 0
 var survey_driver_direction: int = 1
 var survey_driver_cursor := Vector2(240.0, 420.0)
+var transit_income: float = 0.0
+var m32_purchase_time: float = -1.0
+var m110_purchase_time: float = -1.0
+var post_m32_harvests: int = 0
+var post_m110_harvests: int = 0
+var galactic_observation_seconds: float = 0.0
+var transit_cursor_seconds: float = 0.0
+var meteor_cursor_seconds: float = 0.0
+var max_local_group_purchase_batch: int = 0
 
 
 func _initialize() -> void:
@@ -54,7 +67,7 @@ func _run() -> void:
 	var failed := false
 	for seed in SEEDS:
 		var result: Dictionary = await _run_seed(seed)
-		print("FULL_TREE_ECONOMY_RESULT seed=%d purchased=%d/%d completion_seconds=%.1f successes=%d earned=%.0f bank=%.0f value_multiplier=%.2f next_node=%s next_cost=%.0f checkpoints=%s multiplier_times=%s longest_multiplier_gap=%.1f arrival_gaps=%s purchase_batches=%s max_purchase_batch=%d longest_no_arrival=%.1f" % [
+		print("FULL_TREE_ECONOMY_RESULT seed=%d purchased=%d/%d completion_seconds=%.1f successes=%d earned=%.0f bank=%.0f value_multiplier=%.2f next_node=%s next_cost=%.0f checkpoints=%s multiplier_times=%s longest_multiplier_gap=%.1f arrival_gaps=%s purchase_batches=%s max_purchase_batch=%d max_local_group_purchase_batch=%d longest_no_arrival=%.1f local_group_purchase_gaps=%s transit_income=%.0f post_m32_harvests=%d post_m32_rate_per_minute=%.3f post_m110_harvests=%d post_m110_rate_per_minute=%.3f galactic_observation_seconds=%.1f transit_cursor_seconds=%.1f meteor_cursor_seconds=%.1f transit_cursor_total_share=%.3f transit_cursor_busy_share=%.3f meteor_cursor_total_share=%.3f transit_metrics=%s" % [
 			seed,
 			int(result.purchased),
 			Balance.UPGRADE_NODES.size(),
@@ -71,13 +84,34 @@ func _run() -> void:
 			str(result.arrival_gaps),
 			str(result.purchase_batches),
 			int(result.max_purchase_batch),
+			int(result.max_local_group_purchase_batch),
 			float(result.longest_no_arrival),
+			str(result.local_group_purchase_gaps),
+			float(result.transit_income),
+			int(result.post_m32_harvests),
+			float(result.post_m32_harvest_rate_per_minute),
+			int(result.post_m110_harvests),
+			float(result.post_m110_harvest_rate_per_minute),
+			float(result.galactic_observation_seconds),
+			float(result.transit_cursor_seconds),
+			float(result.meteor_cursor_seconds),
+			float(result.transit_cursor_total_share),
+			float(result.transit_cursor_busy_share),
+			float(result.meteor_cursor_total_share),
+			str(result.transit_metrics),
 		])
 		if (
 			int(result.purchased) != Balance.UPGRADE_NODES.size()
 			or float(result.completion_time) < 0.0
 			or float(result.longest_no_arrival) > MAX_NO_ARRIVAL_SECONDS + STEP
 			or not is_equal_approx(float(result.value_multiplier), EXPECTED_FINAL_VALUE_MULTIPLIER)
+			or not _all_local_group_gaps_within(Dictionary(result.local_group_purchase_gaps), 120.0 + STEP)
+			or int(Dictionary(result.transit_metrics).get("harvests_at_confirmation_3", 0)) <= 0
+			or int(result.post_m32_harvests) <= 0
+			or int(result.post_m110_harvests) <= 0
+			or float(result.transit_cursor_busy_share) >= 0.50
+			or int(result.max_local_group_purchase_batch) > 1
+			or float(result.transit_income) <= 0.0
 		):
 			failed = true
 	if failed:
@@ -108,6 +142,17 @@ func _run_seed(seed: int) -> Dictionary:
 	for node_id in MULTIPLIER_NODES:
 		multiplier_purchase_times[node_id] = -1.0
 	seen_available_nodes.clear()
+	availability_times.clear()
+	purchase_times.clear()
+	transit_income = 0.0
+	m32_purchase_time = -1.0
+	m110_purchase_time = -1.0
+	post_m32_harvests = 0
+	post_m110_harvests = 0
+	galactic_observation_seconds = 0.0
+	transit_cursor_seconds = 0.0
+	meteor_cursor_seconds = 0.0
+	max_local_group_purchase_batch = 0
 	last_arrival_time = 0.0
 	longest_no_arrival = 0.0
 	purchase_batches.clear()
@@ -146,8 +191,22 @@ func _run_seed(seed: int) -> Dictionary:
 		"longest_multiplier_gap": _longest_multiplier_gap(),
 		"purchase_batches": purchase_batches.duplicate(true),
 		"max_purchase_batch": max_purchase_batch,
+		"max_local_group_purchase_batch": max_local_group_purchase_batch,
 		"arrival_gaps": arrival_gaps.duplicate(true),
 		"longest_no_arrival": longest_no_arrival,
+		"local_group_purchase_gaps": _local_group_purchase_gaps(),
+		"transit_income": transit_income,
+		"post_m32_harvests": post_m32_harvests,
+		"post_m32_harvest_rate_per_minute": _harvest_rate_per_minute(post_m32_harvests, m32_purchase_time),
+		"post_m110_harvests": post_m110_harvests,
+		"post_m110_harvest_rate_per_minute": _harvest_rate_per_minute(post_m110_harvests, m110_purchase_time),
+		"galactic_observation_seconds": galactic_observation_seconds,
+		"transit_cursor_seconds": transit_cursor_seconds,
+		"meteor_cursor_seconds": meteor_cursor_seconds,
+		"transit_cursor_total_share": _safe_ratio(transit_cursor_seconds, galactic_observation_seconds),
+		"transit_cursor_busy_share": _safe_ratio(transit_cursor_seconds, transit_cursor_seconds + meteor_cursor_seconds),
+		"meteor_cursor_total_share": _safe_ratio(meteor_cursor_seconds, galactic_observation_seconds),
+		"transit_metrics": game.host_stars.get_metrics(),
 	}
 	game.queue_free()
 	game = null
@@ -175,12 +234,15 @@ func _prepare(seed: int) -> void:
 	game.events.set_process(false)
 	game.sky_contacts.set_process(false)
 	game.observer.set_process(false)
+	game.host_stars.set_process(false)
 	# The gate advances simulated minutes in milliseconds and does not measure
 	# audio. Remove the runtime synth so queued WAV playbacks cannot outlive a seed.
 	if game.sound != null and is_instance_valid(game.sound):
 		game.sound.free()
 		game.sound = null
 	game.progression.reset()
+	game.host_stars.reset()
+	game._sync_galactic_systems()
 	game.events.reset()
 	game.spawner.reset()
 	game.spawner.rng.seed = seed
@@ -199,6 +261,14 @@ func _prepare(seed: int) -> void:
 	var game_upgrade_handler := Callable(game, "_on_upgrade_purchased")
 	if game.progression.upgrade_purchased.is_connected(game_upgrade_handler):
 		game.progression.upgrade_purchased.disconnect(game_upgrade_handler)
+	var game_confirmation_handler := Callable(game, "_on_transit_confirmed")
+	if game.host_stars.transit_confirmed.is_connected(game_confirmation_handler):
+		game.host_stars.transit_confirmed.disconnect(game_confirmation_handler)
+	game.host_stars.transit_confirmed.connect(_on_transit_confirmed)
+	var game_harvest_handler := Callable(game, "_on_host_harvested")
+	if game.host_stars.host_harvested.is_connected(game_harvest_handler):
+		game.host_stars.host_harvested.disconnect(game_harvest_handler)
+	game.host_stars.host_harvested.connect(_on_host_harvested)
 	var game_banner_handler := Callable(game, "_on_event_banner")
 	if game.events.banner_requested.is_connected(game_banner_handler):
 		game.events.banner_requested.disconnect(game_banner_handler)
@@ -211,6 +281,7 @@ func _run_round(duration: float) -> void:
 	_reset_survey_driver()
 	game.spawner.set_phase_time_remaining(duration)
 	game.spawner.start_spawning()
+	game.host_stars.begin_round()
 	game.events.start()
 	if game.progression.leonid_storm_ready() and game.spawner.try_start_leonid_storm():
 		game.progression.consume_leonid_storm_charge()
@@ -223,6 +294,7 @@ func _run_round(duration: float) -> void:
 		game.spawner._process(delta)
 		game.events._process(delta)
 		game.survey.advance_time(delta)
+		game.host_stars.advance_time(delta)
 		if game.sky_contacts.dish_active():
 			game.sky_contacts._update_dishes(delta)
 		_process_targets(delta)
@@ -234,6 +306,7 @@ func _run_round(duration: float) -> void:
 		active_elapsed += delta
 		_record_success_checkpoints()
 	game.events.pause_for_intermission()
+	game.host_stars.end_round()
 	game.spawner.reset()
 	game.sky_contacts.reset()
 	game.survey.end_round()
@@ -242,7 +315,50 @@ func _run_round(duration: float) -> void:
 
 
 func _process_targets(delta: float) -> void:
-	var manual_target = _first_uncovered_target()
+	var host_activity := false
+	for star in game.host_stars.host_stars.duplicate():
+		if not is_instance_valid(star) or not bool(star.is_hidden):
+			continue
+		for angle in [0.0, PI * 0.5, PI]:
+			var direction: Vector2 = Vector2.from_angle(float(angle)) * game.observation_view.screen_length_to_world(80.0)
+			game.host_stars.record_sweep_segment(star.global_position - direction, star.global_position + direction)
+		host_activity = true
+	for child in game.host_stars.get_children():
+		if child is ComparisonStar and bool(child.correct):
+			child.apply_manual_observation(
+				delta,
+				0.0,
+				child.get_tracking_radius(game.progression.get_tracking_radius()),
+				game.progression.get_manual_analysis_speed_multiplier()
+			)
+			host_activity = true
+	for star in game.host_stars.host_stars.duplicate():
+		if not is_instance_valid(star):
+			continue
+		if String(star.state) == "transiting" and not bool(star.comparison_locked):
+			star.apply_manual_observation(
+				delta,
+				0.0,
+				star.get_tracking_radius(game.progression.get_tracking_radius()),
+				game.progression.get_manual_analysis_speed_multiplier()
+			)
+			host_activity = true
+		elif String(star.state) == "idle" and int(star.confirmation_count) >= HOST_HARVEST_CONFIRMATIONS:
+			star.arm_harvest()
+			star.apply_manual_observation(
+				delta,
+				0.0,
+				star.get_tracking_radius(game.progression.get_tracking_radius()),
+				game.progression.get_manual_analysis_speed_multiplier()
+			)
+			host_activity = true
+	var manual_target = null if host_activity else _first_uncovered_target()
+	if game.progression.host_stars_unlocked():
+		galactic_observation_seconds += delta
+		if host_activity:
+			transit_cursor_seconds += delta
+		elif manual_target != null:
+			meteor_cursor_seconds += delta
 	for target in game.meteor_layer.get_children():
 		if not is_instance_valid(target):
 			continue
@@ -303,8 +419,9 @@ func _on_target_observed(target, reward: float, multiplier: float, was_manual: b
 	var research_multiplier: float = game.progression.get_observation_value_multiplier(
 		String(target.type_id), active_target_count
 	)
+	var reference_result: Dictionary = game.host_stars.record_meteor_observation(target.global_position)
 	game.progression.add_observation(
-		round(reward * research_multiplier),
+		round(reward * research_multiplier * float(reference_result.get("multiplier", 1.0))),
 		was_manual,
 		multiplier * research_multiplier
 	)
@@ -326,6 +443,21 @@ func _on_target_observed(target, reward: float, multiplier: float, was_manual: b
 		)
 
 
+func _on_transit_confirmed(_star, _confirmation_count: int, _projected_reward: float, multiplier: float, was_manual: bool, _quality_grade: String) -> void:
+	game.progression.record_transit_confirmation(was_manual, multiplier)
+
+
+func _on_host_harvested(_star, reward: float, _multiplier: float, _was_manual: bool, _quality_grade: String, _confirmation_count: int) -> void:
+	var final_reward: float = game.progression.add_transit_harvest(
+		round(reward * game.progression.get_transit_value_multiplier())
+	)
+	transit_income += final_reward
+	if game.progression.has_upgrade("messier_32"):
+		post_m32_harvests += 1
+	if game.progression.has_upgrade("messier_110"):
+		post_m110_harvests += 1
+
+
 func _purchase_affordable_research() -> void:
 	var batch_size := 0
 	var batch_nodes: Array[String] = []
@@ -343,15 +475,26 @@ func _purchase_affordable_research() -> void:
 				candidate_cost = cost
 		if not candidate_id.is_empty():
 			game.progression.request_purchase(candidate_id)
+			purchase_times[candidate_id] = active_elapsed
+			if candidate_id == "messier_32":
+				m32_purchase_time = active_elapsed
+			elif candidate_id == "messier_110":
+				m110_purchase_time = active_elapsed
 			batch_size += 1
 			batch_nodes.append(candidate_id)
 			if candidate_id in MULTIPLIER_NODES:
 				multiplier_purchase_times[candidate_id] = active_elapsed
 			game.sky_contacts.refresh_dishes()
 			game.spawner.refresh_active_features()
+			game._sync_galactic_systems()
 			_record_available_arrivals()
 			purchased_one = true
 	if batch_size > 0:
+		var local_group_batch_size := 0
+		for node_id in batch_nodes:
+			if String(Balance.upgrade_definition(node_id).get("branch", "")) == "local_group":
+				local_group_batch_size += 1
+		max_local_group_purchase_batch = maxi(max_local_group_purchase_batch, local_group_batch_size)
 		purchase_batches.append({
 			"time": active_elapsed,
 			"count": batch_size,
@@ -387,6 +530,7 @@ func _record_available_arrivals() -> void:
 		if seen_available_nodes.has(node_id) or game.progression.get_node_state(node_id) != "available":
 			continue
 		seen_available_nodes[node_id] = true
+		availability_times[node_id] = active_elapsed
 		arriving_nodes.append(node_id)
 	if arriving_nodes.is_empty():
 		return
@@ -395,3 +539,38 @@ func _record_available_arrivals() -> void:
 	if arrival_gap > Balance.MAX_OBSERVATION_DURATION + STEP:
 		arrival_gaps.append({"time": active_elapsed, "gap": arrival_gap, "nodes": arriving_nodes})
 	last_arrival_time = active_elapsed
+
+
+func _local_group_purchase_gaps() -> Dictionary:
+	var result := {}
+	for definition_variant in Balance.UPGRADE_NODES:
+		var definition: Dictionary = definition_variant
+		if String(definition.get("branch", "")) != "local_group":
+			continue
+		var node_id := String(definition.id)
+		if availability_times.has(node_id) and purchase_times.has(node_id):
+			result[node_id] = float(purchase_times[node_id]) - float(availability_times[node_id])
+	return result
+
+
+func _all_local_group_gaps_within(gaps: Dictionary, ceiling: float) -> bool:
+	var local_group_count := 0
+	for definition_variant in Balance.UPGRADE_NODES:
+		var definition: Dictionary = definition_variant
+		if String(definition.get("branch", "")) != "local_group":
+			continue
+		local_group_count += 1
+		var node_id := String(definition.id)
+		if not gaps.has(node_id) or float(gaps[node_id]) > ceiling:
+			return false
+	return gaps.size() == local_group_count
+
+
+func _harvest_rate_per_minute(harvest_count: int, start_time: float) -> float:
+	if start_time < 0.0 or completion_time <= start_time:
+		return 0.0
+	return float(harvest_count) * 60.0 / (completion_time - start_time)
+
+
+func _safe_ratio(numerator: float, denominator: float) -> float:
+	return numerator / denominator if denominator > 0.0 else 0.0

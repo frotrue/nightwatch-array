@@ -1,13 +1,12 @@
 extends Camera2D
 
-# Stage 0 is deliberately an identity transform. Later galactic research can
-# raise this value through progression without changing any caller's coordinate
-# assumptions.
-const OBSERVATION_SPAN := 1.0
+signal span_changed(value: float)
+
+var observation_span := 1.0
 
 func _ready() -> void:
 	position = atmospheric_rect().get_center()
-	zoom = Vector2.ONE / OBSERVATION_SPAN
+	zoom = Vector2.ONE / observation_span
 	get_viewport().size_changed.connect(_refresh_camera)
 
 
@@ -17,7 +16,7 @@ func atmospheric_rect() -> Rect2:
 
 func visible_world_rect() -> Rect2:
 	var atmospheric := atmospheric_rect()
-	var visible_size := atmospheric.size * OBSERVATION_SPAN
+	var visible_size := atmospheric.size * observation_span
 	return Rect2(atmospheric.get_center() - visible_size * 0.5, visible_size)
 
 
@@ -30,9 +29,18 @@ func world_to_screen(point: Vector2) -> Vector2:
 
 
 func screen_length_to_world(pixels: float) -> float:
-	return pixels * OBSERVATION_SPAN
+	return pixels * observation_span
+
+
+func set_observation_span(value: float) -> void:
+	var next_span := clampf(value, 1.0, GameBalance.GALACTIC_FINAL_OBSERVATION_SPAN)
+	if is_equal_approx(next_span, observation_span):
+		return
+	observation_span = next_span
+	_refresh_camera()
+	span_changed.emit(observation_span)
 
 
 func _refresh_camera() -> void:
 	position = atmospheric_rect().get_center()
-	zoom = Vector2.ONE / OBSERVATION_SPAN
+	zoom = Vector2.ONE / observation_span
