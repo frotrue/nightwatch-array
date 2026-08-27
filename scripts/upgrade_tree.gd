@@ -29,10 +29,11 @@ const PULLBACK_DURATION := 3.60
 const PULLBACK_LINES_END := 0.65
 const PULLBACK_ZOOM_START := 0.55
 const PULLBACK_ZOOM_END := 1.85
-const PULLBACK_BAND_START := 1.55
-const PULLBACK_BAND_END := 2.65
-const PULLBACK_SPIRAL_START := 2.45
 const PULLBACK_SPIRAL_END := 3.60
+# Fraction of the star morph spent reaching the band before the arms take over.
+# The disc, the band and the spiral are one path travelled on one clock; two
+# clocks handing off to each other put a stall and a kink in the middle of it.
+const PULLBACK_MORPH_BAND_SPLIT := 0.62
 const HOLD_PURCHASE_SECONDS := 0.75
 const CHART_ORIGIN := Vector2(TREE_SIZE.x * 0.5, TREE_SIZE.y * 0.91)
 const ROTATION_STEP := deg_to_rad(6.0)
@@ -516,13 +517,20 @@ func _advance_galactic_pullback(delta: float) -> void:
 	pullback_elapsed = minf(PULLBACK_DURATION, pullback_elapsed + maxf(0.0, delta))
 	var pullback_ratio := _timed_ratio(pullback_elapsed, PULLBACK_ZOOM_START, PULLBACK_ZOOM_END)
 	var eased_pullback := _ease_in_out(pullback_ratio)
-	zoom = lerpf(pullback_start_zoom, GALACTIC_ZOOM, eased_pullback)
-	var galaxy_pan := _galactic_pan_for_zoom(zoom)
-	pan_position = pullback_start_pan.lerp(galaxy_pan, eased_pullback)
+	# Scale is perceived as a ratio, so a linear ramp through zoom reads as an
+	# accelerating rush that stops dead at the end. Stepping through zoom
+	# geometrically keeps the apparent rate of withdrawal constant.
+	zoom = pullback_start_zoom * pow(GALACTIC_ZOOM / pullback_start_zoom, eased_pullback)
 	galactic_chart_detail = 1.0 - eased_pullback
+	# The anchor has to be recomputed from the live zoom every frame. Lerping a
+	# stored start pan toward a galaxy pan puts the focal point on a different
+	# curve from the scale, and the sky slides sideways while it shrinks.
+	var anchored_pan := _galactic_pan_for_zoom(zoom, galactic_chart_detail)
+	var canonical_start_pan := _galactic_pan_for_zoom(pullback_start_zoom, 1.0)
+	pan_position = anchored_pan + (pullback_start_pan - canonical_start_pan) * (1.0 - eased_pullback)
 	galactic_chart_anchor_blend = _ease_in_out(_timed_ratio(
 		pullback_elapsed,
-		PULLBACK_SPIRAL_START,
+		PULLBACK_ZOOM_END,
 		PULLBACK_SPIRAL_END
 	))
 	_layout_chart()
@@ -552,6 +560,17 @@ func _timed_ratio(value: float, start: float, finish: float) -> float:
 
 func _ease_in_out(value: float) -> float:
 	return value * value * (3.0 - 2.0 * value)
+
+
+func _polar_blend(from_point: Vector2, to_point: Vector2, ratio: float) -> Vector2:
+	# Structure that turns has to be interpolated as radius and angle. A
+	# straight line between two points cuts the chord, so the field reads as
+	# stars sliding into a picture instead of a disc winding up into arms.
+	var from_offset := from_point - CHART_ORIGIN
+	var to_offset := to_point - CHART_ORIGIN
+	var radius := lerpf(from_offset.length(), to_offset.length(), ratio)
+	var sweep := wrapf(to_offset.angle() - from_offset.angle(), -PI, PI)
+	return CHART_ORIGIN + Vector2.RIGHT.rotated(from_offset.angle() + sweep * ratio) * radius
 
 
 func _galactic_pan_for_zoom(target_zoom: float, chart_detail: float = 0.0) -> Vector2:
@@ -1536,23 +1555,39 @@ func _draw_chart_background(galactic_background: bool) -> void:
 			tree_canvas.draw_circle(background_position, radius, Color(UITheme.STAR_BACKGROUND, alpha))
 		return
 
-	var band_ratio := 1.0
-	var spiral_ratio := 1.0
+	var morph_progress := 1.0
 	var galaxy_presence := 1.0 - galactic_chart_detail
 	var extra_alpha := galaxy_presence
 	if galactic_mode == GALACTIC_MODE_PULLBACK:
-		band_ratio = _ease_in_out(_timed_ratio(pullback_elapsed, PULLBACK_BAND_START, PULLBACK_BAND_END))
-		spiral_ratio = pow(_ease_in_out(_timed_ratio(pullback_elapsed, PULLBACK_SPIRAL_START, PULLBACK_SPIRAL_END)), 1.85)
-		galaxy_presence = maxf(band_ratio, spiral_ratio)
-		extra_alpha = band_ratio
+		# One eased clock over the whole morph. Easing each beat separately made
+		# every beat decelerate to a stop while the next accelerated from one,
+		# so the sequence stalled at each handoff.
+		morph_progress = _ease_in_out(_timed_ratio(
+			pullback_elapsed,
+			PULLBACK_ZOOM_START,
+			PULLBACK_SPIRAL_END
+		))
+		galaxy_presence = morph_progress
+		extra_alpha = clampf(morph_progress / PULLBACK_MORPH_BAND_SPLIT, 0.0, 1.0)
 	var render_star_count := GALACTIC_TRANSITION_STAR_COUNT if galactic_mode == GALACTIC_MODE_PULLBACK else GALACTIC_FINAL_STAR_COUNT
 	for index in range(render_star_count):
 		var source := CHART_ORIGIN + (galactic_star_sources[index] - CHART_ORIGIN).rotated(rotation_offset)
 		var position := source
 		if galactic_mode == GALACTIC_MODE_PULLBACK:
-			position = source.lerp(galactic_star_bands[index], band_ratio).lerp(galactic_star_spirals[index], spiral_ratio)
+			if morph_progress <= PULLBACK_MORPH_BAND_SPLIT:
+				position = _polar_blend(
+					source,
+					galactic_star_bands[index],
+					morph_progress / PULLBACK_MORPH_BAND_SPLIT
+				)
+			else:
+				position = _polar_blend(
+					galactic_star_bands[index],
+					galactic_star_spirals[index],
+					(morph_progress - PULLBACK_MORPH_BAND_SPLIT) / (1.0 - PULLBACK_MORPH_BAND_SPLIT)
+				)
 		else:
-			position = galactic_star_spirals[index].lerp(source, galactic_chart_detail)
+			position = _polar_blend(galactic_star_spirals[index], source, galactic_chart_detail)
 		var normal_radius := 1.7 if index % 5 == 0 else 1.0
 		var screen_radius := float(galactic_star_screen_sizes[index]) / maxf(zoom, 0.001)
 		var radius := lerpf(normal_radius, screen_radius, galaxy_presence)
