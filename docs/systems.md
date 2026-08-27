@@ -135,11 +135,15 @@ _on_upgrade_tree_closed() → _begin_observation_phase(advance_round = true)
 
 The run currently has no ending. Installing the 86 non-Draco systems reveals
 Draco's root; installing all 95 systems opens the saved Galactic Reference
-Frame state and its denser background-star presentation, but does not interrupt the active
-observation round or a later one. New galactic object families are not yet part
-of that state. Sirius Bloom still schedules one warned Major Fireball at a
-randomized viable time in each subsequent round. Observing or losing it does
-not stop the night.
+Frame state and its denser background-star presentation. On the
+`feat/galactic-pullback` candidate branch, the open chart also performs one
+saved 3.6-second pull-back into a deterministic spiral-galaxy frame. It is a
+non-terminal presentation state: it does not interrupt the active observation
+round or a later one, and Ctrl+wheel travels between the galaxy and completed
+chart scales after the one-time sequence. New galactic object families are not
+yet part of that state. Sirius Bloom still schedules one warned Major Fireball
+at a randomized viable time in each subsequent round. Observing or losing it
+does not stop the night.
 
 ### Time invariants
 
@@ -231,6 +235,14 @@ only to live meteor tracking.
 cost, then emits `upgrade_purchased`. `game._on_upgrade_purchased` refreshes
 dishes and spawner features, plays feedback, and autosaves.
 
+Galactic Reference Frame is the presentation exception. If its purchase occurs
+while the chart is open, `game.gd` asks the chart to begin the pull-back before
+the progression refresh. A deliberate key, mouse-button, joypad-button, or
+wheel press skips to the same final state; the mouse release that completed the
+hold and passive motion do not. `upgrade_tree.gd` emits
+`galactic_pullback_finished` only after completion or skip, and `game.gd` then
+marks the flat save flag and autosaves again.
+
 All prerequisite-free roots are visible from time zero. Internal nodes reveal
 only from prerequisite IDs; the live graph contains no success-count reveal
 gates. Eight approved branch leaves contribute unconditional `×2` observation
@@ -301,3 +313,11 @@ comparison baseline instead of presenting pre-load installs as fresh growth.
 
 Autosave runs every 60 seconds of observation time, and on every purchase,
 round end, and slot change.
+
+`galactic_pullback_seen` is a flat game-save presentation flag, separate from
+the ID-based progression payload. A missing field is false. A legacy save that
+already owns `galactic_reference_frame` therefore plays the sequence once on
+its next chart open; a save with the flag true opens directly at the galaxy
+scale. Resetting a run clears both progression and this flag. If the process
+ends between the purchase autosave and the completion autosave, replaying the
+short sequence is the safe fallback.

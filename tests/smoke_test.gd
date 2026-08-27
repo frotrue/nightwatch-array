@@ -1740,19 +1740,77 @@ func _run() -> void:
 	open_night_game.events.run_time = 999999.0
 	open_night_game.events._process(0.05)
 	_check(open_night_game.events.canis_major_state == "idle", "elapsed run time cannot summon Sirius before its research is installed")
+	open_night_game.upgrade_tree.open_tree()
+	await process_frame
+	await process_frame
+	_check(open_night_game.upgrade_tree.galactic_mode == open_night_game.upgrade_tree.GALACTIC_MODE_NORMAL and open_night_game.upgrade_tree.zoom >= open_night_game.upgrade_tree.MIN_ZOOM, "the pre-unlock research chart opens in its normal player zoom range")
 	# The run has no ending. A finished tree waits through the current round,
 	# then schedules Sirius as a recurrent event without closing the sky.
 	open_night_game.progression.debug_purchase_all()
+	_check(open_night_game.upgrade_tree.galactic_mode == open_night_game.upgrade_tree.GALACTIC_MODE_PULLBACK and not open_night_game.galactic_pullback_seen, "buying Galactic Reference Frame in the open chart starts the one-time pull-back")
+	var purchase_release := InputEventMouseButton.new()
+	purchase_release.button_index = MOUSE_BUTTON_LEFT
+	purchase_release.pressed = false
+	open_night_game.upgrade_tree._input(purchase_release)
+	open_night_game.upgrade_tree._input(InputEventMouseMotion.new())
+	_check(open_night_game.upgrade_tree.galactic_mode == open_night_game.upgrade_tree.GALACTIC_MODE_PULLBACK, "the purchase release and passive pointer jitter do not skip the pull-back")
+	var pullback_skip := InputEventKey.new()
+	pullback_skip.keycode = KEY_SPACE
+	pullback_skip.pressed = true
+	open_night_game.upgrade_tree._input(pullback_skip)
+	_check(open_night_game.upgrade_tree.galactic_mode == open_night_game.upgrade_tree.GALACTIC_MODE_FINAL and open_night_game.galactic_pullback_seen, "a deliberate input skips to the same saved galactic final state")
+	_check(is_equal_approx(open_night_game.upgrade_tree.zoom, open_night_game.upgrade_tree.GALACTIC_ZOOM) and open_night_game.upgrade_tree.zoom < open_night_game.upgrade_tree.MIN_ZOOM, "the galactic frame uses its presentation zoom outside the player chart clamp")
+	var visible_galactic_buttons := 0
+	for galactic_button_variant in open_night_game.upgrade_tree.node_buttons.values():
+		if galactic_button_variant.visible:
+			visible_galactic_buttons += 1
+	_check(visible_galactic_buttons == 0, "the final galaxy frame exposes no node hit targets that imply an empty content tier")
+	open_night_game.upgrade_tree._zoom_at(open_night_game.upgrade_tree.content_clip.global_position + open_night_game.upgrade_tree.content_clip.size * 0.5, 4.0)
+	var readable_chart_buttons := 0
+	for chart_button_variant in open_night_game.upgrade_tree.node_buttons.values():
+		if chart_button_variant.visible and chart_button_variant.mouse_filter == Control.MOUSE_FILTER_STOP:
+			readable_chart_buttons += 1
+	_check(open_night_game.upgrade_tree.zoom >= open_night_game.upgrade_tree.MIN_ZOOM and readable_chart_buttons > 0, "Ctrl+wheel zoom restores the completed chart hit targets and record view")
+	open_night_game.upgrade_tree._zoom_at(open_night_game.upgrade_tree.content_clip.global_position + open_night_game.upgrade_tree.content_clip.size * 0.5, 0.01)
+	open_night_game.upgrade_tree._reset_view(false)
+	open_night_game.upgrade_tree._on_content_resized()
+	await process_frame
+	_check(is_equal_approx(open_night_game.upgrade_tree.zoom, open_night_game.upgrade_tree.GALACTIC_ZOOM) and open_night_game.upgrade_tree.galactic_chart_detail == 0.0, "reset and resize preserve the unlocked galaxy frame instead of applying the normal MIN_ZOOM fit")
+	var seen_galactic_save: Dictionary = open_night_game._build_save_data()
+	_check(bool(seen_galactic_save.get("galactic_pullback_seen", false)), "the completed or skipped pull-back is present in the flat game save")
+	open_night_game.upgrade_tree.close_tree()
+	await process_frame
 	_check(open_night_game.events.canis_major_state == "idle", "completing research inside a live observation round does not interrupt that round")
 	open_night_game._end_observation_phase()
 	_check(not open_night_game.observation_phase_active, "a completed tree reaches the ordinary round summary")
 	open_night_game._on_phase_summary_continue_requested()
 	await process_frame
+	await process_frame
+	_check(open_night_game.upgrade_tree.galactic_mode == open_night_game.upgrade_tree.GALACTIC_MODE_FINAL and is_equal_approx(open_night_game.upgrade_tree.zoom, open_night_game.upgrade_tree.GALACTIC_ZOOM), "a seen pull-back reopens at the galaxy frame without replaying")
 	open_night_game.upgrade_tree.close_tree()
 	await process_frame
 	_check(open_night_game.observation_phase_active and open_night_game.observation_round == 2, "closing the completed research tree opens another observation round instead of an ending")
 	_check(open_night_game.events.canis_major_state == "scheduled", "the next viable round randomizes one warned Sirius event")
 	_check(not open_night_game.completed, "a finished research tree and its recurrent major never complete the run")
+	var legacy_galactic_save: Dictionary = seen_galactic_save.duplicate(true)
+	legacy_galactic_save.erase("galactic_pullback_seen")
+	open_night_game._apply_save_data(legacy_galactic_save)
+	open_night_game.upgrade_tree.open_tree()
+	await process_frame
+	await process_frame
+	_check(open_night_game.upgrade_tree.galactic_mode == open_night_game.upgrade_tree.GALACTIC_MODE_PULLBACK and not open_night_game.galactic_pullback_seen, "a completed legacy save without the presentation flag plays the pull-back once on its next chart open")
+	var pullback_close := InputEventKey.new()
+	pullback_close.keycode = KEY_U
+	pullback_close.pressed = true
+	open_night_game.upgrade_tree._input(pullback_close)
+	_check(open_night_game.galactic_pullback_seen and not open_night_game.upgrade_tree.is_open(), "U completes the pull-back final state and still closes the research chart")
+	open_night_game._apply_save_data(seen_galactic_save)
+	open_night_game.upgrade_tree.open_tree()
+	await process_frame
+	await process_frame
+	_check(open_night_game.upgrade_tree.galactic_mode == open_night_game.upgrade_tree.GALACTIC_MODE_FINAL and open_night_game.galactic_pullback_seen, "a save with the presentation flag restores the final frame without replay")
+	open_night_game.reset_run()
+	_check(not open_night_game.galactic_pullback_seen and not open_night_game.progression.galaxy_unlocked() and open_night_game.upgrade_tree.galactic_mode == open_night_game.upgrade_tree.GALACTIC_MODE_NORMAL, "reset clears both the galactic unlock and its one-time presentation flag")
 	open_night_game.queue_free()
 	await process_frame
 

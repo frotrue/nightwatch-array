@@ -298,12 +298,15 @@ Header: `LAYER2_FRAME_PROBE_ENV`.
 
 ### Research UI frame pacing — `research_ui_frame_probe.gd`
 
-Measures the research chart in three automated three-second phases: open idle,
-an eight-wheel-event burst on every rendered frame, and cursor motion over a
-tooltip. It reports frame-time percentiles, the synchronous workload time, and
+Measures the research chart in five automated phases: open idle, an
+eight-wheel-event burst on every rendered frame, cursor motion over a tooltip,
+the 3.6-second Galactic Reference Frame pull-back, and the static final galaxy
+frame. It reports frame-time percentiles, the synchronous workload time, and
 the number of chart layout passes. The burst deliberately sends more wheel
 events than a frame should commit; `layout_passes` should stay at roughly one
-per rendered frame rather than eight.
+per rendered frame rather than eight. The candidate pull-back accepts only a
+windowed `galactic_transition` and `galactic_final` p95 below 16.7 ms. The ENV
+line records the rendered galactic point count and pull-back duration.
 
 Run it windowed so the draw-call and primitive counts represent the shipped
 renderer:
@@ -334,6 +337,18 @@ $env:NIGHTWATCH_PRICING_SEEDS = "20"; & $godot --headless --path . --script res:
 
 성공하면 `PREVIEW_SAVED:` 한 줄이 나온다. 이것은 통과/실패 게이트가 아니라
 그림을 보고 판단하기 위한 도구다.
+
+`NIGHTWATCH_GALACTIC_RESEARCH_PREVIEW=1`은 최종 은하 축척을
+`build/galactic_research_preview.png`로 저장한다. 여기에
+`NIGHTWATCH_GALACTIC_RESEARCH_PREVIEW_TIME=0.65`처럼 0~3.6초 값을 함께 주면
+해당 전환 프레임을 `build/galactic_research_transition_065.png` 형식으로
+저장해 네 박자의 중간 상태를 확인할 수 있다.
+
+```powershell
+$env:NIGHTWATCH_GALACTIC_RESEARCH_PREVIEW = "1"
+& $godot --path . --script res://tests/research_chart_preview.gd
+Remove-Item Env:NIGHTWATCH_GALACTIC_RESEARCH_PREVIEW -ErrorAction SilentlyContinue
+```
 
 ## 메인 HUD 캡처
 
