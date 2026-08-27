@@ -386,6 +386,22 @@ UPGRADE_WIDE_PURSUIT_NAME,Wide Pursuit,광역 추적
 UPGRADE_WIDE_PURSUIT_DESC,Adds 0.5 px of tracking range per Momentum stack on top of Expanded Sweep.,확장 탐색 위에 모멘텀 중첩당 추적 범위 0.5px를 더합니다.
 UPGRADE_RAPID_FOCUS_NAME,Rapid Focus,신속 초점
 UPGRADE_RAPID_FOCUS_DESC,Adds 1% manual-analysis speed per Momentum stack on top of Accelerated Analysis.,가속 분석 위에 모멘텀 중첩당 수동 분석 속도 1%를 더합니다.
+UPGRADE_CANIS_OPENING_NAME,Canis Relay,큰개자리 중계
+UPGRADE_CANIS_OPENING_DESC,Opens the price-gated Canis Major cadence circuit without changing the shipped density curve.,기존 밀도 곡선은 유지하고 가격으로 제한된 큰개자리 리듬 회로를 엽니다.
+UPGRADE_CANIS_CADENCE_I_NAME,Swift Signal,신속 신호
+UPGRADE_CANIS_CADENCE_I_DESC,Lowers the regular meteor interval floor to 1.00 seconds.,일반 유성의 최소 출현 간격을 1.00초로 낮춥니다.
+UPGRADE_CANIS_CAPACITY_I_NAME,Long Leash,긴 목줄
+UPGRADE_CANIS_CAPACITY_I_DESC,"Raises regular active-sky capacity by one, from eight to nine at the completed legacy array.",완성된 기존 관측망에서 일반 표적의 상한을 1개 늘립니다. 8개에서 9개가 됩니다.
+UPGRADE_CANIS_CADENCE_II_NAME,Running Cadence,질주 리듬
+UPGRADE_CANIS_CADENCE_II_DESC,Lowers the regular meteor interval floor to 0.85 seconds.,일반 유성의 최소 출현 간격을 0.85초로 낮춥니다.
+UPGRADE_CANIS_CAPACITY_II_NAME,Twin Watch,쌍자 경계
+UPGRADE_CANIS_CAPACITY_II_DESC,"Raises regular active-sky capacity by one, from nine to ten at the completed legacy array.",완성된 기존 관측망에서 일반 표적의 상한을 1개 늘립니다. 9개에서 10개가 됩니다.
+UPGRADE_CANIS_CADENCE_III_NAME,White-Star Tempo,백성 템포
+UPGRADE_CANIS_CADENCE_III_DESC,Lowers the regular meteor interval floor to 0.70 seconds.,일반 유성의 최소 출현 간격을 0.70초로 낮춥니다.
+UPGRADE_CANIS_CAPACITY_III_NAME,Pack Array,무리 관측망
+UPGRADE_CANIS_CAPACITY_III_DESC,"Raises regular active-sky capacity by two, from ten to twelve at the completed legacy array.",완성된 기존 관측망에서 일반 표적의 상한을 2개 늘립니다. 10개에서 12개가 됩니다.
+UPGRADE_SIRIUS_FIREBALL_NAME,Sirius Bloom,시리우스 발광
+UPGRADE_SIRIUS_FIREBALL_DESC,Warns of and releases one Major Fireball at most once during each viable observation round.,시간이 추적을 허락하는 각 관측 회차에 경고 후 대형 화구를 최대 한 번 출현시킵니다.
 UPGRADE_CADENCE_MEMORY_NAME,Cadence Memory,박자 기억
 UPGRADE_CADENCE_MEMORY_DESC,Extends the Momentum window from three seconds to 3.5 seconds and lets five stacks affect its buffs.,모멘텀 제한 시간을 3초에서 3.5초로 늘리고 최대 5중첩까지 강화 효과에 반영합니다.
 UPGRADE_EXPANDED_SWEEP_NAME,Expanded Sweep,확장 탐색

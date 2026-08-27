@@ -41,12 +41,13 @@ feel rather than correctness.
 
 ### Research contract test
 
-Checks all 78 research definitions against the three-layer effect schema. It
+Checks all 86 research definitions against the three-layer effect schema. It
 requires every literal `has_upgrade("id")` reference to resolve, every research
 node to have one declared implementation connection, and the only production
-parameter keys to have live consumers. Sixteen nodes have executable contracts:
+parameter keys to have live consumers. Twenty-two nodes have executable contracts:
 eight global observation-value multipliers, four duration bonuses, and four
-regular active-contact capacity deltas. The other 62 ids are held as an exact
+legacy plus three Canis regular active-contact capacity deltas, plus three Canis
+regular-arrival floors. The other 64 ids are held as an exact
 unverified baseline that may shrink but cannot silently grow or exchange ids.
 
 For each executable contract, the test compares independent expected behavior
@@ -60,7 +61,7 @@ false claim on Storm Zenith.
 & $godot --headless --path . --script res://tests/research_contract_test.gd
 ```
 
-- Pass: `RESEARCH_CONTRACT_PASS: 78 nodes, 16 executable contracts, 62 exact unverified ids, and bidirectional en/ko claims`
+- Pass: `RESEARCH_CONTRACT_PASS: 86 nodes, 22 executable contracts, 64 exact unverified ids, and bidirectional en/ko claims`
 - Fail: `RESEARCH_CONTRACT:` error lines, then `RESEARCH_CONTRACT_FAIL: N failure(s)`
 
 ### Smoke test
@@ -140,7 +141,7 @@ Header: `DURATION_PRICING_ENV`.
 
 ### Full-tree economy gate — `full_tree_economy_test.gd`
 
-Pass/fail gate for the expanded 78-system graph. It runs three deterministic
+Pass/fail gate for the expanded 86-system graph. It runs three deterministic
 scripted-engaged watches at `0.05s` steps until all research is purchased. It
 buys the cheapest currently available research at each intermission, applies
 purchased Lyra calibration automatically, reproduces purchased Taurus combo
@@ -148,7 +149,7 @@ speed, Gemini echo bursts, and Leo storm charge, and uses predictive dishes
 when installed. The engaged driver sweeps blank sky only while no manual meteor
 target is available.
 
-Every seed must reach 78/78, finish with exact unconditional `×256` observation
+Every seed must reach 86/86, finish with exact unconditional `×256` observation
 value, and keep the longest pre-completion interval without a newly available
 node at or below `2 × MAX_OBSERVATION_DURATION` (currently 120 seconds).
 Completion time is reported, not asserted. A 14,400-second watchdog catches a
@@ -171,9 +172,9 @@ stale historical 41-system snapshot; it is not a live acceptance target.
 ### Duration matrix — `duration_matrix_probe.gd`
 
 Sweeps all five durations against a synthetic 1080-second timeline for several
-builds. This is a historical comparison horizon, not the live finale condition.
-The live run now ends from research completion at a round boundary. Use this
-probe only when a change needs comparison with the old duration matrix.
+builds. This is a historical comparison horizon; the live run currently has no
+ending. Use this probe only when a change needs comparison with the old duration
+matrix.
 
 ```powershell
 & $godot --headless --path . --script res://tests/duration_matrix_probe.gd
@@ -191,9 +192,12 @@ Counts what is on screen over a 30-second phase: pending forecast contacts,
 live meteors, and combined workload, per type. Behind
 [legacy-density-be11e42.md](legacy-density-be11e42.md).
 
-The live completed-tree regular capacity is eight as of the 2026-08-26
-description/action audit. The linked legacy baseline froze a four/six-cap tree
-and is not a current density or performance acceptance target.
+The legacy completed-tree regular capacity is eight. Canis Major raises the
+live endpoint to twelve and lowers the regular-arrival floor from 1.15 to 0.70
+seconds. The linked legacy baseline froze a four/six-cap tree and is not a
+current density or performance acceptance target. The probe deliberately keeps
+`EventController` stopped, so its completed row isolates the new regular
+floor/cap and excludes the once-per-round Major Fireball.
 
 ```powershell
 & $godot --headless --path . --script res://tests/contact_density_probe.gd

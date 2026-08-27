@@ -26,8 +26,9 @@ const ROWS := [
 		"modes": [MODE_NO_INPUT, MODE_BASELINE_ENGAGED],
 	},
 	{
-		# The original 52-node tree has 51 pacing upgrades; Predictive Dish
-		# Control is the sole interaction-only exclusion from density.
+		# The original 52-node tree still owns the 51-node progression curve.
+		# Later interaction branches do not dilute it; Canis instead changes the
+		# explicit regular-arrival floor and active-contact cap at the endpoint.
 		"name": "duration-ladder-end",
 		"upgrades": [
 			"better_lens", "long_exposure", "observation_streak",
@@ -48,6 +49,9 @@ const ROWS := [
 			"single_echo_channel", "dual_echo_channel", "triple_echo_array",
 			"leonid_radiant", "compressed_cadence", "dense_stream",
 			"rapid_reacquisition", "storm_front", "leonid_storm",
+			"canis_opening", "canis_cadence_i", "canis_capacity_i",
+			"canis_cadence_ii", "canis_capacity_ii", "canis_cadence_iii",
+			"canis_capacity_iii", "sirius_fireball",
 		],
 		"modes": [MODE_NO_INPUT, MODE_SCRIPTED_ENGAGED],
 	},

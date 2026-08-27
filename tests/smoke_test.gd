@@ -263,13 +263,13 @@ func _run() -> void:
 	var initial: Dictionary = game.get_debug_snapshot()
 	_check(initial.upgrade_level == 0, "run begins with no upgrades")
 	_check(initial.successes == 0, "run begins with no observations")
-	_check(not initial.final_started, "final event is initially inactive")
+	_check(initial.canis_major_state == "idle", "Canis Major event is initially inactive")
 	_check(initial.observation_round == 1 and initial.observation_phase_active, "run begins in observation round 1")
 	_check(absf(float(initial.observation_phase_remaining) - 20.0) < 1.0, "first observation round starts at 20 seconds")
 	_check(game.progression.get_max_active() == 4, "the opening sky supports four concurrent targets so attention starts scarce")
 	_check(balance.FIRST_METEOR_DELAY <= 2.0, "the opening meteor arrives before the sky feels empty")
 	_check(balance.REGULAR_SPAWN_INTERVAL_MIN == 1.6 and balance.REGULAR_SPAWN_INTERVAL_MAX == 2.4, "regular spawn cadence keeps multiple choices in flight")
-	_check(game.progression.get_available_nodes().size() == 11, "all eleven prerequisite-free research roots are available from the opening sky")
+	_check(game.progression.get_available_nodes().size() == 15, "the eleven legacy and four price-gated Canis roots are available from the opening sky")
 	_check(game.upgrade_tree.systems_readout != null, "the research chart owns the complete system-count readout")
 	_check(not game.hud.root_control.has_node("ArrayCompletionBar"), "the HUD no longer duplicates completion as a bar")
 	_check(not game.hud.tracking_cluster.is_processing(), "the hidden tracking instrument does no frame work before first use")
@@ -1220,7 +1220,7 @@ func _run() -> void:
 	fastest.queue_free()
 	await process_frame
 
-	# Assigned rare contacts and nearby contactless finale objects both remain
+	# Assigned rare contacts and nearby contactless major objects both remain
 	# manual prizes, even though the dish servo is now fast enough to follow them.
 	var fireball = game.spawner.spawn_meteor("fireball", Vector2(-1000, -1000), Vector2.ZERO, 1.0)
 	dish = game.sky_contacts.dishes[0]
@@ -1328,7 +1328,7 @@ func _run() -> void:
 	_check(game.progression.upgrade_level == balance.UPGRADE_NODES.size(), "all tree nodes unlock through prerequisite-safe debug purchase")
 	_check(game.progression.is_research_complete(), "the progression controller recognizes the complete research graph")
 	_check(is_equal_approx(game.progression.get_observation_value_multiplier("common", 1), 256.0), "the eight selected branch leaves produce exact unconditional x256 observation value growth")
-	_check(not game.events.final_started, "research completed during a live round waits for the round boundary before the finale")
+	_check(game.events.canis_major_state == "idle", "purchasing Sirius during a live round waits until the next round to schedule its event")
 	var completed_save_probe = load("res://scripts/progression_controller.gd").new()
 	completed_save_probe.load_save_data(game.progression.get_save_data())
 	_check(completed_save_probe.is_research_complete() and is_equal_approx(completed_save_probe.get_observation_value_multiplier("common", 1), 256.0), "ID-based completed saves retain every purchased node and intentionally gain the new x256 effects")
@@ -1352,8 +1352,9 @@ func _run() -> void:
 				and installed_states[1] == "purchased"
 				and game.upgrade_tree._segment_color(installed_states) == Color(chart_ui_theme.LINE_INSTALLED, 0.42)
 			)
-	_check(installed_research_segments == 74 and all_research_segments_installed, "all seventy-four research-constellation segments reach the installed color at full completion")
-	_check(game.progression.get_max_active() == 8, "all four capacity systems raise the regular active-sky cap from four to eight")
+	_check(installed_research_segments == 82 and all_research_segments_installed, "all eighty-two research-constellation segments reach the installed color at full completion")
+	_check(game.progression.get_max_active() == 12, "the completed Canis array raises the regular active-sky cap from the legacy eight to twelve")
+	_check(is_equal_approx(game.progression.get_regular_spawn_interval_floor(), 0.70), "the completed Canis array lowers the regular-arrival floor from 1.15 to 0.70 seconds")
 	_check(game.progression.upgrade_level == balance.UPGRADE_NODES.size(), "the run resolves to the full research array completion")
 	_check(is_equal_approx(game.progression.get_progression_ratio(), 1.0), "the original pacing topology preserves the completed-tree density endpoint")
 	for legacy_id in ["better_lens", "long_exposure", "wide_field", "trajectory", "precision_multiplier", "secondary_camera", "shower_detector", "automated_tracking"]:
@@ -1388,7 +1389,7 @@ func _run() -> void:
 	_check(Vector2(game.sky_contacts.dishes[1].target).is_equal_approx(far_target_before), "literal nearest movement leaves the farther idle dish untouched")
 	_check(is_zero_approx(nearest_target.dish_assist_rate), "literal nearest movement releases the busy dish's old target immediately")
 	nearest_target.free()
-	# Additive machine sources must not reopen the finale-value regression. The
+	# Additive machine sources must not reopen the major-value regression. The
 	# major receives its intended 49% passive lifetime coverage, while dish and
 	# lane type guards keep every limited hardware contribution at zero.
 	var machine_only_major = game.spawner.spawn_meteor(
@@ -1450,22 +1451,31 @@ func _run() -> void:
 	await process_frame
 	_check(game.events.shower_state == "idle", "shower terminates cleanly")
 
-	game.events.trigger_final()
-	game.events.trigger_final()
-	game.events.final_timer = -1.0
+	game.spawner.canis_major_spawned_this_round = false
+	game.events.canis_major_state = "idle"
+	_check(game.events.trigger_canis_major_warning(), "Sirius Bloom begins with the existing atmospheric warning")
+	_check(not game.spawner.pause_regular_spawns, "the Canis warning leaves ordinary arrivals running")
+	_check(not game.events.trigger_canis_major_warning(), "a warning already in progress cannot be triggered twice")
+	_check(not game.events.trigger_shower(), "a shower cannot overwrite the short Canis warning")
+	game.events.canis_major_timer = -1.0
 	await process_frame
 	var major_count := 0
 	for child in game.meteor_layer.get_children():
 		if child.has_method("is_major") and child.is_major():
 			major_count += 1
-	_check(major_count == 1, "final event spawns exactly one Major Fireball")
-	game.events.trigger_final()
+	_check(major_count == 1, "Sirius Bloom spawns exactly one Major Fireball")
+	_check(game.spawner.try_spawn_canis_major_fireball() == null, "the spawner-owned round guard rejects a second Canis Major Fireball")
 	await process_frame
 	var major_count_after := 0
 	for child in game.meteor_layer.get_children():
 		if child.has_method("is_major") and child.is_major():
 			major_count_after += 1
-	_check(major_count_after == 1, "final event cannot be triggered twice")
+	_check(major_count_after == 1, "the Canis Major Fireball cannot be emitted twice in one round")
+	var canis_consumed_save: Dictionary = game._build_save_data()
+	_check(bool(canis_consumed_save.get("canis_major_spawned_this_round", false)), "an active-round save records that Sirius was already emitted")
+	game._apply_save_data(canis_consumed_save)
+	await process_frame
+	_check(game.spawner.canis_major_spawned_this_round and game.events.canis_major_state == "resolved", "loading that round cannot schedule a second Sirius event")
 
 	game.reset_run()
 	await process_frame
@@ -1476,7 +1486,7 @@ func _run() -> void:
 	_check(reset_state.upgrade_level == 0, "reset clears progression")
 	_check(reset_state.purchased_nodes.is_empty(), "reset clears purchased tree node state")
 	_check(reset_state.shower_state == "idle", "reset clears shower state")
-	_check(not reset_state.final_started, "reset makes the final event available again")
+	_check(reset_state.canis_major_state == "idle" and not game.spawner.canis_major_spawned_this_round, "reset clears the Canis event schedule and round guard")
 	_check(reset_state.observation_round == 1 and reset_state.observation_phase_active, "reset returns to the first observation round")
 	_check(absf(float(reset_state.observation_phase_remaining) - 20.0) < 1.0, "reset restores the base 20-second round")
 	_check(game._observation_duration() == 20.0, "the base observation window is 20 seconds")
@@ -1684,26 +1694,30 @@ func _run() -> void:
 			)
 	game.effects.reset()
 
-	var finale_boundary_game = packed.instantiate()
-	finale_boundary_game.startup_slot_prompt_enabled = false
-	finale_boundary_game.get_node("Tutorial").auto_start_enabled = false
-	root.add_child(finale_boundary_game)
+	var open_night_game = packed.instantiate()
+	open_night_game.startup_slot_prompt_enabled = false
+	open_night_game.get_node("Tutorial").auto_start_enabled = false
+	root.add_child(open_night_game)
 	await process_frame
 	await process_frame
-	finale_boundary_game.set_process(false)
-	finale_boundary_game.events.run_time = 999999.0
-	finale_boundary_game.events._process(0.05)
-	_check(not finale_boundary_game.events.final_started, "elapsed run time cannot trigger the finale before research completion")
-	finale_boundary_game.progression.debug_purchase_all()
-	_check(not finale_boundary_game.events.final_started, "completing research inside a live observation round does not interrupt that round")
-	finale_boundary_game._end_observation_phase()
-	_check(not finale_boundary_game.events.final_started and not finale_boundary_game.observation_phase_active, "the completed tree waits through the round summary boundary")
-	finale_boundary_game._on_phase_summary_continue_requested()
+	open_night_game.set_process(false)
+	open_night_game.events.run_time = 999999.0
+	open_night_game.events._process(0.05)
+	_check(open_night_game.events.canis_major_state == "idle", "elapsed run time cannot summon Sirius before its research is installed")
+	# The run has no ending. A finished tree waits through the current round,
+	# then schedules Sirius as a recurrent event without closing the sky.
+	open_night_game.progression.debug_purchase_all()
+	_check(open_night_game.events.canis_major_state == "idle", "completing research inside a live observation round does not interrupt that round")
+	open_night_game._end_observation_phase()
+	_check(not open_night_game.observation_phase_active, "a completed tree reaches the ordinary round summary")
+	open_night_game._on_phase_summary_continue_requested()
 	await process_frame
-	finale_boundary_game.upgrade_tree.close_tree()
+	open_night_game.upgrade_tree.close_tree()
 	await process_frame
-	_check(finale_boundary_game.events.final_started and finale_boundary_game.observation_phase_active and finale_boundary_game.observation_round == 2, "closing the completed research tree starts the finale with the next live observation round")
-	finale_boundary_game.queue_free()
+	_check(open_night_game.observation_phase_active and open_night_game.observation_round == 2, "closing the completed research tree opens another observation round instead of an ending")
+	_check(open_night_game.events.canis_major_state == "scheduled", "the next viable round randomizes one warned Sirius event")
+	_check(not open_night_game.completed, "a finished research tree and its recurrent major never complete the run")
+	open_night_game.queue_free()
 	await process_frame
 
 	# Let short procedural audio voices and delayed chord tones release cleanly.
@@ -2001,7 +2015,7 @@ func _run_survey_regressions(packed: PackedScene, balance) -> void:
 
 	var legacy_ids: Array[String] = []
 	for definition in balance.UPGRADE_NODES:
-		if String(definition.branch) != "ursa_minor":
+		if String(definition.branch) not in ["ursa_minor", "canis_major"]:
 			legacy_ids.append(String(definition.id))
 	_check(legacy_ids.size() == 71, "the pre-survey research graph remains an exact 71-ID compatibility fixture")
 	survey_game.progression.load_save_data({

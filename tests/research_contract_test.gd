@@ -3,7 +3,7 @@ extends SceneTree
 const Balance = preload("res://scripts/game_balance.gd")
 const ProgressionController = preload("res://scripts/progression_controller.gd")
 
-const EXPECTED_NODE_COUNT := 78
+const EXPECTED_NODE_COUNT := 86
 const EXPECTED_RUNTIME_PARAMETER_KEYS := [
 	"observation_duration_bonus",
 	"observation_value_multiplier",
@@ -11,14 +11,15 @@ const EXPECTED_RUNTIME_PARAMETER_KEYS := [
 const EXPECTED_CONTRACT_COUNTS := {
 	"observation_value_multiplier": 8,
 	"observation_duration_bonus": 4,
-	"max_active_delta": 4,
+	"max_active_delta": 7,
+	"regular_spawn_interval_floor": 3,
 }
 const EXPECTED_DYNAMIC_CONNECTION_IDS := [
 	"amber_band",
 	"blue_band",
 	"violet_band",
 ]
-const EXPECTED_PREREQUISITE_ONLY_IDS := ["filter_wheel"]
+const EXPECTED_PREREQUISITE_ONLY_IDS := ["canis_opening", "filter_wheel"]
 
 # This exact baseline makes the remaining contract debt visible without making
 # `unverified` a free escape hatch. New nodes and verified-node regressions fail
@@ -86,6 +87,8 @@ const EXPECTED_UNVERIFIED_IDS := [
 	"expanded_sweep",
 	"accelerated_analysis",
 	"sustained_charge",
+	"canis_opening",
+	"sirius_fireball",
 ]
 
 var failures: Array[String] = []
@@ -113,7 +116,7 @@ func _run() -> void:
 	var prerequisite_only_ids: Array[String] = []
 	var actual_unverified_ids: Array[String] = []
 
-	_check(Balance.UPGRADE_NODES.size() == EXPECTED_NODE_COUNT, "research node count remains 78")
+	_check(Balance.UPGRADE_NODES.size() == EXPECTED_NODE_COUNT, "research node count remains 86")
 	for definition_variant in Balance.UPGRADE_NODES:
 		var definition: Dictionary = definition_variant
 		var node_id := String(definition.get("id", ""))
@@ -208,7 +211,7 @@ func _run() -> void:
 	_verify_claims_bidirectionally(contract_ids_by_kind)
 	print("RESEARCH_CONTRACT_UNVERIFIED: %d exact ids" % actual_unverified_ids.size())
 	if failures.is_empty():
-		print("RESEARCH_CONTRACT_PASS: 78 nodes, 16 executable contracts, 62 exact unverified ids, and bidirectional en/ko claims")
+		print("RESEARCH_CONTRACT_PASS: 86 nodes, 22 executable contracts, 64 exact unverified ids, and bidirectional en/ko claims")
 		quit(0)
 	else:
 		push_error("RESEARCH_CONTRACT_FAIL: %d failure(s)" % failures.size())
@@ -240,6 +243,10 @@ func _verify_contract_behavior(progression, definition: Dictionary) -> void:
 			progression.purchased_nodes[node_id] = true
 			var after: int = progression.get_max_active()
 			_check(is_equal_approx(float(after - before), expected_value), node_id + " runtime active-cap delta matches its independent contract")
+		"regular_spawn_interval_floor":
+			_check(String(contract.scope) == "regular_meteor_arrivals", node_id + " interval-floor contract has regular-arrival scope")
+			progression.purchased_nodes[node_id] = true
+			_check(is_equal_approx(progression.get_regular_spawn_interval_floor(), expected_value), node_id + " runtime interval floor matches its independent contract")
 		_:
 			_check(false, node_id + " has no executable adapter for contract kind: " + kind)
 
@@ -262,6 +269,7 @@ func _verify_claims_bidirectionally(contract_ids_by_kind: Dictionary) -> void:
 		"observation_value_multiplier": [],
 		"observation_duration_bonus": [],
 		"max_active_delta": [],
+		"regular_spawn_interval_floor": [],
 	}
 	var original_locale := TranslationServer.get_locale()
 	for definition_variant in Balance.UPGRADE_NODES:
@@ -276,6 +284,8 @@ func _verify_claims_bidirectionally(contract_ids_by_kind: Dictionary) -> void:
 			claimed_ids_by_kind["observation_duration_bonus"].append(node_id)
 		if _claims_max_active_delta(english, korean):
 			claimed_ids_by_kind["max_active_delta"].append(node_id)
+		if _claims_regular_spawn_interval_floor(english, korean):
+			claimed_ids_by_kind["regular_spawn_interval_floor"].append(node_id)
 
 		if not contract.is_empty():
 			match String(contract.kind):
@@ -286,8 +296,14 @@ func _verify_claims_bidirectionally(contract_ids_by_kind: Dictionary) -> void:
 					_check("10 seconds" in english and "future observation window" in english, node_id + " English copy exposes the 10-second future-window delta")
 					_check("10초" in korean and "다음 관측부터 관측 시간을" in korean, node_id + " Korean copy exposes the 10-second future-window delta")
 				"max_active_delta":
-					_check("regular active-sky capacity by one" in english.to_lower(), node_id + " English copy exposes the +1 regular active-contact scope")
-					_check("일반 표적의 상한을 1개 늘립니다" in korean, node_id + " Korean copy exposes the +1 regular active-contact scope")
+					var english_delta := "one" if is_equal_approx(float(contract.value), 1.0) else "two"
+					var korean_delta := "1개" if is_equal_approx(float(contract.value), 1.0) else "2개"
+					_check("regular active-sky capacity by " + english_delta in english.to_lower(), node_id + " English copy exposes its regular active-contact delta")
+					_check("일반 표적의 상한을 " + korean_delta + " 늘립니다" in korean, node_id + " Korean copy exposes its regular active-contact delta")
+				"regular_spawn_interval_floor":
+					var seconds := "%.2f" % float(contract.value)
+					_check("regular meteor interval floor to " + seconds + " seconds" in english, node_id + " English copy exposes the exact regular-arrival floor")
+					_check("일반 유성의 최소 출현 간격을 " + seconds + "초로" in korean, node_id + " Korean copy exposes the exact regular-arrival floor")
 	TranslationServer.set_locale(original_locale)
 
 	# The reverse comparison is essential: the 2026-08-26 audit checked that all
@@ -312,7 +328,11 @@ func _claims_duration_bonus(english: String, korean: String) -> bool:
 
 
 func _claims_max_active_delta(english: String, korean: String) -> bool:
-	return "regular active-sky capacity by one" in english.to_lower() or "일반 표적의 상한을 1개 늘립니다" in korean
+	return "regular active-sky capacity by " in english.to_lower() or ("일반 표적의 상한을 " in korean and "개 늘립니다" in korean)
+
+
+func _claims_regular_spawn_interval_floor(english: String, korean: String) -> bool:
+	return "regular meteor interval floor to " in english or "일반 유성의 최소 출현 간격을 " in korean
 
 
 func _localized_description(node_id: String, locale: String) -> String:

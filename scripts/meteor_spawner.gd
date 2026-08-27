@@ -62,6 +62,7 @@ var leonid_storm_interval: float = 0.0
 var leonid_storm_spawn_index: int = 0
 var pending_echoes: Array[Dictionary] = []
 var echo_burst_serial: int = 0
+var canis_major_spawned_this_round: bool = false
 
 
 func setup(target_layer: Node2D, progression_controller: Node) -> void:
@@ -76,6 +77,7 @@ func setup(target_layer: Node2D, progression_controller: Node) -> void:
 func start_spawning() -> void:
 	running = true
 	pause_regular_spawns = false
+	canis_major_spawned_this_round = false
 	next_spawn_time = Balance.FIRST_METEOR_DELAY
 	first_spawn_pending = true
 	# Forecast phases start with one warm contact so their information pipeline
@@ -96,6 +98,7 @@ func reset() -> void:
 	pending_contacts.clear()
 	pending_echoes.clear()
 	echo_burst_serial = 0
+	canis_major_spawned_this_round = false
 	phase_time_remaining = INF
 	burnout_cell_cursors.clear()
 	leonid_storm_remaining = 0
@@ -139,7 +142,10 @@ func _process(delta: float) -> void:
 		Balance.REGULAR_SPAWN_INTERVAL_MIN,
 		Balance.REGULAR_SPAWN_INTERVAL_MAX
 	)
-	next_spawn_time = maxf(1.15, base_interval * progression.get_spawn_interval_scale())
+	next_spawn_time = maxf(
+		progression.get_regular_spawn_interval_floor(),
+		base_interval * progression.get_spawn_interval_scale()
+	)
 
 
 func spawn_meteor(type_id: String = "common", custom_start := Vector2.INF, custom_velocity := Vector2.INF, lifetime_override: float = -1.0, custom_burnout := Vector2.INF, is_observation_echo: bool = false, is_leonid_storm: bool = false, is_perseid_outburst: bool = false):
@@ -711,6 +717,15 @@ func spawn_major_fireball():
 	return spawn_meteor("major", start, (target - start).normalized() * 128.0, 14.0)
 
 
+func try_spawn_canis_major_fireball():
+	if canis_major_spawned_this_round:
+		return null
+	var meteor = spawn_major_fireball()
+	if meteor != null:
+		canis_major_spawned_this_round = true
+	return meteor
+
+
 func refresh_active_features() -> void:
 	for child in meteor_layer.get_children():
 		if child.has_method("set_features"):
@@ -854,7 +869,7 @@ func _on_fragment_requested(origin: Vector2, parent_velocity: Vector2, parent_ty
 	var burst_speed := parent_velocity.length()
 	# The parent is intentionally slow at its terminal split. Preserve the old
 	# 245px/s fragment burst so the children read as released energy rather than
-	# inheriting the parent's near-stall. Major fragments keep the finale speed.
+	# inheriting the parent's near-stall. Major fragments keep the fireball speed.
 	if parent_type != "major":
 		burst_speed = maxf(burst_speed, float(Balance.meteor_spec("fragment").speed))
 	var available_slots := maxi(0, (MAX_TOTAL_METEORS - 1) - meteor_layer.get_child_count())

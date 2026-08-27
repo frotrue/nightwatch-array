@@ -9,7 +9,7 @@ const HITSTOP_COOLDOWN_MSEC := 400
 const COMBO_STRENGTH_STEP := 0.045
 const IMPACT_TARGET_TYPES := ["fireball", "major"]
 # Every manual observation gets a directional kick; the rumble and the freeze
-# are reserved for rare fireballs and the finale so the game's repeated core
+# are reserved for rare fireballs and the Canis Major event so the game's repeated core
 # action never becomes a chain of camera motion and freezes.
 const KICK_MIN_PIXELS := 1.3
 const KICK_MAX_PIXELS := 3.0
@@ -196,7 +196,7 @@ func _process(delta: float) -> void:
 		if autosave_elapsed >= AUTOSAVE_INTERVAL_SECONDS:
 			autosave_elapsed = fmod(autosave_elapsed, AUTOSAVE_INTERVAL_SECONDS)
 			_autosave_active_slot()
-	if observation_phase_remaining <= 0.0 and not events.final_started:
+	if observation_phase_remaining <= 0.0:
 		_end_observation_phase()
 
 
@@ -227,11 +227,8 @@ func _begin_observation_phase(advance_round: bool = false, remaining_override: f
 	survey.begin_round(observation_round)
 	events.run_time = elapsed_time
 	events.start()
-	# Research completion is committed while the chart has the tree paused. The
-	# finale begins only after the chart closes and a live observation round has
-	# started, preserving the round boundary and giving its target a real sky.
-	if progression.is_research_complete():
-		events.trigger_final()
+	# Completing the research no longer ends the run. Canis Major turns its old
+	# one-shot spectacle into a recurrent round event, and the sky remains open.
 	var pending_leonid_count := _try_start_leonid_storm()
 	if pending_leonid_count > 0:
 		hud.show_banner(tr("BANNER_LEONID_STORM") % pending_leonid_count, UITheme.INK_MAX, 1.8)
@@ -382,8 +379,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			if events.trigger_shower():
 				sound.play_warning()
 		KEY_F:
-			events.trigger_final()
-			sound.play_warning()
+			if events.trigger_canis_major_warning():
+				sound.play_warning()
 		KEY_BACKSPACE:
 			reset_run()
 		_:
@@ -482,8 +479,6 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 	if progression.success_count == 1:
 		hud.mark_first_success()
 	tutorial.notify_observation_completed()
-	if meteor.is_major():
-		_complete_prototype(true)
 
 
 func _try_start_leonid_storm() -> int:
@@ -536,10 +531,8 @@ func _on_packet_landed(amount: float) -> void:
 	hud.pulse_data_counter(amount)
 
 
-func _on_meteor_expired(meteor, was_major: bool) -> void:
+func _on_meteor_expired(meteor, _was_major: bool) -> void:
 	observer.release_target(meteor)
-	if was_major and not completed:
-		_complete_prototype(false)
 
 
 func _on_upgrade_purchased(definition: Dictionary) -> void:
@@ -583,37 +576,8 @@ func _on_shower_started() -> void:
 		phase_had_shower = true
 
 
-func _complete_prototype(success: bool) -> void:
-	if completed:
-		return
-	completed = true
-	last_completion_success = success
-	hud.hide_phase_summary()
-	events.finish_final()
-	observer.release_target()
-	survey.end_round()
-	if success:
-		sound.play_complete()
-	_autosave_active_slot()
-	hud.show_end(success, _build_end_stats())
-
-
 func _on_language_changed(_locale: String) -> void:
-	if completed:
-		hud.show_end(last_completion_success, _build_end_stats())
-
-
-func _build_end_stats() -> String:
-	return "\n\n".join([
-		tr("END_RUN_TIME") % [int(elapsed_time) / 60, int(elapsed_time) % 60],
-		"\n".join([
-			tr("END_OBSERVATIONS") % progression.success_count,
-			tr("END_MANUAL_AUTO") % [progression.manual_successes, progression.automatic_successes],
-			tr("END_TOTAL_DATA") % int(progression.total_data_earned),
-			tr("END_SYSTEMS") % [progression.upgrade_level, Balance.UPGRADE_NODES.size()],
-			tr("END_BEST_MULTIPLIER") % progression.best_multiplier
-		])
-	])
+	pass
 
 
 func _upgrade_name(definition: Dictionary) -> String:
@@ -753,6 +717,7 @@ func _build_save_data() -> Dictionary:
 		"phase_start_total_data": phase_start_total_data,
 		"phase_start_upgrade_signature": phase_start_upgrade_signature.duplicate(),
 		"phase_had_shower": phase_had_shower,
+		"canis_major_spawned_this_round": spawner.canis_major_spawned_this_round,
 		"last_clean_round_result": last_clean_round_result.duplicate(true),
 		"best_round_rate": best_round_rate,
 		"progression": progression.get_save_data(),
@@ -795,6 +760,10 @@ func _apply_save_data(data: Dictionary) -> void:
 			_observation_duration()
 		))
 		_begin_observation_phase(false, saved_remaining)
+		if bool(data.get("canis_major_spawned_this_round", false)):
+			spawner.canis_major_spawned_this_round = true
+			events.canis_major_state = "resolved"
+			events.canis_major_timer = 0.0
 		phase_start_successes = maxi(0, int(data.get("phase_start_successes", progression.success_count)))
 		phase_start_manual_successes = maxi(0, int(data.get("phase_start_manual_successes", progression.manual_successes)))
 		phase_start_automatic_successes = maxi(0, int(data.get("phase_start_automatic_successes", progression.automatic_successes)))
@@ -867,7 +836,7 @@ func get_debug_snapshot() -> Dictionary:
 		"survey_summoned": survey.summoned_this_round,
 		"survey_charge": survey.get_charge_progress(),
 		"shower_state": events.shower_state,
-		"final_started": events.final_started,
+		"canis_major_state": events.canis_major_state,
 		"observation_round": observation_round,
 		"observation_phase_active": observation_phase_active,
 		"observation_phase_remaining": observation_phase_remaining,

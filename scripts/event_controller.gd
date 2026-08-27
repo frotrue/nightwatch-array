@@ -23,9 +23,8 @@ var outburst_timer: float = 0.0
 var outburst_spawn_timer: float = 0.0
 var outburst_index: int = 0
 var next_outburst_time: float = -1.0
-var final_state: String = "idle"
-var final_timer: float = 0.0
-var final_started: bool = false
+var canis_major_state: String = "idle"
+var canis_major_timer: float = 0.0
 var rng := RandomNumberGenerator.new()
 
 const SHOWER_BOUNDARY_MARGIN := 0.12
@@ -33,6 +32,9 @@ const PERSEID_OUTBURST_WARNING := 1.8
 const PERSEID_OUTBURST_DURATION := 3.4
 const PERSEID_OUTBURST_INTERVAL := 0.42
 const PERSEID_OUTBURST_COUNT := 8
+const CANIS_MAJOR_WARNING_TIME := 2.6
+const CANIS_MAJOR_BOUNDARY_MARGIN := 0.12
+const CANIS_MAJOR_MINIMUM_DELAY := 0.6
 
 
 func setup(meteor_spawner: Node, progression_controller: Node) -> void:
@@ -43,6 +45,7 @@ func setup(meteor_spawner: Node, progression_controller: Node) -> void:
 
 func start() -> void:
 	running = true
+	_schedule_canis_major_for_round()
 
 
 func pause_for_intermission() -> void:
@@ -61,6 +64,8 @@ func pause_for_intermission() -> void:
 		outburst_spawn_timer = 0.0
 		outburst_index = 0
 		next_outburst_time = run_time
+	canis_major_state = "idle"
+	canis_major_timer = 0.0
 	if spawner != null:
 		spawner.pause_regular_spawns = false
 
@@ -78,9 +83,8 @@ func reset() -> void:
 	outburst_spawn_timer = 0.0
 	outburst_index = 0
 	next_outburst_time = -1.0
-	final_state = "idle"
-	final_timer = 0.0
-	final_started = false
+	canis_major_state = "idle"
+	canis_major_timer = 0.0
 	if spawner != null:
 		spawner.pause_regular_spawns = false
 	sky_activity_changed.emit(0.0)
@@ -93,20 +97,20 @@ func _process(delta: float) -> void:
 
 	if progression.has_upgrade("shower_detector") and next_shower_time < 0.0 and shower_state == "idle" and outburst_state == "idle":
 		next_shower_time = run_time + 14.0
-	if next_shower_time > 0.0 and run_time >= next_shower_time and shower_state == "idle" and outburst_state == "idle" and not final_started:
+	if next_shower_time > 0.0 and run_time >= next_shower_time and shower_state == "idle" and outburst_state == "idle":
 		trigger_shower()
 	if progression.has_upgrade("perseid_outburst") and next_outburst_time < 0.0 and outburst_state == "idle":
 		next_outburst_time = run_time + 8.0
-	if next_outburst_time > 0.0 and run_time >= next_outburst_time and outburst_state == "idle" and shower_state == "idle" and not final_started:
+	if next_outburst_time > 0.0 and run_time >= next_outburst_time and outburst_state == "idle" and shower_state == "idle":
 		trigger_perseid_outburst()
 
 	_update_shower(delta)
 	_update_perseid_outburst(delta)
-	_update_final(delta)
+	_update_canis_major(delta)
 
 
 func trigger_shower() -> bool:
-	if final_started or shower_state != "idle" or outburst_state != "idle":
+	if shower_state != "idle" or outburst_state != "idle" or canis_major_state == "warning":
 		return false
 	if not _shower_fits_current_observation():
 		# Leave next_shower_time due. The first viable frame of the next round
@@ -135,7 +139,7 @@ func trigger_shower() -> bool:
 
 
 func trigger_perseid_outburst() -> bool:
-	if final_started or shower_state != "idle" or outburst_state != "idle":
+	if shower_state != "idle" or outburst_state != "idle" or canis_major_state == "warning":
 		return false
 	var required := PERSEID_OUTBURST_WARNING + PERSEID_OUTBURST_DURATION + SHOWER_BOUNDARY_MARGIN
 	if spawner != null and float(spawner.phase_time_remaining) < required:
@@ -160,26 +164,45 @@ func _shower_fits_current_observation() -> bool:
 	return float(spawner.phase_time_remaining) >= required
 
 
-func trigger_final() -> void:
-	if final_started:
-		return
-	final_started = true
-	final_state = "warning"
-	final_timer = 4.2
-	shower_state = "idle"
-	next_shower_time = -1.0
-	outburst_state = "idle"
-	next_outburst_time = -1.0
-	spawner.pause_regular_spawns = true
+func trigger_canis_major_warning() -> bool:
+	if progression == null or not progression.has_upgrade("sirius_fireball"):
+		return false
+	if canis_major_state in ["warning", "resolved", "deferred"]:
+		return false
+	if shower_state != "idle" or outburst_state != "idle":
+		return false
+	if not _canis_major_fits_current_observation():
+		canis_major_state = "deferred"
+		return false
+	canis_major_state = "warning"
+	canis_major_timer = CANIS_MAJOR_WARNING_TIME
 	banner_requested.emit("EVENT_ATMOSPHERIC_BLOOM", UITheme.ACCENT_PIP)
-	sky_activity_changed.emit(1.0)
+	return true
 
 
-func finish_final() -> void:
-	running = false
-	final_state = "resolved"
-	spawner.pause_regular_spawns = true
-	sky_activity_changed.emit(0.4)
+func _schedule_canis_major_for_round() -> void:
+	canis_major_state = "idle"
+	canis_major_timer = 0.0
+	if progression == null or not progression.has_upgrade("sirius_fireball"):
+		return
+	if not _canis_major_fits_current_observation():
+		canis_major_state = "deferred"
+		return
+	var available_delay := maxf(
+		0.0,
+		float(spawner.phase_time_remaining) - _canis_major_required_time()
+	)
+	var minimum_delay := minf(CANIS_MAJOR_MINIMUM_DELAY, available_delay)
+	canis_major_timer = rng.randf_range(minimum_delay, available_delay)
+	canis_major_state = "scheduled"
+
+
+func _canis_major_required_time() -> float:
+	return CANIS_MAJOR_WARNING_TIME + float(Balance.meteor_spec("major").lifetime) + CANIS_MAJOR_BOUNDARY_MARGIN
+
+
+func _canis_major_fits_current_observation() -> bool:
+	return spawner == null or float(spawner.phase_time_remaining) >= _canis_major_required_time()
 
 
 func _update_shower(delta: float) -> void:
@@ -232,11 +255,20 @@ func _update_perseid_outburst(delta: float) -> void:
 				banner_requested.emit("EVENT_PERSEID_OUTBURST_PASSED", UITheme.BANNER_SUB)
 
 
-func _update_final(delta: float) -> void:
-	if final_state != "warning":
-		return
-	final_timer -= delta
-	if final_timer <= 0.0:
-		final_state = "active"
-		banner_requested.emit("EVENT_MAJOR_FIREBALL", UITheme.INK_MAX)
-		spawner.spawn_major_fireball()
+func _update_canis_major(delta: float) -> void:
+	match canis_major_state:
+		"scheduled":
+			canis_major_timer -= delta
+			if canis_major_timer <= 0.0:
+				trigger_canis_major_warning()
+		"warning":
+			canis_major_timer -= delta
+			if canis_major_timer > 0.0:
+				return
+			var meteor = spawner.try_spawn_canis_major_fireball()
+			if meteor == null:
+				if float(spawner.phase_time_remaining) < float(Balance.meteor_spec("major").lifetime) + CANIS_MAJOR_BOUNDARY_MARGIN:
+					canis_major_state = "deferred"
+				return
+			canis_major_state = "resolved"
+			banner_requested.emit("EVENT_MAJOR_FIREBALL", UITheme.INK_MAX)

@@ -173,16 +173,17 @@ const CONSTELLATIONS := {
 		"segments": [["pleiades", "epsilon_tau"], ["epsilon_tau", "delta_tau"], ["delta_tau", "hyadum"], ["hyadum", "theta_tau"], ["theta_tau", "aldebaran"], ["aldebaran", "tianguan"], ["epsilon_tau", "elnath"]]
 	},
 	"canis_major": {
+		"branch": "canis_major",
 		"label_key": "CONSTELLATION_CANIS_MAJOR",
 		"stars": [
-			{"id": "sirius", "name_key": "STAR_SIRIUS", "bayer": "α CMa", "magnitude": -1.46, "local_position": Vector2(-0.34, -0.86), "node_id": "", "kind": "star"},
-			{"id": "mirzam", "name_key": "STAR_MIRZAM", "bayer": "β CMa", "magnitude": 1.98, "local_position": Vector2(-0.96, -0.62), "node_id": "", "kind": "star"},
-			{"id": "muliphein", "name_key": "STAR_MULIPHEIN", "bayer": "γ CMa", "magnitude": 4.11, "local_position": Vector2(0.24, -0.72), "node_id": "", "kind": "star"},
-			{"id": "omicron_cma", "name_key": "STAR_OMICRON_CMA", "bayer": "ο² CMa", "magnitude": 3.02, "local_position": Vector2(-0.16, -0.26), "node_id": "", "kind": "star"},
-			{"id": "wezen", "name_key": "STAR_WEZEN", "bayer": "δ CMa", "magnitude": 1.83, "local_position": Vector2(0.18, 0.34), "node_id": "", "kind": "star"},
-			{"id": "adhara", "name_key": "STAR_ADHARA", "bayer": "ε CMa", "magnitude": 1.50, "local_position": Vector2(-0.38, 0.52), "node_id": "", "kind": "star"},
-			{"id": "furud", "name_key": "STAR_FURUD", "bayer": "ζ CMa", "magnitude": 3.02, "local_position": Vector2(-0.64, 0.94), "node_id": "", "kind": "star"},
-			{"id": "aludra", "name_key": "STAR_ALUDRA", "bayer": "η CMa", "magnitude": 2.45, "local_position": Vector2(0.64, 0.62), "node_id": "", "kind": "star"}
+			{"id": "sirius", "name_key": "STAR_SIRIUS", "bayer": "α CMa", "magnitude": -1.46, "local_position": Vector2(-0.34, -0.86), "node_id": "sirius_fireball", "kind": "star"},
+			{"id": "mirzam", "name_key": "STAR_MIRZAM", "bayer": "β CMa", "magnitude": 1.98, "local_position": Vector2(-0.96, -0.62), "node_id": "canis_capacity_ii", "kind": "star"},
+			{"id": "muliphein", "name_key": "STAR_MULIPHEIN", "bayer": "γ CMa", "magnitude": 4.11, "local_position": Vector2(0.24, -0.72), "node_id": "canis_cadence_i", "kind": "star"},
+			{"id": "omicron_cma", "name_key": "STAR_OMICRON_CMA", "bayer": "ο² CMa", "magnitude": 3.02, "local_position": Vector2(-0.16, -0.26), "node_id": "canis_capacity_iii", "kind": "star"},
+			{"id": "wezen", "name_key": "STAR_WEZEN", "bayer": "δ CMa", "magnitude": 1.83, "local_position": Vector2(0.18, 0.34), "node_id": "canis_cadence_ii", "kind": "star"},
+			{"id": "adhara", "name_key": "STAR_ADHARA", "bayer": "ε CMa", "magnitude": 1.50, "local_position": Vector2(-0.38, 0.52), "node_id": "canis_cadence_iii", "kind": "star"},
+			{"id": "furud", "name_key": "STAR_FURUD", "bayer": "ζ CMa", "magnitude": 3.02, "local_position": Vector2(-0.64, 0.94), "node_id": "canis_opening", "kind": "star"},
+			{"id": "aludra", "name_key": "STAR_ALUDRA", "bayer": "η CMa", "magnitude": 2.45, "local_position": Vector2(0.64, 0.62), "node_id": "canis_capacity_i", "kind": "star"}
 		],
 		"segments": [["sirius", "mirzam"], ["sirius", "muliphein"], ["sirius", "omicron_cma"], ["omicron_cma", "adhara"], ["adhara", "furud"], ["omicron_cma", "wezen"], ["wezen", "adhara"], ["wezen", "aludra"]]
 	}
