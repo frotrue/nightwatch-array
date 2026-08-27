@@ -7,7 +7,9 @@ const SHOWER_DURATION := 9.0
 const BASE_OBSERVATION_DURATION := 20.0
 const MAX_OBSERVATION_DURATION := 60.0
 const BASE_MAX_ACTIVE_METEORS := 4
-const MAX_ACTIVE_METEORS := 8
+const MAX_ACTIVE_METEORS := 12
+const CANIS_FINAL_ACTIVE_CAPACITY_DELTA := 2
+const CANIS_FINAL_REGULAR_SPAWN_INTERVAL_FLOOR := 0.70
 const REGULAR_SPAWN_INTERVAL_MIN := 1.6
 const REGULAR_SPAWN_INTERVAL_MAX := 2.4
 const BRANCHES := {
@@ -20,7 +22,8 @@ const BRANCHES := {
 	"taurus": {"name": "TAURUS / MOMENTUM", "color": Color("ffbd7a")},
 	"lyra": {"name": "LYRA / SPECTRUM", "color": Color("69a9ff")},
 	"andromeda": {"name": "ANDROMEDA / DEEP SURVEY", "color": Color("ff78c8")},
-	"leo": {"name": "LEO / METEOR STORM", "color": Color("ff9a66")}
+	"leo": {"name": "LEO / METEOR STORM", "color": Color("ff9a66")},
+	"canis_major": {"name": "CANIS MAJOR / CADENCE", "color": Color("8ad9ff")}
 }
 
 # Existing upgrade ids are preserved so every gameplay consumer migrates without
@@ -613,6 +616,69 @@ const UPGRADE_NODES: Array[Dictionary] = [
 		"effect_notes": {"combo_window": 5.0, "combo_cap": 10},
 		"runtime_parameters": {"observation_value_multiplier": 2.0},
 		"effect_contract": {"kind": "observation_value_multiplier", "value": 2.0, "scope": "all_observation_data"},
+		"major": true, "affects_pacing": false
+	},
+	{
+		"id": "canis_opening", "name": "Canis Relay", "icon": "CMa", "cost": 620000,
+		"description": "Opens the price-gated Canis Major cadence circuit without changing the shipped density curve.",
+		"branch": "canis_major", "prerequisites": [],
+		"hidden_until": [], "effect_type": "unlock", "effect_notes": {"canis_major_branch": true},
+		"implementation_connection": "prerequisite_only",
+		"major": false, "affects_pacing": false
+	},
+	{
+		"id": "canis_cadence_i", "name": "Swift Signal", "icon": "1.00s", "cost": 760000,
+		"description": "Lowers the regular meteor interval floor to 1.00 seconds.",
+		"branch": "canis_major", "prerequisites": [],
+		"hidden_until": [], "effect_type": "transformation", "effect_notes": {"regular_spawn_interval_floor": 1.0},
+		"effect_contract": {"kind": "regular_spawn_interval_floor", "value": 1.0, "scope": "regular_meteor_arrivals"},
+		"major": false, "affects_pacing": false
+	},
+	{
+		"id": "canis_capacity_i", "name": "Long Leash", "icon": "+1", "cost": 900000,
+		"description": "Raises regular active-sky capacity by one, from eight to nine at the completed legacy array.",
+		"branch": "canis_major", "prerequisites": [],
+		"hidden_until": [], "effect_type": "passive", "effect_notes": {"max_active_delta": 1},
+		"effect_contract": {"kind": "max_active_delta", "value": 1, "scope": "regular_active_contacts"},
+		"major": false, "affects_pacing": false
+	},
+	{
+		"id": "canis_cadence_ii", "name": "Running Cadence", "icon": "0.85s", "cost": 1150000,
+		"description": "Lowers the regular meteor interval floor to 0.85 seconds.",
+		"branch": "canis_major", "prerequisites": ["canis_capacity_i"],
+		"hidden_until": ["canis_capacity_i"], "effect_type": "transformation", "effect_notes": {"regular_spawn_interval_floor": 0.85},
+		"effect_contract": {"kind": "regular_spawn_interval_floor", "value": 0.85, "scope": "regular_meteor_arrivals"},
+		"major": true, "affects_pacing": false
+	},
+	{
+		"id": "canis_capacity_ii", "name": "Twin Watch", "icon": "+1", "cost": 1400000,
+		"description": "Raises regular active-sky capacity by one, from nine to ten at the completed legacy array.",
+		"branch": "canis_major", "prerequisites": [],
+		"hidden_until": [], "effect_type": "passive", "effect_notes": {"max_active_delta": 1},
+		"effect_contract": {"kind": "max_active_delta", "value": 1, "scope": "regular_active_contacts"},
+		"major": true, "affects_pacing": false
+	},
+	{
+		"id": "canis_cadence_iii", "name": "White-Star Tempo", "icon": "0.70s", "cost": 1750000,
+		"description": "Lowers the regular meteor interval floor to 0.70 seconds.",
+		"branch": "canis_major", "prerequisites": ["canis_opening", "canis_cadence_ii"],
+		"hidden_until": ["canis_opening", "canis_cadence_ii"], "effect_type": "transformation", "effect_notes": {"regular_spawn_interval_floor": 0.70},
+		"effect_contract": {"kind": "regular_spawn_interval_floor", "value": 0.70, "scope": "regular_meteor_arrivals"},
+		"major": true, "affects_pacing": false
+	},
+	{
+		"id": "canis_capacity_iii", "name": "Pack Array", "icon": "+2", "cost": 2100000,
+		"description": "Raises regular active-sky capacity by two, from ten to twelve at the completed legacy array.",
+		"branch": "canis_major", "prerequisites": ["canis_cadence_iii"],
+		"hidden_until": ["canis_cadence_iii"], "effect_type": "passive", "effect_notes": {"max_active_delta": 2},
+		"effect_contract": {"kind": "max_active_delta", "value": 2, "scope": "regular_active_contacts"},
+		"major": true, "affects_pacing": false
+	},
+	{
+		"id": "sirius_fireball", "name": "Sirius Bloom", "icon": "★", "cost": 10000000,
+		"description": "Warns of and releases one Major Fireball at most once during each viable observation round.",
+		"branch": "canis_major", "prerequisites": ["canis_capacity_ii", "canis_cadence_i", "canis_capacity_iii"],
+		"hidden_until": ["canis_capacity_ii", "canis_cadence_i", "canis_capacity_iii"], "effect_type": "unlock", "effect_notes": {"major_fireball_per_round": 1},
 		"major": true, "affects_pacing": false
 	}
 ]

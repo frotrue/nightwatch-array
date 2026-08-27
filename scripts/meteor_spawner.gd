@@ -31,6 +31,7 @@ const LEONID_STORM_REQUIRED_TIME := 9.0
 # Automatic lanes are partial assist: at 7x analysis time the scan duration
 # exceeds every eligible target's lifetime, so completion needs another source.
 const LANE_TIME_MULTIPLIER := 7.0
+const REGULAR_ACTIVE_TYPES := ["common", "fast", "fragment", "fragment_piece", "fireball"]
 
 enum LaneSelectionOrder {
 	PARTNER_FIRST,
@@ -61,6 +62,7 @@ var leonid_storm_interval: float = 0.0
 var leonid_storm_spawn_index: int = 0
 var pending_echoes: Array[Dictionary] = []
 var echo_burst_serial: int = 0
+var canis_major_spawned_this_round: bool = false
 
 
 func setup(target_layer: Node2D, progression_controller: Node) -> void:
@@ -75,6 +77,7 @@ func setup(target_layer: Node2D, progression_controller: Node) -> void:
 func start_spawning() -> void:
 	running = true
 	pause_regular_spawns = false
+	canis_major_spawned_this_round = false
 	next_spawn_time = Balance.FIRST_METEOR_DELAY
 	first_spawn_pending = true
 	# Forecast phases start with one warm contact so their information pipeline
@@ -95,6 +98,7 @@ func reset() -> void:
 	pending_contacts.clear()
 	pending_echoes.clear()
 	echo_burst_serial = 0
+	canis_major_spawned_this_round = false
 	phase_time_remaining = INF
 	burnout_cell_cursors.clear()
 	leonid_storm_remaining = 0
@@ -118,7 +122,13 @@ func _process(delta: float) -> void:
 	next_spawn_time -= delta
 	if next_spawn_time > 0.0:
 		return
-	if _active_count() + pending_contacts.size() >= progression.get_max_active():
+	# The research contract is a cap on live atmospheric work. Forecasts are
+	# information about future work, while same-round deep targets have their own
+	# long dwell times; charging either against this budget made better warning
+	# and deep-sky discoveries suppress ordinary meteor arrivals. Burst sources
+	# still count once their atmospheric objects are live, and every path remains
+	# bounded by MAX_TOTAL_METEORS inside spawn_meteor().
+	if _regular_active_count() >= progression.get_max_active():
 		next_spawn_time = 0.45
 		return
 	if first_spawn_pending:
@@ -132,7 +142,10 @@ func _process(delta: float) -> void:
 		Balance.REGULAR_SPAWN_INTERVAL_MIN,
 		Balance.REGULAR_SPAWN_INTERVAL_MAX
 	)
-	next_spawn_time = maxf(1.15, base_interval * progression.get_spawn_interval_scale())
+	next_spawn_time = maxf(
+		progression.get_regular_spawn_interval_floor(),
+		base_interval * progression.get_spawn_interval_scale()
+	)
 
 
 func spawn_meteor(type_id: String = "common", custom_start := Vector2.INF, custom_velocity := Vector2.INF, lifetime_override: float = -1.0, custom_burnout := Vector2.INF, is_observation_echo: bool = false, is_leonid_storm: bool = false, is_perseid_outburst: bool = false):
@@ -704,6 +717,15 @@ func spawn_major_fireball():
 	return spawn_meteor("major", start, (target - start).normalized() * 128.0, 14.0)
 
 
+func try_spawn_canis_major_fireball():
+	if canis_major_spawned_this_round:
+		return null
+	var meteor = spawn_major_fireball()
+	if meteor != null:
+		canis_major_spawned_this_round = true
+	return meteor
+
+
 func refresh_active_features() -> void:
 	for child in meteor_layer.get_children():
 		if child.has_method("set_features"):
@@ -847,7 +869,7 @@ func _on_fragment_requested(origin: Vector2, parent_velocity: Vector2, parent_ty
 	var burst_speed := parent_velocity.length()
 	# The parent is intentionally slow at its terminal split. Preserve the old
 	# 245px/s fragment burst so the children read as released energy rather than
-	# inheriting the parent's near-stall. Major fragments keep the finale speed.
+	# inheriting the parent's near-stall. Major fragments keep the fireball speed.
 	if parent_type != "major":
 		burst_speed = maxf(burst_speed, float(Balance.meteor_spec("fragment").speed))
 	var available_slots := maxi(0, (MAX_TOTAL_METEORS - 1) - meteor_layer.get_child_count())
@@ -862,10 +884,14 @@ func _on_fragment_requested(origin: Vector2, parent_velocity: Vector2, parent_ty
 		)
 
 
-func _active_count() -> int:
+func _regular_active_count() -> int:
 	var count := 0
 	for child_index in range(meteor_layer.get_child_count()):
 		var child = meteor_layer.get_child(child_index)
-		if child.has_method("can_be_tracked") and child.can_be_tracked():
+		if (
+			String(child.get("type_id")) in REGULAR_ACTIVE_TYPES
+			and child.has_method("can_be_tracked")
+			and child.can_be_tracked()
+		):
 			count += 1
 	return count

@@ -43,13 +43,13 @@ content.
 |---|---|
 | `game.gd` | Round lifecycle, save/load orchestration, economy-independent feedback dispatch (kick/shake/hitstop), debug keys. The only node that knows about all the others. |
 | `progression_controller.gd` | Data balance, purchased nodes, discovery gates, transient Taurus manual combo, persistent Leo storm charge, and systemic derived upgrade effects. Single source of truth: consumers ask it, not `game_balance.gd`. |
-| `game_balance.gd` | Static data only: the 78 upgrade definitions and the meteor/deep-target spec table. `RefCounted`, no state. |
-| `meteor_spawner.gd` | Spawn cadence, type rolls (including same-round satellites, variable stars, comets, binary stars, and galaxy fields), delayed/forecast Gemini observation echoes, paced Leo meteor-storm queues, sky-wide burnout endpoint planning, forecast contact announcements, fragment spawning, survey-requested custom-start spawns, shower and finale spawns, support-lane assignment. |
+| `game_balance.gd` | Static data only: the 86 upgrade definitions and the meteor/deep-target spec table. `RefCounted`, no state. |
+| `meteor_spawner.gd` | Spawn cadence, type rolls (including same-round satellites, variable stars, comets, binary stars, and galaxy fields), delayed/forecast Gemini observation echoes, paced Leo meteor-storm queues, sky-wide burnout endpoint planning, forecast contact announcements, fragment spawning, survey-requested custom-start spawns, shower and round-guarded Canis Major spawns, support-lane assignment. |
 | `meteor.gd` | One object's burn-progress motion, trail and terminal fade, observation progress, quality grading, split behaviour, and passive spectral calibration result. |
 | `observation_controller.gd` | Cursor sampling, the tracking-versus-survey input latch, manual tracking, swept-path hit detection, tracking and hover rings, and the software cursor. |
 | `sky_contacts.gd` | Low-chrome forecast contact rendering and steerable dishes. Right-click moves the nearest dish; Predictive Dish Control automatically pre-positions an idle dish. Contact Ledger narrows the uncertainty ring instead of adding value/time text. |
 | `survey_controller.gd` | Round-local blank-sky sweep charge, the 150 px live-meteor guard, isolated deterministic summon rolls, custom-start spawner calls, cooldown, and the cursor-local red-light arc. |
-| `event_controller.gd` | Meteor showers, Perseid outbursts, and the research-completion finale sequence. |
+| `event_controller.gd` | Meteor showers, Perseid outbursts, and the randomized warned Canis Major event schedule. |
 | `effects_layer.gd` | Success bursts, data packets, incoming markers, forecast markers, screen kick and shake. |
 | `hud.gd` | All in-round UI, round summary, settings, save-slot dialogs, banners. |
 | `upgrade_tree.gd` | Research tree rendering and purchase interaction. |
@@ -121,7 +121,6 @@ intermission. `game.gd` drives it.
 _begin_observation_phase()
     duration = progression.get_observation_duration()   (20s base, 60s max)
     spawner.start_spawning(); survey.begin_round(); events.start()
-    if progression.is_research_complete(): events.trigger_final()
     ↓  _process() counts down; elapsed_time accrues
 _end_observation_phase()
     _build_round_result()   → data, rate, manual/automatic split, build signature
@@ -134,12 +133,11 @@ _on_phase_summary_continue_requested() → upgrade_tree.open_tree()
 _on_upgrade_tree_closed() → _begin_observation_phase(advance_round = true)
 ```
 
-The run has no fixed-time finale. Installing all 78 research systems marks the
-tree complete, but does not interrupt the active observation round. After the
-round summary, closing the research tree starts the next live observation
-round; `_begin_observation_phase()` then asks `EventController` to fire the
-finale. Observing or losing the major fireball resolves the run through
-`_complete_prototype()`.
+The run currently has no ending. Installing all 86 research systems marks the
+tree complete but does not interrupt the active observation round or a later
+one. Sirius Bloom instead schedules one warned Major Fireball at a randomized
+viable time in each subsequent round. Observing or losing it does not stop the
+night.
 
 ### Time invariants
 
@@ -149,9 +147,9 @@ These are load-bearing. Breaking them silently corrupts the Data/min series.
   intermission costs no run time.
 - `_process` divides by `Engine.time_scale` to convert back to real seconds, so
   a hitstop freeze cannot buy the player extra observation time.
-- Research completion is checked only at `_begin_observation_phase()`, after the
-  tree closes. Purchases can never inject the finale into the middle of a live
-  round, and elapsed wall-clock time cannot start it.
+- Canis Major scheduling happens only in `EventController.start()`, after the
+  tree closes and a new round begins. Buying Sirius cannot inject the event
+  into the middle of the current observation.
 - Every round clears unfinished objects and pending forecasts at zero rather
   than letting them leak into the next sample.
 - Long Andromeda targets are announced only while their own centered manual
@@ -160,6 +158,10 @@ These are load-bearing. Breaking them silently corrupts the Data/min series.
 - A shower starts only if its warning plus active phase fits before zero.
   Otherwise it stays due and starts in the next viable round
   (`event_controller.gd::_shower_fits_current_observation`).
+- Sirius Bloom is likewise deferred unless its 2.6-second warning and the
+  Major Fireball's full 14-second lifetime fit before zero. It does not pause
+  regular spawning; `MeteorSpawner` resets and enforces its once-per-round
+  guard.
 
 ## Observation flow
 
@@ -235,8 +237,15 @@ existing target-conditional multipliers are applied.
 
 Regular active-sky capacity begins at four. Array Planning, Multi-Target
 Analysis, Cascade Sampling, and Perseid Survey each add one permanent slot, so
-the completed regular-spawn cap is eight. Event, echo, storm, fragment, and
-finale paths still share the separate global `MAX_TOTAL_METEORS = 32` cap.
+the completed legacy cap is eight. Canis Major then raises it 8 → 9 → 10 →
+12 while lowering the regular-arrival floor 1.15 → 1.00 → 0.85 → 0.70
+seconds. The scheduler charges only live
+atmospheric targets (`common`, `fast`, `fragment`, `fragment_piece`, and
+`fireball`) against that budget. Pending forecasts are future information and
+same-round deep targets are long-dwell catalog work, so neither suppresses the
+regular arrival stream. Atmospheric objects created by events, echoes, storms,
+and fragments do count once live; every source still shares the separate global
+`MAX_TOTAL_METEORS = 32` cap.
 
 Research metadata has three deliberately separate layers in `game_balance.gd`:
 
@@ -257,11 +266,12 @@ declared prerequisite-only role. Calibration Framework is intentionally the
 last kind: it opens downstream band and binary-star research without a direct
 runtime toggle.
 
-The first executable contract kinds cover the three numeric families that have
-already drifted: eight global value multipliers, four observation-duration
-bonuses, and four regular active-contact capacity increases. The exact 62-node
-unverified set is a hard baseline, not a wildcard; follow-up work may shrink it,
-and adding or exchanging an id requires an explicit test diff.
+The executable contract kinds cover the numeric families that have already
+drifted: eight global value multipliers, four observation-duration bonuses,
+seven regular active-contact capacity increases, and three regular-arrival
+floors. The exact 64-node unverified set is a hard baseline, not a wildcard;
+follow-up work may shrink it, and adding or exchanging an id requires an
+explicit test diff.
 
 ## Save format
 
@@ -273,8 +283,10 @@ sanitizes every field: unknown upgrade ids are dropped by
 result into legal ranges.
 
 Sweep charge, cooldown, and live summoned meteors are round state and are
-discarded on load. Removed stationary-survey fields in an old same-day fixture
-are ignored; the required 71-node pre-Ursa-Minor saves still validate normally.
+discarded on load. The Canis once-per-round consumed flag is retained so loading
+a save made after Sirius cannot emit it twice in one observation. Removed
+stationary-survey fields in an old same-day fixture are ignored; the required
+71-node pre-Ursa-Minor saves still validate normally.
 
 A resumed round sets `phase_resumed_from_save`, which makes that round its own
 comparison baseline instead of presenting pre-load installs as fresh growth.

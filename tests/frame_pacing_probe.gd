@@ -2,9 +2,12 @@ extends SceneTree
 
 const PROBE_SECONDS := 24.0
 const PROBE_SECONDS_ENV := "NIGHTWATCH_PROBE_SECONDS"
+const RENDER_STRESS_OBJECTS := 18
+const RENDER_STRESS_OBJECTS_ENV := "NIGHTWATCH_RENDER_STRESS_OBJECTS"
 
 var game
 var probe_seconds: float = PROBE_SECONDS
+var render_stress_objects: int = RENDER_STRESS_OBJECTS
 var frame_times: Array[float] = []
 var cursor_distances: Array[float] = []
 var second_start_usec: int = 0
@@ -26,13 +29,14 @@ func _run() -> void:
 	root.add_child(game)
 	await process_frame
 	await process_frame
-	_prepare_render_stress()
 	probe_seconds = _probe_seconds_from_environment()
+	render_stress_objects = _render_stress_objects_from_environment()
+	_prepare_render_stress()
 	previous_cursor_position = root.get_mouse_position()
 	probe_start_usec = Time.get_ticks_usec()
 	second_start_usec = probe_start_usec
 	last_frame_usec = probe_start_usec
-	print("FRAME_PROBE_ENV engine=%s viewport=%s window=%s refresh_hz=%.2f mode=%d vsync=%d renderer=%s duration_seconds=%.2f" % [
+	print("FRAME_PROBE_ENV engine=%s viewport=%s window=%s refresh_hz=%.2f mode=%d vsync=%d renderer=%s duration_seconds=%.2f stress_objects=%d" % [
 		Engine.get_version_info(),
 		root.get_visible_rect().size,
 		DisplayServer.window_get_size(),
@@ -40,7 +44,8 @@ func _run() -> void:
 		DisplayServer.window_get_mode(),
 		DisplayServer.window_get_vsync_mode(),
 		RenderingServer.get_current_rendering_method(),
-		probe_seconds
+		probe_seconds,
+		render_stress_objects,
 	])
 	print("FRAME_PROBE_READY: keep still during seconds 1-7 and 19-24; move rapidly during seconds 8-18")
 	while float(Time.get_ticks_usec() - probe_start_usec) / 1000000.0 < probe_seconds:
@@ -77,17 +82,32 @@ func _probe_seconds_from_environment() -> float:
 func _prepare_render_stress() -> void:
 	game.spawner.pause_regular_spawns = true
 	var viewport_size := root.get_visible_rect().size
-	for index in range(18):
+	var regular_objects := mini(render_stress_objects, game.spawner.MAX_TOTAL_METEORS - 1)
+	var columns := 6
+	var rows := maxi(1, int(ceil(float(regular_objects) / float(columns))))
+	for index in range(regular_objects):
 		var type_id := "fireball" if index % 7 == 0 else ("fragment" if index % 4 == 0 else "common")
 		var start := Vector2(
 			80.0 + float(index % 6) * (viewport_size.x - 160.0) / 5.0,
-			115.0 + float(index / 6) * 145.0
+			viewport_size.y * 0.14 + float(index / columns) * viewport_size.y * 0.72 / maxf(1.0, float(rows - 1))
 		)
 		var direction := Vector2.from_angle(-0.35 + float(index % 5) * 0.16)
 		var meteor = game.spawner.spawn_meteor(type_id, start, direction * 18.0, 40.0)
 		meteor.trail_points.clear()
 		for trail_index in range(meteor.max_trail_points):
 			meteor.trail_points.append(start - direction * float(trail_index) * 7.0)
+	if render_stress_objects >= game.spawner.MAX_TOTAL_METEORS:
+		game.spawner.spawn_major_fireball()
+
+
+func _render_stress_objects_from_environment() -> int:
+	if not OS.has_environment(RENDER_STRESS_OBJECTS_ENV):
+		return RENDER_STRESS_OBJECTS
+	var configured := OS.get_environment(RENDER_STRESS_OBJECTS_ENV).strip_edges()
+	if not configured.is_valid_int():
+		push_warning("Ignoring invalid %s=%s" % [RENDER_STRESS_OBJECTS_ENV, configured])
+		return RENDER_STRESS_OBJECTS
+	return clampi(configured.to_int(), 1, game.spawner.MAX_TOTAL_METEORS)
 
 
 func _print_second_stats() -> void:

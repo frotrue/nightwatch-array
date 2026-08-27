@@ -350,6 +350,16 @@ func get_spawn_interval_scale() -> float:
 	return scale
 
 
+func get_regular_spawn_interval_floor() -> float:
+	if has_upgrade("canis_cadence_iii"):
+		return Balance.CANIS_FINAL_REGULAR_SPAWN_INTERVAL_FLOOR
+	if has_upgrade("canis_cadence_ii"):
+		return 0.85
+	if has_upgrade("canis_cadence_i"):
+		return 1.00
+	return 1.15
+
+
 func get_observation_echo_probability() -> float:
 	if has_upgrade("echo_correlation_20"):
 		return 0.20
@@ -431,6 +441,9 @@ func get_max_active() -> int:
 		+ int(has_upgrade("multi_target_analysis"))
 		+ int(has_upgrade("cascade_sampling"))
 		+ int(has_upgrade("perseid_survey"))
+		+ int(has_upgrade("canis_capacity_i"))
+		+ int(has_upgrade("canis_capacity_ii"))
+		+ Balance.CANIS_FINAL_ACTIVE_CAPACITY_DELTA * int(has_upgrade("canis_capacity_iii"))
 	)
 
 

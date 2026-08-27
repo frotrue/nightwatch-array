@@ -26,19 +26,18 @@ func _run() -> void:
 
 	# Hover a node so the cursor tooltip is part of the capture. The script has no
 	# real pointer, so the tooltip is placed at the hovered star by hand. Keep
-	# Keep Taurus above the horizon so its complete Momentum path and the
-	# research-bearing Pleiades cluster can be reviewed in one capture.
+	# Canis Major above the horizon so its four-root figure and Sirius terminus
+	# can be reviewed in one capture.
 	var tree = game.upgrade_tree
 	tree._reset_view(false)
-	tree.rotation_offset = -0.65
+	tree.rotation_offset = -1.27
 	tree._layout_chart()
-	tree._on_node_hovered("taurus_full_gallop")
+	tree._on_node_hovered("sirius_fireball")
 	for _index in range(4):
 		await process_frame
-	var star: Control = tree.node_buttons["taurus_full_gallop"]
-	var overlay_control: Control = tree.overlay
-	var cursor: Vector2 = star.global_position + star.size * 0.5 - overlay_control.global_position
-	tree._position_node_tooltip(cursor)
+	# Park the tooltip in the sparse upper-left so it names Sirius without
+	# covering the small Canis figure it is meant to review.
+	tree._position_node_tooltip(Vector2(24.0, 100.0))
 	# Fix animated pulse state and wait for the renderer so baseline comparisons
 	# are deterministic instead of occasionally capturing a partially drawn frame.
 	for star_visual_variant in tree.node_hold_bars.values():
