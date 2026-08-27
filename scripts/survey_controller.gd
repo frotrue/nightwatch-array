@@ -13,6 +13,7 @@ const FAST_TYPE_CHANCE := 0.35
 var progression: Node
 var spawner: Node
 var meteor_layer: Node2D
+var observation_view: Camera2D
 var rng := RandomNumberGenerator.new()
 var active_round: int = 0
 var scanning: bool = false
@@ -24,10 +25,11 @@ var summoned_this_round: int = 0
 var roll_count: int = 0
 
 
-func setup(progression_controller: Node, meteor_spawner: Node, target_layer: Node2D) -> void:
+func setup(progression_controller: Node, meteor_spawner: Node, target_layer: Node2D, view: Camera2D = null) -> void:
 	progression = progression_controller
 	spawner = meteor_spawner
 	meteor_layer = target_layer
+	observation_view = view
 	reset()
 
 
@@ -101,7 +103,7 @@ func apply_scan_segment(from: Vector2, to: Vector2, _active_delta: float = 0.0) 
 		queue_redraw()
 		return 0
 	charge_distance += path_length
-	var required_distance: float = progression.get_survey_required_distance()
+	var required_distance: float = _world_px(progression.get_survey_required_distance())
 	var spawned_count := 0
 	while charge_distance >= required_distance and cooldown_remaining <= 0.0:
 		charge_distance -= required_distance
@@ -128,7 +130,7 @@ func is_blank_sky(position: Vector2) -> bool:
 			and not child.is_queued_for_deletion()
 			and child.has_method("can_be_tracked")
 			and child.can_be_tracked()
-			and position.distance_to(child.global_position) <= EMPTY_SKY_RADIUS
+			and position.distance_to(child.global_position) <= _world_px(EMPTY_SKY_RADIUS)
 		):
 			return false
 	return true
@@ -137,7 +139,7 @@ func is_blank_sky(position: Vector2) -> bool:
 func get_charge_progress() -> float:
 	if progression == null or not progression.survey_enabled():
 		return 0.0
-	return clampf(charge_distance / maxf(1.0, progression.get_survey_required_distance()), 0.0, 1.0)
+	return clampf(charge_distance / maxf(1.0, _world_px(progression.get_survey_required_distance())), 0.0, 1.0)
 
 
 func get_cooldown_progress() -> float:
@@ -153,7 +155,7 @@ func _spawn_from_cursor(position: Vector2) -> int:
 		var type_id := "common"
 		if progression.has_upgrade("trajectory") and rng.randf() < FAST_TYPE_CHANCE:
 			type_id = "fast"
-		var toward_centre := (get_viewport_rect().size * 0.5 - position).normalized()
+		var toward_centre := (_atmospheric_rect().get_center() - position).normalized()
 		if toward_centre.is_zero_approx():
 			toward_centre = Vector2.UP
 		var direction := toward_centre.rotated(rng.randf_range(-SPAWN_DIRECTION_SPREAD, SPAWN_DIRECTION_SPREAD))
@@ -175,11 +177,12 @@ func _draw() -> void:
 		return
 	if not scanning and charge_distance <= 0.0 and cooldown_remaining <= 0.0:
 		return
-	var radius: float = progression.get_tracking_radius() + 16.0
+	var visual_scale := _world_px(1.0)
+	var radius: float = _world_px(progression.get_tracking_radius() + 16.0)
 	var blocked := scanning and not is_blank_sky(cursor_position)
 	var track_alpha := 0.16 if blocked else 0.30
-	draw_arc(cursor_position, radius, 0.0, TAU, 64, Color(UITheme.SHADOW, 0.76), 4.2, true)
-	draw_arc(cursor_position, radius, 0.0, TAU, 64, Color(UITheme.ACCENT_DEEP, track_alpha), 1.4, true)
+	draw_arc(cursor_position, radius, 0.0, TAU, 64, Color(UITheme.SHADOW, 0.76), 4.2 * visual_scale, true)
+	draw_arc(cursor_position, radius, 0.0, TAU, 64, Color(UITheme.ACCENT_DEEP, track_alpha), 1.4 * visual_scale, true)
 	var progress := get_charge_progress()
 	var arc_color := Color(UITheme.ACCENT_LINE, 0.38 if blocked else 0.92)
 	if cooldown_remaining > 0.0:
@@ -194,6 +197,18 @@ func _draw() -> void:
 		-PI * 0.5 + TAU * progress,
 		64,
 		arc_color,
-		2.2,
+		2.2 * visual_scale,
 		true
 	)
+
+
+func _atmospheric_rect() -> Rect2:
+	if observation_view != null:
+		return observation_view.atmospheric_rect()
+	return Rect2(Vector2.ZERO, get_viewport_rect().size)
+
+
+func _world_px(pixels: float) -> float:
+	if observation_view != null:
+		return observation_view.screen_length_to_world(pixels)
+	return pixels

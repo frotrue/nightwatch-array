@@ -12,6 +12,7 @@ Engine: Godot 4.7.2-stable, `gl_compatibility` renderer, 1152x648 viewport.
 
 ```
 Game (Node2D)                      scripts/game.gd
+├── ObservationView (Camera2D)     scripts/observation_view.gd
 ├── Starfield (Node2D)             scripts/starfield.gd
 ├── TwinkleStars (Node2D)          scripts/star_twinkle.gd
 ├── MeteorLayer (Node2D)           (plain container; holds meteor.gd instances)
@@ -42,8 +43,9 @@ content.
 | Script | Owns |
 |---|---|
 | `game.gd` | Round lifecycle, save/load orchestration, economy-independent feedback dispatch (kick/shake/hitstop), debug keys. The only node that knows about all the others. |
+| `observation_view.gd` | The fixed atmospheric playfield, the camera-visible world rectangle, screen/world point conversion, screen-length conversion, and the Camera2D feedback offset. Stage 0 keeps its span at exactly 1.0. |
 | `progression_controller.gd` | Data balance, purchased nodes, discovery gates, transient Taurus manual combo, persistent Leo storm charge, and systemic derived upgrade effects. Single source of truth: consumers ask it, not `game_balance.gd`. |
-| `game_balance.gd` | Static data only: the 95 upgrade definitions and the meteor/long-watch-target spec table. `RefCounted`, no state. |
+| `game_balance.gd` | Static data only: the 95 upgrade definitions, the meteor/long-watch-target spec table, and the single final galactic observation-span ceiling. `RefCounted`, no state. |
 | `meteor_spawner.gd` | Spawn cadence, type rolls (including same-round satellites, variable stars, comets, binary stars, and distant galaxies), delayed/forecast Gemini observation echoes, paced Leo meteor-storm queues, sky-wide burnout endpoint planning, forecast contact announcements, fragment spawning, survey-requested custom-start spawns, shower and round-guarded Canis Major spawns, support-lane assignment. |
 | `meteor.gd` | One object's burn-progress motion, trail and terminal fade, observation progress, quality grading, split behaviour, and passive spectral calibration result. |
 | `observation_controller.gd` | Cursor sampling, the tracking-versus-survey input latch, manual tracking, swept-path hit detection, tracking and hover rings, and the software cursor. |
@@ -67,12 +69,36 @@ hud.bind_progression(progression)      upgrade_tree.bind_progression(progression
 hud.bind_settings(settings)            upgrade_tree.bind_settings(settings)
 hud.bind_save_games(save_games)        tutorial.setup(settings, progression)
 
-sky_contacts.setup(meteor_layer, progression)
-spawner.setup(meteor_layer, progression)
-survey.setup(progression, spawner, meteor_layer)
-observer.setup(meteor_layer, progression, hud, survey)
-events.setup(spawner, progression)
+starfield.setup(observation_view)         twinkle_stars.setup(observation_view)
+effects.setup(observation_view)
+sky_contacts.setup(meteor_layer, progression, observation_view)
+spawner.setup(meteor_layer, progression, observation_view)
+survey.setup(progression, spawner, meteor_layer, observation_view)
+observer.setup(meteor_layer, progression, hud, survey, observation_view)
+events.setup(spawner, progression, observation_view)
 ```
+
+The main scene also injects `ObservationView` into the star layers, effects,
+contacts, spawner, survey, observer, and events. Optional view arguments keep
+standalone probes on their original identity coordinate system.
+
+## Observation coordinates
+
+The main sky now has an identity-scaled `Camera2D` even though stage 0 does not
+zoom. `ObservationView` exposes five routing methods:
+
+- `atmospheric_rect()` stays at the shipped 1152×648 playfield.
+- `visible_world_rect()` is the camera-visible area around the same centre.
+- `screen_to_world()` and `world_to_screen()` cross the input/HUD boundary.
+- `screen_length_to_world()` preserves pixel-sized interaction and drawing
+  contracts when a later stage raises the span.
+
+Meteor entry and burnout planning, dish homes, and shower entry previews use
+the atmospheric rectangle. Background coverage and full-screen feedback use
+the visible rectangle. `EffectsLayer` sends shake and kick through the camera
+instead of writing `Viewport.canvas_transform` in the main scene; the
+standalone Layer 2 probe retains the legacy fallback because it has no
+`ObservationView`.
 
 ## Signal wiring
 

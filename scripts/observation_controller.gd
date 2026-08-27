@@ -18,6 +18,7 @@ var meteor_layer: Node2D
 var progression: Node
 var hud: CanvasLayer
 var survey: Node2D
+var observation_view: Camera2D
 var selected_meteor = null
 var hovered_meteor = null
 var tracked_meteors: Array = []
@@ -32,11 +33,12 @@ var interaction_mode: InteractionMode = InteractionMode.NONE
 var pending_blank_distance: float = 0.0
 
 
-func setup(target_layer: Node2D, progression_controller: Node, hud_layer: CanvasLayer, survey_controller: Node2D = null) -> void:
+func setup(target_layer: Node2D, progression_controller: Node, hud_layer: CanvasLayer, survey_controller: Node2D = null, view: Camera2D = null) -> void:
 	meteor_layer = target_layer
 	progression = progression_controller
 	hud = hud_layer
 	survey = survey_controller
+	observation_view = view
 	# Keep the engine-side mouse state coalesced. Gameplay samples that state once
 	# per rendered frame and does not subscribe to raw mouse-motion callbacks.
 	Input.set_use_accumulated_input(true)
@@ -44,7 +46,7 @@ func setup(target_layer: Node2D, progression_controller: Node, hud_layer: Canvas
 	# OS-composited cursor from racing ahead of the rendered game during a stall.
 	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
 	native_cursor_visible = false
-	cursor_position = get_viewport().get_mouse_position()
+	cursor_position = _screen_to_world(get_viewport().get_mouse_position())
 	previous_cursor_position = cursor_position
 	cursor_initialized = true
 
@@ -72,7 +74,7 @@ func reset() -> void:
 func _process(delta: float) -> void:
 	if meteor_layer == null:
 		return
-	var sampled_cursor := get_viewport().get_mouse_position()
+	var sampled_cursor := _screen_to_world(get_viewport().get_mouse_position())
 	if not cursor_initialized:
 		cursor_position = sampled_cursor
 		previous_cursor_position = sampled_cursor
@@ -100,8 +102,8 @@ func _process(delta: float) -> void:
 			String(selected_meteor.type_id),
 			predicted_multiplier,
 			maxi(1, _valid_tracked_count()),
-			cursor_position,
-			_software_cursor_radius()
+			_world_to_screen(cursor_position),
+			_screen_length(_software_cursor_radius())
 		)
 	else:
 		hud.hide_tracking()
@@ -146,7 +148,7 @@ func _update_survey_interaction(delta: float) -> void:
 				_update_manual_tracking(delta)
 				return
 			pending_blank_distance += previous_cursor_position.distance_to(cursor_position)
-			if pending_blank_distance >= SCAN_INTENT_DISTANCE:
+			if pending_blank_distance >= _world_px(SCAN_INTENT_DISTANCE):
 				interaction_mode = InteractionMode.SCANNING
 				survey.set_scanning(true, cursor_position)
 				survey.apply_scan_segment(previous_cursor_position, cursor_position, delta / maxf(Engine.time_scale, 0.001))
@@ -185,7 +187,7 @@ func _update_manual_tracking(delta: float) -> void:
 		return
 
 	var primary = selected_meteor
-	var tracking_radius: float = primary.get_tracking_radius(progression.get_tracking_radius())
+	var tracking_radius: float = primary.get_tracking_radius(_world_px(progression.get_tracking_radius()))
 	var current_distance: float = cursor_position.distance_to(primary.global_position)
 	if _apply_manual_contact(primary, delta):
 		tracking_grace_remaining = TRACKING_GRACE_SECONDS
@@ -218,7 +220,7 @@ func _observe_additional_targets(delta: float, primary) -> void:
 func _apply_manual_contact(target, delta: float) -> bool:
 	if not _target_is_valid(target):
 		return false
-	var tracking_radius: float = target.get_tracking_radius(progression.get_tracking_radius())
+	var tracking_radius: float = target.get_tracking_radius(_world_px(progression.get_tracking_radius()))
 	var current_distance: float = cursor_position.distance_to(target.global_position)
 	if current_distance <= tracking_radius:
 		target.apply_manual_observation(
@@ -295,7 +297,7 @@ func _find_target_under_cursor():
 		var child := meteor_layer.get_child(child_index)
 		if not child.has_method("can_be_tracked") or not child.can_be_tracked():
 			continue
-		var tracking_radius: float = child.get_tracking_radius(progression.get_tracking_radius())
+		var tracking_radius: float = child.get_tracking_radius(_world_px(progression.get_tracking_radius()))
 		# Swept point-to-segment distance prevents fast mouse movement from
 		# tunnelling straight through a target between two rendered frames.
 		var distance: float = _distance_to_cursor_path(child.global_position)
@@ -336,7 +338,7 @@ func _cursor_is_on_ui() -> bool:
 	var hovered: Control = get_viewport().gui_get_hovered_control()
 	if hovered != null and hovered.get_mouse_filter_with_override() != Control.MOUSE_FILTER_IGNORE:
 		return true
-	return hud != null and hud.has_method("is_pointer_over_hud") and hud.is_pointer_over_hud(cursor_position)
+	return hud != null and hud.has_method("is_pointer_over_hud") and hud.is_pointer_over_hud(_world_to_screen(cursor_position))
 
 
 func _set_native_cursor_visible(visible: bool) -> void:
@@ -365,6 +367,7 @@ func _draw_software_cursor() -> void:
 	# The cursor is the observation field itself, so Better Lens communicates its
 	# wider range directly instead of relying on a separate crosshair.
 	var observation_radius := _software_cursor_radius()
+	var visual_scale := _world_px(1.0)
 	var tracking := _selection_is_valid()
 	var progress: float = selected_meteor.get_progress() if tracking else 0.0
 	# The cursor and the progress gauge are one circle. They used to be two rings
@@ -380,10 +383,10 @@ func _draw_software_cursor() -> void:
 	var reticle_alpha := 0.34 if tracking else (0.96 if was_holding else 0.72)
 	draw_circle(cursor_position, observation_radius, Color(cursor_color, field_alpha))
 	# The backing stroke only needs to be wide enough for whatever sits on it.
-	draw_arc(cursor_position, observation_radius, 0.0, TAU, 64, shadow_color, 5.6 if tracking else 4.2, true)
+	draw_arc(cursor_position, observation_radius, 0.0, TAU, 64, shadow_color, (5.6 if tracking else 4.2) * visual_scale, true)
 	# Plain circle at rest. Under observation the same circle sweeps and thickens,
 	# so progress is read as a fattening border rather than as a second ring.
-	draw_arc(cursor_position, observation_radius, 0.0, TAU, 64, Color(cursor_color, reticle_alpha), 1.8, true)
+	draw_arc(cursor_position, observation_radius, 0.0, TAU, 64, Color(cursor_color, reticle_alpha), 1.8 * visual_scale, true)
 	if tracking and progress > 0.0:
 		draw_arc(
 			cursor_position,
@@ -392,20 +395,20 @@ func _draw_software_cursor() -> void:
 			-PI * 0.5 + TAU * progress,
 			64,
 			cursor_color,
-			lerpf(2.2, 5.0, progress),
+			lerpf(2.2, 5.0, progress) * visual_scale,
 			true
 		)
 	for direction in [Vector2.LEFT, Vector2.RIGHT, Vector2.UP, Vector2.DOWN]:
-		var range_tick_start: Vector2 = cursor_position + direction * (observation_radius - 4.0)
-		var range_tick_end: Vector2 = cursor_position + direction * (observation_radius + 5.0)
-		draw_line(range_tick_start, range_tick_end, shadow_color, 4.2, true)
-		draw_line(range_tick_start, range_tick_end, Color(cursor_color, reticle_alpha), 1.8, true)
-		var center_mark_start: Vector2 = cursor_position + direction * 4.0
-		var center_mark_end: Vector2 = cursor_position + direction * 8.0
-		draw_line(center_mark_start, center_mark_end, shadow_color, 4.0, true)
-		draw_line(center_mark_start, center_mark_end, Color(cursor_color, reticle_alpha), 1.6, true)
-	draw_circle(cursor_position, 4.0, shadow_color)
-	draw_circle(cursor_position, 1.8, cursor_color)
+		var range_tick_start: Vector2 = cursor_position + direction * (observation_radius - 4.0 * visual_scale)
+		var range_tick_end: Vector2 = cursor_position + direction * (observation_radius + 5.0 * visual_scale)
+		draw_line(range_tick_start, range_tick_end, shadow_color, 4.2 * visual_scale, true)
+		draw_line(range_tick_start, range_tick_end, Color(cursor_color, reticle_alpha), 1.8 * visual_scale, true)
+		var center_mark_start: Vector2 = cursor_position + direction * 4.0 * visual_scale
+		var center_mark_end: Vector2 = cursor_position + direction * 8.0 * visual_scale
+		draw_line(center_mark_start, center_mark_end, shadow_color, 4.0 * visual_scale, true)
+		draw_line(center_mark_start, center_mark_end, Color(cursor_color, reticle_alpha), 1.6 * visual_scale, true)
+	draw_circle(cursor_position, 4.0 * visual_scale, shadow_color)
+	draw_circle(cursor_position, 1.8 * visual_scale, cursor_color)
 	_draw_manual_combo(observation_radius)
 
 
@@ -415,10 +418,11 @@ func _draw_manual_combo(observation_radius: float) -> void:
 	var stacks: int = progression.get_taurus_combo_stack_count()
 	if stacks <= 0:
 		return
-	var timer_radius := observation_radius + 8.0
+	var visual_scale := _world_px(1.0)
+	var timer_radius := observation_radius + 8.0 * visual_scale
 	var timer_progress: float = progression.get_manual_combo_progress()
 	var timer_color := UITheme.ACCENT_LINE.lerp(UITheme.INK_MAX, float(stacks) / 10.0)
-	draw_arc(cursor_position, timer_radius, 0.0, TAU, 64, Color(UITheme.SHADOW, 0.78), 4.2, true)
+	draw_arc(cursor_position, timer_radius, 0.0, TAU, 64, Color(UITheme.SHADOW, 0.78), 4.2 * visual_scale, true)
 	draw_arc(
 		cursor_position,
 		timer_radius,
@@ -426,12 +430,12 @@ func _draw_manual_combo(observation_radius: float) -> void:
 		-PI * 0.5 + TAU * timer_progress,
 		64,
 		Color(timer_color, 0.92),
-		2.2,
+		2.2 * visual_scale,
 		true
 	)
 	var font: Font = UITheme.mono_tabular(true)
-	var font_size := UITheme.size_px(22.0)
-	var label_position := cursor_position + Vector2(timer_radius + 7.0, float(font_size) * 0.35)
+	var font_size := int(round(float(UITheme.size_px(22.0)) * visual_scale))
+	var label_position := cursor_position + Vector2(timer_radius + 7.0 * visual_scale, float(font_size) * 0.35)
 	draw_string(
 		font,
 		label_position,
@@ -444,11 +448,12 @@ func _draw_manual_combo(observation_radius: float) -> void:
 
 
 func _software_cursor_radius() -> float:
-	return progression.get_tracking_radius() if progression != null else DEFAULT_TRACKING_RADIUS
+	return _world_px(progression.get_tracking_radius() if progression != null else DEFAULT_TRACKING_RADIUS)
 
 
 func _draw_tracking_ring(target, is_primary: bool) -> void:
-	var tracking_radius: float = target.get_tracking_radius(progression.get_tracking_radius())
+	var visual_scale := _world_px(1.0)
+	var tracking_radius: float = target.get_tracking_radius(_world_px(progression.get_tracking_radius()))
 	var quality: float = target.get_quality()
 	# Quality rides brightness inside the palette: a poorly centred track sits
 	# at the accent line, a perfectly centred one climbs to the brightest ink.
@@ -458,13 +463,13 @@ func _draw_tracking_ring(target, is_primary: bool) -> void:
 	# the cursor drifts inside the grace radius the connector line is what says
 	# which object is still latched.
 	if is_primary:
-		draw_line(cursor_position, target.global_position, Color(UITheme.ACCENT_DEEP, 0.45), 1.0, true)
+		draw_line(cursor_position, target.global_position, Color(UITheme.ACCENT_DEEP, 0.45), 1.0 * visual_scale, true)
 		return
 	# Secondary targets keep a ring of their own, on one radius: the dim full
 	# circle is the track and the bright arc fills it. The cursor gauge only ever
 	# reports the primary, so these have nothing else showing their progress.
 	draw_circle(target.global_position, tracking_radius, Color(ring_color, 0.018))
-	draw_arc(target.global_position, tracking_radius, 0.0, TAU, 48, Color(ring_color, 0.16), 0.9, true)
+	draw_arc(target.global_position, tracking_radius, 0.0, TAU, 48, Color(ring_color, 0.16), 0.9 * visual_scale, true)
 	draw_arc(
 		target.global_position,
 		tracking_radius,
@@ -472,24 +477,47 @@ func _draw_tracking_ring(target, is_primary: bool) -> void:
 		-PI * 0.5 + TAU * target.get_progress(),
 		48,
 		Color(ring_color, 0.76),
-		1.8,
+		1.8 * visual_scale,
 		true
 	)
 
 
 func _draw_hover_ring(target) -> void:
-	var tracking_radius: float = target.get_tracking_radius(progression.get_tracking_radius())
+	var visual_scale := _world_px(1.0)
+	var tracking_radius: float = target.get_tracking_radius(_world_px(progression.get_tracking_radius()))
 	# A hint, not a gauge, so it stays below the tracking ring.
 	var ring_color := UITheme.INK_MID
 	var pulse := 1.0 + sin(Time.get_ticks_msec() * 0.006) * 0.06
 	var radius := tracking_radius * pulse
-	draw_arc(target.global_position, radius, 0.0, TAU, 40, Color(ring_color, 0.34), 1.8, true)
+	draw_arc(target.global_position, radius, 0.0, TAU, 40, Color(ring_color, 0.34), 1.8 * visual_scale, true)
 	for angle in [0.0, PI * 0.5, PI, PI * 1.5]:
 		var direction := Vector2.from_angle(angle)
 		draw_line(
-			target.global_position + direction * (radius - 5.0),
-			target.global_position + direction * (radius + 5.0),
+			target.global_position + direction * (radius - 5.0 * visual_scale),
+			target.global_position + direction * (radius + 5.0 * visual_scale),
 			Color(ring_color, 0.62),
-			2.0,
+			2.0 * visual_scale,
 			true
 		)
+
+
+func _world_px(pixels: float) -> float:
+	if observation_view != null:
+		return observation_view.screen_length_to_world(pixels)
+	return pixels
+
+
+func _screen_length(world_length: float) -> float:
+	return world_length / maxf(_world_px(1.0), 0.001)
+
+
+func _screen_to_world(point: Vector2) -> Vector2:
+	if observation_view != null:
+		return observation_view.screen_to_world(point)
+	return point
+
+
+func _world_to_screen(point: Vector2) -> Vector2:
+	if observation_view != null:
+		return observation_view.world_to_screen(point)
+	return point

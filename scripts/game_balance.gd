@@ -12,6 +12,9 @@ const CANIS_FINAL_ACTIVE_CAPACITY_DELTA := 2
 const CANIS_FINAL_REGULAR_SPAWN_INTERVAL_FLOOR := 0.70
 const REGULAR_SPAWN_INTERVAL_MIN := 1.6
 const REGULAR_SPAWN_INTERVAL_MAX := 2.4
+# pow(1.05, 8): the single upper bound for the eight future galactic pull-back
+# steps. Stage 0 does not apply this span to the camera.
+const GALACTIC_FINAL_OBSERVATION_SPAN := 1.4774554
 const BRANCHES := {
 	"optics": {"name": "OPTICS / MANUAL", "color": Color("53d6ff")},
 	"detection": {"name": "DETECTION / DISCOVERY", "color": Color("b379ff")},

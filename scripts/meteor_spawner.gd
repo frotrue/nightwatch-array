@@ -40,6 +40,7 @@ enum LaneSelectionOrder {
 
 var meteor_layer: Node2D
 var progression: Node
+var observation_view: Camera2D
 var rng := RandomNumberGenerator.new()
 var forecast_rng := RandomNumberGenerator.new()
 var warm_contact_rng := RandomNumberGenerator.new()
@@ -65,9 +66,10 @@ var echo_burst_serial: int = 0
 var canis_major_spawned_this_round: bool = false
 
 
-func setup(target_layer: Node2D, progression_controller: Node) -> void:
+func setup(target_layer: Node2D, progression_controller: Node, view: Camera2D = null) -> void:
 	meteor_layer = target_layer
 	progression = progression_controller
+	observation_view = view
 	rng.randomize()
 	forecast_rng.randomize()
 	warm_contact_rng.randomize()
@@ -169,7 +171,7 @@ func spawn_meteor(type_id: String = "common", custom_start := Vector2.INF, custo
 		lifetime_scale = lifetime_override / float(spec.lifetime)
 	var meteor = MeteorScript.new()
 	var features := _current_features(type_id)
-	meteor.configure(spec, type_id, start, move_velocity, lifetime_scale, features, burnout)
+	meteor.configure(spec, type_id, start, move_velocity, lifetime_scale, features, burnout, observation_view)
 	if is_observation_echo:
 		meteor.set_meta("gemini_echo", true)
 	if is_leonid_storm:
@@ -286,7 +288,7 @@ func _plan_echo_entry(type_id: String, index: int, count: int, trigger: Dictiona
 	if progression.has_upgrade("echo_deconfliction"):
 		return _plan_deconflicted_echo_entry(type_id, index, count, trigger)
 	if progression.has_upgrade("mirror_echo_solution") and not trigger.is_empty():
-		var size := get_viewport().get_visible_rect().size
+		var size := _atmospheric_rect().size
 		var mirrored_start := Vector2(size.x - float(Vector2(trigger.entry).x), float(Vector2(trigger.entry).y))
 		var mirrored_burnout := Vector2(size.x - float(Vector2(trigger.burnout).x), float(Vector2(trigger.burnout).y))
 		var direction := (mirrored_burnout - mirrored_start).normalized()
@@ -301,7 +303,7 @@ func _plan_echo_entry(type_id: String, index: int, count: int, trigger: Dictiona
 
 
 func _plan_deconflicted_echo_entry(type_id: String, index: int, count: int, trigger: Dictionary) -> Dictionary:
-	var size := get_viewport().get_visible_rect().size
+	var size := _atmospheric_rect().size
 	var spec := Balance.meteor_spec(type_id)
 	var speed := float(spec.speed)
 	var lifetime_scale: float = progression.get_lifetime_multiplier() if progression != null else 1.0
@@ -353,9 +355,9 @@ func _announce_echo_contact(type_id: String, entry: Dictionary, countdown: float
 		"velocity": entry.velocity,
 		"burnout": entry.burnout,
 		"direction": direction,
-		"intercept": Vector2(entry.start) + direction * FORECAST_INTERCEPT_DISTANCE,
-		"error_offset": Vector2.from_angle(forecast_rng.randf_range(0.0, TAU)) * forecast_rng.randf_range(min_error, max_error),
-		"max_error": max_error,
+		"intercept": Vector2(entry.start) + direction * _world_px(FORECAST_INTERCEPT_DISTANCE),
+		"error_offset": Vector2.from_angle(forecast_rng.randf_range(0.0, TAU)) * _world_px(forecast_rng.randf_range(min_error, max_error)),
+		"max_error": _world_px(max_error),
 		"countdown": countdown,
 		"lead_time": countdown,
 		"trajectory_known": progression.has_upgrade("mirror_echo_solution") or progression.has_upgrade("trajectory"),
@@ -437,7 +439,7 @@ func _leonid_storm_entry(type_id: String, index: int) -> Dictionary:
 	var entry := plan_entry(type_id)
 	if not progression.has_upgrade("split_radiant_model"):
 		return entry
-	var size := get_viewport().get_visible_rect().size
+	var size := _atmospheric_rect().size
 	var should_start_left := index % 2 == 0
 	var starts_left := float(Vector2(entry.start).x) <= size.x * 0.5
 	if should_start_left == starts_left:
@@ -455,7 +457,7 @@ func plan_entry(type_id: String) -> Dictionary:
 
 
 func _plan_entry_with_rng(type_id: String, source_rng: RandomNumberGenerator) -> Dictionary:
-	var size := get_viewport().get_visible_rect().size
+	var size := _atmospheric_rect().size
 	var spec := Balance.meteor_spec(type_id)
 	# Keep the planning stream at the legacy fixed five draws so changing spatial
 	# geometry cannot silently change later type rolls or spawn cadence.
@@ -660,9 +662,9 @@ func _announce_regular_spawn(source_rng: RandomNumberGenerator = null) -> void:
 		"velocity": entry.velocity,
 		"burnout": entry.burnout,
 		"direction": direction,
-		"intercept": Vector2(entry.start) + direction * FORECAST_INTERCEPT_DISTANCE,
-		"error_offset": Vector2.from_angle(forecast_rng.randf_range(0.0, TAU)) * forecast_rng.randf_range(min_error, max_error),
-		"max_error": max_error,
+		"intercept": Vector2(entry.start) + direction * _world_px(FORECAST_INTERCEPT_DISTANCE),
+		"error_offset": Vector2.from_angle(forecast_rng.randf_range(0.0, TAU)) * _world_px(forecast_rng.randf_range(min_error, max_error)),
+		"max_error": _world_px(max_error),
 		"countdown": lead_time,
 		"lead_time": lead_time,
 		"trajectory_known": progression.has_upgrade("trajectory"),
@@ -711,7 +713,7 @@ func spawn_for_perseid_outburst(index: int) -> void:
 
 
 func spawn_major_fireball():
-	var size := get_viewport().get_visible_rect().size
+	var size := _atmospheric_rect().size
 	var start := Vector2(size.x + 80.0, size.y * 0.16)
 	var target := Vector2(-110.0, size.y * 0.72)
 	return spawn_meteor("major", start, (target - start).normalized() * 128.0, 14.0)
@@ -734,7 +736,7 @@ func refresh_active_features() -> void:
 
 
 func _spawn_first_meteor() -> void:
-	var size := get_viewport().get_visible_rect().size
+	var size := _atmospheric_rect().size
 	var start := Vector2(size.x + 16.0, size.y * 0.18)
 	var target := Vector2(size.x * 0.31, size.y * 0.57)
 	var spec := Balance.meteor_spec("common")
@@ -895,3 +897,15 @@ func _regular_active_count() -> int:
 		):
 			count += 1
 	return count
+
+
+func _atmospheric_rect() -> Rect2:
+	if observation_view != null:
+		return observation_view.atmospheric_rect()
+	return Rect2(Vector2.ZERO, get_viewport().get_visible_rect().size)
+
+
+func _world_px(pixels: float) -> float:
+	if observation_view != null:
+		return observation_view.screen_length_to_world(pixels)
+	return pixels

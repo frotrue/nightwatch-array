@@ -1,5 +1,9 @@
 extends SceneTree
 
+const Balance = preload("res://scripts/game_balance.gd")
+const StarfieldScript = preload("res://scripts/starfield.gd")
+const StarTwinkleScript = preload("res://scripts/star_twinkle.gd")
+
 var failures: Array[String] = []
 
 
@@ -25,6 +29,35 @@ func _run() -> void:
 	root.add_child(game)
 	await process_frame
 	await process_frame
+	var observation_view = game.observation_view
+	var atmospheric_rect: Rect2 = observation_view.atmospheric_rect()
+	var visible_world_rect: Rect2 = observation_view.visible_world_rect()
+	var identity_probe := Vector2(317.0, 211.0)
+	_check(
+		atmospheric_rect.position == Vector2.ZERO and atmospheric_rect.size == Vector2(1152.0, 648.0),
+		"observation routing keeps the atmospheric playfield at the shipped 1152x648 rect"
+	)
+	_check(
+		visible_world_rect.position == atmospheric_rect.position and visible_world_rect.size == atmospheric_rect.size,
+		"stage-zero observation span leaves the visible world identical to the atmospheric playfield"
+	)
+	_check(
+		observation_view.world_to_screen(identity_probe).is_equal_approx(identity_probe)
+		and observation_view.screen_to_world(identity_probe).is_equal_approx(identity_probe)
+		and is_equal_approx(observation_view.screen_length_to_world(36.0), 36.0),
+		"stage-zero observation world and screen conversions are identity transforms"
+	)
+	var outer_background_reserved := false
+	for star in game.starfield.outer_stars:
+		if not atmospheric_rect.has_point(Vector2(star.p)):
+			outer_background_reserved = true
+			break
+	_check(outer_background_reserved, "background stars reserve deterministic coverage outside the atmospheric playfield")
+	_check(
+		StarfieldScript.BACKGROUND_COVERAGE_SPAN > Balance.GALACTIC_FINAL_OBSERVATION_SPAN
+		and StarTwinkleScript.BACKGROUND_COVERAGE_SPAN > Balance.GALACTIC_FINAL_OBSERVATION_SPAN,
+		"background coverage derives with overscan from the single galactic observation-span ceiling"
+	)
 	var original_research_rotation: float = game.settings.get_research_chart_rotation()
 	var startup_save_directory := "user://nightwatch_startup_smoke_saves"
 	_cleanup_smoke_saves(startup_save_directory)
