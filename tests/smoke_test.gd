@@ -149,6 +149,7 @@ func _run() -> void:
 	_check(TranslationServer.translate("CONSTELLATION_GEMINI") == "쌍둥이자리  /  공명", "the mapped Gemini figure exposes its Korean research role")
 	_check(TranslationServer.translate("CONSTELLATION_LEO") == "사자자리  /  유성 폭풍", "the mapped Leo figure exposes its Korean research role")
 	_check(TranslationServer.translate("CONSTELLATION_URSA_MINOR") == "작은곰자리  /  빈 하늘 훑기", "the mapped Ursa Minor figure exposes its Korean research role")
+	_check(TranslationServer.translate("CONSTELLATION_DRACO") == "용자리  /  최종 관측", "the mapped Draco figure exposes its Korean culmination role")
 	_check(TranslationServer.translate("HUD_AUTOSAVED") == "자동 저장됨", "Korean autosave status stays concise")
 	_check(TranslationServer.translate("HUD_OBSERVATION_TIME") % [1, 1, 0] == "1차 관측  •  01:00", "Korean round countdown reads naturally")
 	_check(TranslationServer.translate("TREE_INTERMISSION_SUBTITLE") % [2, 30] == "업그레이드 시간  /  2차 관측은 30초", "Korean upgrade-break guidance explains the next round and duration")
@@ -274,6 +275,7 @@ func _run() -> void:
 	_check(not game.hud.root_control.has_node("ArrayCompletionBar"), "the HUD no longer duplicates completion as a bar")
 	_check(not game.hud.tracking_cluster.is_processing(), "the hidden tracking instrument does no frame work before first use")
 	_check(game.progression.get_node_state("long_exposure") == "hidden", "adjacent optics node begins hidden")
+	_check(game.progression.get_node_state("draco_synthesis") == "hidden", "Draco stays dark before every other constellation is complete")
 	_check(not game.progression.forecast_visible(), "Andromeda forecasts are inert before Ephemeris Marks")
 	_check(is_equal_approx(game.progression.get_lifetime_multiplier(), 1.0), "Perseus exposure is inert before purchase")
 	_check(is_equal_approx(game.progression.get_analysis_speed_multiplier("comet"), 1.0), "Andromeda analysis speed is inert before its capstone")
@@ -292,6 +294,29 @@ func _run() -> void:
 		capacity_probe.purchased_nodes[String(capacity_step[0])] = true
 		_check(capacity_probe.get_max_active() == int(capacity_step[1]), "%s contributes its permanent active-sky slot" % String(capacity_step[0]))
 	capacity_probe.free()
+	var draco_probe = load("res://scripts/progression_controller.gd").new()
+	for draco_gate_definition_variant in balance.UPGRADE_NODES:
+		var draco_gate_definition: Dictionary = draco_gate_definition_variant
+		if String(draco_gate_definition.branch) != "draco":
+			draco_probe.purchased_nodes[String(draco_gate_definition.id)] = true
+	_check(draco_probe.upgrade_level == 86 and draco_probe.get_node_state("draco_synthesis") == "available", "completing the other eleven constellations reveals Draco's first star")
+	_check(draco_probe.get_node_state("draco_cadence") == "hidden", "Draco still reveals only one internal step at a time")
+	_check(draco_probe.debug_purchase_node("draco_synthesis") and is_equal_approx(draco_probe.get_observation_value_multiplier("common", 1), 1024.0), "All-Sky Synthesis multiplies the legacy x256 array to x1024")
+	_check(draco_probe.debug_purchase_node("draco_cadence") and is_equal_approx(draco_probe.get_regular_spawn_interval_floor(), 0.45), "Circumpolar Cadence lowers the regular-arrival floor to 0.45 seconds")
+	_check(draco_probe.debug_purchase_node("draco_capacity") and draco_probe.get_max_active() == 18, "Dragon-Spine Array raises regular active capacity from twelve to eighteen")
+	_check(draco_probe.debug_purchase_node("draco_sweep"), "Coiled-Sky Sweep follows the capacity step")
+	_check(is_equal_approx(draco_probe.get_survey_required_distance(), 190.0) and is_equal_approx(draco_probe.get_survey_spawn_probability(), 1.0) and draco_probe.get_survey_spawn_count() == 4 and is_equal_approx(draco_probe.get_survey_cooldown_seconds(), 0.45), "Coiled-Sky Sweep applies all four declared sweep overcharge effects")
+	_check(draco_probe.debug_purchase_node("draco_echo") and is_equal_approx(draco_probe.get_observation_echo_probability(), 0.65) and draco_probe.get_observation_echo_count() == 6, "Polar Resonance raises the manual echo to sixty-five percent and six entries")
+	_check(draco_probe.debug_purchase_node("draco_storm") and draco_probe.get_leonid_trigger_count() == 2 and draco_probe.get_leonid_storm_count() == 30, "Radiant Convergence arms thirty-object storms after two manual observations")
+	_check(draco_probe.debug_purchase_node("draco_array") and draco_probe.get_dish_count() == 4 and draco_probe.get_secondary_slots() == 4, "Total Array expands both steerable dishes and automatic lanes to four")
+	_check(draco_probe.debug_purchase_node("draco_apotheosis") and is_equal_approx(draco_probe.get_observation_value_multiplier("common", 1), 8192.0), "Dragon's Eye raises the completed constellation economy to x8192")
+	_check(not draco_probe.galaxy_unlocked() and draco_probe.debug_purchase_node("galactic_reference_frame") and draco_probe.galaxy_unlocked(), "the final Draco node unlocks the galactic reference frame")
+	_check(draco_probe.is_research_complete(), "the nine Draco systems complete the expanded research graph")
+	var draco_save_probe = load("res://scripts/progression_controller.gd").new()
+	draco_save_probe.load_save_data(draco_probe.get_save_data())
+	_check(draco_save_probe.galaxy_unlocked() and is_equal_approx(draco_save_probe.get_observation_value_multiplier("common", 1), 8192.0), "Draco culmination and galaxy state survive ID-based saves")
+	draco_save_probe.free()
+	draco_probe.free()
 	var research_probe = load("res://scripts/progression_controller.gd").new()
 	var base_probe_scale: float = research_probe.get_spawn_interval_scale()
 	_check(research_probe.debug_purchase_node("momentum_acquisition"), "Taurus Momentum is available from the opening sky")
@@ -609,6 +634,11 @@ func _run() -> void:
 		if not String(Dictionary(taurus_star_variant).get("node_id", "")).is_empty():
 			taurus_research_stars += 1
 	_check(taurus_research_stars == 8, "Taurus maps Momentum research across all eight stars and every figure segment")
+	var draco_research_stars := 0
+	for draco_star_variant in chart_data.CONSTELLATIONS.draco.stars:
+		if not String(Dictionary(draco_star_variant).get("node_id", "")).is_empty():
+			draco_research_stars += 1
+	_check(draco_research_stars == 9, "Draco maps its complete culmination chain across all nine stars")
 	var deep_sky_marker_kinds := {}
 	for marker_constellation_id in ["orion", "taurus", "andromeda"]:
 		for marker_star_variant in chart_data.CONSTELLATIONS[marker_constellation_id].stars:
@@ -1327,11 +1357,12 @@ func _run() -> void:
 	game.progression.debug_purchase_all()
 	_check(game.progression.upgrade_level == balance.UPGRADE_NODES.size(), "all tree nodes unlock through prerequisite-safe debug purchase")
 	_check(game.progression.is_research_complete(), "the progression controller recognizes the complete research graph")
-	_check(is_equal_approx(game.progression.get_observation_value_multiplier("common", 1), 256.0), "the eight selected branch leaves produce exact unconditional x256 observation value growth")
+	_check(is_equal_approx(game.progression.get_observation_value_multiplier("common", 1), 8192.0), "the eight legacy leaves and two Draco multipliers produce exact unconditional x8192 observation value growth")
+	_check(game.progression.galaxy_unlocked() and game.starfield.galactic_mode, "the final Draco purchase switches the live sky into its galactic visual state")
 	_check(game.events.canis_major_state == "idle", "purchasing Sirius during a live round waits until the next round to schedule its event")
 	var completed_save_probe = load("res://scripts/progression_controller.gd").new()
 	completed_save_probe.load_save_data(game.progression.get_save_data())
-	_check(completed_save_probe.is_research_complete() and is_equal_approx(completed_save_probe.get_observation_value_multiplier("common", 1), 256.0), "ID-based completed saves retain every purchased node and intentionally gain the new x256 effects")
+	_check(completed_save_probe.is_research_complete() and completed_save_probe.galaxy_unlocked() and is_equal_approx(completed_save_probe.get_observation_value_multiplier("common", 1), 8192.0), "ID-based completed saves retain every purchased node and the galactic x8192 endpoint")
 	completed_save_probe.free()
 	game.upgrade_tree._refresh()
 	await process_frame
@@ -1352,17 +1383,22 @@ func _run() -> void:
 				and installed_states[1] == "purchased"
 				and game.upgrade_tree._segment_color(installed_states) == Color(chart_ui_theme.LINE_INSTALLED, 0.42)
 			)
-	_check(installed_research_segments == 82 and all_research_segments_installed, "all eighty-two research-constellation segments reach the installed color at full completion")
-	_check(game.progression.get_max_active() == 12, "the completed Canis array raises the regular active-sky cap from the legacy eight to twelve")
-	_check(is_equal_approx(game.progression.get_regular_spawn_interval_floor(), 0.70), "the completed Canis array lowers the regular-arrival floor from 1.15 to 0.70 seconds")
+	_check(installed_research_segments == 91 and all_research_segments_installed, "all ninety-one research-constellation segments reach the installed color at full completion")
+	_check(game.progression.get_max_active() == 18, "the completed Draco array raises the regular active-sky cap from twelve to eighteen")
+	_check(is_equal_approx(game.progression.get_regular_spawn_interval_floor(), 0.45), "the completed Draco array lowers the regular-arrival floor from 0.70 to 0.45 seconds")
 	_check(game.progression.upgrade_level == balance.UPGRADE_NODES.size(), "the run resolves to the full research array completion")
 	_check(is_equal_approx(game.progression.get_progression_ratio(), 1.0), "the original pacing topology preserves the completed-tree density endpoint")
 	for legacy_id in ["better_lens", "long_exposure", "wide_field", "trajectory", "precision_multiplier", "secondary_camera", "shower_detector", "automated_tracking"]:
 		_check(game.progression.has_upgrade(legacy_id), "legacy upgrade migrated: " + legacy_id)
 	_check(game.progression.has_upgrade("automated_tracking"), "final automation system is active")
-	_check(game.progression.get_secondary_slots() == 2, "observatory network keeps its two automatic lanes when dish capacity grows")
-	_check(game.progression.get_dish_count() == 2, "observatory network adds a second steerable dish for late-game capacity")
-	_check(game.sky_contacts.dishes.size() == 2, "purchasing the observatory network places both steerable dishes")
+	_check(game.progression.get_secondary_slots() == 4, "Total Array expands automatic support from two lanes to four")
+	_check(game.progression.get_dish_count() == 4, "Total Array expands steerable dish capacity from two to four")
+	_check(game.sky_contacts.dishes.size() == 4, "purchasing Total Array places all four steerable dishes")
+	var all_draco_dishes_on_screen := true
+	for draco_dish_variant in game.sky_contacts.dishes:
+		var draco_dish: Dictionary = draco_dish_variant
+		all_draco_dishes_on_screen = all_draco_dishes_on_screen and float(Vector2(draco_dish.position).x) > 0.0 and float(Vector2(draco_dish.position).x) < 1152.0
+	_check(all_draco_dishes_on_screen, "the four-dish home layout keeps every Total Array dish on screen")
 	_check(game.progression.dish_auto_assignment_enabled(), "completed research includes automatic Predictive Dish Control")
 	_check(game.progression.get_automation_strength("fireball") == 0.0, "rare fireballs remain manual high-value targets")
 	# Literal nearest is intentionally spatial, not availability-aware: a busy
@@ -2015,7 +2051,7 @@ func _run_survey_regressions(packed: PackedScene, balance) -> void:
 
 	var legacy_ids: Array[String] = []
 	for definition in balance.UPGRADE_NODES:
-		if String(definition.branch) not in ["ursa_minor", "canis_major"]:
+		if String(definition.branch) not in ["ursa_minor", "canis_major", "draco"]:
 			legacy_ids.append(String(definition.id))
 	_check(legacy_ids.size() == 71, "the pre-survey research graph remains an exact 71-ID compatibility fixture")
 	survey_game.progression.load_save_data({

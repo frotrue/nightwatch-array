@@ -171,7 +171,7 @@ STAR_RIGEL,Rigel,리겔
 CONSTELLATION_ANDROMEDA,ANDROMEDA,안드로메다자리
 CONSTELLATION_PERSEUS,PERSEUS,페르세우스자리
 CONSTELLATION_LYRA,LYRA,거문고자리
-CONSTELLATION_DRACO,DRACO,용자리
+CONSTELLATION_DRACO,DRACO  /  CULMINATION,용자리  /  최종 관측
 CONSTELLATION_URSA_MINOR,URSA MINOR  /  BLANK-SKY SWEEP,작은곰자리  /  빈 하늘 훑기
 CONSTELLATION_LEO,LEO  /  METEOR STORM,사자자리  /  유성 폭풍
 CONSTELLATION_GEMINI,GEMINI  /  ECHO,쌍둥이자리  /  공명
@@ -402,6 +402,24 @@ UPGRADE_CANIS_CAPACITY_III_NAME,Pack Array,무리 관측망
 UPGRADE_CANIS_CAPACITY_III_DESC,"Raises regular active-sky capacity by two, from ten to twelve at the completed legacy array.",완성된 기존 관측망에서 일반 표적의 상한을 2개 늘립니다. 10개에서 12개가 됩니다.
 UPGRADE_SIRIUS_FIREBALL_NAME,Sirius Bloom,시리우스 발광
 UPGRADE_SIRIUS_FIREBALL_DESC,Warns of and releases one Major Fireball at most once during each viable observation round.,시간이 추적을 허락하는 각 관측 회차에 경고 후 대형 화구를 최대 한 번 출현시킵니다.
+UPGRADE_DRACO_SYNTHESIS_NAME,All-Sky Synthesis,전천 합성
+UPGRADE_DRACO_SYNTHESIS_DESC,"Multiplies all observation Data by 4, including automatic completions.",자동 완료를 포함한 모든 관측 데이터를 4배로 늘립니다.
+UPGRADE_DRACO_CADENCE_NAME,Circumpolar Cadence,주극 리듬
+UPGRADE_DRACO_CADENCE_DESC,Lowers the regular meteor interval floor to 0.45 seconds.,일반 유성의 최소 출현 간격을 0.45초로 낮춥니다.
+UPGRADE_DRACO_CAPACITY_NAME,Dragon-Spine Array,용등 관측망
+UPGRADE_DRACO_CAPACITY_DESC,"Raises regular active-sky capacity by six, from twelve to eighteen.",일반 표적의 상한을 6개 늘립니다. 12개에서 18개가 됩니다.
+UPGRADE_DRACO_SWEEP_NAME,Coiled-Sky Sweep,환천 훑기
+UPGRADE_DRACO_SWEEP_DESC,"Overcharges blank-sky sweeping: 190 px per roll, guaranteed success, four meteors, and a 0.45-second cooldown.",빈 하늘 훑기를 과충전합니다. 190px마다 확정 성공하고 유성 4개를 부르며 재사용 대기시간은 0.45초가 됩니다.
+UPGRADE_DRACO_ECHO_NAME,Polar Resonance,극점 공명
+UPGRADE_DRACO_ECHO_DESC,Raises manual-observation echo chance to 65% and launches six echoes at once.,수동 관측의 공명 확률을 65%로 높이고 한 번에 공명 유성 6개를 출현시킵니다.
+UPGRADE_DRACO_STORM_NAME,Radiant Convergence,복사점 수렴
+UPGRADE_DRACO_STORM_DESC,Arms a 30-object Leonid storm after two eligible manual observations.,조건을 만족하는 수동 관측 2회마다 천체 30개의 사자자리 유성 폭풍을 준비합니다.
+UPGRADE_DRACO_ARRAY_NAME,Total Array,총력 관측망
+UPGRADE_DRACO_ARRAY_DESC,Expands the observatory to four steerable dishes and four automatic support lanes.,관측소를 조종 가능한 접시 4개와 자동 지원 레인 4개로 확장합니다.
+UPGRADE_DRACO_APOTHEOSIS_NAME,Dragon's Eye,용의 눈
+UPGRADE_DRACO_APOTHEOSIS_DESC,"Multiplies all observation Data by 8, including automatic completions.",자동 완료를 포함한 모든 관측 데이터를 8배로 늘립니다.
+UPGRADE_GALACTIC_REFERENCE_FRAME_NAME,Galactic Reference Frame,은하 기준계
+UPGRADE_GALACTIC_REFERENCE_FRAME_DESC,"Unlocks galactic observation, converts the completed celestial map to a galactic reference frame, and deepens the background star field.",은하 관측을 해금하고 완성된 성도를 은하 기준계로 전환해 배경별을 깊게 만듭니다.
 UPGRADE_CADENCE_MEMORY_NAME,Cadence Memory,박자 기억
 UPGRADE_CADENCE_MEMORY_DESC,Extends the Momentum window from three seconds to 3.5 seconds and lets five stacks affect its buffs.,모멘텀 제한 시간을 3초에서 3.5초로 늘리고 최대 5중첩까지 강화 효과에 반영합니다.
 UPGRADE_EXPANDED_SWEEP_NAME,Expanded Sweep,확장 탐색
@@ -448,6 +466,7 @@ BANNER_QUALITY,%s OBSERVATION  •  x%.2f,%s 관측  •  x%.2f
 BANNER_GEMINI_ECHO,GEMINI ECHO  •  +%d METEORS,쌍둥이자리 공명  •  유성 +%d
 BANNER_LEONID_STORM,LEONID STORM  •  %d METEORS,사자자리 유성 폭풍  •  유성 %d개
 BANNER_SYSTEM_ONLINE,SYSTEM ONLINE  •  %s,시스템 가동  •  %s
+BANNER_GALACTIC_FRAME,GALACTIC REFERENCE FRAME  •  ONLINE,은하 기준계  •  가동
 BANNER_SECONDARY_ALERT,SECONDARY CAMERA ALERT,보조 카메라 경보
 BANNER_UNUSUAL_SIGNATURE,UNUSUAL SIGNATURE,이상 신호
 EVENT_SHOWER_INCOMING,METEOR SHOWER INCOMING,유성우 접근 중

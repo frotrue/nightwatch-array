@@ -96,17 +96,18 @@ const CONSTELLATIONS := {
 		"segments": [["vega", "epsilon_lyr"], ["vega", "zeta_lyr"], ["zeta_lyr", "sheliak"], ["sheliak", "sulafat"], ["sulafat", "delta_lyr"], ["delta_lyr", "zeta_lyr"]]
 	},
 	"draco": {
+		"branch": "draco",
 		"label_key": "CONSTELLATION_DRACO",
 		"stars": [
-			{"id": "eltanin", "name_key": "STAR_ELTANIN", "bayer": "γ Dra", "magnitude": 2.24, "local_position": Vector2(-1.00, -0.34), "node_id": "", "kind": "star"},
-			{"id": "rastaban", "name_key": "STAR_RASTABAN", "bayer": "β Dra", "magnitude": 2.79, "local_position": Vector2(-0.86, -0.66), "node_id": "", "kind": "star"},
-			{"id": "nu_dra", "name_key": "STAR_NU_DRA", "bayer": "ν Dra", "magnitude": 4.88, "local_position": Vector2(-0.62, -0.52), "node_id": "", "kind": "star"},
-			{"id": "xi_dra", "name_key": "STAR_XI_DRA", "bayer": "ξ Dra", "magnitude": 3.75, "local_position": Vector2(-0.66, -0.20), "node_id": "", "kind": "star"},
-			{"id": "altais", "name_key": "STAR_ALTAIS", "bayer": "δ Dra", "magnitude": 3.07, "local_position": Vector2(-0.18, 0.10), "node_id": "", "kind": "star"},
-			{"id": "zeta_dra", "name_key": "STAR_ZETA_DRA", "bayer": "ζ Dra", "magnitude": 3.17, "local_position": Vector2(0.24, -0.16), "node_id": "", "kind": "star"},
-			{"id": "eta_dra", "name_key": "STAR_ETA_DRA", "bayer": "η Dra", "magnitude": 2.73, "local_position": Vector2(0.60, 0.30), "node_id": "", "kind": "star"},
-			{"id": "thuban", "name_key": "STAR_THUBAN", "bayer": "α Dra", "magnitude": 3.65, "local_position": Vector2(0.88, 0.02), "node_id": "", "kind": "star"},
-			{"id": "iota_dra", "name_key": "STAR_IOTA_DRA", "bayer": "ι Dra", "magnitude": 3.29, "local_position": Vector2(1.00, 0.58), "node_id": "", "kind": "star"}
+			{"id": "eltanin", "name_key": "STAR_ELTANIN", "bayer": "γ Dra", "magnitude": 2.24, "local_position": Vector2(-1.00, -0.34), "node_id": "draco_synthesis", "kind": "star"},
+			{"id": "rastaban", "name_key": "STAR_RASTABAN", "bayer": "β Dra", "magnitude": 2.79, "local_position": Vector2(-0.86, -0.66), "node_id": "draco_cadence", "kind": "star"},
+			{"id": "nu_dra", "name_key": "STAR_NU_DRA", "bayer": "ν Dra", "magnitude": 4.88, "local_position": Vector2(-0.62, -0.52), "node_id": "draco_capacity", "kind": "star"},
+			{"id": "xi_dra", "name_key": "STAR_XI_DRA", "bayer": "ξ Dra", "magnitude": 3.75, "local_position": Vector2(-0.66, -0.20), "node_id": "draco_sweep", "kind": "star"},
+			{"id": "altais", "name_key": "STAR_ALTAIS", "bayer": "δ Dra", "magnitude": 3.07, "local_position": Vector2(-0.18, 0.10), "node_id": "draco_echo", "kind": "star"},
+			{"id": "zeta_dra", "name_key": "STAR_ZETA_DRA", "bayer": "ζ Dra", "magnitude": 3.17, "local_position": Vector2(0.24, -0.16), "node_id": "draco_storm", "kind": "star"},
+			{"id": "eta_dra", "name_key": "STAR_ETA_DRA", "bayer": "η Dra", "magnitude": 2.73, "local_position": Vector2(0.60, 0.30), "node_id": "draco_array", "kind": "star"},
+			{"id": "thuban", "name_key": "STAR_THUBAN", "bayer": "α Dra", "magnitude": 3.65, "local_position": Vector2(0.88, 0.02), "node_id": "draco_apotheosis", "kind": "star"},
+			{"id": "iota_dra", "name_key": "STAR_IOTA_DRA", "bayer": "ι Dra", "magnitude": 3.29, "local_position": Vector2(1.00, 0.58), "node_id": "galactic_reference_frame", "kind": "star"}
 		],
 		"segments": [["eltanin", "xi_dra"], ["xi_dra", "nu_dra"], ["nu_dra", "rastaban"], ["rastaban", "eltanin"], ["xi_dra", "altais"], ["altais", "zeta_dra"], ["zeta_dra", "eta_dra"], ["eta_dra", "thuban"], ["thuban", "iota_dra"]]
 	},

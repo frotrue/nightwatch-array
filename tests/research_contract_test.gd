@@ -3,16 +3,16 @@ extends SceneTree
 const Balance = preload("res://scripts/game_balance.gd")
 const ProgressionController = preload("res://scripts/progression_controller.gd")
 
-const EXPECTED_NODE_COUNT := 86
+const EXPECTED_NODE_COUNT := 95
 const EXPECTED_RUNTIME_PARAMETER_KEYS := [
 	"observation_duration_bonus",
 	"observation_value_multiplier",
 ]
 const EXPECTED_CONTRACT_COUNTS := {
-	"observation_value_multiplier": 8,
+	"observation_value_multiplier": 10,
 	"observation_duration_bonus": 4,
-	"max_active_delta": 7,
-	"regular_spawn_interval_floor": 3,
+	"max_active_delta": 8,
+	"regular_spawn_interval_floor": 4,
 }
 const EXPECTED_DYNAMIC_CONNECTION_IDS := [
 	"amber_band",
@@ -89,6 +89,11 @@ const EXPECTED_UNVERIFIED_IDS := [
 	"sustained_charge",
 	"canis_opening",
 	"sirius_fireball",
+	"draco_sweep",
+	"draco_echo",
+	"draco_storm",
+	"draco_array",
+	"galactic_reference_frame",
 ]
 
 var failures: Array[String] = []
@@ -116,7 +121,7 @@ func _run() -> void:
 	var prerequisite_only_ids: Array[String] = []
 	var actual_unverified_ids: Array[String] = []
 
-	_check(Balance.UPGRADE_NODES.size() == EXPECTED_NODE_COUNT, "research node count remains 86")
+	_check(Balance.UPGRADE_NODES.size() == EXPECTED_NODE_COUNT, "research node count remains 95")
 	for definition_variant in Balance.UPGRADE_NODES:
 		var definition: Dictionary = definition_variant
 		var node_id := String(definition.get("id", ""))
@@ -211,7 +216,7 @@ func _run() -> void:
 	_verify_claims_bidirectionally(contract_ids_by_kind)
 	print("RESEARCH_CONTRACT_UNVERIFIED: %d exact ids" % actual_unverified_ids.size())
 	if failures.is_empty():
-		print("RESEARCH_CONTRACT_PASS: 86 nodes, 22 executable contracts, 64 exact unverified ids, and bidirectional en/ko claims")
+		print("RESEARCH_CONTRACT_PASS: 95 nodes, 26 executable contracts, 69 exact unverified ids, and bidirectional en/ko claims")
 		quit(0)
 	else:
 		push_error("RESEARCH_CONTRACT_FAIL: %d failure(s)" % failures.size())
@@ -260,8 +265,8 @@ func _verify_combined_value_multiplier(progression, multiplier_ids: Array) -> vo
 		var contract: Dictionary = Balance.upgrade_definition(node_id).effect_contract
 		expected_product *= float(contract.value)
 	var actual_product: float = progression.get_observation_value_multiplier("common", 0)
-	_check(is_equal_approx(expected_product, 256.0), "eight multiplier contracts combine to x256")
-	_check(is_equal_approx(actual_product, expected_product), "runtime global multiplier matches the independent x256 contract product")
+	_check(is_equal_approx(expected_product, 8192.0), "ten multiplier contracts combine to x8192")
+	_check(is_equal_approx(actual_product, expected_product), "runtime global multiplier matches the independent x8192 contract product")
 
 
 func _verify_claims_bidirectionally(contract_ids_by_kind: Dictionary) -> void:
@@ -290,14 +295,21 @@ func _verify_claims_bidirectionally(contract_ids_by_kind: Dictionary) -> void:
 		if not contract.is_empty():
 			match String(contract.kind):
 				"observation_value_multiplier":
-					_check("Doubles all observation Data" in english and "automatic completions" in english and "×256" in english, node_id + " English copy exposes global x2, automation scope, and x256")
-					_check("모든 관측 데이터를 2배" in korean and "자동 완료" in korean and "×256" in korean, node_id + " Korean copy exposes global x2, automation scope, and x256")
+					var value := int(round(float(contract.value)))
+					if value == 2:
+						_check("Doubles all observation Data" in english and "automatic completions" in english and "×256" in english, node_id + " English copy exposes global x2, automation scope, and legacy x256 combination")
+						_check("모든 관측 데이터를 2배" in korean and "자동 완료" in korean and "×256" in korean, node_id + " Korean copy exposes global x2, automation scope, and legacy x256 combination")
+					else:
+						_check("Multiplies all observation Data by %d" % value in english and "automatic completions" in english, node_id + " English copy exposes its global multiplier and automation scope")
+						_check("모든 관측 데이터를 %d배" % value in korean and "자동 완료" in korean, node_id + " Korean copy exposes its global multiplier and automation scope")
 				"observation_duration_bonus":
 					_check("10 seconds" in english and "future observation window" in english, node_id + " English copy exposes the 10-second future-window delta")
 					_check("10초" in korean and "다음 관측부터 관측 시간을" in korean, node_id + " Korean copy exposes the 10-second future-window delta")
 				"max_active_delta":
-					var english_delta := "one" if is_equal_approx(float(contract.value), 1.0) else "two"
-					var korean_delta := "1개" if is_equal_approx(float(contract.value), 1.0) else "2개"
+					var delta_words := {1: "one", 2: "two", 6: "six"}
+					var delta_value := int(round(float(contract.value)))
+					var english_delta := String(delta_words.get(delta_value, str(delta_value)))
+					var korean_delta := "%d개" % delta_value
 					_check("regular active-sky capacity by " + english_delta in english.to_lower(), node_id + " English copy exposes its regular active-contact delta")
 					_check("일반 표적의 상한을 " + korean_delta + " 늘립니다" in korean, node_id + " Korean copy exposes its regular active-contact delta")
 				"regular_spawn_interval_floor":
@@ -320,7 +332,15 @@ func _verify_claims_bidirectionally(contract_ids_by_kind: Dictionary) -> void:
 
 
 func _claims_global_multiplier(english: String, korean: String) -> bool:
-	return "Doubles all observation Data" in english or "×256" in english or "모든 관측 데이터를 2배" in korean or "×256" in korean
+	return (
+		"Doubles all observation Data" in english
+		or "Multiplies all observation Data by " in english
+		or "×256" in english
+		or "모든 관측 데이터를 2배" in korean
+		or "모든 관측 데이터를 4배" in korean
+		or "모든 관측 데이터를 8배" in korean
+		or "×256" in korean
+	)
 
 
 func _claims_duration_bonus(english: String, korean: String) -> bool:

@@ -6,6 +6,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var survey_preview := OS.get_environment("NIGHTWATCH_SURVEY_PREVIEW") == "1"
+	var galactic_preview := OS.get_environment("NIGHTWATCH_GALACTIC_PREVIEW") == "1"
 	var scene: PackedScene = load("res://scenes/main.tscn")
 	var game: Node = scene.instantiate()
 	game.startup_slot_prompt_enabled = false
@@ -20,11 +21,15 @@ func _run() -> void:
 	# Freeze the gameplay controller so it cannot hide the synthetic tracking
 	# readout before the capture settles.
 	game.observer.set_process(false)
-	if survey_preview:
+	if survey_preview or galactic_preview:
 		game.set_process(false)
 		game.spawner.set_process(false)
 		game.events.set_process(false)
 		game.sky_contacts.set_process(false)
+	if galactic_preview:
+		game.progression.debug_purchase_all()
+		game.hud.hide_tracking()
+	elif survey_preview:
 		game.progression.debug_purchase_node("polar_survey")
 		game.survey.begin_round(3)
 		var sweep_cursor := Vector2(560.0, 420.0)
@@ -42,6 +47,6 @@ func _run() -> void:
 	for _index in range(8):
 		await process_frame
 	var image := root.get_texture().get_image()
-	var output_path := "res://build/survey_preview.png" if survey_preview else "res://build/hud_preview.png"
+	var output_path := "res://build/galactic_preview.png" if galactic_preview else ("res://build/survey_preview.png" if survey_preview else "res://build/hud_preview.png")
 	print("PREVIEW_SAVED" if image.save_png(output_path) == OK else "PREVIEW_FAILED")
 	quit()

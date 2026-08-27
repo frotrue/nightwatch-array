@@ -1158,10 +1158,13 @@ func _cached_node_state(node_id: String) -> String:
 
 
 func _draw_tree() -> void:
+	var galactic_background: bool = progression != null and progression.galaxy_unlocked()
 	for index in range(background_stars.size()):
 		var background_position := CHART_ORIGIN + (background_stars[index] - CHART_ORIGIN).rotated(rotation_offset)
 		var radius := 1.7 if index % 5 == 0 else 1.0
 		var alpha := 0.28 if index % 5 == 0 else 0.16
+		if galactic_background:
+			alpha += 0.08 if index % 5 == 0 else 0.05
 		tree_canvas.draw_circle(background_position, radius, Color(UITheme.STAR_BACKGROUND, alpha))
 	for constellation_id in ChartData.CONSTELLATIONS:
 		var constellation: Dictionary = ChartData.CONSTELLATIONS[constellation_id]
@@ -1190,8 +1193,6 @@ func _draw_tree() -> void:
 	# one rotation, and it has to be buried by the ground rather than drawn
 	# over it.
 	_draw_chart_horizon()
-
-
 func _draw_background_cluster(center: Vector2, radius: float, alpha: float) -> void:
 	for index in range(CLUSTER_MARKER_OFFSETS.size()):
 		var point_radius := maxf(0.65, radius * (0.24 if index % 2 == 0 else 0.17))

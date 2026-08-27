@@ -43,7 +43,7 @@ content.
 |---|---|
 | `game.gd` | Round lifecycle, save/load orchestration, economy-independent feedback dispatch (kick/shake/hitstop), debug keys. The only node that knows about all the others. |
 | `progression_controller.gd` | Data balance, purchased nodes, discovery gates, transient Taurus manual combo, persistent Leo storm charge, and systemic derived upgrade effects. Single source of truth: consumers ask it, not `game_balance.gd`. |
-| `game_balance.gd` | Static data only: the 86 upgrade definitions and the meteor/deep-target spec table. `RefCounted`, no state. |
+| `game_balance.gd` | Static data only: the 95 upgrade definitions and the meteor/deep-target spec table. `RefCounted`, no state. |
 | `meteor_spawner.gd` | Spawn cadence, type rolls (including same-round satellites, variable stars, comets, binary stars, and galaxy fields), delayed/forecast Gemini observation echoes, paced Leo meteor-storm queues, sky-wide burnout endpoint planning, forecast contact announcements, fragment spawning, survey-requested custom-start spawns, shower and round-guarded Canis Major spawns, support-lane assignment. |
 | `meteor.gd` | One object's burn-progress motion, trail and terminal fade, observation progress, quality grading, split behaviour, and passive spectral calibration result. |
 | `observation_controller.gd` | Cursor sampling, the tracking-versus-survey input latch, manual tracking, swept-path hit detection, tracking and hover rings, and the software cursor. |
@@ -133,11 +133,13 @@ _on_phase_summary_continue_requested() → upgrade_tree.open_tree()
 _on_upgrade_tree_closed() → _begin_observation_phase(advance_round = true)
 ```
 
-The run currently has no ending. Installing all 86 research systems marks the
-tree complete but does not interrupt the active observation round or a later
-one. Sirius Bloom instead schedules one warned Major Fireball at a randomized
-viable time in each subsequent round. Observing or losing it does not stop the
-night.
+The run currently has no ending. Installing the 86 non-Draco systems reveals
+Draco's root; installing all 95 systems opens the saved Galactic Reference
+Frame state and its denser background-star presentation, but does not interrupt the active
+observation round or a later one. New galactic object families are not yet part
+of that state. Sirius Bloom still schedules one warned Major Fireball at a
+randomized viable time in each subsequent round. Observing or losing it does
+not stop the night.
 
 ### Time invariants
 
@@ -232,14 +234,16 @@ dishes and spawner features, plays feedback, and autosaves.
 All prerequisite-free roots are visible from time zero. Internal nodes reveal
 only from prerequisite IDs; the live graph contains no success-count reveal
 gates. Eight approved branch leaves contribute unconditional `×2` observation
-value each, so a completed tree has exact global `×256` growth before the four
-existing target-conditional multipliers are applied.
+value each. Draco adds unconditional `×4` and `×8` steps after all other
+research, so a completed 95-node tree has exact global `×8192` growth before
+the four existing target-conditional multipliers are applied.
 
 Regular active-sky capacity begins at four. Array Planning, Multi-Target
 Analysis, Cascade Sampling, and Perseid Survey each add one permanent slot, so
 the completed legacy cap is eight. Canis Major then raises it 8 → 9 → 10 →
 12 while lowering the regular-arrival floor 1.15 → 1.00 → 0.85 → 0.70
-seconds. The scheduler charges only live
+seconds. Draco's final-power sequence raises the endpoint to 18 and lowers the
+floor to 0.45 seconds. The scheduler charges only live
 atmospheric targets (`common`, `fast`, `fragment`, `fragment_piece`, and
 `fireball`) against that budget. Pending forecasts are future information and
 same-round deep targets are long-dwell catalog work, so neither suppresses the
@@ -267,9 +271,9 @@ last kind: it opens downstream band and binary-star research without a direct
 runtime toggle.
 
 The executable contract kinds cover the numeric families that have already
-drifted: eight global value multipliers, four observation-duration bonuses,
-seven regular active-contact capacity increases, and three regular-arrival
-floors. The exact 64-node unverified set is a hard baseline, not a wildcard;
+drifted: ten global value multipliers, four observation-duration bonuses,
+eight regular active-contact capacity increases, and four regular-arrival
+floors. The exact 69-node unverified set is a hard baseline, not a wildcard;
 follow-up work may shrink it, and adding or exchanging an id requires an
 explicit test diff.
 
@@ -287,6 +291,10 @@ discarded on load. The Canis once-per-round consumed flag is retained so loading
 a save made after Sirius cannot emit it twice in one observation. Removed
 stationary-survey fields in an old same-day fixture are ignored; the required
 71-node pre-Ursa-Minor saves still validate normally.
+
+Because purchases are saved by stable id, an 86-node completed save remains
+valid and resumes with Draco's first node revealed rather than receiving any
+of the nine new nodes automatically.
 
 A resumed round sets `phase_resumed_from_save`, which makes that round its own
 comparison baseline instead of presenting pre-load installs as fresh growth.
