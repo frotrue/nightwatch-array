@@ -235,8 +235,13 @@ existing target-conditional multipliers are applied.
 
 Regular active-sky capacity begins at four. Array Planning, Multi-Target
 Analysis, Cascade Sampling, and Perseid Survey each add one permanent slot, so
-the completed regular-spawn cap is eight. Event, echo, storm, fragment, and
-finale paths still share the separate global `MAX_TOTAL_METEORS = 32` cap.
+the completed regular-spawn cap is eight. The scheduler charges only live
+atmospheric targets (`common`, `fast`, `fragment`, `fragment_piece`, and
+`fireball`) against that budget. Pending forecasts are future information and
+same-round deep targets are long-dwell catalog work, so neither suppresses the
+regular arrival stream. Atmospheric objects created by events, echoes, storms,
+and fragments do count once live; every source still shares the separate global
+`MAX_TOTAL_METEORS = 32` cap.
 
 Research metadata has three deliberately separate layers in `game_balance.gd`:
 

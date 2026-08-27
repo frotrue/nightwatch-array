@@ -902,6 +902,45 @@ func _run() -> void:
 	_check(not bool(wide_contact.classified), "Wide Field Sensor contacts begin unclassified")
 	_check(not bool(wide_contact.trajectory_known), "Wide Field Sensor alone does not reveal the approach vector")
 
+	# Capacity contracts apply only to live atmospheric work. Long-lived deep
+	# objects and pending forecast information must not consume the regular sky
+	# budget, while a genuinely full atmospheric sky still delays the scheduler.
+	game.spawner.reset()
+	await process_frame
+	await process_frame
+	game.spawner.spawn_meteor("satellite", Vector2(240, 180), Vector2.ZERO, 20.0)
+	for _forecast_index in range(game.progression.get_max_active() + 2):
+		game.spawner._announce_regular_spawn()
+	_check(game.spawner._regular_active_count() == 0, "deep targets stay outside the live regular-contact capacity scope")
+	var pending_before_scope_probe: int = game.spawner.pending_contacts.size()
+	game.spawner.running = true
+	game.spawner.first_spawn_pending = false
+	game.spawner.next_spawn_time = 0.0
+	game.spawner.set_phase_time_remaining(30.0)
+	game.spawner._process(0.05)
+	_check(
+		game.spawner.pending_contacts.size() == pending_before_scope_probe + 1,
+		"pending forecasts and live deep targets do not suppress the next regular announcement"
+	)
+	game.spawner.reset()
+	await process_frame
+	await process_frame
+	for _regular_index in range(game.progression.get_max_active()):
+		game.spawner.spawn_meteor("common", Vector2(180 + _regular_index * 30, 190), Vector2.ZERO, 20.0)
+	_check(game.spawner._regular_active_count() == game.progression.get_max_active(), "live atmospheric targets fill the declared regular-contact capacity")
+	game.spawner.running = true
+	game.spawner.first_spawn_pending = false
+	game.spawner.next_spawn_time = 0.0
+	game.spawner.set_phase_time_remaining(30.0)
+	game.spawner._process(0.05)
+	_check(game.spawner.pending_contacts.is_empty() and is_equal_approx(game.spawner.next_spawn_time, 0.45), "a full live atmospheric sky still delays the regular scheduler")
+	game.spawner.reset()
+	game.sky_contacts.reset()
+	await process_frame
+	await process_frame
+	game.spawner.set_phase_time_remaining(30.0)
+	game.spawner._announce_regular_spawn()
+
 	_check(game.progression.debug_purchase_node("contact_ledger"), "Contact Ledger completes the Big Dipper approach to Trajectory Prediction")
 	game.spawner._announce_regular_spawn()
 	var ledger_contact: Dictionary = game.spawner.pending_contacts[1]

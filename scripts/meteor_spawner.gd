@@ -31,6 +31,7 @@ const LEONID_STORM_REQUIRED_TIME := 9.0
 # Automatic lanes are partial assist: at 7x analysis time the scan duration
 # exceeds every eligible target's lifetime, so completion needs another source.
 const LANE_TIME_MULTIPLIER := 7.0
+const REGULAR_ACTIVE_TYPES := ["common", "fast", "fragment", "fragment_piece", "fireball"]
 
 enum LaneSelectionOrder {
 	PARTNER_FIRST,
@@ -118,7 +119,13 @@ func _process(delta: float) -> void:
 	next_spawn_time -= delta
 	if next_spawn_time > 0.0:
 		return
-	if _active_count() + pending_contacts.size() >= progression.get_max_active():
+	# The research contract is a cap on live atmospheric work. Forecasts are
+	# information about future work, while same-round deep targets have their own
+	# long dwell times; charging either against this budget made better warning
+	# and deep-sky discoveries suppress ordinary meteor arrivals. Burst sources
+	# still count once their atmospheric objects are live, and every path remains
+	# bounded by MAX_TOTAL_METEORS inside spawn_meteor().
+	if _regular_active_count() >= progression.get_max_active():
 		next_spawn_time = 0.45
 		return
 	if first_spawn_pending:
@@ -862,10 +869,14 @@ func _on_fragment_requested(origin: Vector2, parent_velocity: Vector2, parent_ty
 		)
 
 
-func _active_count() -> int:
+func _regular_active_count() -> int:
 	var count := 0
 	for child_index in range(meteor_layer.get_child_count()):
 		var child = meteor_layer.get_child(child_index)
-		if child.has_method("can_be_tracked") and child.can_be_tracked():
+		if (
+			String(child.get("type_id")) in REGULAR_ACTIVE_TYPES
+			and child.has_method("can_be_tracked")
+			and child.can_be_tracked()
+		):
 			count += 1
 	return count
