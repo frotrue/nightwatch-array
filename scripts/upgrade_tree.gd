@@ -230,6 +230,7 @@ var node_positions: Dictionary = {}
 var node_star_records: Dictionary = {}
 var base_star_positions: Dictionary = {}
 var star_node_ids: Dictionary = {}
+var local_group_node_positions: Dictionary = {}
 
 var hovered_node_id: String = ""
 var tooltip_suppressed_until_motion: bool = false
@@ -616,6 +617,28 @@ func _galactic_chart_is_readable() -> bool:
 	return not galactic_unlocked or not galactic_pullback_seen or galactic_chart_detail >= 0.94
 
 
+func _is_local_group_node(node_id: String) -> bool:
+	return local_group_node_positions.has(node_id)
+
+
+func _local_group_alpha() -> float:
+	if not galactic_unlocked or not galactic_pullback_seen:
+		return 0.0
+	return 1.0 - smoothstep(0.05, 0.34, galactic_chart_detail)
+
+
+func _node_presentation_alpha(node_id: String) -> float:
+	if _is_local_group_node(node_id):
+		return _local_group_alpha()
+	return 1.0 if not galactic_unlocked else smoothstep(0.05, 0.34, galactic_chart_detail)
+
+
+func _node_interaction_ready(node_id: String) -> bool:
+	if _is_local_group_node(node_id):
+		return galactic_unlocked and galactic_pullback_seen and galactic_chart_detail <= 0.06
+	return _galactic_chart_is_readable()
+
+
 func _galactic_structure_alpha() -> float:
 	if galactic_mode == GALACTIC_MODE_PULLBACK:
 		return 1.0 - _ease_in_out(_timed_ratio(pullback_elapsed, 0.0, PULLBACK_LINES_END))
@@ -866,6 +889,7 @@ func _shuffle_galactic_targets(rng: RandomNumberGenerator) -> void:
 func _cache_chart_geometry() -> void:
 	base_star_positions.clear()
 	star_node_ids.clear()
+	local_group_node_positions.clear()
 	for constellation_id in ChartData.CONSTELLATIONS:
 		var constellation: Dictionary = ChartData.CONSTELLATIONS[constellation_id]
 		var placement: Dictionary = ChartData.PLACEMENTS[constellation_id]
@@ -880,6 +904,9 @@ func _cache_chart_geometry() -> void:
 			var node_id := String(star.get("node_id", ""))
 			if not node_id.is_empty():
 				star_node_ids[star_key] = node_id
+	for galaxy_variant in ChartData.LOCAL_GROUP_GALAXIES:
+		var galaxy: Dictionary = galaxy_variant
+		local_group_node_positions[String(galaxy.node_id)] = CHART_ORIGIN + Vector2(galaxy.local_position)
 
 
 func _layout_chart() -> void:
@@ -896,17 +923,18 @@ func _layout_chart() -> void:
 		star_positions[star_key] = chart_position
 		if star_node_ids.has(star_key):
 			node_positions[String(star_node_ids[star_key])] = chart_position
+	for node_id_variant in local_group_node_positions:
+		var node_id := String(node_id_variant)
+		node_positions[node_id] = Vector2(local_group_node_positions[node_id])
 	for node_id in node_positions:
 		if not node_buttons.has(node_id):
 			continue
 		var button: Button = node_buttons[node_id]
 		var center := Vector2(node_positions[node_id])
 		button.position = center - button.size * 0.5
-		var presentation_alpha := 1.0
-		if galactic_unlocked:
-			presentation_alpha = smoothstep(0.05, 0.34, galactic_chart_detail)
+		var presentation_alpha := _node_presentation_alpha(String(node_id))
 		button.modulate.a = presentation_alpha
-		button.mouse_filter = Control.MOUSE_FILTER_STOP if presentation_alpha >= 0.92 and _galactic_chart_is_readable() else Control.MOUSE_FILTER_IGNORE
+		button.mouse_filter = Control.MOUSE_FILTER_STOP if presentation_alpha >= 0.92 and _node_interaction_ready(String(node_id)) else Control.MOUSE_FILTER_IGNORE
 		button.visible = (
 			bool(button.get_meta("revealed", true))
 			and presentation_alpha > 0.01
@@ -928,6 +956,8 @@ func _galactic_horizon_active() -> bool:
 
 
 func _is_node_above_horizon(node_id: String) -> bool:
+	if _is_local_group_node(node_id):
+		return true
 	# Before the first layout there are no positions yet; the layout pass that
 	# follows settles it.
 	if not node_positions.has(node_id):
@@ -1047,9 +1077,9 @@ func _refresh() -> void:
 		# on where the wheel has put it. Both are stored so neither pass undoes
 		# the other.
 		button.set_meta("revealed", visible)
-		var presentation_alpha := 1.0 if not galactic_unlocked else smoothstep(0.05, 0.34, galactic_chart_detail)
+		var presentation_alpha := _node_presentation_alpha(node_id)
 		button.modulate.a = presentation_alpha
-		button.mouse_filter = Control.MOUSE_FILTER_STOP if presentation_alpha >= 0.92 and _galactic_chart_is_readable() else Control.MOUSE_FILTER_IGNORE
+		button.mouse_filter = Control.MOUSE_FILTER_STOP if presentation_alpha >= 0.92 and _node_interaction_ready(node_id) else Control.MOUSE_FILTER_IGNORE
 		button.visible = visible and presentation_alpha > 0.01 and _is_node_above_horizon(node_id)
 		button.set_meta("visual_state", visual_state)
 		if not visible:
@@ -1123,7 +1153,7 @@ func _sync_star_animation_processing() -> void:
 
 
 func _show_node_tooltip(node_id: String) -> void:
-	if progression == null or not _galactic_chart_is_readable() or not node_buttons.has(node_id) or not node_buttons[node_id].visible:
+	if progression == null or not _node_interaction_ready(node_id) or not node_buttons.has(node_id) or not node_buttons[node_id].visible:
 		return
 	var visual_state := String(node_buttons[node_id].get_meta("visual_state"))
 	var content_key := "%s:%s:%d:%d:%s" % [
@@ -1146,8 +1176,12 @@ func _show_node_tooltip(node_id: String) -> void:
 	var definition := Balance.upgrade_definition(node_id)
 	var star_record: Dictionary = node_star_records[node_id]
 	var star: Dictionary = star_record.star
-	var constellation: Dictionary = ChartData.CONSTELLATIONS[String(star_record.constellation_id)]
-	var constellation_label := tr(String(constellation.label_key))
+	var group_id := String(star_record.constellation_id)
+	var group_label_key := ChartData.LOCAL_GROUP_LABEL_KEY
+	if group_id != "local_group":
+		var constellation: Dictionary = ChartData.CONSTELLATIONS[group_id]
+		group_label_key = String(constellation.label_key)
+	var constellation_label := tr(group_label_key)
 	tooltip_star.text = "%s  ·  %s" % [tr(String(star.name_key)), String(star.bayer)]
 	if visual_state == "teaser":
 		tooltip_branch.text = "%s  /  %s" % [constellation_label, tr("TREE_UNRESOLVED_SIGNAL")]
@@ -1463,7 +1497,7 @@ func _position_node_tooltip(cursor_position: Vector2) -> void:
 
 
 func _connection_points(source_id: String, target_id: String) -> PackedVector2Array:
-	var start := Vector2(node_positions[source_id])
+	var start := CHART_ORIGIN if source_id == "galactic_reference_frame" and _is_local_group_node(target_id) else Vector2(node_positions[source_id])
 	var finish := Vector2(node_positions[target_id])
 	var direction := start.direction_to(finish)
 	if direction.is_zero_approx():
@@ -1534,7 +1568,7 @@ func _draw_tree() -> void:
 					"galaxy":
 						_draw_background_galaxy(point, star_radius, alpha)
 			tree_canvas.draw_circle(point, maxf(1.2, star_radius * 0.55), Color(UITheme.STAR_BACKGROUND, alpha))
-	if progression != null and structure_alpha > 0.01:
+	if progression != null and (structure_alpha > 0.01 or _local_group_alpha() > 0.01):
 		_draw_frontier_overlay()
 	# The ground goes on last. Half the sky now sits below the horizon at any
 	# one rotation, and it has to be buried by the ground rather than drawn
@@ -1662,11 +1696,11 @@ func _draw_background_galaxy(center: Vector2, radius: float, alpha: float) -> vo
 func _draw_frontier_overlay() -> void:
 	# Only the current purchasable frontier stays lit. Purchased history is
 	# already encoded by stable bright stars, so late-game DAG clutter never grows.
-	var presentation_alpha := _galactic_structure_alpha()
 	for frontier_variant in _frontier_connections():
 		var frontier: PackedStringArray = frontier_variant
 		var source_id := String(frontier[0])
 		var target_id := String(frontier[1])
+		var presentation_alpha := maxf(_node_presentation_alpha(source_id), _node_presentation_alpha(target_id))
 		var connection := _connection_points(source_id, target_id)
 		var start := connection[0]
 		var finish := connection[1]
@@ -1679,6 +1713,7 @@ func _draw_frontier_overlay() -> void:
 				var source_id := String(prerequisite_variant)
 				if _cached_node_state(source_id) == "purchased":
 					continue
+				var presentation_alpha := _node_presentation_alpha(hovered_node_id)
 				var connection := _connection_points(source_id, hovered_node_id)
 				_draw_dashed_connection(connection[0], connection[1], Color(UITheme.LINE_IDLE, UITheme.LINE_IDLE.a * presentation_alpha))
 

@@ -1,7 +1,7 @@
 # Tests and Probes
 
 Every file in `tests/` is a `SceneTree` script run through `--script`, not a
-GUT/gdUnit suite. There is no test runner to install. Fourteen files: four
+GUT/gdUnit suite. There is no test runner to install. Sixteen files: six
 pass/fail gates, seven measurement probes, two visual capture utilities, and
 one human-driven survey slice. The full-tree economy gate is documented with
 the pacing probes below because it reports both acceptance and diagnostic data.
@@ -41,13 +41,15 @@ feel rather than correctness.
 
 ### Research contract test
 
-Checks all 95 research definitions against the three-layer effect schema. It
+Checks all 124 research definitions against the three-layer effect schema. It
 requires every literal `has_upgrade("id")` reference to resolve, every research
 node to have one declared implementation connection, and the only production
-parameter keys to have live consumers. Twenty-six nodes have executable contracts:
+parameter keys to have live consumers. Fifty-five nodes have executable contracts:
 ten global observation-value multipliers, four duration bonuses, four legacy
 plus three Canis plus one Draco regular active-contact capacity deltas, and
-three Canis plus one Draco regular-arrival floors. The other 69 ids are held as an exact
+three Canis plus one Draco regular-arrival floors, one host/transit unlock, one
+transit-only value multiplier, six later galactic span steps, two independent
+host/window capacity steps, and 19 six-family rule profiles. The other 69 ids are held as an exact
 unverified baseline that may shrink but cannot silently grow or exchange ids.
 
 For each executable contract, the test compares independent expected behavior
@@ -61,7 +63,7 @@ false claim on Storm Zenith.
 & $godot --headless --path . --script res://tests/research_contract_test.gd
 ```
 
-- Pass: `RESEARCH_CONTRACT_PASS: 95 nodes, 26 executable contracts, 69 exact unverified ids, and bidirectional en/ko claims`
+- Pass: `RESEARCH_CONTRACT_PASS: 124 nodes, 55 executable contracts, 69 exact unverified ids, and bidirectional en/ko claims`
 - Fail: `RESEARCH_CONTRACT:` error lines, then `RESEARCH_CONTRACT_FAIL: N failure(s)`
 
 ### Smoke test
@@ -82,6 +84,38 @@ performance caps, stale references, and reset.
 
 - Pass: a single `SMOKE_TEST_PASS:` line
 - Fail: `SMOKE:` error lines, then `SMOKE_TEST_FAIL: N failure(s)`
+
+### Observation span gate
+
+Runs identical fixed-seed atmospheric plans at span `1.0` and `1.05`, requiring
+exact serialized equality. It also checks the expanded visible rectangle,
+screen-fixed input/effect/meteor budgets, background/flash coverage, and that
+the sky gradient and horizon span the visible frame rather than stopping at the
+fixed atmospheric boundary.
+
+```powershell
+& $godot --headless --path . --script res://tests/observation_span_probe.gd
+```
+
+- Pass: `OBSERVATION_SPAN_PASS`
+
+### Galactic vertical-slice gate
+
+Checks the 124-node topology, exact eight-step span, independent one-to-two
+host/window capacities, all six reusable Local Group rule families,
+all three confirmation tiers and their shortened follow-up waits, explicit
+harvest, miss retention, round-boundary evidence retention, respawn, reference
+selection and no-stacking, active-transit save/load, unchanged meteor cap 32,
+and unchanged global `×8192` product. It also compares fixed 180-second
+1/2/3-confirmation policies: long-run rates must remain within 20%, while a
+small immediate need favors one confirmation, a middle need favors two, and a
+larger need favors three.
+
+```powershell
+& $godot --headless --path . --script res://tests/galactic_slice_test.gd
+```
+
+- Pass: `GALACTIC_SLICE_PASS`
 
 ### Layer 2 probe test
 
@@ -143,22 +177,32 @@ Header: `DURATION_PRICING_ENV`.
 
 ### Full-tree economy gate — `full_tree_economy_test.gd`
 
-Pass/fail gate for the expanded 95-system graph. It runs three deterministic
+Pass/fail gate for the expanded 124-system graph. It runs three deterministic
 scripted-engaged watches at `0.05s` steps until all research is purchased. It
 buys the cheapest currently available research at each intermission, applies
 purchased Lyra calibration automatically, reproduces purchased Taurus combo
 speed, Gemini echo bursts, and Leo storm charge, and uses predictive dishes
-when installed. The engaged driver sweeps blank sky only while no manual meteor
-target is available.
+when installed. The engaged driver reveals hidden hosts with distinct sweep
+directions, selects correct comparison stars, rejects decoys, resolves every
+live host, waits for three confirmations, explicitly harvests, and routes the
+actual harvest and reference-star income through production accessors.
 
-Every seed must reach 95/95, finish with exact unconditional `×8192` observation
+Every seed must reach 124/124, finish with exact unconditional `×8192` observation
 value, and keep the longest pre-completion interval without a newly available
 node at or below `2 × MAX_OBSERVATION_DURATION` (currently 120 seconds).
+Each Local Group node must also be purchased within 120 seconds of becoming
+available, and at least one three-confirmation host must be harvested.
 Completion time is reported, not asserted. A 14,400-second watchdog catches a
 stalled simulation without turning a target duration into design policy. Output
 also includes total earned/banked Data, 270/540/810-second success checkpoints,
 the purchase time of each `×2` leaf, the longest interval between those leaves,
-purchase batches, and arrival gaps. Multiplier spacing and purchase-batch size
+purchase batches, arrival gaps, Local Group availability-to-purchase gaps,
+transit income, post-M32/M110 harvest rates, cursor seconds split between host
+work and meteor tracking, confirmation and harvest-tier counts, miss counts,
+respawn and transit-wait gaps, live-host meteor bonus ratio, and both overall
+and Local Group maximum intermission purchase-batch sizes. Host work must stay
+below half of measured busy cursor time, and a Local Group intermission may not
+batch more than one node. Multiplier spacing and overall purchase-batch size
 are playtest diagnostics, not automated pass/fail thresholds. This is the
 authoritative economy-tuning gate for the live graph.
 
@@ -378,3 +422,7 @@ $env:NIGHTWATCH_GALACTIC_PREVIEW = "1"
 & "C:\Users\user\AppData\Local\Temp\codex-godot-4.7.2\Godot_v4.7.2-stable_win64_console.exe" --path . --script res://tests/hud_preview.gd
 Remove-Item Env:NIGHTWATCH_GALACTIC_PREVIEW -ErrorAction SilentlyContinue
 ```
+
+`NIGHTWATCH_TRANSIT_PREVIEW=1`은 같은 완성 빌드에서 첫 확인을 마치고 두 번째
+통과를 절반쯤 진행시켜 기준별 반경, 확인 점, 광도 하락, 행성 점을
+`build/transit_preview.png`에 저장한다.

@@ -23,6 +23,7 @@ const SHAKE_TRAUMA_CEILING := 0.88
 
 @onready var starfield: Node2D = $Starfield
 @onready var twinkle_stars: Node2D = $TwinkleStars
+@onready var host_stars: Node2D = $HostStarLayer
 @onready var meteor_layer: Node2D = $MeteorLayer
 @onready var effects: Node2D = $EffectsLayer
 @onready var observer: Node2D = $ObservationController
@@ -95,13 +96,17 @@ func _ready() -> void:
 	starfield.setup(observation_view)
 	twinkle_stars.setup(observation_view)
 	effects.setup(observation_view)
+	host_stars.setup(progression, observation_view)
 	sky_contacts.setup(meteor_layer, progression, observation_view)
 	spawner.setup(meteor_layer, progression, observation_view)
-	survey.setup(progression, spawner, meteor_layer, observation_view)
-	observer.setup(meteor_layer, progression, hud, survey, observation_view)
+	survey.setup(progression, spawner, meteor_layer, observation_view, host_stars)
+	observer.setup(meteor_layer, progression, hud, survey, observation_view, host_stars)
 	events.setup(spawner, progression, observation_view)
 
 	spawner.meteor_spawned.connect(_on_meteor_spawned)
+	host_stars.transit_confirmed.connect(_on_transit_confirmed)
+	host_stars.host_harvested.connect(_on_host_harvested)
+	host_stars.transit_missed.connect(_on_transit_missed)
 	spawner.rare_spawned.connect(_on_rare_spawned)
 	spawner.contact_announced.connect(sky_contacts.on_contact_announced)
 	spawner.contact_resolved.connect(sky_contacts.on_contact_resolved)
@@ -161,6 +166,7 @@ func start_run() -> void:
 	hud.reset_tutorial()
 	hud.set_runtime(0.0)
 	starfield.set_activity(0.0)
+	_sync_galactic_systems()
 	starfield.set_galactic_mode(progression.galaxy_unlocked())
 	upgrade_tree.configure_galactic_state(progression.galaxy_unlocked(), galactic_pullback_seen)
 	_begin_observation_phase()
@@ -178,6 +184,7 @@ func reset_run() -> void:
 	effects.reset()
 	events.reset()
 	spawner.reset()
+	host_stars.reset()
 	progression.reset()
 	hud.hide_end()
 	hud.hide_phase_summary()
@@ -201,6 +208,7 @@ func _process(delta: float) -> void:
 	hud.set_observation_phase(observation_round, observation_phase_remaining, observation_phase_duration)
 	progression.update_manual_combo(real_delta)
 	survey.advance_time(real_delta)
+	host_stars.advance_time(real_delta)
 	if active_save_slot > 0:
 		autosave_elapsed += real_delta
 		if autosave_elapsed >= AUTOSAVE_INTERVAL_SECONDS:
@@ -234,6 +242,7 @@ func _begin_observation_phase(advance_round: bool = false, remaining_override: f
 	hud.hide_phase_summary()
 	hud.set_observation_phase(observation_round, observation_phase_remaining, observation_phase_duration)
 	spawner.start_spawning()
+	host_stars.begin_round()
 	survey.begin_round(observation_round)
 	events.run_time = elapsed_time
 	events.start()
@@ -250,6 +259,7 @@ func _begin_observation_phase(advance_round: bool = false, remaining_override: f
 func _end_observation_phase() -> void:
 	if completed or not observation_phase_active:
 		return
+	host_stars.end_round()
 	progression.reset_manual_combo()
 	var result := _build_round_result()
 	var previous_result := last_clean_round_result.duplicate(true)
@@ -424,7 +434,9 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 	var research_multiplier: float = progression.get_observation_value_multiplier(
 		String(meteor.type_id), active_target_count
 	)
-	reward = round(reward * research_multiplier)
+	var reference_result: Dictionary = host_stars.record_meteor_observation(meteor.global_position)
+	var reference_multiplier := float(reference_result.get("multiplier", 1.0))
+	reward = round(reward * reference_multiplier * research_multiplier)
 	var final_reward: float = progression.add_observation(reward, was_manual, intrinsic_multiplier)
 	var is_proc_meteor := (
 		bool(meteor.get_meta("gemini_echo", false))
@@ -450,7 +462,7 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 		meteor.global_position,
 		final_reward,
 		meteor.get_visual_color(),
-		intrinsic_multiplier,
+		intrinsic_multiplier * reference_multiplier,
 		strength,
 		quality_grade,
 		hud.get_data_anchor()
@@ -489,6 +501,39 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 	if progression.success_count == 1:
 		hud.mark_first_success()
 	tutorial.notify_observation_completed()
+
+
+func _on_transit_confirmed(star, confirmation_count: int, _projected_reward: float, multiplier: float, was_manual: bool, _quality_grade: String) -> void:
+	observer.release_target(star)
+	progression.record_transit_confirmation(was_manual, multiplier)
+	if sound != null:
+		sound.play_success(multiplier, confirmation_count, 0.46)
+	if progression.success_count == 1:
+		hud.mark_first_success()
+	tutorial.notify_observation_completed()
+
+
+func _on_host_harvested(star, reward: float, multiplier: float, _was_manual: bool, quality_grade: String, confirmation_count: int) -> void:
+	observer.release_target(star)
+	var transit_multiplier: float = progression.get_transit_value_multiplier()
+	var final_reward: float = progression.add_transit_harvest(round(reward * transit_multiplier))
+	effects.spawn_success(
+		star.global_position,
+		final_reward,
+		star.get_visual_color(),
+		multiplier * transit_multiplier,
+		1.0,
+		quality_grade,
+		hud.get_data_anchor()
+	)
+	if sound != null:
+		sound.play_success(multiplier, confirmation_count, minf(1.0, 0.55 + float(confirmation_count) * 0.15))
+
+
+func _on_transit_missed(star_id: int) -> void:
+	var missed_star = host_stars.get_host_by_id(star_id)
+	if missed_star != null:
+		observer.release_target(missed_star)
 
 
 func _try_start_leonid_storm() -> int:
@@ -553,6 +598,7 @@ func _on_upgrade_purchased(definition: Dictionary) -> void:
 		upgrade_tree.set_intermission_context(observation_round + 1, int(_observation_duration()))
 	effects.spawn_upgrade_pulse()
 	sound.play_upgrade()
+	_sync_galactic_systems()
 	if String(definition.id) == "galactic_reference_frame":
 		hud.show_banner(tr("BANNER_GALACTIC_FRAME"), UITheme.INK_MAX, 3.2)
 		upgrade_tree.begin_galactic_pullback()
@@ -697,6 +743,7 @@ func _start_fresh_slot() -> void:
 	effects.reset()
 	events.reset()
 	spawner.reset()
+	host_stars.reset()
 	progression.reset()
 	hud.hide_end()
 	hud.reset_tutorial()
@@ -743,6 +790,7 @@ func _build_save_data() -> Dictionary:
 		"last_clean_round_result": last_clean_round_result.duplicate(true),
 		"best_round_rate": best_round_rate,
 		"galactic_pullback_seen": galactic_pullback_seen,
+		"host_stars": host_stars.get_save_data(),
 		"progression": progression.get_save_data(),
 	}
 
@@ -755,6 +803,7 @@ func _apply_save_data(data: Dictionary) -> void:
 	effects.reset()
 	events.reset()
 	spawner.reset()
+	host_stars.reset()
 	completed = false
 	last_completion_success = false
 	elapsed_time = maxf(0.0, float(data.get("elapsed_time", 0.0)))
@@ -778,6 +827,9 @@ func _apply_save_data(data: Dictionary) -> void:
 	hud.restore_tutorial(progression.success_count > 0)
 	hud.set_runtime(elapsed_time)
 	starfield.set_activity(progression.get_progression_ratio() * 0.16)
+	_sync_galactic_systems()
+	var host_data = data.get("host_stars", {})
+	host_stars.load_save_data(host_data if host_data is Dictionary else {})
 	starfield.set_galactic_mode(progression.galaxy_unlocked())
 	var saved_phase_active := bool(data.get("observation_phase_active", true))
 	if saved_phase_active:
@@ -805,6 +857,11 @@ func _apply_save_data(data: Dictionary) -> void:
 		var next_round := observation_round + 1
 		upgrade_tree.set_intermission_context(next_round, int(_observation_duration()))
 		call_deferred("_resume_upgrade_intermission")
+
+
+func _sync_galactic_systems() -> void:
+	observation_view.set_observation_span(progression.get_observation_span())
+	host_stars.refresh_unlock_state()
 
 
 func _validated_signature(value) -> Array[String]:

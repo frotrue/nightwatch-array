@@ -22,6 +22,12 @@ func _ready() -> void:
 
 func setup(view: Camera2D) -> void:
 	observation_view = view
+	if not observation_view.span_changed.is_connected(_on_observation_span_changed):
+		observation_view.span_changed.connect(_on_observation_span_changed)
+	queue_redraw()
+
+
+func _on_observation_span_changed(_value: float) -> void:
 	queue_redraw()
 
 
