@@ -16,12 +16,12 @@ const BRANCHES := {
 	"optics": {"name": "OPTICS / MANUAL", "color": Color("53d6ff")},
 	"detection": {"name": "DETECTION / DISCOVERY", "color": Color("b379ff")},
 	"network": {"name": "OBSERVATION NETWORK", "color": Color("52e0b1")},
-	"ursa_minor": {"name": "URSA MINOR / SKY SURVEY", "color": Color("ff9f7a")},
+	"ursa_minor": {"name": "URSA MINOR / SKY SWEEP", "color": Color("ff9f7a")},
 	"perseus": {"name": "PERSEUS / DENSITY", "color": Color("ffb56b")},
 	"gemini": {"name": "GEMINI / ECHO", "color": Color("ffd27d")},
 	"taurus": {"name": "TAURUS / MOMENTUM", "color": Color("ffbd7a")},
 	"lyra": {"name": "LYRA / SPECTRUM", "color": Color("69a9ff")},
-	"andromeda": {"name": "ANDROMEDA / DEEP SURVEY", "color": Color("ff78c8")},
+	"andromeda": {"name": "ANDROMEDA / LONG WATCH", "color": Color("ff78c8")},
 	"leo": {"name": "LEO / METEOR STORM", "color": Color("ff9a66")},
 	"canis_major": {"name": "CANIS MAJOR / CADENCE", "color": Color("8ad9ff")},
 	"draco": {"name": "DRACO / CULMINATION", "color": Color("e8a6ff")}
@@ -73,35 +73,35 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "edge_detection", "name": "Edge Detection", "icon": "≋", "cost": 30,
-		"description": "Classifies high-speed entry signatures and introduces fast meteors.",
+		"description": "Identifies fast arrivals and introduces fast meteors.",
 		"branch": "detection", "prerequisites": [],
 		"hidden_until": [], "effect_type": "discovery", "effect_notes": {"meteor_type": "fast"},
 		"major": false
 	},
 	{
 		"id": "wide_field", "name": "Wide Field Sensor", "icon": "⌗", "cost": 100,
-		"description": "Reveals incoming contacts before they enter the sky so you can pre-position.",
+		"description": "Shows where incoming objects are expected to appear so you have time to prepare.",
 		"branch": "detection", "prerequisites": ["edge_detection"],
 		"hidden_until": ["edge_detection"], "effect_type": "unlock", "effect_notes": {"entry_warning": true},
 		"major": false
 	},
 	{
 		"id": "trajectory", "name": "Trajectory Prediction", "icon": "➤", "cost": 220,
-		"description": "Tightens forecast uncertainty and reveals each contact's approach.",
+		"description": "Makes expected entry positions more accurate and shows each object's direction.",
 		"branch": "detection", "prerequisites": ["wide_field", "contact_ledger"],
 		"hidden_until": ["wide_field"], "effect_type": "unlock", "effect_notes": {"trajectory_line": true},
 		"major": true
 	},
 	{
 		"id": "rare_detection", "name": "Rare Meteor Detection", "icon": "★", "cost": 450,
-		"description": "Reveals rare fireballs and identifies every forecast contact before entry.",
+		"description": "Reveals rare fireballs and shows the type of every incoming object before it appears.",
 		"branch": "detection", "prerequisites": ["trajectory"],
 		"hidden_until": ["trajectory"], "effect_type": "discovery", "effect_notes": {"meteor_type": "fireball"},
 		"major": true
 	},
 	{
-		"id": "fragment_analysis", "name": "Fragment Analysis", "icon": "◆", "cost": 900,
-		"description": "Discovers splitting meteors; network analysis can assist with their fragments.",
+		"id": "fragment_analysis", "name": "Fragment Tracking", "icon": "◆", "cost": 900,
+		"description": "Discovers splitting meteors; the observation network can help track their fragments.",
 		"branch": "detection", "prerequisites": ["rare_detection"],
 		"hidden_until": ["rare_detection"], "effect_type": "discovery", "effect_notes": {"meteor_type": "fragment"},
 		"major": true
@@ -118,7 +118,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "array_planning", "name": "Array Planning", "icon": "⬡", "cost": 50,
-		"description": "Raises the regular active-sky capacity by one target.",
+		"description": "Allows one more regular target to remain in the sky at once.",
 		"branch": "network", "prerequisites": [],
 		"hidden_until": [], "effect_type": "unlock", "effect_notes": {"max_active": 1},
 		"effect_contract": {"kind": "max_active_delta", "value": 1, "scope": "regular_active_contacts"},
@@ -169,14 +169,14 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "predictive_dish_control", "name": "Predictive Dish Control", "icon": "⌁", "cost": 800,
-		"description": "Automatically pre-positions an idle dish for trackable forecast contacts; right-click placement still overrides it.",
+		"description": "Automatically moves an idle dish toward trackable incoming objects; manual right-click placement still takes priority.",
 		"branch": "network", "prerequisites": ["secondary_camera"],
 		"hidden_until": ["secondary_camera"], "effect_type": "automation", "effect_notes": {"dish_auto_assignment": true},
 		"major": true
 	},
 	{
-		"id": "multi_target_analysis", "name": "Multi-Target Analysis", "icon": "⊕", "cost": 1200,
-		"description": "Advances every meteor inside the manual tracking field together and raises regular active-sky capacity by one. Adds one support camera lane; with Fragment Analysis, it also assists fragment pieces.",
+		"id": "multi_target_analysis", "name": "Multi-Target Tracking", "icon": "⊕", "cost": 1200,
+		"description": "Tracks every meteor inside the manual observation area together and allows one more regular target in the sky. Automatically supports one target; with Fragment Tracking, it can also help with fragment pieces.",
 		"branch": "network", "prerequisites": ["secondary_camera", "extended_watch_protocol"],
 		"hidden_until": ["secondary_camera"], "effect_type": "transformation", "effect_notes": {"assist_slots": 2, "manual_group_tracking": true},
 		"effect_contract": {"kind": "max_active_delta", "value": 1, "scope": "regular_active_contacts"},
@@ -184,21 +184,21 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "automated_tracking", "name": "Automated Common Tracking", "icon": "⚙", "cost": 2200,
-		"description": "Common targets are analyzed automatically; rare and high-value targets still need you.",
+		"description": "Common targets are observed automatically; rare and high-value targets still need you.",
 		"branch": "network", "prerequisites": ["multi_target_analysis"],
 		"hidden_until": ["multi_target_analysis"], "effect_type": "automation", "effect_notes": {"common_rate": 0.29},
 		"major": true
 	},
 	{
 		"id": "observatory_network", "name": "Observatory Network", "icon": "✧", "cost": 3500,
-		"description": "Links the array and previews shower entry sectors. Adds a second steerable dish and expands automatic support from one lane to two.",
+		"description": "Links the array and previews shower entry areas. Adds a second steerable dish and raises automatic support from one target to two.",
 		"branch": "network", "prerequisites": ["automated_tracking"],
 		"hidden_until": ["automated_tracking"], "effect_type": "transformation", "effect_notes": {"assist_slots": 3, "shower_preview": true},
 		"major": true
 	},
 	{
-		"id": "contact_ledger", "name": "Contact Ledger", "icon": "≣", "cost": 180,
-		"description": "Cross-references incoming contacts to narrow their forecast uncertainty without adding another sky label.",
+		"id": "contact_ledger", "name": "Forecast Log", "icon": "≣", "cost": 180,
+		"description": "Combines incoming records to make expected entry positions more accurate without adding another sky label.",
 		"branch": "detection", "prerequisites": ["edge_detection"],
 		"hidden_until": ["edge_detection"], "effect_type": "transformation", "effect_notes": {"forecast_error_scale": 0.82},
 		"major": false
@@ -211,7 +211,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 		"major": true
 	},
 	{
-		"id": "polar_survey", "name": "Polar Survey", "icon": "✣", "cost": 80,
+		"id": "polar_survey", "name": "Sky Sweep", "icon": "✣", "cost": 80,
 		"description": "Opens blank-sky sweeping: travel 460 px through quiet sky for a 30% chance to call a meteor at the cursor.",
 		"branch": "ursa_minor", "prerequisites": [],
 		"hidden_until": [], "effect_type": "unlock", "effect_notes": {"survey_distance": 460.0, "survey_probability": 0.30},
@@ -268,7 +268,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "crowd_forecast", "name": "Crowd Forecast", "icon": "⌁", "cost": 12000,
-		"description": "Adds 0.8 seconds of warning time to every forecast contact.",
+		"description": "Shows every incoming object 0.8 seconds earlier.",
 		"branch": "perseus", "prerequisites": ["radiant_plotting"],
 		"hidden_until": ["radiant_plotting"], "effect_type": "unlock", "effect_notes": {"forecast_lead_bonus": 0.8},
 		"major": false
@@ -289,7 +289,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "cascade_sampling", "name": "Cascade Sampling", "icon": "⠿", "cost": 120000,
-		"description": "Raises the regular active-sky capacity by one target.",
+		"description": "Allows one more regular target to remain in the sky at once.",
 		"branch": "perseus", "prerequisites": ["debris_correlation"],
 		"hidden_until": ["debris_correlation"], "effect_type": "passive", "effect_notes": {"max_active": 1},
 		"effect_contract": {"kind": "max_active_delta", "value": 1, "scope": "regular_active_contacts"},
@@ -303,8 +303,8 @@ const UPGRADE_NODES: Array[Dictionary] = [
 		"major": true
 	},
 	{
-		"id": "perseid_survey", "name": "Perseid Survey", "icon": "✹", "cost": 30000,
-		"description": "Raises regular active-sky capacity by one. While at least three targets are active, every completion earns 18% more Data.",
+		"id": "perseid_survey", "name": "Perseid Watch", "icon": "✹", "cost": 30000,
+		"description": "Allows one more regular target in the sky. While at least three targets are present, every observation earns 18% more Data.",
 		"branch": "perseus", "prerequisites": ["adaptive_exposure_grid"],
 		"hidden_until": ["adaptive_exposure_grid"], "effect_type": "transformation", "effect_notes": {"max_active": 1, "crowd_value_multiplier": 1.18},
 		"effect_contract": {"kind": "max_active_delta", "value": 1, "scope": "regular_active_contacts"},
@@ -320,7 +320,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "blue_band", "name": "Blue Band", "icon": "B", "cost": 18000,
-		"description": "Automatically calibrates analysis for blue-band targets, improving their speed and value.",
+		"description": "Automatically calibrates blue-band targets, improving observation speed and value.",
 		"branch": "lyra", "prerequisites": ["filter_wheel"],
 		"hidden_until": ["filter_wheel"], "effect_type": "passive", "effect_notes": {"calibration": "blue"},
 		"implementation_connection": "dynamic_upgrade_id",
@@ -328,7 +328,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "amber_band", "name": "Amber Band", "icon": "A", "cost": 22000,
-		"description": "Automatically calibrates analysis for amber-band targets, improving their speed and value.",
+		"description": "Automatically calibrates amber-band targets, improving observation speed and value.",
 		"branch": "lyra", "prerequisites": ["blue_band"],
 		"hidden_until": ["blue_band"], "effect_type": "passive", "effect_notes": {"calibration": "amber"},
 		"implementation_connection": "dynamic_upgrade_id",
@@ -336,7 +336,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "violet_band", "name": "Violet Band", "icon": "V", "cost": 26000,
-		"description": "Automatically calibrates analysis for violet-band targets, improving their speed and value.",
+		"description": "Automatically calibrates violet-band targets, improving observation speed and value.",
 		"branch": "lyra", "prerequisites": ["amber_band"],
 		"hidden_until": ["amber_band"], "effect_type": "passive", "effect_notes": {"calibration": "violet"},
 		"implementation_connection": "dynamic_upgrade_id",
@@ -344,28 +344,28 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "lyrid_spectrograph", "name": "Lyrid Spectrograph", "icon": "≋", "cost": 180000,
-		"description": "Strengthens every calibrated spectral band for faster analysis and a decisive data bonus.",
+		"description": "Strengthens every calibrated spectral band for faster observations and a decisive data bonus.",
 		"branch": "lyra", "prerequisites": ["violet_band"],
 		"hidden_until": ["violet_band"], "effect_type": "transformation", "effect_notes": {"calibrated_speed": 1.45, "calibrated_value": 1.35},
 		"major": true
 	},
 	{
 		"id": "ephemeris_marks", "name": "Ephemeris Marks", "icon": "⊹", "cost": 16000,
-		"description": "Immediately opens an independent three-second baseline forecast for every incoming contact.",
+		"description": "Shows every incoming object three seconds before it appears.",
 		"branch": "andromeda", "prerequisites": [],
 		"hidden_until": [], "effect_type": "discovery", "effect_notes": {"deep_forecast": true},
 		"major": false
 	},
 	{
 		"id": "satellite_catalog", "name": "Satellite Catalog", "icon": "▰", "cost": 20000,
-		"description": "Adds slow artificial satellites to the same-round survey catalog.",
+		"description": "Adds slow artificial satellites that can appear during the current observation round.",
 		"branch": "andromeda", "prerequisites": ["ephemeris_marks"],
 		"hidden_until": ["ephemeris_marks"], "effect_type": "discovery", "effect_notes": {"target_type": "satellite"},
 		"major": false
 	},
 	{
 		"id": "change_detection", "name": "Change Detection", "icon": "Δ", "cost": 24000,
-		"description": "Classifies Andromeda targets and tightens their forecast uncertainty to 8–22 px.",
+		"description": "Identifies Andromeda targets and predicts where they will appear within 8–22 px.",
 		"branch": "andromeda", "prerequisites": ["satellite_catalog"],
 		"hidden_until": ["satellite_catalog"], "effect_type": "transformation", "effect_notes": {"deep_classification": true},
 		"major": false
@@ -378,15 +378,15 @@ const UPGRADE_NODES: Array[Dictionary] = [
 		"major": true
 	},
 	{
-		"id": "comet_solutions", "name": "Comet Solutions", "icon": "☄", "cost": 28000,
-		"description": "Adds long-arc comets that remain in the current observation round for a complete solution.",
+		"id": "comet_solutions", "name": "Comet Tracking", "icon": "☄", "cost": 28000,
+		"description": "Adds slow comets that draw long trails and remain until the current observation round ends.",
 		"branch": "andromeda", "prerequisites": ["change_detection"],
 		"hidden_until": ["change_detection"], "effect_type": "discovery", "effect_notes": {"target_type": "comet"},
 		"major": true
 	},
 	{
-		"id": "andromeda_deep_survey", "name": "Andromeda Deep Survey", "icon": "◎", "cost": 32000,
-		"description": "Raises analysis speed by 25% and Data by 30% for satellites, variable stars, comets, and galaxies; binary stars are excluded.",
+		"id": "andromeda_deep_survey", "name": "Andromeda Long Watch", "icon": "◎", "cost": 32000,
+		"description": "Raises observation speed by 25% and Data by 30% for satellites, variable stars, comets, and distant galaxies; binary stars are excluded.",
 		"branch": "andromeda", "prerequisites": ["comet_solutions"],
 		"hidden_until": ["comet_solutions"], "effect_type": "transformation", "effect_notes": {"deep_speed": 1.25, "deep_value": 1.3},
 		"major": true
@@ -470,7 +470,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "perseid_outburst", "name": "Perseid Outburst", "icon": "✺", "cost": 50000,
-		"description": "Unlocks short warned Perseid outbursts with their own radiant cadence. Doubles all observation Data, including automatic completions. All eight ×2 systems combine to ×256.",
+		"description": "Unlocks short Perseid bursts that arrive after a warning. Doubles all observation Data, including automatic completions. All eight ×2 systems combine to ×256.",
 		"branch": "perseus", "prerequisites": ["perseid_survey"],
 		"hidden_until": ["perseid_survey"], "effect_type": "discovery",
 		"effect_notes": {"event": "perseid_outburst"},
@@ -480,7 +480,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "double_star_resolution", "name": "Double-Star Resolution", "icon": "⁚", "cost": 12000,
-		"description": "Adds binary-star contacts, classifies their forecasts, and tightens their uncertainty to 8–22 px. Doubles all observation Data, including automatic completions. All eight ×2 systems combine to ×256.",
+		"description": "Adds binary stars, identifies them before they appear, and predicts where they will appear within 8–22 px. Doubles all observation Data, including automatic completions. All eight ×2 systems combine to ×256.",
 		"branch": "lyra", "prerequisites": ["filter_wheel"],
 		"hidden_until": ["filter_wheel"], "effect_type": "discovery",
 		"effect_notes": {"target_type": "binary_star"},
@@ -489,8 +489,8 @@ const UPGRADE_NODES: Array[Dictionary] = [
 		"major": true, "affects_pacing": false
 	},
 	{
-		"id": "galaxy_imaging", "name": "Galaxy Imaging", "icon": "M31", "cost": 90000,
-		"description": "Adds long-exposure galaxy fields to the same-round deep-sky survey. Doubles all observation Data, including automatic completions. All eight ×2 systems combine to ×256.",
+		"id": "galaxy_imaging", "name": "Distant Galaxy Imaging", "icon": "M31", "cost": 90000,
+		"description": "Adds distant galaxies that need long observation but can be completed within the current round. Doubles all observation Data, including automatic completions. All eight ×2 systems combine to ×256.",
 		"branch": "andromeda", "prerequisites": ["andromeda_deep_survey"],
 		"hidden_until": ["andromeda_deep_survey"], "effect_type": "discovery",
 		"effect_notes": {"target_type": "galaxy"},
@@ -524,7 +524,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "echo_signature_lock", "name": "Echo Signature Lock", "icon": "≡", "cost": 14000,
-		"description": "Echoes copy a fresh manual common, fast, fragment, or fireball target. Other targets still produce a random unlocked regular class.",
+		"description": "Echoes copy the type of a freshly observed common, fast, fragmenting, or fireball target. Other targets still produce a random unlocked regular type.",
 		"branch": "gemini", "prerequisites": ["echo_correlation_20"],
 		"hidden_until": ["echo_correlation_20"], "effect_type": "transformation", "effect_notes": {"echo_signature_lock": true},
 		"major": false, "affects_pacing": false
@@ -547,22 +547,22 @@ const UPGRADE_NODES: Array[Dictionary] = [
 		"major": true, "affects_pacing": false
 	},
 	{
-		"id": "echo_deconfliction", "name": "Echo Deconfliction", "icon": "⌗", "cost": 340000,
-		"description": "Automatically distributes one burst across separated burnout cells so its targets do not stack.",
+		"id": "echo_deconfliction", "name": "Echo Spacing", "icon": "⌗", "cost": 340000,
+		"description": "Spreads each echo burst across separate parts of the sky so its targets do not overlap.",
 		"branch": "gemini", "prerequisites": ["triple_echo_array"],
 		"hidden_until": ["triple_echo_array"], "effect_type": "automation", "effect_notes": {"echo_deconfliction": true},
 		"major": true, "affects_pacing": false
 	},
 	{
 		"id": "echo_beacon", "name": "Echo Beacon", "icon": "⌁", "cost": 380000,
-		"description": "Announces delayed echoes as ordinary forecast contacts so dishes and operators can pre-position.",
+		"description": "Shows delayed echoes as ordinary incoming alerts so dishes can move into position early.",
 		"branch": "gemini", "prerequisites": ["triple_echo_array"],
 		"hidden_until": ["triple_echo_array"], "effect_type": "unlock", "effect_notes": {"echo_forecast": true},
 		"major": true, "affects_pacing": false
 	},
 	{
 		"id": "momentum_acquisition", "name": "Momentum Acquisition", "icon": "×4", "cost": 18000,
-		"description": "Manual observations within three seconds build up to four Momentum stacks; each adds 2% analysis speed and 1 px of tracking range.",
+		"description": "Manual observations within three seconds build up to four Momentum stacks; each adds 2% observation speed and 1 px of tracking range.",
 		"branch": "taurus", "prerequisites": [],
 		"hidden_until": [], "effect_type": "unlock", "effect_notes": {"combo_window": 3.0, "combo_cap": 4, "speed_per_stack": 0.02, "radius_per_stack": 1.0},
 		"major": false, "affects_pacing": false
@@ -576,7 +576,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "rapid_focus", "name": "Rapid Focus", "icon": "+3%", "cost": 460000,
-		"description": "Adds 1% manual-analysis speed per Momentum stack on top of Accelerated Analysis.",
+		"description": "Adds 1% manual-observation speed per Momentum stack on top of Faster Observation.",
 		"branch": "taurus", "prerequisites": ["momentum_acquisition"],
 		"hidden_until": ["momentum_acquisition"], "effect_type": "passive", "effect_notes": {"speed_bonus_per_stack": 0.01},
 		"major": false, "affects_pacing": false
@@ -596,8 +596,8 @@ const UPGRADE_NODES: Array[Dictionary] = [
 		"major": false, "affects_pacing": false
 	},
 	{
-		"id": "accelerated_analysis", "name": "Accelerated Analysis", "icon": "+4%", "cost": 65000,
-		"description": "Sets the central Momentum manual-analysis gain to 4% per stack; Rapid Focus adds 1% on top.",
+		"id": "accelerated_analysis", "name": "Faster Observation", "icon": "+4%", "cost": 65000,
+		"description": "Sets the central Momentum manual-observation gain to 4% per stack; Rapid Focus adds 1% on top.",
 		"branch": "taurus", "prerequisites": ["expanded_sweep"],
 		"hidden_until": ["expanded_sweep"], "effect_type": "transformation", "effect_notes": {"speed_per_stack": 0.04},
 		"major": true, "affects_pacing": false
@@ -611,7 +611,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "taurus_full_gallop", "name": "Full Gallop", "icon": "×10", "cost": 140000,
-		"description": "Extends Momentum to five seconds and ten stacks; with both flank upgrades, they grant up to 50% manual-analysis speed and 25 px of tracking range. Doubles all observation Data, including automatic completions. All eight ×2 systems combine to ×256.",
+		"description": "Extends Momentum to five seconds and ten stacks; with both flank upgrades, they grant up to 50% manual-observation speed and 25 px of tracking range. Doubles all observation Data, including automatic completions. All eight ×2 systems combine to ×256.",
 		"branch": "taurus", "prerequisites": ["sustained_charge"],
 		"hidden_until": ["sustained_charge"], "effect_type": "transformation",
 		"effect_notes": {"combo_window": 5.0, "combo_cap": 10},
@@ -621,7 +621,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "canis_opening", "name": "Canis Relay", "icon": "CMa", "cost": 620000,
-		"description": "Opens the price-gated Canis Major cadence circuit without changing the shipped density curve.",
+		"description": "Opens the Canis Major research chain without changing how often meteors currently appear.",
 		"branch": "canis_major", "prerequisites": [],
 		"hidden_until": [], "effect_type": "unlock", "effect_notes": {"canis_major_branch": true},
 		"implementation_connection": "prerequisite_only",
@@ -629,7 +629,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "canis_cadence_i", "name": "Swift Signal", "icon": "1.00s", "cost": 760000,
-		"description": "Lowers the regular meteor interval floor to 1.00 seconds.",
+		"description": "Sets the shortest time between regular meteors to 1.00 seconds.",
 		"branch": "canis_major", "prerequisites": [],
 		"hidden_until": [], "effect_type": "transformation", "effect_notes": {"regular_spawn_interval_floor": 1.0},
 		"effect_contract": {"kind": "regular_spawn_interval_floor", "value": 1.0, "scope": "regular_meteor_arrivals"},
@@ -637,7 +637,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "canis_capacity_i", "name": "Long Leash", "icon": "+1", "cost": 900000,
-		"description": "Raises regular active-sky capacity by one, from eight to nine at the completed legacy array.",
+		"description": "Allows one more regular target in the sky, raising the limit from eight to nine.",
 		"branch": "canis_major", "prerequisites": [],
 		"hidden_until": [], "effect_type": "passive", "effect_notes": {"max_active_delta": 1},
 		"effect_contract": {"kind": "max_active_delta", "value": 1, "scope": "regular_active_contacts"},
@@ -645,7 +645,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "canis_cadence_ii", "name": "Running Cadence", "icon": "0.85s", "cost": 1150000,
-		"description": "Lowers the regular meteor interval floor to 0.85 seconds.",
+		"description": "Sets the shortest time between regular meteors to 0.85 seconds.",
 		"branch": "canis_major", "prerequisites": ["canis_capacity_i"],
 		"hidden_until": ["canis_capacity_i"], "effect_type": "transformation", "effect_notes": {"regular_spawn_interval_floor": 0.85},
 		"effect_contract": {"kind": "regular_spawn_interval_floor", "value": 0.85, "scope": "regular_meteor_arrivals"},
@@ -653,7 +653,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "canis_capacity_ii", "name": "Twin Watch", "icon": "+1", "cost": 1400000,
-		"description": "Raises regular active-sky capacity by one, from nine to ten at the completed legacy array.",
+		"description": "Allows one more regular target in the sky, raising the limit from nine to ten.",
 		"branch": "canis_major", "prerequisites": [],
 		"hidden_until": [], "effect_type": "passive", "effect_notes": {"max_active_delta": 1},
 		"effect_contract": {"kind": "max_active_delta", "value": 1, "scope": "regular_active_contacts"},
@@ -661,7 +661,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "canis_cadence_iii", "name": "White-Star Tempo", "icon": "0.70s", "cost": 1750000,
-		"description": "Lowers the regular meteor interval floor to 0.70 seconds.",
+		"description": "Sets the shortest time between regular meteors to 0.70 seconds.",
 		"branch": "canis_major", "prerequisites": ["canis_opening", "canis_cadence_ii"],
 		"hidden_until": ["canis_opening", "canis_cadence_ii"], "effect_type": "transformation", "effect_notes": {"regular_spawn_interval_floor": 0.70},
 		"effect_contract": {"kind": "regular_spawn_interval_floor", "value": 0.70, "scope": "regular_meteor_arrivals"},
@@ -669,7 +669,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "canis_capacity_iii", "name": "Pack Array", "icon": "+2", "cost": 2100000,
-		"description": "Raises regular active-sky capacity by two, from ten to twelve at the completed legacy array.",
+		"description": "Allows two more regular targets in the sky, raising the limit from ten to twelve.",
 		"branch": "canis_major", "prerequisites": ["canis_cadence_iii"],
 		"hidden_until": ["canis_cadence_iii"], "effect_type": "passive", "effect_notes": {"max_active_delta": 2},
 		"effect_contract": {"kind": "max_active_delta", "value": 2, "scope": "regular_active_contacts"},
@@ -677,7 +677,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "sirius_fireball", "name": "Sirius Bloom", "icon": "★", "cost": 10000000,
-		"description": "Warns of and releases one Major Fireball at most once during each viable observation round.",
+		"description": "One Major Fireball may appear after a warning in observation rounds with enough time left.",
 		"branch": "canis_major", "prerequisites": ["canis_capacity_ii", "canis_cadence_i", "canis_capacity_iii"],
 		"hidden_until": ["canis_capacity_ii", "canis_cadence_i", "canis_capacity_iii"], "effect_type": "unlock", "effect_notes": {"major_fireball_per_round": 1},
 		"major": true, "affects_pacing": false
@@ -694,7 +694,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "draco_cadence", "name": "Circumpolar Cadence", "icon": "0.45s", "cost": 8000000,
-		"description": "Lowers the regular meteor interval floor to 0.45 seconds.",
+		"description": "Sets the shortest time between regular meteors to 0.45 seconds.",
 		"branch": "draco", "prerequisites": ["draco_synthesis"],
 		"hidden_until": ["draco_synthesis"], "effect_type": "transformation", "effect_notes": {"regular_spawn_interval_floor": 0.45},
 		"effect_contract": {"kind": "regular_spawn_interval_floor", "value": 0.45, "scope": "regular_meteor_arrivals"},
@@ -702,7 +702,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "draco_capacity", "name": "Dragon-Spine Array", "icon": "+6", "cost": 30000000,
-		"description": "Raises regular active-sky capacity by six, from twelve to eighteen.",
+		"description": "Allows six more regular targets in the sky, raising the limit from twelve to eighteen.",
 		"branch": "draco", "prerequisites": ["draco_cadence"],
 		"hidden_until": ["draco_cadence"], "effect_type": "transformation", "effect_notes": {"max_active_delta": 6},
 		"effect_contract": {"kind": "max_active_delta", "value": 6, "scope": "regular_active_contacts"},
@@ -710,7 +710,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "draco_sweep", "name": "Coiled-Sky Sweep", "icon": "4×", "cost": 40000000,
-		"description": "Overcharges blank-sky sweeping: 190 px per roll, guaranteed success, four meteors, and a 0.45-second cooldown.",
+		"description": "Every 190 px of blank-sky sweeping now calls four meteors, always succeeds, and can trigger again after 0.45 seconds.",
 		"branch": "draco", "prerequisites": ["draco_capacity"],
 		"hidden_until": ["draco_capacity"], "effect_type": "transformation", "effect_notes": {"survey_distance": 190.0, "survey_probability": 1.0, "survey_count": 4, "survey_cooldown": 0.45},
 		"major": true, "affects_pacing": false
@@ -731,7 +731,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "draco_array", "name": "Total Array", "icon": "4+4", "cost": 70000000,
-		"description": "Expands the observatory to four steerable dishes and four automatic support lanes.",
+		"description": "Expands the observatory to four steerable dishes that can automatically support four targets.",
 		"branch": "draco", "prerequisites": ["draco_storm"],
 		"hidden_until": ["draco_storm"], "effect_type": "transformation", "effect_notes": {"dish_count": 4, "support_lanes": 4},
 		"major": true, "affects_pacing": false
@@ -746,8 +746,8 @@ const UPGRADE_NODES: Array[Dictionary] = [
 		"major": true, "affects_pacing": false
 	},
 	{
-		"id": "galactic_reference_frame", "name": "Galactic Reference Frame", "icon": "MW", "cost": 400000000,
-		"description": "Unlocks galactic observation, converts the completed celestial map to a galactic reference frame, and deepens the background star field.",
+		"id": "galactic_reference_frame", "name": "Galaxy Map", "icon": "MW", "cost": 400000000,
+		"description": "Pulls the completed research chart back to a view of the galaxy and adds more background stars to the night sky.",
 		"branch": "draco", "prerequisites": ["draco_apotheosis"],
 		"hidden_until": ["draco_apotheosis"], "effect_type": "unlock", "effect_notes": {"galactic_survey": true},
 		"major": true, "affects_pacing": false
@@ -846,7 +846,7 @@ static func meteor_spec(type_id: String) -> Dictionary:
 			}
 		"galaxy":
 			return {
-				"name": "GALAXY FIELD", "speed": 20.0, "lifetime": 40.0,
+				"name": "DISTANT GALAXY", "speed": 20.0, "lifetime": 40.0,
 				"radius": 18.0, "trail": 8, "value": 220.0, "track_time": 5.2,
 				"color": Color("ffe8d2"), "glow": Color("dc84ff"),
 				"spectral_band": "amber",

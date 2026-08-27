@@ -310,11 +310,11 @@ func _verify_claims_bidirectionally(contract_ids_by_kind: Dictionary) -> void:
 					var delta_value := int(round(float(contract.value)))
 					var english_delta := String(delta_words.get(delta_value, str(delta_value)))
 					var korean_delta := "%d개" % delta_value
-					_check("regular active-sky capacity by " + english_delta in english.to_lower(), node_id + " English copy exposes its regular active-contact delta")
+					_check("allows " + english_delta + " more regular target" in english.to_lower(), node_id + " English copy exposes its regular active-contact delta")
 					_check("일반 표적의 상한을 " + korean_delta + " 늘립니다" in korean, node_id + " Korean copy exposes its regular active-contact delta")
 				"regular_spawn_interval_floor":
 					var seconds := "%.2f" % float(contract.value)
-					_check("regular meteor interval floor to " + seconds + " seconds" in english, node_id + " English copy exposes the exact regular-arrival floor")
+					_check("shortest time between regular meteors to " + seconds + " seconds" in english, node_id + " English copy exposes the exact regular-arrival floor")
 					_check("일반 유성의 최소 출현 간격을 " + seconds + "초로" in korean, node_id + " Korean copy exposes the exact regular-arrival floor")
 	TranslationServer.set_locale(original_locale)
 
@@ -348,11 +348,17 @@ func _claims_duration_bonus(english: String, korean: String) -> bool:
 
 
 func _claims_max_active_delta(english: String, korean: String) -> bool:
-	return "regular active-sky capacity by " in english.to_lower() or ("일반 표적의 상한을 " in korean and "개 늘립니다" in korean)
+	var plain_english := english.to_lower()
+	return (
+		"allows one more regular target" in plain_english
+		or "allows two more regular targets" in plain_english
+		or "allows six more regular targets" in plain_english
+		or ("일반 표적의 상한을 " in korean and "개 늘립니다" in korean)
+	)
 
 
 func _claims_regular_spawn_interval_floor(english: String, korean: String) -> bool:
-	return "regular meteor interval floor to " in english or "일반 유성의 최소 출현 간격을 " in korean
+	return "shortest time between regular meteors to " in english or "일반 유성의 최소 출현 간격을 " in korean
 
 
 func _localized_description(node_id: String, locale: String) -> String:

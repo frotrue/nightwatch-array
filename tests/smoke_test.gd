@@ -152,23 +152,23 @@ func _run() -> void:
 	_check(TranslationServer.translate("CONSTELLATION_DRACO") == "용자리  /  최종 관측", "the mapped Draco figure exposes its Korean culmination role")
 	_check(TranslationServer.translate("HUD_AUTOSAVED") == "자동 저장됨", "Korean autosave status stays concise")
 	_check(TranslationServer.translate("HUD_OBSERVATION_TIME") % [1, 1, 0] == "1차 관측  •  01:00", "Korean round countdown reads naturally")
-	_check(TranslationServer.translate("TREE_INTERMISSION_SUBTITLE") % [2, 30] == "업그레이드 시간  /  2차 관측은 30초", "Korean upgrade-break guidance explains the next round and duration")
+	_check(TranslationServer.translate("TREE_INTERMISSION_SUBTITLE") % [2, 30] == "연구 시간  /  2차 관측은 30초", "Korean research-break guidance explains the next round and duration")
 	_check(TranslationServer.translate("PHASE_SUMMARY_TITLE") % 1 == "1차 관측 완료", "Korean phase summary title reads naturally")
-	_check(TranslationServer.translate("PHASE_SUMMARY_SYSTEMS_CHANGED") % 130.0 == "실현 처리량 130.0 데이터/분  •  시스템 변경  •  다음 라운드에서 새 기준 기록", "Korean mixed-build summary explains realized productivity and the next baseline")
+	_check(TranslationServer.translate("PHASE_SUMMARY_SYSTEMS_CHANGED") % 130.0 == "분당 데이터 130.0  •  시스템 변경  •  다음 회차부터 비교", "Korean mixed-build summary explains the data rate and next comparison")
 	_check(
 		game.upgrade_tree._upgrade_description(predictive_control_definition)
-		== "추적 가능한 예보 신호에 유휴 접시를 자동으로 미리 배치하며 우클릭 수동 배치가 항상 우선합니다.",
-		"Korean Predictive Dish Control description explains automatic pre-positioning"
+		== "추적 가능한 천체가 들어오면 유휴 접시를 예상 위치로 자동 이동하며 우클릭 수동 배치가 항상 우선합니다.",
+		"Korean Predictive Dish Control description explains automatic movement"
 	)
 	_check(
 		game.upgrade_tree._upgrade_description(multi_target_definition)
-		== "수동 관측 범위 안의 모든 유성을 함께 분석하고 하늘에 동시에 유지되는 일반 표적의 상한을 1개 늘립니다. 지원 카메라 채널 하나를 추가하며 파편 분석을 설치했다면 파편 조각도 지원합니다.",
-		"Korean Multi-Target Analysis description names capacity and both support effects"
+		== "수동 관측 범위 안의 모든 유성을 함께 관측하고 하늘에 동시에 유지되는 일반 표적의 상한을 1개 늘립니다. 표적 하나를 자동 지원하며 파편 추적을 설치했다면 파편 조각도 지원합니다.",
+		"Korean Multi-Target Tracking description names capacity and both support effects"
 	)
 	_check(
 		game.upgrade_tree._upgrade_description(observatory_definition)
-		== "전체 관측망을 연결하고 유성우 진입 구역을 예측합니다. 직접 조준하는 두 번째 접시를 추가하고 자동 지원 채널을 1개에서 2개로 늘립니다.",
-		"Korean Observatory Network description names the second dish and two support lanes"
+		== "전체 관측망을 연결하고 유성우 진입 구역을 예측합니다. 직접 조준하는 두 번째 접시를 추가하고 동시에 자동 지원하는 표적을 1개에서 2개로 늘립니다.",
+		"Korean Observatory Network description names the second dish and two automatically supported targets"
 	)
 	_check(
 		game.upgrade_tree._upgrade_description(triple_echo_definition)
@@ -201,18 +201,18 @@ func _run() -> void:
 	_check(game.hud.settings_button.text.ends_with("SETTINGS"), "English can be restored at runtime")
 	_check(
 		game.upgrade_tree._upgrade_description(predictive_control_definition)
-		== "Automatically pre-positions an idle dish for trackable forecast contacts; right-click placement still overrides it.",
-		"English Predictive Dish Control description explains automatic pre-positioning"
+		== "Automatically moves an idle dish toward trackable incoming objects; manual right-click placement still takes priority.",
+		"English Predictive Dish Control description explains automatic movement"
 	)
 	_check(
 		game.upgrade_tree._upgrade_description(multi_target_definition)
-		== "Advances every meteor inside the manual tracking field together and raises regular active-sky capacity by one. Adds one support camera lane; with Fragment Analysis, it also assists fragment pieces.",
-		"English Multi-Target Analysis description names capacity and both support effects"
+		== "Tracks every meteor inside the manual observation area together and allows one more regular target in the sky. Automatically supports one target; with Fragment Tracking, it can also help with fragment pieces.",
+		"English Multi-Target Tracking description names capacity and both support effects"
 	)
 	_check(
 		game.upgrade_tree._upgrade_description(observatory_definition)
-		== "Links the array and previews shower entry sectors. Adds a second steerable dish and expands automatic support from one lane to two.",
-		"English Observatory Network description names the second dish and two support lanes"
+		== "Links the array and previews shower entry areas. Adds a second steerable dish and raises automatic support from one target to two.",
+		"English Observatory Network description names the second dish and two automatically supported targets"
 	)
 	_check(
 		game.upgrade_tree._upgrade_description(triple_echo_definition)
@@ -251,7 +251,7 @@ func _run() -> void:
 	_check(
 		String(multi_target_definition.description)
 		== game.upgrade_tree._upgrade_description(multi_target_definition),
-		"Multi-Target Analysis fallback description stays in sync with rendered localization"
+		"Multi-Target Tracking fallback description stays in sync with rendered localization"
 	)
 	_check(
 		String(observatory_definition.description)
