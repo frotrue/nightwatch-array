@@ -59,9 +59,11 @@ var travel_direction := Vector2.ZERO
 var trail_sample_accumulator: float = 0.0
 var wobble_phase: float = 0.0
 var rng := RandomNumberGenerator.new()
+var observation_view: Camera2D
+var observation_visual_scale: float = 1.0
 
 
-func configure(spec: Dictionary, meteor_type: String, start_position: Vector2, move_velocity: Vector2, lifetime_scale: float, features: Dictionary, planned_burnout := Vector2.INF) -> void:
+func configure(spec: Dictionary, meteor_type: String, start_position: Vector2, move_velocity: Vector2, lifetime_scale: float, features: Dictionary, planned_burnout := Vector2.INF, view: Camera2D = null) -> void:
 	type_id = meteor_type
 	display_name = String(spec.name)
 	position = start_position
@@ -99,6 +101,8 @@ func configure(spec: Dictionary, meteor_type: String, start_position: Vector2, m
 	analysis_speed_multiplier = maxf(0.1, float(features.get("analysis_speed", 1.0)))
 	spectral_calibrated = bool(features.get("spectral_calibrated", false))
 	spectral_capstone_enabled = bool(features.get("spectral_capstone", false))
+	observation_view = view
+	observation_visual_scale = _current_visual_scale()
 	rng.seed = int(start_position.x * 193.0 + start_position.y * 877.0 + velocity.length() * 31.0) & 0x7fffffff
 	wobble_phase = rng.randf_range(0.0, TAU)
 	trail_points.append(start_position)
@@ -135,12 +139,13 @@ func _ready() -> void:
 func _rebuild_prediction_draw_points() -> void:
 	prediction_draw_points.clear()
 	for index in range(7):
-		var distance := body_radius + 28.0 + index * 24.0
+		var distance := (body_radius + 28.0 + index * 24.0) * observation_visual_scale
 		prediction_draw_points.append(travel_direction * distance)
-		prediction_draw_points.append(travel_direction * (distance + 10.0))
+		prediction_draw_points.append(travel_direction * (distance + 10.0 * observation_visual_scale))
 
 
 func _process(delta: float) -> void:
+	_sync_visual_scale()
 	if not alive:
 		linger_time -= delta
 		queue_redraw()
@@ -287,7 +292,7 @@ func can_be_tracked() -> bool:
 
 func get_tracking_radius(base_radius: float) -> float:
 	var size_bonus := clampf((body_radius - 7.0) * 0.52, 0.0, 18.0)
-	return base_radius + size_bonus
+	return base_radius + size_bonus * observation_visual_scale
 
 
 func get_progress() -> float:
@@ -397,6 +402,7 @@ func _finish_observation(auto_rate: float) -> void:
 
 
 func _draw() -> void:
+	var visual_scale := observation_visual_scale
 	var burn_visibility := get_burn_visibility()
 	var burn_tail_scale := get_burn_tail_scale()
 	if trail_points.size() > 1:
@@ -414,11 +420,11 @@ func _draw() -> void:
 			trail_glow_colors.append(Color(glow_color, alpha * 0.42))
 			trail_core_colors.append(Color(primary_color, alpha * 0.82))
 		# Two batched Canvas commands replace two draw_line calls per segment.
-		draw_polyline_colors(trail_draw_points, trail_glow_colors, maxf(0.6, body_radius * 1.18 * burn_tail_scale), true)
-		draw_polyline_colors(trail_draw_points, trail_core_colors, maxf(0.4, body_radius * 0.42 * burn_tail_scale), true)
+		draw_polyline_colors(trail_draw_points, trail_glow_colors, maxf(0.6, body_radius * 1.18 * burn_tail_scale) * visual_scale, true)
+		draw_polyline_colors(trail_draw_points, trail_core_colors, maxf(0.4, body_radius * 0.42 * burn_tail_scale) * visual_scale, true)
 
 	if prediction_enabled and alive:
-		draw_multiline(prediction_draw_points, Color(glow_color, 0.22 * minf(1.0, burn_visibility)), 1.4, true)
+		draw_multiline(prediction_draw_points, Color(glow_color, 0.22 * minf(1.0, burn_visibility)), 1.4 * visual_scale, true)
 
 	var visibility := burn_visibility
 	if not alive:
@@ -434,11 +440,11 @@ func _draw() -> void:
 	elif burn_style == "snap":
 		pulse_amount = 0.035
 	var pulse := 1.0 + sin(age * 13.0 + wobble_phase) * pulse_amount
-	var r := body_radius * pulse * success_bloom
+	var r := body_radius * visual_scale * pulse * success_bloom
 	if type_id == "galaxy":
 		var galaxy_axis := Vector2(1.0, 0.34).rotated(travel_direction.angle()).normalized()
 		draw_line(-galaxy_axis * r * 2.7, galaxy_axis * r * 2.7, Color(glow_color, 0.12 * visibility), r * 1.4, true)
-		draw_line(-galaxy_axis * r * 2.2, galaxy_axis * r * 2.2, Color(primary_color, 0.72 * visibility), maxf(1.0, r * 0.34), true)
+		draw_line(-galaxy_axis * r * 2.2, galaxy_axis * r * 2.2, Color(primary_color, 0.72 * visibility), maxf(1.0 * visual_scale, r * 0.34), true)
 		draw_circle(Vector2.ZERO, r * 0.48, Color(1.0, 1.0, 1.0, 0.82 * visibility))
 	elif type_id == "binary_star":
 		var binary_axis := Vector2(-travel_direction.y, travel_direction.x)
@@ -451,7 +457,7 @@ func _draw() -> void:
 	else:
 		draw_circle(Vector2.ZERO, r * 3.4, Color(glow_color, clampf(0.065 * visibility, 0.0, 1.0)))
 		draw_circle(Vector2.ZERO, r * 1.95, Color(glow_color, clampf(0.17 * visibility, 0.0, 1.0)))
-		draw_arc(Vector2.ZERO, r + 8.0 + sin(age * 4.0) * 1.5, 0.0, TAU, 28, Color(glow_color, clampf(0.16 * visibility, 0.0, 1.0)), 1.2, true)
+		draw_arc(Vector2.ZERO, r + (8.0 + sin(age * 4.0) * 1.5) * visual_scale, 0.0, TAU, 28, Color(glow_color, clampf(0.16 * visibility, 0.0, 1.0)), 1.2 * visual_scale, true)
 		draw_circle(Vector2.ZERO, r, Color(primary_color, clampf(visibility, 0.0, 1.0)))
 		draw_circle(-travel_direction * r * 0.22, r * 0.45, Color(1.0, 1.0, 1.0, clampf(visibility, 0.0, 1.0)))
 
@@ -464,7 +470,22 @@ func _draw() -> void:
 
 	var scan_rate := get_automatic_rate()
 	if scan_rate > 0.0 and alive:
-		var scan_radius := body_radius + 12.0 + sin(age * 5.0) * 2.0
+		var scan_radius := (body_radius + 12.0 + sin(age * 5.0) * 2.0) * visual_scale
 		var start_angle := age * 2.5
-		draw_arc(Vector2.ZERO, scan_radius, start_angle, start_angle + PI * 1.25, 30, Color(0.39, 0.95, 0.82, minf(1.0, burn_visibility)), 1.6, true)
-		draw_arc(Vector2.ZERO, scan_radius + 5.0, -start_angle * 0.7, -start_angle * 0.7 + PI * 0.55, 18, Color(0.38, 0.95, 0.82, 0.38 * minf(1.0, burn_visibility)), 1.0, true)
+		draw_arc(Vector2.ZERO, scan_radius, start_angle, start_angle + PI * 1.25, 30, Color(0.39, 0.95, 0.82, minf(1.0, burn_visibility)), 1.6 * visual_scale, true)
+		draw_arc(Vector2.ZERO, scan_radius + 5.0 * visual_scale, -start_angle * 0.7, -start_angle * 0.7 + PI * 0.55, 18, Color(0.38, 0.95, 0.82, 0.38 * minf(1.0, burn_visibility)), 1.0 * visual_scale, true)
+
+
+func _current_visual_scale() -> float:
+	if observation_view != null:
+		return observation_view.screen_length_to_world(1.0)
+	return 1.0
+
+
+func _sync_visual_scale() -> void:
+	var next_scale := _current_visual_scale()
+	if is_equal_approx(next_scale, observation_visual_scale):
+		return
+	observation_visual_scale = next_scale
+	_rebuild_prediction_draw_points()
+	queue_redraw()

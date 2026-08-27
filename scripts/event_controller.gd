@@ -11,6 +11,7 @@ const Balance = preload("res://scripts/game_balance.gd")
 
 var spawner: Node
 var progression: Node
+var observation_view: Camera2D
 var running: bool = false
 var run_time: float = 0.0
 var shower_state: String = "idle"
@@ -37,9 +38,10 @@ const CANIS_MAJOR_BOUNDARY_MARGIN := 0.12
 const CANIS_MAJOR_MINIMUM_DELAY := 0.6
 
 
-func setup(meteor_spawner: Node, progression_controller: Node) -> void:
+func setup(meteor_spawner: Node, progression_controller: Node, view: Camera2D = null) -> void:
 	spawner = meteor_spawner
 	progression = progression_controller
+	observation_view = view
 	rng.randomize()
 
 
@@ -127,7 +129,7 @@ func trigger_shower() -> bool:
 	shower_started.emit()
 	banner_requested.emit("EVENT_SHOWER_INCOMING", UITheme.ACCENT_TEXT)
 	if progression.has_upgrade("observatory_network"):
-		var size := get_viewport().get_visible_rect().size
+		var size := _atmospheric_rect().size
 		forecast_requested.emit([
 			Vector2(size.x * 0.18, 54.0),
 			Vector2(size.x * 0.48, 54.0),
@@ -162,6 +164,12 @@ func _shower_fits_current_observation() -> bool:
 		return true
 	var required := Balance.SHOWER_WARNING_TIME + Balance.SHOWER_DURATION + SHOWER_BOUNDARY_MARGIN
 	return float(spawner.phase_time_remaining) >= required
+
+
+func _atmospheric_rect() -> Rect2:
+	if observation_view != null:
+		return observation_view.atmospheric_rect()
+	return Rect2(Vector2.ZERO, get_viewport().get_visible_rect().size)
 
 
 func trigger_canis_major_warning() -> bool:

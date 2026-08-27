@@ -76,7 +76,9 @@ testbed.
 ```
 
 Covers tutorial, saves, localization, phase summary, compact HUD, observation,
-progression, events, performance caps, stale references, and reset.
+the identity screen/world routing, fixed atmospheric rectangle, and background
+coverage above the single galactic span ceiling, progression, events,
+performance caps, stale references, and reset.
 
 - Pass: a single `SMOKE_TEST_PASS:` line
 - Fail: `SMOKE:` error lines, then `SMOKE_TEST_FAIL: N failure(s)`

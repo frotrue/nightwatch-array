@@ -1,16 +1,29 @@
 extends Node2D
 
+const Balance = preload("res://scripts/game_balance.gd")
+
+# Keep a small overscan reserve around the final camera limit so changing the
+# single balance constant cannot silently reveal an unpainted border.
+const BACKGROUND_COVERAGE_SPAN := Balance.GALACTIC_FINAL_OBSERVATION_SPAN * 1.02
+
 var stars: Array[Dictionary] = []
+var outer_stars: Array[Dictionary] = []
 var activity: float = 0.0
 var galactic_mode: bool = false
 var rng := RandomNumberGenerator.new()
 var cached_size := Vector2.ZERO
+var observation_view: Camera2D
 
 
 func _ready() -> void:
 	rng.seed = 914027
 	_rebuild_stars()
 	get_viewport().size_changed.connect(_rebuild_stars)
+	queue_redraw()
+
+
+func setup(view: Camera2D) -> void:
+	observation_view = view
 	queue_redraw()
 
 
@@ -31,8 +44,9 @@ func set_galactic_mode(enabled: bool) -> void:
 
 
 func _rebuild_stars() -> void:
-	cached_size = get_viewport_rect().size
+	cached_size = _atmospheric_rect().size
 	stars.clear()
+	outer_stars.clear()
 	# Density is measured per megapixel against the design capture. The twinkle
 	# layer draws its own stars on top, so this divisor is set for the pair
 	# rather than for this layer alone, and the floor stays under it so a small
@@ -48,11 +62,29 @@ func _rebuild_stars() -> void:
 			"speed": rng.randf_range(0.35, 1.2),
 			"blue": rng.randf_range(0.0, 1.0)
 		})
+	var coverage := _background_coverage_rect()
+	var extra_area := maxf(0.0, coverage.size.x * coverage.size.y - cached_size.x * cached_size.y)
+	var outer_base_count := int(round(extra_area / 17000.0))
+	var outer_count := int(round(float(outer_base_count) * 1.65)) if galactic_mode else outer_base_count
+	for _index in range(outer_count):
+		var point := _sample_outer_point(coverage)
+		outer_stars.append({
+			"p": point,
+			"size": rng.randf_range(0.45, 1.30),
+			"phase": rng.randf_range(0.0, TAU),
+			"speed": rng.randf_range(0.35, 1.2),
+			"blue": rng.randf_range(0.0, 1.0)
+		})
 	queue_redraw()
 
 
 func _draw() -> void:
-	var size := get_viewport_rect().size
+	var atmospheric := _atmospheric_rect()
+	var size := atmospheric.size
+	# The camera is still identity-scaled in stage 0, so this reserve is outside
+	# the shipped frame. It prevents later pull-back steps from exposing an
+	# unpainted border without changing today's sky.
+	draw_rect(_background_coverage_rect(), Color("05070C"), true)
 	# Layered bands give a restrained vertical night-sky gradient without textures.
 	# A radial well centred just below the frame, so the sky is darkest overhead
 	# and the red-light information layer never competes with a blue field.
@@ -72,16 +104,9 @@ func _draw() -> void:
 		draw_rect(Rect2(0.0, band_y - size.y / bands, size.x, size.y / bands + 2.0), sky)
 
 	for star in stars:
-		var p: Vector2 = star.p * size
-		var pulse := 0.62 + sin(float(star.phase)) * 0.16
-		pulse += activity * 0.12
-		var star_color := Color("d9dee6").lerp(Color("ffffff"), float(star.blue))
-		star_color.a = clampf(pulse, 0.22, 1.0)
-		var radius := float(star.size)
-		# No cross rays. They were the reason a background star could occupy more
-		# pixels than a meteor's head, and the sky has to stay quieter than the
-		# thing the player is trying to see in it.
-		draw_circle(p, radius, star_color)
+		_draw_star(Vector2(star.p) * size, star)
+	for star in outer_stars:
+		_draw_star(Vector2(star.p), star)
 
 	# A quiet, low-contrast horizon line, and nothing on it. The observatory that
 	# used to sit here read as a foreground object in a frame whose whole subject
@@ -94,3 +119,44 @@ func _draw() -> void:
 		Vector2(size.x, horizon_y + 4), Vector2(size.x, size.y), Vector2(0, size.y)
 	])
 	draw_colored_polygon(ridge, Color("03050A"))
+
+
+func _draw_star(point: Vector2, star: Dictionary) -> void:
+	var pulse := 0.62 + sin(float(star.phase)) * 0.16
+	pulse += activity * 0.12
+	var star_color := Color("d9dee6").lerp(Color("ffffff"), float(star.blue))
+	star_color.a = clampf(pulse, 0.22, 1.0)
+	# No cross rays. They were the reason a background star could occupy more
+	# pixels than a meteor's head, and the sky has to stay quieter than the
+	# thing the player is trying to see in it.
+	draw_circle(point, _world_px(float(star.size)), star_color)
+
+
+func _atmospheric_rect() -> Rect2:
+	if observation_view != null:
+		return observation_view.atmospheric_rect()
+	return Rect2(Vector2.ZERO, get_viewport_rect().size)
+
+
+func _background_coverage_rect() -> Rect2:
+	var atmospheric := _atmospheric_rect()
+	var coverage_size := atmospheric.size * BACKGROUND_COVERAGE_SPAN
+	return Rect2(atmospheric.get_center() - coverage_size * 0.5, coverage_size)
+
+
+func _sample_outer_point(coverage: Rect2) -> Vector2:
+	var atmospheric := _atmospheric_rect()
+	for _attempt in range(32):
+		var point := Vector2(
+			rng.randf_range(coverage.position.x, coverage.end.x),
+			rng.randf_range(coverage.position.y, coverage.end.y)
+		)
+		if not atmospheric.has_point(point):
+			return point
+	return coverage.position
+
+
+func _world_px(pixels: float) -> float:
+	if observation_view != null:
+		return observation_view.screen_length_to_world(pixels)
+	return pixels

@@ -22,6 +22,7 @@ const SHAKE_TRAUMA_FLOOR := 0.54
 const SHAKE_TRAUMA_CEILING := 0.88
 
 @onready var starfield: Node2D = $Starfield
+@onready var twinkle_stars: Node2D = $TwinkleStars
 @onready var meteor_layer: Node2D = $MeteorLayer
 @onready var effects: Node2D = $EffectsLayer
 @onready var observer: Node2D = $ObservationController
@@ -35,6 +36,7 @@ const SHAKE_TRAUMA_CEILING := 0.88
 @onready var hud: CanvasLayer = $HUD
 @onready var upgrade_tree: CanvasLayer = $UpgradeTree
 @onready var tutorial: CanvasLayer = $Tutorial
+@onready var observation_view: Camera2D = $ObservationView
 
 var sound: Node
 var elapsed_time: float = 0.0
@@ -90,11 +92,14 @@ func _ready() -> void:
 	upgrade_tree.tree_opened.connect(tutorial.notify_upgrade_tree_opened)
 	upgrade_tree.tree_closed.connect(_on_upgrade_tree_closed)
 	upgrade_tree.galactic_pullback_finished.connect(_on_galactic_pullback_finished)
-	sky_contacts.setup(meteor_layer, progression)
-	spawner.setup(meteor_layer, progression)
-	survey.setup(progression, spawner, meteor_layer)
-	observer.setup(meteor_layer, progression, hud, survey)
-	events.setup(spawner, progression)
+	starfield.setup(observation_view)
+	twinkle_stars.setup(observation_view)
+	effects.setup(observation_view)
+	sky_contacts.setup(meteor_layer, progression, observation_view)
+	spawner.setup(meteor_layer, progression, observation_view)
+	survey.setup(progression, spawner, meteor_layer, observation_view)
+	observer.setup(meteor_layer, progression, hud, survey, observation_view)
+	events.setup(spawner, progression, observation_view)
 
 	spawner.meteor_spawned.connect(_on_meteor_spawned)
 	spawner.rare_spawned.connect(_on_rare_spawned)

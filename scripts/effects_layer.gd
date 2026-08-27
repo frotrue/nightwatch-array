@@ -38,6 +38,7 @@ var kick_time: float = 0.0
 var kick_offset := Vector2.ZERO
 var view_offset := Vector2.ZERO
 var rng := RandomNumberGenerator.new()
+var observation_view: Camera2D
 
 
 func _ready() -> void:
@@ -47,6 +48,11 @@ func _ready() -> void:
 	shake_enabled = DisplayServer.get_name() != "headless"
 	queue_redraw()
 	set_process(false)
+
+
+func setup(view: Camera2D) -> void:
+	observation_view = view
+	_apply_view_transform()
 
 
 func _exit_tree() -> void:
@@ -88,7 +94,7 @@ func spawn_success(world_position: Vector2, amount: float, color: Color, multipl
 		var life := rng.randf_range(0.38, life_ceiling)
 		particles.append({
 			"p": world_position,
-			"v": Vector2.from_angle(angle) * speed,
+			"v": Vector2.from_angle(angle) * _world_px(speed),
 			"life": life,
 			"max_life": life,
 			"color": color,
@@ -119,11 +125,11 @@ func spawn_success(world_position: Vector2, amount: float, color: Color, multipl
 		label = "%s+%d%s" % [prefix, int(amount), suffix]
 	if popups.size() >= MAX_POPUPS:
 		popups.remove_at(0)
-	var start := world_position + Vector2(0, -20)
+	var start := world_position + Vector2(0, -_world_px(20.0))
 	popups.append({
 		"p": start,
 		"origin": start,
-		"v": Vector2(rng.randf_range(-16.0, 16.0), -32.0),
+		"v": Vector2(_world_px(rng.randf_range(-16.0, 16.0)), -_world_px(32.0)),
 		"age": 0.0,
 		"alpha": 1.0,
 		"text": label,
@@ -132,7 +138,7 @@ func spawn_success(world_position: Vector2, amount: float, color: Color, multipl
 		"mote_size": lerpf(2.6, 5.4, power),
 		"amount": amount,
 		"anchor": anchor,
-		"bow": rng.randf_range(-34.0, 34.0)
+		"bow": _world_px(rng.randf_range(-34.0, 34.0))
 	})
 
 	flash_color = color
@@ -154,7 +160,7 @@ func add_kick(from_point: Vector2, amount: float) -> void:
 	# instead of reading as separate hits.
 	if absf(_kick_envelope()) * kick_amplitude > amount:
 		return
-	var away := from_point - get_viewport_rect().size * 0.5
+	var away := from_point - _atmospheric_rect().get_center()
 	kick_direction = away.normalized() if away.length() > 1.0 else Vector2.UP
 	kick_amplitude = minf(amount, MAX_KICK_OFFSET)
 	kick_time = 0.0
@@ -171,10 +177,10 @@ func spawn_upgrade_pulse() -> void:
 
 
 func spawn_incoming(start_position: Vector2, velocity: Vector2, color: Color) -> void:
-	var size := get_viewport_rect().size
+	var atmospheric := _atmospheric_rect()
 	var marker_position := Vector2(
-		clampf(start_position.x, 34.0, size.x - 34.0),
-		clampf(start_position.y, 34.0, size.y - 76.0)
+		clampf(start_position.x, atmospheric.position.x + _world_px(34.0), atmospheric.end.x - _world_px(34.0)),
+		clampf(start_position.y, atmospheric.position.y + _world_px(34.0), atmospheric.end.y - _world_px(76.0))
 	)
 	if incoming_markers.size() >= MAX_INCOMING_MARKERS:
 		incoming_markers.remove_at(0)
@@ -190,7 +196,7 @@ func spawn_incoming(start_position: Vector2, velocity: Vector2, color: Color) ->
 
 
 func spawn_forecast(entry_points: Array) -> void:
-	var center := get_viewport_rect().size * 0.5
+	var center := _atmospheric_rect().get_center()
 	for point in entry_points:
 		if incoming_markers.size() >= MAX_INCOMING_MARKERS:
 			break
@@ -282,6 +288,11 @@ func _update_view_offset() -> void:
 func _apply_view_transform() -> void:
 	if not shake_enabled or not is_inside_tree():
 		return
+	if is_instance_valid(observation_view):
+		# Camera2D offset moves the camera, so negate it to move the rendered
+		# world in the same screen direction as the former canvas origin.
+		observation_view.offset = -view_offset * _world_px(1.0)
+		return
 	var viewport := get_viewport()
 	if viewport == null:
 		return
@@ -320,9 +331,9 @@ func _update_packets(delta: float) -> void:
 		var flight := clampf((age - PACKET_RISE_TIME) / PACKET_FLIGHT_TIME, 0.0, 1.0)
 		var eased := flight * flight * (3.0 - 2.0 * flight)
 		var origin: Vector2 = popup.origin
-		var target := anchor - view_offset
+		var target: Vector2 = observation_view.screen_to_world(anchor) if is_instance_valid(observation_view) else anchor - view_offset
 		var straight := origin.lerp(target, eased)
-		var travel := target - origin
+		var travel: Vector2 = target - origin
 		var side := Vector2(-travel.y, travel.x).normalized()
 		popup.p = straight + side * sin(eased * PI) * float(popup.bow)
 		popup.alpha = 1.0 - eased * 0.30
@@ -333,38 +344,57 @@ func _update_packets(delta: float) -> void:
 
 
 func _draw() -> void:
+	var visual_scale := _world_px(1.0)
 	for particle in particles:
 		var alpha := clampf(float(particle.life) / maxf(float(particle.max_life), 0.001), 0.0, 1.0)
-		draw_circle(particle.p, float(particle.size) * alpha, Color(particle.color, alpha * 0.9))
+		draw_circle(particle.p, float(particle.size) * alpha * visual_scale, Color(particle.color, alpha * 0.9))
 	for ring in rings:
 		var progress := 1.0 - clampf(float(ring.life) / maxf(float(ring.max_life), 0.001), 0.0, 1.0)
 		var radius := lerpf(float(ring.radius_start), float(ring.radius_end), progress)
-		draw_arc(ring.p, radius, 0.0, TAU, 44, Color(ring.color, (1.0 - progress) * 0.55), float(ring.width), true)
+		draw_arc(ring.p, radius * visual_scale, 0.0, TAU, 44, Color(ring.color, (1.0 - progress) * 0.55), float(ring.width) * visual_scale, true)
 	for popup in popups:
 		var alpha := clampf(float(popup.alpha), 0.0, 1.0)
 		var text := String(popup.text)
 		if text.is_empty():
 			var mote := float(popup.mote_size)
-			draw_circle(popup.p, mote * 2.4, Color(popup.color, alpha * 0.16))
-			draw_circle(popup.p, mote, Color(popup.color, alpha * 0.92))
+			draw_circle(popup.p, mote * 2.4 * visual_scale, Color(popup.color, alpha * 0.16))
+			draw_circle(popup.p, mote * visual_scale, Color(popup.color, alpha * 0.92))
 			continue
 		var font := ThemeDB.fallback_font
-		draw_string(font, popup.p, text, HORIZONTAL_ALIGNMENT_CENTER, -1.0, int(popup.font_size), Color(popup.color, alpha))
+		draw_string(font, popup.p, text, HORIZONTAL_ALIGNMENT_CENTER, -1.0, int(round(float(popup.font_size) * visual_scale)), Color(popup.color, alpha))
 	for marker in incoming_markers:
 		var alpha := clampf(float(marker.life) / 0.4, 0.0, 1.0)
 		var pulse := 1.0 + sin(float(marker.life) * 16.0) * 0.12
 		var p: Vector2 = marker.p
 		var direction: Vector2 = marker.dir
 		var side := Vector2(-direction.y, direction.x)
-		var tip := p + direction * 13.0 * pulse
-		var arrow := PackedVector2Array([tip, p - direction * 7.0 + side * 7.0, p - direction * 7.0 - side * 7.0])
+		var tip := p + direction * 13.0 * visual_scale * pulse
+		var arrow := PackedVector2Array([tip, p + (-direction * 7.0 + side * 7.0) * visual_scale, p + (-direction * 7.0 - side * 7.0) * visual_scale])
 		draw_colored_polygon(arrow, Color(marker.color, alpha * 0.72))
-		draw_arc(p, 23.0 * pulse, 0.0, TAU, 28, Color(marker.color, alpha * 0.28), 1.4, true)
+		draw_arc(p, 23.0 * visual_scale * pulse, 0.0, TAU, 28, Color(marker.color, alpha * 0.28), 1.4 * visual_scale, true)
 		if bool(marker.get("forecast", false)):
-			draw_arc(p, 34.0 * pulse, -PI * 0.75, PI * 0.75, 24, Color(marker.color, alpha * 0.5), 2.0, true)
-			draw_line(p + direction * 18.0, p + direction * 58.0, Color(marker.color, alpha * 0.22), 1.2, true)
+			draw_arc(p, 34.0 * visual_scale * pulse, -PI * 0.75, PI * 0.75, 24, Color(marker.color, alpha * 0.5), 2.0 * visual_scale, true)
+			draw_line(p + direction * 18.0 * visual_scale, p + direction * 58.0 * visual_scale, Color(marker.color, alpha * 0.22), 1.2 * visual_scale, true)
 	if flash_strength > 0.001:
 		# Grown by the shake budget so a displaced canvas cannot expose an
 		# unpainted strip along the edge the screen shook away from.
-		var margin := Vector2.ONE * (MAX_SHAKE_OFFSET + MAX_KICK_OFFSET + 2.0)
-		draw_rect(Rect2(-margin, get_viewport_rect().size + margin * 2.0), Color(flash_color, flash_strength), true)
+		var margin := Vector2.ONE * _world_px(MAX_SHAKE_OFFSET + MAX_KICK_OFFSET + 2.0)
+		draw_rect(_visible_world_rect().grow(margin.x), Color(flash_color, flash_strength), true)
+
+
+func _atmospheric_rect() -> Rect2:
+	if is_instance_valid(observation_view):
+		return observation_view.atmospheric_rect()
+	return Rect2(Vector2.ZERO, get_viewport_rect().size)
+
+
+func _visible_world_rect() -> Rect2:
+	if is_instance_valid(observation_view):
+		return observation_view.visible_world_rect()
+	return _atmospheric_rect()
+
+
+func _world_px(pixels: float) -> float:
+	if is_instance_valid(observation_view):
+		return observation_view.screen_length_to_world(pixels)
+	return pixels
