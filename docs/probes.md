@@ -378,7 +378,9 @@ $env:NIGHTWATCH_PRICING_SEEDS = "20"; & $godot --headless --path . --script res:
 
 `tests/research_chart_preview.gd`는 설계 검토용으로 연구 화면을 캡처해
 `build/research_chart_preview.png`로 저장한다. 렌더된 프레임이 필요하므로
-`--headless` 없이 창 모드로 실행한다.
+`--headless` 없이 창 모드로 실행한다. 기본 캡처는 목업과 직접 비교할 수 있도록
+앞의 열 계열을 완료하고 큰개자리 세 노드를 설치한 81/124 상태, 데이터
+1,284,000, 5차 관측 80초 문맥을 재현한다.
 
 ```powershell
 & "C:\Users\user\AppData\Local\Temp\codex-godot-4.7.2\Godot_v4.7.2-stable_win64_console.exe" --path . --script res://tests/research_chart_preview.gd
