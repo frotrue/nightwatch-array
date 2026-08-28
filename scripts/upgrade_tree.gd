@@ -12,6 +12,10 @@ const TREE_SIZE := Vector2(1460, 780)
 const MIN_ZOOM := 0.55
 const MAX_ZOOM := 1.28
 const GALACTIC_ZOOM := 0.18
+# Installing every node earns a wider frame. The galaxy map still opens at
+# GALACTIC_ZOOM; this only lowers the floor the player can pull back to, so the
+# extra room is chosen rather than imposed.
+const GALACTIC_ZOOM_COMPLETE := 0.12
 const GALACTIC_DETAIL_ZOOM_START := 0.26
 const GALACTIC_DETAIL_ZOOM_END := 0.55
 const GALACTIC_CHART_SCALE := 0.0
@@ -623,9 +627,15 @@ func _frame_galaxy() -> void:
 	_update_galactic_presentation()
 
 
+func _galactic_zoom_floor() -> float:
+	if progression != null and progression.upgrade_level >= Balance.UPGRADE_NODES.size():
+		return GALACTIC_ZOOM_COMPLETE
+	return GALACTIC_ZOOM
+
+
 func _zoom_galactic_chart(factor: float) -> void:
 	var old_zoom := zoom
-	zoom = clampf(zoom * factor, GALACTIC_ZOOM, MAX_ZOOM)
+	zoom = clampf(zoom * factor, _galactic_zoom_floor(), MAX_ZOOM)
 	if is_equal_approx(old_zoom, zoom):
 		return
 	galactic_chart_detail = _ease_in_out(_timed_ratio(
@@ -2286,10 +2296,23 @@ func _galactic_core_point(star_key: String, scale_amount: float) -> Vector2:
 	return CHART_ORIGIN + Vector2(raw_offset.x * scale_amount, raw_offset.y * scale_amount * GALACTIC_DISK_TILT)
 
 
+func _galactic_label_alpha() -> float:
+	# Code labels are screen-locked, so pulling below the normal galactic frame
+	# shrinks the disc under labels that stay the same size and they collide.
+	# Fade them across the extra range the completed chart unlocks: the wider
+	# frame is for reading the shape, and the inspector still names what is
+	# hovered.
+	if zoom >= GALACTIC_ZOOM:
+		return 1.0
+	var span := maxf(0.0001, GALACTIC_ZOOM - GALACTIC_ZOOM_COMPLETE)
+	return clampf((zoom - GALACTIC_ZOOM_COMPLETE) / span, 0.0, 1.0)
+
+
 func _draw_local_group_labels() -> void:
 	var group_alpha := _local_group_alpha()
 	if group_alpha <= 0.01:
 		return
+	var label_alpha := _galactic_label_alpha()
 	var font := UITheme.mono()
 	var font_size := maxi(1, int(round(float(UITheme.size_px(12.0)) / maxf(zoom, 0.001))))
 	var tracking := UITheme.px(1.4) / maxf(zoom, 0.001)
@@ -2308,12 +2331,17 @@ func _draw_local_group_labels() -> void:
 		if left:
 			label_position.x -= _tracked_text_width(font, label, font_size, tracking)
 		var active := hovered_node_id == node_id
+		# The hovered galaxy keeps its label at any zoom; it is the one the
+		# player is asking about.
+		var fade := 1.0 if active else label_alpha
+		if fade <= 0.01:
+			continue
 		_draw_tracked_text(
 			font,
 			label_position,
 			label,
 			font_size,
-			Color(UITheme.INK_MAX if active else UITheme.INK_MID, (1.0 if active else 0.70) * group_alpha),
+			Color(UITheme.INK_MAX if active else UITheme.INK_MID, (1.0 if active else 0.70) * group_alpha * fade),
 			tracking
 		)
 

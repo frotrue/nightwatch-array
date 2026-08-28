@@ -95,7 +95,15 @@ zoom. `ObservationView` exposes five routing methods:
 
 Meteor entry and burnout planning, dish homes, and shower entry previews use
 the atmospheric rectangle. Background coverage and full-screen feedback use
-the visible rectangle. `EffectsLayer` sends shake and kick through the camera
+the visible rectangle.
+
+Meteors always entered from the true edges, but `BURNOUT_SAFE_MIN/MAX` and the
+per-cell `BURNOUT_JITTER_MIN/MAX` stacked into a second inset that kept every
+deadline inside roughly 12–88% horizontally and 18–82% vertically, so the outer
+sky held no burnout and read as dead. The horizontal inset guarded nothing and
+is now nearly gone; the vertical one is only relaxed as far as the phase clock
+above and the controls below allow, because a burnout under either is a target
+the player cannot hit. `EffectsLayer` sends shake and kick through the camera
 instead of writing `Viewport.canvas_transform` in the main scene; the
 standalone Layer 2 probe retains the legacy fallback because it has no
 `ObservationView`.

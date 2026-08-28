@@ -13,12 +13,19 @@ const MINIMUM_PAYABLE_TRACK_TIME := 0.95
 const ENTRY_MARGIN := 24.0
 const BURNOUT_GRID_COLUMNS := 4
 const BURNOUT_GRID_ROWS := 3
-const BURNOUT_SAFE_MIN := Vector2(0.08, 0.14)
-const BURNOUT_SAFE_MAX := Vector2(0.92, 0.86)
+# Meteors always entered from the true edges, but the burnout point stayed well
+# inside them, so the outer sky held no deadline and read as dead. The
+# horizontal inset guarded nothing and is now nearly gone; the vertical one
+# still clears the phase clock above and the controls below, because a burnout
+# under either is a target the player cannot hit.
+const BURNOUT_SAFE_MIN := Vector2(0.03, 0.11)
+const BURNOUT_SAFE_MAX := Vector2(0.97, 0.89)
 const BURNOUT_CELL_ORDER := [0, 5, 10, 3, 8, 1, 6, 11, 4, 9, 2, 7]
 const OUTER_BURNOUT_CELLS := [0, 1, 2, 3, 4, 5, 6, 7, 8, 11]
-const BURNOUT_JITTER_MIN := 0.18
-const BURNOUT_JITTER_MAX := 0.82
+# Jitter is a second inset on top of the safe rect: at 0.18 the outer cells
+# never used their outer third. Widening it is what actually reaches the edge.
+const BURNOUT_JITTER_MIN := 0.10
+const BURNOUT_JITTER_MAX := 0.90
 const BURNOUT_JITTER_ATTEMPTS := 8
 const PLAN_SPEED_FACTOR_MIN := 0.96
 const PLAN_SPEED_FACTOR_MAX := 1.08
