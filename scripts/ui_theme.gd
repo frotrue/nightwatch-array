@@ -58,6 +58,7 @@ const STAR_READY_RING := Color("FFAE82")
 const STAR_SHORT_BORDER := Color("B37458")
 const STAR_LOCKED := Color("AEA298")
 const STAR_BACKGROUND := Color("EAEFF5")
+const GALACTIC_BACKGROUND_STAR := Color("8798AD")
 
 const LINE_IDLE := Color("A5AFBA")
 const LINE_INSTALLED := Color("F6D8BC")

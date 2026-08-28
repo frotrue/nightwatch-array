@@ -20,11 +20,17 @@ const GALACTIC_MODE_NORMAL := 0
 const GALACTIC_MODE_PULLBACK := 1
 const GALACTIC_MODE_FINAL := 2
 const PULLBACK_DURATION := 3.60
-const PULLBACK_LINES_END := 0.65
-const PULLBACK_ZOOM_START := 0.55
-const PULLBACK_ZOOM_END := 1.85
-const PULLBACK_NODES_START := 0.95
-const PULLBACK_NODES_END := 3.45
+const PULLBACK_LINES_END := 0.90
+const PULLBACK_ZOOM_START := 0.15
+const PULLBACK_ZOOM_END := 2.25
+const PULLBACK_LEGACY_FADE_START := 0.40
+const PULLBACK_LEGACY_FADE_END := 1.55
+const PULLBACK_ROUTE_START := 0.95
+const PULLBACK_ROUTE_END := 3.15
+const PULLBACK_GALACTIC_BACKGROUND_START := 1.45
+const PULLBACK_GALACTIC_BACKGROUND_END := 2.85
+const GALACTIC_NODE_SETTLE_SCALE := 0.965
+const GALACTIC_NODE_REVEAL_WINDOW := 0.04
 const HOLD_PURCHASE_SECONDS := 0.75
 const CHART_ORIGIN := Vector2(TREE_SIZE.x * 0.5, TREE_SIZE.y * 0.91)
 const ROTATION_STEP := deg_to_rad(6.0)
@@ -45,6 +51,12 @@ const BACKGROUND_STAR_COUNT := 150
 const BACKGROUND_STAR_MIN_RADIUS := 90.0
 const BACKGROUND_STAR_MAX_RADIUS := 1180.0
 const BACKGROUND_STAR_SEED := 20260824
+const GALACTIC_BACKGROUND_STAR_COUNT := 30
+const GALACTIC_BACKGROUND_STAR_SEED := 20260828
+const GALACTIC_BACKGROUND_X_RANGE := 0.46
+const GALACTIC_BACKGROUND_Y_RANGE := Vector2(-0.35, 0.38)
+const GALACTIC_BACKGROUND_EXCLUSION := Vector2(0.235, 0.36)
+const GALACTIC_BACKGROUND_MIN_SEPARATION := 0.055
 const CLUSTER_MARKER_OFFSETS := [
 	Vector2(-1.45, -0.42),
 	Vector2(-0.62, 0.88),
@@ -223,6 +235,8 @@ var base_star_positions: Dictionary = {}
 var star_node_ids: Dictionary = {}
 var local_group_node_positions: Dictionary = {}
 var local_group_node_order: Dictionary = {}
+var local_group_node_route_ratios: Dictionary = {}
+var local_group_route_length: float = 0.0
 
 var hovered_node_id: String = ""
 var tooltip_suppressed_until_motion: bool = false
@@ -235,6 +249,7 @@ var pan_position := Vector2.ZERO
 var rotation_offset: float = DEFAULT_ROTATION
 var pending_rotation_delta: float = 0.0
 var background_stars: PackedVector2Array = PackedVector2Array()
+var galactic_background_stars: PackedVector2Array = PackedVector2Array()
 var galactic_unlocked: bool = false
 var galactic_pullback_seen: bool = false
 var galactic_mode: int = GALACTIC_MODE_NORMAL
@@ -258,6 +273,7 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 	node_star_records = ChartData.node_star_map()
 	_build_background_stars()
+	_build_galactic_background_stars()
 	_cache_chart_geometry()
 	_build_interface()
 	set_process_input(true)
@@ -537,6 +553,11 @@ func _ease_in_out(value: float) -> float:
 	return value * value * (3.0 - 2.0 * value)
 
 
+func _ease_out_back(value: float) -> float:
+	var offset := value - 1.0
+	return 1.0 + 2.70158 * offset * offset * offset + 1.70158 * offset * offset
+
+
 func _galactic_pan_for_zoom(target_zoom: float, chart_detail: float = 0.0) -> Vector2:
 	if content_clip == null:
 		return pan_position
@@ -584,11 +605,35 @@ func _is_local_group_node(node_id: String) -> bool:
 	return local_group_node_positions.has(node_id)
 
 
+func _galactic_route_progress() -> float:
+	if galactic_mode == GALACTIC_MODE_PULLBACK:
+		# A linear clock moves the route head at a stable speed. Node-local easing
+		# supplies the softness without repeatedly slowing the whole trace.
+		return _timed_ratio(pullback_elapsed, PULLBACK_ROUTE_START, PULLBACK_ROUTE_END)
+	if galactic_unlocked and galactic_pullback_seen:
+		return 1.0
+	return 0.0
+
+
 func _local_group_alpha() -> float:
 	if not galactic_unlocked:
 		return 0.0
 	if galactic_mode == GALACTIC_MODE_PULLBACK:
-		return _ease_in_out(_timed_ratio(pullback_elapsed, PULLBACK_NODES_START, PULLBACK_NODES_END))
+		return _galactic_route_progress()
+	if not galactic_pullback_seen:
+		return 0.0
+	return 1.0 - smoothstep(0.05, 0.34, galactic_chart_detail)
+
+
+func _galactic_background_alpha() -> float:
+	if not galactic_unlocked:
+		return 0.0
+	if galactic_mode == GALACTIC_MODE_PULLBACK:
+		return _ease_in_out(_timed_ratio(
+			pullback_elapsed,
+			PULLBACK_GALACTIC_BACKGROUND_START,
+			PULLBACK_GALACTIC_BACKGROUND_END
+		))
 	if not galactic_pullback_seen:
 		return 0.0
 	return 1.0 - smoothstep(0.05, 0.34, galactic_chart_detail)
@@ -598,12 +643,26 @@ func _local_group_node_reveal(node_id: String) -> float:
 	var group_alpha := _local_group_alpha()
 	if galactic_mode != GALACTIC_MODE_PULLBACK or group_alpha <= 0.0:
 		return group_alpha
-	var reveal_clock := _timed_ratio(pullback_elapsed, PULLBACK_NODES_START, PULLBACK_NODES_END)
-	var node_count := maxi(1, local_group_node_order.size())
-	var order_ratio := float(local_group_node_order.get(node_id, 0)) / float(maxi(1, node_count - 1))
-	# The reveal head travels down the real dependency order. Each node expands
-	# from the Milky Way only when the preceding part of the route has arrived.
-	return _ease_in_out(clampf((reveal_clock - order_ratio * 0.42) / 0.58, 0.0, 1.0))
+	var arrival_ratio := float(local_group_node_route_ratios.get(node_id, 1.0))
+	# The node reaches full brightness exactly as the traced route reaches it.
+	# Its short lead-in reads as illumination, not a second expanding structure.
+	return _ease_in_out(clampf(
+		(group_alpha - arrival_ratio + GALACTIC_NODE_REVEAL_WINDOW) / GALACTIC_NODE_REVEAL_WINDOW,
+		0.0,
+		1.0
+	))
+
+
+func _legacy_chart_alpha() -> float:
+	if not galactic_unlocked:
+		return 1.0
+	if galactic_mode == GALACTIC_MODE_PULLBACK:
+		return 1.0 - _ease_in_out(_timed_ratio(
+			pullback_elapsed,
+			PULLBACK_LEGACY_FADE_START,
+			PULLBACK_LEGACY_FADE_END
+		))
+	return smoothstep(0.05, 0.34, galactic_chart_detail)
 
 
 func _node_presentation_alpha(node_id: String) -> float:
@@ -611,7 +670,7 @@ func _node_presentation_alpha(node_id: String) -> float:
 		return _local_group_node_reveal(node_id)
 	if node_id == "galactic_reference_frame" and galactic_unlocked:
 		return 1.0
-	return 1.0 if not galactic_unlocked else smoothstep(0.05, 0.34, galactic_chart_detail)
+	return _legacy_chart_alpha()
 
 
 func _node_interaction_ready(node_id: String) -> bool:
@@ -787,11 +846,42 @@ func _build_background_stars() -> void:
 		background_stars[index] = CHART_ORIGIN + Vector2.RIGHT.rotated(rng.randf_range(-PI, PI)) * distance
 
 
+func _build_galactic_background_stars() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GALACTIC_BACKGROUND_STAR_SEED
+	galactic_background_stars.clear()
+	var attempts := 0
+	while galactic_background_stars.size() < GALACTIC_BACKGROUND_STAR_COUNT and attempts < 1000:
+		attempts += 1
+		var candidate := Vector2(
+			rng.randf_range(-GALACTIC_BACKGROUND_X_RANGE, GALACTIC_BACKGROUND_X_RANGE),
+			rng.randf_range(GALACTIC_BACKGROUND_Y_RANGE.x, GALACTIC_BACKGROUND_Y_RANGE.y)
+		)
+		# Coordinates are normalized to the visible chart frame. The central
+		# ellipse is reserved for the real Local Group route and its buttons.
+		var exclusion_distance := Vector2(
+			candidate.x / GALACTIC_BACKGROUND_EXCLUSION.x,
+			candidate.y / GALACTIC_BACKGROUND_EXCLUSION.y
+		).length()
+		if exclusion_distance < 1.0:
+			continue
+		var separated := true
+		for existing_variant in galactic_background_stars:
+			var existing := Vector2(existing_variant)
+			if candidate.distance_to(existing) < GALACTIC_BACKGROUND_MIN_SEPARATION:
+				separated = false
+				break
+		if separated:
+			galactic_background_stars.append(candidate)
+
+
 func _cache_chart_geometry() -> void:
 	base_star_positions.clear()
 	star_node_ids.clear()
 	local_group_node_positions.clear()
 	local_group_node_order.clear()
+	local_group_node_route_ratios.clear()
+	local_group_route_length = 0.0
 	for constellation_id in ChartData.CONSTELLATIONS:
 		var constellation: Dictionary = ChartData.CONSTELLATIONS[constellation_id]
 		var placement: Dictionary = ChartData.PLACEMENTS[constellation_id]
@@ -812,6 +902,28 @@ func _cache_chart_geometry() -> void:
 		var node_id := String(galaxy.node_id)
 		local_group_node_positions[node_id] = CHART_ORIGIN + Vector2(galaxy.local_position)
 		local_group_node_order[node_id] = index
+	_cache_local_group_route()
+
+
+func _cache_local_group_route() -> void:
+	var previous_position := CHART_ORIGIN
+	for galaxy_variant in ChartData.LOCAL_GROUP_GALAXIES:
+		var galaxy: Dictionary = galaxy_variant
+		var node_id := String(galaxy.node_id)
+		var current_position := Vector2(local_group_node_positions[node_id])
+		local_group_route_length += previous_position.distance_to(current_position)
+		previous_position = current_position
+	if local_group_route_length <= 0.0:
+		return
+	var accumulated_length := 0.0
+	previous_position = CHART_ORIGIN
+	for galaxy_variant in ChartData.LOCAL_GROUP_GALAXIES:
+		var galaxy: Dictionary = galaxy_variant
+		var node_id := String(galaxy.node_id)
+		var current_position := Vector2(local_group_node_positions[node_id])
+		accumulated_length += previous_position.distance_to(current_position)
+		local_group_node_route_ratios[node_id] = accumulated_length / local_group_route_length
+		previous_position = current_position
 
 
 func _layout_chart() -> void:
@@ -860,7 +972,13 @@ func _present_local_group_position(node_id: String) -> Vector2:
 	var final_position := Vector2(local_group_node_positions[node_id])
 	if galactic_mode != GALACTIC_MODE_PULLBACK:
 		return final_position
-	return CHART_ORIGIN.lerp(final_position, _local_group_node_reveal(node_id))
+	var reveal_ratio := _local_group_node_reveal(node_id)
+	var settle_ratio := lerpf(GALACTIC_NODE_SETTLE_SCALE, 1.0, _ease_out_back(reveal_ratio))
+	# Hold traced nodes at their final screen-space radius while the old chart's
+	# camera is still pulling back. Otherwise the new map appears oversized and
+	# then visibly contracts as zoom reaches GALACTIC_ZOOM.
+	var screen_lock_scale := GALACTIC_ZOOM / maxf(zoom, 0.001)
+	return CHART_ORIGIN + (final_position - CHART_ORIGIN) * screen_lock_scale * settle_ratio
 
 
 func _node_render_scale(node_id: String, presentation_alpha: float) -> float:
@@ -1469,6 +1587,7 @@ func _cached_node_state(node_id: String) -> String:
 
 func _draw_tree() -> void:
 	_draw_chart_background()
+	_draw_galactic_background()
 	var structure_alpha := _galactic_structure_alpha()
 	for constellation_id in ChartData.CONSTELLATIONS:
 		var constellation: Dictionary = ChartData.CONSTELLATIONS[constellation_id]
@@ -1516,6 +1635,29 @@ func _draw_chart_background() -> void:
 		tree_canvas.draw_circle(background_position, radius, Color(UITheme.STAR_BACKGROUND, alpha))
 
 
+func _draw_galactic_background() -> void:
+	var field_alpha := _galactic_background_alpha()
+	if field_alpha <= 0.01 or content_clip == null:
+		return
+	# These positions live in normalized screen space so the sparse field does
+	# not rush inward with the camera. It follows the galactic frame centre but
+	# stays visually quiet behind the interactive route.
+	for index in range(galactic_background_stars.size()):
+		var normalized_position := galactic_background_stars[index]
+		var screen_offset := Vector2(
+			normalized_position.x * content_clip.size.x,
+			normalized_position.y * content_clip.size.y
+		)
+		var point := CHART_ORIGIN + screen_offset / maxf(zoom, 0.001)
+		var screen_radius := 1.42 if index % 6 == 0 else 0.96
+		var alpha := (0.28 if index % 6 == 0 else 0.18) * field_alpha
+		tree_canvas.draw_circle(
+			point,
+			screen_radius / maxf(zoom, 0.001),
+			Color(UITheme.GALACTIC_BACKGROUND_STAR, alpha)
+		)
+
+
 func _draw_background_cluster(center: Vector2, radius: float, alpha: float) -> void:
 	for index in range(CLUSTER_MARKER_OFFSETS.size()):
 		var point_radius := maxf(0.65, radius * (0.24 if index % 2 == 0 else 0.17))
@@ -1544,23 +1686,43 @@ func _draw_local_group_route() -> void:
 	# The Local Group is a single path, so its purchased history can stay visible
 	# without recreating the late-game DAG clutter of the constellation chart.
 	# Every segment terminates at real research buttons; none is decorative.
+	var route_progress := _galactic_route_progress()
+	var visible_length := local_group_route_length * route_progress
+	var accumulated_length := 0.0
 	var source_id := "galactic_reference_frame"
+	var final_source_position := CHART_ORIGIN
 	for galaxy_variant in ChartData.LOCAL_GROUP_GALAXIES:
 		var galaxy: Dictionary = galaxy_variant
 		var target_id := String(galaxy.node_id)
 		if _cached_node_state(target_id) != "purchased":
 			break
-		var presentation_alpha := minf(_node_presentation_alpha(source_id), _node_presentation_alpha(target_id))
+		var final_target_position := Vector2(local_group_node_positions[target_id])
+		var segment_length := final_source_position.distance_to(final_target_position)
+		var segment_ratio := clampf(
+			(visible_length - accumulated_length) / maxf(0.001, segment_length),
+			0.0,
+			1.0
+		)
+		if segment_ratio <= 0.0:
+			break
+		var presentation_alpha := _local_group_alpha() if galactic_mode == GALACTIC_MODE_PULLBACK else minf(
+			_node_presentation_alpha(source_id),
+			_node_presentation_alpha(target_id)
+		)
 		if presentation_alpha > 0.01:
 			var connection := _connection_points(source_id, target_id)
 			tree_canvas.draw_line(
 				connection[0],
-				connection[1],
+				connection[0].lerp(connection[1], segment_ratio),
 				Color(UITheme.LINE_INSTALLED, 0.18 * presentation_alpha),
 				0.85 / maxf(zoom, 0.001),
 				true
 			)
+		accumulated_length += segment_length
 		source_id = target_id
+		final_source_position = final_target_position
+		if segment_ratio < 1.0:
+			break
 
 
 func _draw_frontier_overlay() -> void:

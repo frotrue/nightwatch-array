@@ -1797,6 +1797,22 @@ func _run() -> void:
 	open_night_game.upgrade_tree._input(purchase_release)
 	open_night_game.upgrade_tree._input(InputEventMouseMotion.new())
 	_check(open_night_game.upgrade_tree.galactic_mode == open_night_game.upgrade_tree.GALACTIC_MODE_PULLBACK, "the purchase release and passive pointer jitter do not skip the pull-back")
+	open_night_game.upgrade_tree._advance_galactic_pullback(1.35)
+	var overlap_legacy_alpha: float = open_night_game.upgrade_tree._node_presentation_alpha("better_lens")
+	var overlap_route_progress: float = open_night_game.upgrade_tree._galactic_route_progress()
+	_check(
+		overlap_legacy_alpha > 0.05 and overlap_legacy_alpha < 0.95 and overlap_route_progress > 0.05,
+		"the old chart fade overlaps the traced Local Group route instead of leaving a centre-only hold"
+	)
+	_check(open_night_game.upgrade_tree._galactic_background_alpha() < 0.01, "the sparse galactic background waits until the legacy chart has nearly cleared")
+	var lmc_final_position := Vector2(open_night_game.upgrade_tree.local_group_node_positions["large_magellanic_cloud"])
+	var lmc_presented_position := Vector2(open_night_game.upgrade_tree.node_positions["large_magellanic_cloud"])
+	var lmc_presented_screen_distance: float = lmc_presented_position.distance_to(open_night_game.upgrade_tree.CHART_ORIGIN) * float(open_night_game.upgrade_tree.zoom)
+	var lmc_final_screen_distance: float = lmc_final_position.distance_to(open_night_game.upgrade_tree.CHART_ORIGIN) * float(open_night_game.upgrade_tree.GALACTIC_ZOOM)
+	_check(
+		lmc_presented_screen_distance > lmc_final_screen_distance * 0.94,
+		"revealed galactic nodes light near their final screen positions instead of expanding from the centre"
+	)
 	var pullback_skip := InputEventKey.new()
 	pullback_skip.keycode = KEY_SPACE
 	pullback_skip.pressed = true
@@ -1808,6 +1824,21 @@ func _run() -> void:
 		if galactic_button_variant.visible:
 			visible_galactic_buttons += 1
 	_check(visible_galactic_buttons == 30, "the final galaxy frame exposes the interactive Milky Way anchor and all 29 Local Group research nodes")
+	_check(
+		open_night_game.upgrade_tree.galactic_background_stars.size() == open_night_game.upgrade_tree.GALACTIC_BACKGROUND_STAR_COUNT,
+		"the final galaxy frame retains exactly 30 sparse non-interactive background stars"
+	)
+	var galactic_background_clear := true
+	for background_star_variant in open_night_game.upgrade_tree.galactic_background_stars:
+		var background_star := Vector2(background_star_variant)
+		var exclusion_distance := Vector2(
+			background_star.x / open_night_game.upgrade_tree.GALACTIC_BACKGROUND_EXCLUSION.x,
+			background_star.y / open_night_game.upgrade_tree.GALACTIC_BACKGROUND_EXCLUSION.y
+		).length()
+		if exclusion_distance < 1.0:
+			galactic_background_clear = false
+			break
+	_check(galactic_background_clear, "galactic background stars stay outside the route and node exclusion ellipse")
 	_check(
 		Vector2(open_night_game.upgrade_tree.node_positions["galactic_reference_frame"]).is_equal_approx(open_night_game.upgrade_tree.CHART_ORIGIN),
 		"the original 95-node chart collapses into the interactive Galactic Reference Frame at the Milky Way centre"
