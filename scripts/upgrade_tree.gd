@@ -44,6 +44,7 @@ const GALACTIC_NODE_SETTLE_SCALE := 0.965
 const GALACTIC_NODE_REVEAL_WINDOW := 0.04
 const HOLD_PURCHASE_SECONDS := 0.75
 const CHART_ORIGIN := Vector2(TREE_SIZE.x * 0.5, TREE_SIZE.y * 0.91)
+const CONSTELLATION_ZOOM := UITheme.SCALE * 1.06
 const ROTATION_STEP := deg_to_rad(6.0)
 const DEFAULT_ROTATION := 0.0
 const STAR_HIT_SIZE := Vector2(44.0, 44.0)
@@ -185,7 +186,7 @@ class StarNodeVisual:
 			_draw_cluster_marker(center, radius)
 		match visual_state:
 			"purchased":
-				draw_circle(center, radius * purchased_glow_scale(), Color(UITheme.STAR_INSTALLED_GLOW, 0.70))
+				draw_circle(center, radius * purchased_glow_scale(), Color(UITheme.STAR_INSTALLED_GLOW, 0.22 if hovered else 0.13))
 				draw_circle(center, radius, UITheme.STAR_INSTALLED)
 			"available":
 				if affordable:
@@ -221,6 +222,7 @@ var overlay: Control
 var content_clip: Control
 var tree_canvas: Control
 var data_readout: Label
+var data_context_label: Label
 var systems_readout: Label
 var galactic_progress_installed: Label
 var galactic_progress_separator: Label
@@ -241,6 +243,8 @@ var north_label: Label
 var subtitle_label: Label
 var close_button: Button
 var controls_label: Label
+var constellation_horizon_hint: Label
+var constellation_bottom_action: Label
 
 var node_buttons: Dictionary = {}
 var node_hold_bars: Dictionary = {}
@@ -257,6 +261,7 @@ var local_group_route_polyline: PackedVector2Array = PackedVector2Array()
 var galactic_core_max_length: float = 1.0
 
 var hovered_node_id: String = ""
+var selected_node_id: String = ""
 var tooltip_suppressed_until_motion: bool = false
 var tooltip_content_key: String = ""
 var tooltip_refit_pending: bool = false
@@ -273,6 +278,7 @@ var galactic_background_star_alphas: PackedFloat32Array = PackedFloat32Array()
 var galactic_background_rng_state: int = GALACTIC_BACKGROUND_STAR_SEED
 var galactic_outer_halo: GradientTexture2D
 var galactic_inner_halo: GradientTexture2D
+var constellation_halo: GradientTexture2D
 var galactic_unlocked: bool = false
 var galactic_pullback_seen: bool = false
 var galactic_mode: int = GALACTIC_MODE_NORMAL
@@ -292,6 +298,14 @@ var chart_layout_passes: int = 0
 var tooltip_content_refreshes: int = 0
 
 var completion_detail_label: Label
+var constellation_ledger: Control
+var constellation_ledger_names: Array[Label] = []
+var constellation_ledger_leaders: Array[ColorRect] = []
+var constellation_ledger_notes: Array[Label] = []
+var constellation_ledger_counts: Array[Label] = []
+var tooltip_state: Label
+var tooltip_cost: Label
+var tooltip_action: Label
 var galactic_ledger: Control
 var galactic_span_value: Label
 var galactic_ledger_names: Array[Label] = []
@@ -431,6 +445,11 @@ func _refresh_phase_context() -> void:
 	else:
 		subtitle_label.text = tr("TREE_SUBTITLE")
 		close_button.text = tr("TREE_CLOSE")
+	if data_context_label != null:
+		data_context_label.text = tr("TREE_DATA_CONTEXT") % [intermission_next_round, intermission_next_duration]
+	if constellation_bottom_action != null:
+		constellation_bottom_action.text = tr("TREE_BOTTOM_START_OBSERVATION") if intermission_active else tr("TREE_BOTTOM_CLOSE")
+	_layout_chart_header()
 
 
 func _input(event: InputEvent) -> void:
@@ -446,12 +465,6 @@ func _input(event: InputEvent) -> void:
 		if not (event is InputEventMouseButton and event.button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT, MOUSE_BUTTON_MIDDLE]):
 			get_viewport().set_input_as_handled()
 		return
-	if event is InputEventMouseMotion and not hovered_node_id.is_empty():
-		if tooltip_suppressed_until_motion or not tooltip_panel.visible:
-			tooltip_suppressed_until_motion = false
-			_show_node_tooltip(hovered_node_id)
-		else:
-			_position_node_tooltip(overlay.get_local_mouse_position())
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_ESCAPE or event.keycode == KEY_U:
 			close_tree()
@@ -773,25 +786,11 @@ func _frame_frontier() -> void:
 		return
 	if content_clip == null or content_clip.size.x <= 1.0 or content_clip.size.y <= 1.0:
 		return
-	# Frame the figures that carry research, not the whole sky. The background
-	# constellations reach past the frame on purpose — the wheel is what brings
-	# them over the horizon. Fitting all twelve at once is what made the chart
-	# read as one dense clump no matter how far the sky was spread.
-	var visible_bounds := Rect2(CHART_ORIGIN, Vector2.ZERO)
-	for star_key_variant in star_positions:
-		var star_key := String(star_key_variant)
-		if not star_node_ids.has(star_key):
-			continue
-		visible_bounds = visible_bounds.expand(Vector2(star_positions[star_key]))
-	visible_bounds = visible_bounds.grow(72.0)
-	var horizontal_extent := maxf(absf(visible_bounds.position.x - CHART_ORIGIN.x), absf(visible_bounds.end.x - CHART_ORIGIN.x))
-	var upward_extent := maxf(1.0, CHART_ORIGIN.y - visible_bounds.position.y)
-	zoom = clampf(
-		minf((content_clip.size.x - 36.0) / maxf(horizontal_extent * 2.0, 1.0), (content_clip.size.y - 28.0) / upward_extent) * 0.94,
-		MIN_ZOOM,
-		1.0
-	)
-	pan_position = Vector2(content_clip.size.x * 0.5, content_clip.size.y - 18.0) - CHART_ORIGIN * zoom
+	# The approved 1920×1080 chart fixes the celestial pivot at (880, 1008) and
+	# presents the figure geometry at 1.06×. UITheme.SCALE maps that hand-off to
+	# the 1152×648 project viewport without changing any simulation coordinates.
+	zoom = CONSTELLATION_ZOOM
+	pan_position = Vector2(UITheme.px(880.0), UITheme.px(1008.0)) - CHART_ORIGIN * zoom
 	_apply_transform()
 
 
@@ -811,8 +810,6 @@ func _apply_transform() -> void:
 
 
 func _rotate_chart(amount: float) -> void:
-	_hide_node_tooltip(false)
-	tooltip_suppressed_until_motion = true
 	rotation_offset = wrapf(rotation_offset + amount, -PI, PI)
 	if settings_controller != null:
 		settings_controller.set_research_chart_rotation(rotation_offset, false)
@@ -820,9 +817,6 @@ func _rotate_chart(amount: float) -> void:
 
 
 func _queue_chart_rotation(amount: float) -> void:
-	if is_zero_approx(pending_rotation_delta):
-		_hide_node_tooltip(false)
-		tooltip_suppressed_until_motion = true
 	pending_rotation_delta = wrapf(pending_rotation_delta + amount, -PI, PI)
 
 
@@ -853,6 +847,9 @@ func _layout_chart_header() -> void:
 	var value_size := data_readout.get_combined_minimum_size()
 	data_readout.size = value_size
 	data_readout.position = Vector2(UITheme.px(56.0), title_label.position.y + caption_size.y + UITheme.px(6.0))
+	if data_context_label != null:
+		data_context_label.position = Vector2(UITheme.px(56.0), data_readout.position.y + value_size.y + UITheme.px(7.0))
+		data_context_label.size.x = UITheme.px(360.0)
 
 	var line_width := UITheme.px(440.0)
 	var header_width := UITheme.px(640.0)
@@ -903,22 +900,22 @@ func _layout_chart_header() -> void:
 
 	var action_width := UITheme.px(360.0)
 	close_button.size = Vector2(action_width, UITheme.px(30.0))
-	close_button.position = Vector2(frame.x - UITheme.px(56.0) - action_width, UITheme.px(50.0))
+	close_button.position = Vector2(frame.x - UITheme.px(40.0) - action_width, UITheme.px(44.0))
 	var underline_width := close_button.get_theme_font("font").get_string_size(
 		close_button.text,
 		HORIZONTAL_ALIGNMENT_LEFT,
 		-1,
-		UITheme.size_px(20.0)
+		UITheme.size_px(19.0)
 	).x + UITheme.px(12.0)
 	close_underline.size = Vector2(underline_width, 1.0)
 	close_underline.position = Vector2(
-		frame.x - UITheme.px(56.0) - underline_width,
-		close_button.position.y + close_button.size.y + UITheme.px(7.0)
+		frame.x - UITheme.px(40.0) - underline_width,
+		close_button.position.y + close_button.size.y + UITheme.px(4.0)
 	)
 	subtitle_label.size.x = action_width
 	subtitle_label.position = Vector2(
-		frame.x - UITheme.px(56.0) - action_width,
-		close_underline.position.y + UITheme.px(16.0)
+		frame.x - UITheme.px(40.0) - action_width,
+		close_underline.position.y + UITheme.px(11.0)
 	)
 
 	var wide := frame.x
@@ -928,16 +925,59 @@ func _layout_chart_header() -> void:
 	var bottom_y := frame.y - UITheme.px(38.0)
 	controls_label.position.y = bottom_y - controls_label.get_combined_minimum_size().y
 	north_label.position.y = minf(_north_label_y(), controls_label.position.y - north_label.get_combined_minimum_size().y - UITheme.px(6.0))
+	if constellation_horizon_hint != null:
+		constellation_horizon_hint.size.x = UITheme.px(430.0)
+		constellation_horizon_hint.position = Vector2(UITheme.px(56.0), bottom_y - constellation_horizon_hint.get_combined_minimum_size().y)
+	if constellation_bottom_action != null:
+		constellation_bottom_action.size.x = UITheme.px(430.0)
+		constellation_bottom_action.position = Vector2(frame.x - UITheme.px(40.0) - constellation_bottom_action.size.x, bottom_y - constellation_bottom_action.get_combined_minimum_size().y)
 	galactic_inner_hint.size.x = UITheme.px(430.0)
 	galactic_inner_hint.position = Vector2(UITheme.px(56.0), bottom_y - galactic_inner_hint.get_combined_minimum_size().y)
 	galactic_return_hint.size.x = UITheme.px(430.0)
-	galactic_return_hint.position = Vector2(frame.x - UITheme.px(56.0) - galactic_return_hint.size.x, bottom_y - galactic_return_hint.get_combined_minimum_size().y)
+	galactic_return_hint.position = Vector2(frame.x - UITheme.px(40.0) - galactic_return_hint.size.x, bottom_y - galactic_return_hint.get_combined_minimum_size().y)
+	_layout_constellation_overlays()
 
 
 func _north_label_y() -> float:
 	# The label rides with the horizon so the pivot stays legible at any zoom.
 	var origin_y := tree_canvas.global_position.y + CHART_ORIGIN.y * zoom - overlay.global_position.y
 	return origin_y + UITheme.px(16.0)
+
+
+func _constellation_panel_active() -> bool:
+	return galactic_mode != GALACTIC_MODE_PULLBACK and _galactic_chart_is_readable() and not _galactic_panel_active()
+
+
+func _layout_constellation_overlays() -> void:
+	if overlay == null or constellation_ledger == null or tooltip_panel == null:
+		return
+	var frame := overlay.size
+	constellation_ledger.position = Vector2(UITheme.px(56.0), UITheme.px(206.0))
+	constellation_ledger.size = Vector2(UITheme.px(288.0), maxf(0.0, frame.y - constellation_ledger.position.y - UITheme.px(70.0)))
+	var ledger_title: Label = constellation_ledger.get_node("LedgerTitle")
+	ledger_title.position = Vector2.ZERO
+	ledger_title.size.x = constellation_ledger.size.x
+	var row_y := ledger_title.get_combined_minimum_size().y + UITheme.px(10.0)
+	for index in range(constellation_ledger_names.size()):
+		var name_label := constellation_ledger_names[index]
+		var leader := constellation_ledger_leaders[index]
+		var note_label := constellation_ledger_notes[index]
+		var count_label := constellation_ledger_counts[index]
+		var count_width := maxf(UITheme.px(42.0), count_label.get_combined_minimum_size().x)
+		var note_width := minf(UITheme.px(78.0), note_label.get_combined_minimum_size().x)
+		var name_width := minf(name_label.get_combined_minimum_size().x, constellation_ledger.size.x - count_width - note_width - UITheme.px(34.0))
+		name_label.position = Vector2(0.0, row_y)
+		name_label.size.x = name_width
+		count_label.position = Vector2(constellation_ledger.size.x - count_width, row_y)
+		count_label.size.x = count_width
+		note_label.position = Vector2(count_label.position.x - note_width - UITheme.px(10.0), row_y)
+		note_label.size.x = note_width
+		var baseline_y := row_y + maxf(name_label.get_combined_minimum_size().y, count_label.get_combined_minimum_size().y) * 0.66
+		leader.position = Vector2(name_width + UITheme.px(10.0), baseline_y)
+		leader.size = Vector2(maxf(1.0, note_label.position.x - leader.position.x - UITheme.px(10.0)), 1.0)
+		row_y += maxf(name_label.get_combined_minimum_size().y, count_label.get_combined_minimum_size().y) + UITheme.px(10.0)
+	tooltip_panel.position = Vector2(frame.x - UITheme.px(40.0) - UITheme.px(292.0), UITheme.px(196.0))
+	tooltip_panel.size = Vector2(UITheme.px(292.0), maxf(1.0, frame.y - UITheme.px(196.0) - UITheme.px(70.0)))
 
 
 func _galactic_panel_active() -> bool:
@@ -1055,6 +1095,7 @@ func _refresh_galactic_overlays() -> void:
 	if galactic_panel == null:
 		return
 	var active := _galactic_panel_active()
+	var constellation_active := _constellation_panel_active()
 	var alpha := _galactic_core_alpha()
 	galactic_panel.visible = active
 	galactic_ledger.visible = active
@@ -1062,20 +1103,24 @@ func _refresh_galactic_overlays() -> void:
 	galactic_ledger.modulate.a = alpha
 	galactic_watermark.visible = active
 	galactic_watermark.modulate.a = alpha
-	systems_readout.visible = not active
-	galactic_progress_installed.visible = active
-	galactic_progress_separator.visible = active
-	galactic_progress_total.visible = active
+	constellation_ledger.visible = constellation_active
+	tooltip_panel.visible = constellation_active and not selected_node_id.is_empty()
+	systems_readout.visible = false
+	galactic_progress_installed.visible = true
+	galactic_progress_separator.visible = true
+	galactic_progress_total.visible = true
+	constellation_horizon_hint.visible = constellation_active
+	constellation_bottom_action.visible = constellation_active
 	galactic_inner_hint.visible = active
 	galactic_return_hint.visible = active
-	completion_detail_label.visible = active and progression != null and progression.upgrade_level >= Balance.UPGRADE_NODES.size()
+	completion_detail_label.visible = constellation_active or (active and progression != null and progression.upgrade_level >= Balance.UPGRADE_NODES.size())
 	galactic_core_hit.visible = active and galactic_pullback_seen and galactic_chart_detail <= 0.06
 	galactic_core_hit.mouse_filter = Control.MOUSE_FILTER_STOP if galactic_core_hit.visible else Control.MOUSE_FILTER_IGNORE
 	if node_hold_bars.has("galactic_reference_frame"):
 		var reference_visual: StarNodeVisual = node_hold_bars["galactic_reference_frame"]
 		reference_visual.visible = not active
-	if active and tooltip_panel != null:
-		tooltip_panel.visible = false
+	if constellation_active:
+		_refresh_constellation_overlays()
 	if progression != null:
 		galactic_span_value.text = "×%.4f" % float(progression.get_observation_span())
 		for index in range(GALACTIC_LEDGER_ORDER.size()):
@@ -1095,6 +1140,111 @@ func _refresh_galactic_overlays() -> void:
 	var selected_id := hovered_node_id if hovered_node_id == "galactic_reference_frame" or _is_local_group_node(hovered_node_id) else "galactic_reference_frame"
 	_refresh_galactic_panel(selected_id)
 	_layout_galactic_overlays()
+
+
+func _refresh_constellation_overlays() -> void:
+	if progression == null or constellation_ledger == null:
+		return
+	if selected_node_id.is_empty() or not node_buttons.has(selected_node_id) or _is_local_group_node(selected_node_id):
+		selected_node_id = _default_constellation_selection()
+	var below_horizon_count := 0
+	for index in range(GALACTIC_LEDGER_ORDER.size()):
+		var constellation_id: String = GALACTIC_LEDGER_ORDER[index]
+		var constellation: Dictionary = ChartData.CONSTELLATIONS[constellation_id]
+		var installed := 0
+		var total := 0
+		var opened := false
+		for star_variant in constellation.stars:
+			var star: Dictionary = star_variant
+			var node_id := String(star.get("node_id", ""))
+			if node_id.is_empty():
+				continue
+			total += 1
+			var state: String = progression.get_node_state(node_id)
+			if state == "purchased":
+				installed += 1
+			if state in ["purchased", "available", "locked"]:
+				opened = true
+		var below_horizon := _constellation_below_horizon(constellation_id)
+		if below_horizon:
+			below_horizon_count += 1
+		var kind := "done" if installed == total else ("active" if opened else "locked")
+		var tone := UITheme.TOOLTIP_BODY if kind == "done" else (UITheme.INK_MAX if kind == "active" else UITheme.INK_LOW)
+		constellation_ledger_names[index].add_theme_color_override("font_color", tone)
+		constellation_ledger_counts[index].add_theme_color_override("font_color", tone)
+		constellation_ledger_counts[index].text = "%d / %d" % [installed, total]
+		var note := ""
+		if below_horizon:
+			note = tr("TREE_CONSTELLATION_BELOW_HORIZON")
+		elif kind == "active":
+			note = tr("TREE_CONSTELLATION_IN_PROGRESS")
+		elif kind == "locked":
+			note = tr("TREE_CONSTELLATION_LOCKED")
+		constellation_ledger_notes[index].text = note
+	var local_group_index := GALACTIC_LEDGER_ORDER.size()
+	var local_group_installed := 0
+	for galaxy_variant in ChartData.LOCAL_GROUP_GALAXIES:
+		if progression.get_node_state(String(galaxy_variant.node_id)) == "purchased":
+			local_group_installed += 1
+	var local_group_kind := "done" if local_group_installed == ChartData.LOCAL_GROUP_GALAXIES.size() else ("active" if galactic_unlocked else "locked")
+	var local_group_tone := UITheme.TOOLTIP_BODY if local_group_kind == "done" else (UITheme.INK_MAX if local_group_kind == "active" else UITheme.INK_LOW)
+	constellation_ledger_names[local_group_index].add_theme_color_override("font_color", local_group_tone)
+	constellation_ledger_counts[local_group_index].add_theme_color_override("font_color", local_group_tone)
+	constellation_ledger_counts[local_group_index].text = "%d / %d" % [local_group_installed, ChartData.LOCAL_GROUP_GALAXIES.size()]
+	constellation_ledger_notes[local_group_index].text = tr("TREE_CONSTELLATION_IN_PROGRESS") if local_group_kind == "active" else ("" if local_group_kind == "done" else tr("TREE_CONSTELLATION_LOCKED"))
+	constellation_horizon_hint.text = tr("TREE_CONSTELLATION_HORIZON_HINT") % below_horizon_count
+	constellation_bottom_action.text = tr("TREE_BOTTOM_START_OBSERVATION") if intermission_active else tr("TREE_BOTTOM_CLOSE")
+	_refresh_constellation_detail_line()
+	if not selected_node_id.is_empty():
+		_refresh_constellation_inspector(selected_node_id)
+	_layout_constellation_overlays()
+
+
+func _constellation_below_horizon(constellation_id: String) -> bool:
+	var placement: Dictionary = ChartData.PLACEMENTS[constellation_id]
+	return sin(float(placement.anchor_angle) + rotation_offset) > 0.0
+
+
+func _default_constellation_selection() -> String:
+	if progression == null:
+		return ""
+	for require_affordable in [true, false]:
+		for definition in Balance.UPGRADE_NODES:
+			var node_id := String(definition.id)
+			if _is_local_group_node(node_id) or progression.get_node_state(node_id) != "available":
+				continue
+			if require_affordable and not progression.can_purchase(node_id):
+				continue
+			if _is_node_above_horizon(node_id):
+				return node_id
+	for definition_index in range(Balance.UPGRADE_NODES.size() - 1, -1, -1):
+		var node_id := String(Balance.UPGRADE_NODES[definition_index].id)
+		if not _is_local_group_node(node_id) and progression.get_node_state(node_id) == "purchased" and _is_node_above_horizon(node_id):
+			return node_id
+	return ""
+
+
+func _refresh_constellation_detail_line() -> void:
+	if completion_detail_label == null or progression == null:
+		return
+	var group_label := tr("TREE_CONSTELLATION_CURRENT_SKY")
+	if not selected_node_id.is_empty() and node_star_records.has(selected_node_id):
+		var star_record: Dictionary = node_star_records[selected_node_id]
+		var constellation_id := String(star_record.constellation_id)
+		if constellation_id != "local_group":
+			group_label = tr(String(ChartData.CONSTELLATIONS[constellation_id].label_key)).split("  /  ")[0]
+	var non_draco_installed := 0
+	for definition in Balance.UPGRADE_NODES:
+		var node_id := String(definition.id)
+		if _is_local_group_node(node_id) or String(definition.branch) == "draco":
+			continue
+		if progression.get_node_state(node_id) == "purchased":
+			non_draco_installed += 1
+	var remaining := maxi(0, 86 - non_draco_installed)
+	if remaining > 0:
+		completion_detail_label.text = tr("TREE_CONSTELLATION_DRACO_REMAINING") % [group_label, remaining]
+	else:
+		completion_detail_label.text = tr("TREE_CONSTELLATION_DRACO_OPEN") % group_label
 
 
 func _refresh_galactic_panel(node_id: String) -> void:
@@ -1128,6 +1278,31 @@ func _refresh_galactic_panel(node_id: String) -> void:
 		galactic_rule_ids[index].add_theme_color_override("font_color", UITheme.ACCENT_TEXT if rule_active else UITheme.TOOLTIP_LABEL)
 		galactic_rule_bodies[index].add_theme_color_override("font_color", UITheme.TOOLTIP_VALUE if rule_active else UITheme.TOOLTIP_LABEL)
 	_layout_galactic_panel_content()
+
+
+func _refresh_constellation_static_text() -> void:
+	if constellation_ledger == null or tooltip_panel == null:
+		return
+	var ledger_title: Label = constellation_ledger.get_node("LedgerTitle")
+	ledger_title.text = tr("TREE_CONSTELLATION_LEDGER")
+	for index in range(GALACTIC_LEDGER_ORDER.size()):
+		var constellation: Dictionary = ChartData.CONSTELLATIONS[GALACTIC_LEDGER_ORDER[index]]
+		constellation_ledger_names[index].text = tr(String(constellation.label_key)).split("  /  ")[0]
+	constellation_ledger_names[-1].text = tr(ChartData.LOCAL_GROUP_LABEL_KEY).split(" / ")[0]
+	for field_name in ["STATUS", "COST", "EFFECT"]:
+		var field_label: Label = tooltip_panel.find_child("Field%sLabel" % field_name.capitalize(), true, false)
+		field_label.text = tr("TREE_CONSTELLATION_FIELD_%s" % field_name)
+	var legend_title: Label = tooltip_panel.find_child("LegendTitle", true, false)
+	legend_title.text = tr("TREE_CONSTELLATION_STAR_STATES")
+	var legend_keys := [
+		"TREE_CONSTELLATION_LEGEND_INSTALLED",
+		"TREE_CONSTELLATION_LEGEND_READY",
+		"TREE_CONSTELLATION_LEGEND_SHORT",
+		"TREE_CONSTELLATION_LEGEND_LOCKED",
+	]
+	for index in range(legend_keys.size()):
+		var legend_text: Label = tooltip_panel.find_child("LegendText%d" % index, true, false)
+		legend_text.text = tr(legend_keys[index])
 
 
 func _refresh_galactic_static_text() -> void:
@@ -1204,6 +1379,12 @@ func _next_galactic_background_random() -> float:
 
 
 func _build_galactic_halo_textures() -> void:
+	constellation_halo = _radial_halo_texture(PackedFloat32Array([0.0, 0.40, 0.70, 1.0]), PackedColorArray([
+		Color(1.0, 0.64, 0.48, 0.05),
+		Color(1.0, 0.64, 0.48, 0.014),
+		Color(1.0, 0.64, 0.48, 0.0),
+		Color(1.0, 0.64, 0.48, 0.0),
+	]))
 	galactic_outer_halo = _radial_halo_texture(PackedFloat32Array([0.0, 0.38, 0.68, 1.0]), PackedColorArray([
 		Color(1.0, 0.643, 0.478, 0.035),
 		Color(1.0, 0.643, 0.478, 0.012),
@@ -1365,6 +1546,8 @@ func _layout_chart() -> void:
 			and (not _galactic_horizon_active() or center.y <= CHART_ORIGIN.y)
 		)
 	_layout_galactic_overlays()
+	if progression != null and _constellation_panel_active():
+		_refresh_constellation_overlays()
 	tree_canvas.queue_redraw()
 
 
@@ -1457,10 +1640,10 @@ func _on_node_hovered(node_id: String) -> void:
 		var star_visual: StarNodeVisual = node_hold_bars[node_id]
 		star_visual.set_hovered(true)
 	hovered_node_id = node_id
+	if not _is_local_group_node(node_id) and node_id != "galactic_reference_frame":
+		selected_node_id = node_id
 	if tree_canvas != null:
 		tree_canvas.queue_redraw()
-	if tooltip_suppressed_until_motion:
-		return
 	_show_node_tooltip(node_id)
 
 
@@ -1471,15 +1654,21 @@ func _on_node_unhovered(node_id: String) -> void:
 	if held_node_id == node_id:
 		_cancel_node_hold()
 	if hovered_node_id == node_id:
-		_hide_node_tooltip()
+		hovered_node_id = ""
+		if _galactic_panel_active():
+			_refresh_galactic_panel("galactic_reference_frame")
+		elif not selected_node_id.is_empty():
+			_refresh_constellation_inspector(selected_node_id)
+		if tree_canvas != null:
+			tree_canvas.queue_redraw()
 
 
 func _hide_node_tooltip(clear_hover: bool = true) -> void:
 	var hover_changed := clear_hover and not hovered_node_id.is_empty()
 	if clear_hover:
 		hovered_node_id = ""
-	if tooltip_panel != null and tooltip_panel.visible:
-		tooltip_panel.visible = false
+	if tooltip_panel != null:
+		tooltip_panel.visible = _constellation_panel_active() and not selected_node_id.is_empty()
 	if galactic_panel != null and _galactic_panel_active():
 		_refresh_galactic_panel("galactic_reference_frame")
 	if hover_changed and tree_canvas != null:
@@ -1511,8 +1700,8 @@ func _refresh() -> void:
 	refresh_pending = false
 	data_readout.text = _grouped(int(floor(progression.observation_data)))
 	systems_readout.text = tr("TREE_PROGRESS_COUNT") % [progression.upgrade_level, Balance.UPGRADE_NODES.size()]
-	galactic_progress_installed.text = str(progression.upgrade_level)
-	galactic_progress_total.text = str(Balance.UPGRADE_NODES.size())
+	galactic_progress_installed.text = "%03d" % progression.upgrade_level
+	galactic_progress_total.text = "%03d" % Balance.UPGRADE_NODES.size()
 	_layout_chart_header()
 	var available_count := 0
 	var affordable_count := 0
@@ -1612,7 +1801,15 @@ func _show_node_tooltip(node_id: String) -> void:
 			tooltip_panel.visible = false
 		_refresh_galactic_panel(node_id)
 		return
-	if progression == null or not _node_interaction_ready(node_id) or not node_buttons.has(node_id) or not node_buttons[node_id].visible:
+	if progression == null or not node_buttons.has(node_id) or _is_local_group_node(node_id):
+		return
+	selected_node_id = node_id
+	_refresh_constellation_detail_line()
+	_refresh_constellation_inspector(node_id)
+
+
+func _refresh_constellation_inspector(node_id: String) -> void:
+	if progression == null or not node_buttons.has(node_id) or _is_local_group_node(node_id):
 		return
 	var visual_state := String(node_buttons[node_id].get_meta("visual_state"))
 	var content_key := "%s:%s:%d:%d:%s" % [
@@ -1623,12 +1820,7 @@ func _show_node_tooltip(node_id: String) -> void:
 		TranslationServer.get_locale(),
 	]
 	if tooltip_content_key == content_key:
-		var was_visible := tooltip_panel.visible
-		tooltip_panel.visible = true
-		if not was_visible:
-			_resize_tooltip()
-			_request_tooltip_refit()
-		_position_node_tooltip(overlay.get_local_mouse_position())
+		tooltip_panel.visible = _constellation_panel_active()
 		return
 	tooltip_content_key = content_key
 	tooltip_content_refreshes += 1
@@ -1640,25 +1832,29 @@ func _show_node_tooltip(node_id: String) -> void:
 	if group_id != "local_group":
 		var constellation: Dictionary = ChartData.CONSTELLATIONS[group_id]
 		group_label_key = String(constellation.label_key)
-	var constellation_label := tr(group_label_key)
-	tooltip_star.text = "%s  ·  %s" % [tr(String(star.name_key)), String(star.bayer)]
+	var constellation_label := tr(group_label_key).replace("  /  ", " / ")
+	tooltip_star.text = "%s    %s    %s" % [tr(String(star.name_key)), String(star.bayer), tr("TREE_CONSTELLATION_MAGNITUDE") % float(star.magnitude)]
 	if visual_state == "teaser":
 		tooltip_branch.text = "%s  /  %s" % [constellation_label, tr("TREE_UNRESOLVED_SIGNAL")]
 		tooltip_name.text = "???"
 		tooltip_description.text = tr("TREE_TEASER_DESCRIPTION")
-		tooltip_meta.text = tr("TREE_SIGNAL_OBSCURED")
+		tooltip_state.text = tr("STATE_HIDDEN")
+		tooltip_cost.text = "—"
+		tooltip_action.text = tr("TREE_SIGNAL_OBSCURED")
 	else:
-		tooltip_branch.text = "%s  /  %s" % [constellation_label, tr("EFFECT_%s" % String(definition.effect_type).to_upper())]
+		tooltip_branch.text = constellation_label
 		tooltip_name.text = _upgrade_name(definition)
 		tooltip_description.text = _upgrade_description(definition)
+		tooltip_state.text = tr("STATE_%s" % visual_state.to_upper())
+		tooltip_cost.text = tr("TREE_CONSTELLATION_COST") % _grouped(int(definition.cost))
 		match visual_state:
 			"purchased":
-				tooltip_meta.text = tr("TREE_SYSTEM_ONLINE")
+				tooltip_action.text = tr("TREE_SYSTEM_ONLINE")
 			"available":
 				if progression.can_purchase(node_id):
-					tooltip_meta.text = tr("TREE_INSTALL") % int(definition.cost)
+					tooltip_action.text = tr("TREE_CONSTELLATION_INSTALL_ACTION")
 				else:
-					tooltip_meta.text = tr("TREE_NEED_MORE") % [int(floor(progression.observation_data)), int(definition.cost)]
+					tooltip_action.text = tr("TREE_NEED_MORE") % [int(floor(progression.observation_data)), int(definition.cost)]
 			_:
 				var prerequisite_names: Array[String] = []
 				for prerequisite_variant in definition.prerequisites:
@@ -1667,16 +1863,13 @@ func _show_node_tooltip(node_id: String) -> void:
 						continue
 					var prerequisite := Balance.upgrade_definition(prerequisite_id)
 					prerequisite_names.append(_upgrade_name(prerequisite))
-				var prerequisite_text := tr("TREE_REQUIRES") % ", ".join(prerequisite_names)
-				tooltip_meta.text = "%s  •  %s" % [tr("TREE_COST") % int(definition.cost), prerequisite_text]
+				tooltip_action.text = tr("TREE_REQUIRES") % ", ".join(prerequisite_names)
 	tooltip_branch.add_theme_color_override("font_color", UITheme.TOOLTIP_LABEL)
-	tooltip_meta.add_theme_color_override("font_color", UITheme.TOOLTIP_ACTION if visual_state == "available" and progression.can_purchase(node_id) else UITheme.TOOLTIP_VALUE)
-	tooltip_panel.visible = true
-	_resize_tooltip()
-	_position_node_tooltip(overlay.get_local_mouse_position())
-	# Container minimum sizes settle after the text changes. Coalesce their
-	# notifications so one content refresh schedules at most one deferred refit.
-	_request_tooltip_refit()
+	var state_tone := UITheme.INK_MAX if visual_state == "purchased" else (UITheme.ACCENT_PIP if visual_state == "available" and progression.can_purchase(node_id) else (UITheme.STAR_SHORT_BORDER if visual_state == "available" else UITheme.TOOLTIP_LABEL))
+	tooltip_state.add_theme_color_override("font_color", state_tone)
+	tooltip_action.add_theme_color_override("font_color", UITheme.TOOLTIP_ACTION if visual_state == "available" and progression.can_purchase(node_id) else UITheme.TOOLTIP_LABEL)
+	tooltip_panel.visible = _constellation_panel_active()
+	_layout_constellation_overlays()
 	tree_canvas.queue_redraw()
 
 
@@ -1690,6 +1883,7 @@ func _apply_locale() -> void:
 	title_label.text = tr("HUD_DATA_CAPTION")
 	installed_caption.text = tr("TREE_INSTALLED_CAPTION")
 	north_label.text = tr("TREE_NORTH")
+	_refresh_constellation_static_text()
 	_refresh_galactic_static_text()
 	_refresh_phase_context()
 	_update_galactic_presentation()
@@ -1750,6 +1944,8 @@ func _build_interface() -> void:
 	header.add_child(data_readout)
 	title_label = _spec_label(tr("HUD_DATA_CAPTION"), UITheme.mono(), 12.0, UITheme.INK_MID, 0.28)
 	header.add_child(title_label)
+	data_context_label = _spec_label("", UITheme.mono(), 12.0, UITheme.TOOLTIP_LABEL, 2.0 / 12.0)
+	header.add_child(data_context_label)
 
 	installed_caption = _spec_label(tr("TREE_INSTALLED_CAPTION"), UITheme.mono(), 12.0, UITheme.INK_MID, 0.30)
 	installed_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -1761,18 +1957,16 @@ func _build_interface() -> void:
 		UITheme.INK_MAX
 	)
 	systems_readout.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	systems_readout.visible = false
 	header.add_child(systems_readout)
-	galactic_progress_installed = _spec_label("0", UITheme.mono_tabular(), 64.0, UITheme.INK_MAX)
+	galactic_progress_installed = _spec_label("000", UITheme.mono_tabular(), 64.0, UITheme.INK_MAX)
 	galactic_progress_installed.name = "GalacticProgressInstalled"
-	galactic_progress_installed.visible = false
 	header.add_child(galactic_progress_installed)
 	galactic_progress_separator = _spec_label("/", UITheme.mono(), 26.0, UITheme.INK_LOW)
 	galactic_progress_separator.name = "GalacticProgressSeparator"
-	galactic_progress_separator.visible = false
 	header.add_child(galactic_progress_separator)
-	galactic_progress_total = _spec_label(str(Balance.UPGRADE_NODES.size()), UITheme.mono_tabular(), 64.0, UITheme.INK_MAX)
+	galactic_progress_total = _spec_label("%03d" % Balance.UPGRADE_NODES.size(), UITheme.mono_tabular(), 64.0, UITheme.INK_MID)
 	galactic_progress_total.name = "GalacticProgressTotal"
-	galactic_progress_total.visible = false
 	header.add_child(galactic_progress_total)
 	progress_track = ColorRect.new()
 	progress_track.color = UITheme.ACCENT_DEEP
@@ -1789,8 +1983,8 @@ func _build_interface() -> void:
 	close_button.focus_mode = Control.FOCUS_NONE
 	close_button.alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	close_button.add_theme_font_override("font", UITheme.sans())
-	close_button.add_theme_font_size_override("font_size", UITheme.size_px(20.0))
-	close_button.add_theme_constant_override("spacing_glyph", UITheme.tracking(UITheme.size_px(20.0), 0.06))
+	close_button.add_theme_font_size_override("font_size", UITheme.size_px(19.0))
+	close_button.add_theme_constant_override("spacing_glyph", UITheme.tracking(UITheme.size_px(19.0), 0.06))
 	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
 		close_button.add_theme_color_override(state, UITheme.BANNER_TITLE)
 	close_button.pressed.connect(close_tree)
@@ -1818,6 +2012,11 @@ func _build_interface() -> void:
 	controls_label = _spec_label(tr("TREE_CONTROLS_FULL"), UITheme.mono(), 12.0, UITheme.INK_LOW, 0.18)
 	controls_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	header.add_child(controls_label)
+	constellation_horizon_hint = _spec_label("", UITheme.mono(), 12.0, UITheme.TOOLTIP_LABEL, 0.10)
+	header.add_child(constellation_horizon_hint)
+	constellation_bottom_action = _spec_label("", UITheme.mono(), 12.0, UITheme.INK_HIGH, 0.10)
+	constellation_bottom_action.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	header.add_child(constellation_bottom_action)
 	galactic_inner_hint = _spec_label(tr("TREE_GALACTIC_INNER_HINT"), UITheme.mono(), 12.0, UITheme.TOOLTIP_LABEL, 0.10)
 	header.add_child(galactic_inner_hint)
 	galactic_return_hint = _spec_label(tr("TREE_GALACTIC_RETURN"), UITheme.mono(), 12.0, UITheme.INK_HIGH, 0.10)
@@ -1837,6 +2036,7 @@ func _build_interface() -> void:
 
 	for definition in Balance.UPGRADE_NODES:
 		_build_node_button(definition)
+	_build_constellation_ledger()
 	_build_node_tooltip()
 	_build_galactic_overlays()
 	_layout_chart()
@@ -1887,48 +2087,123 @@ func _build_node_button(definition: Dictionary) -> void:
 	node_hold_bars[node_id] = star_visual
 
 
+func _build_constellation_ledger() -> void:
+	constellation_ledger = Control.new()
+	constellation_ledger.name = "ConstellationInstallLedger"
+	constellation_ledger.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	constellation_ledger.z_index = 30
+	overlay.add_child(constellation_ledger)
+	var ledger_title := _spec_label(tr("TREE_CONSTELLATION_LEDGER"), UITheme.mono(), 11.0, UITheme.INK_MID, 0.31)
+	ledger_title.name = "LedgerTitle"
+	constellation_ledger.add_child(ledger_title)
+	var ledger_ids: Array[String] = []
+	for constellation_id in GALACTIC_LEDGER_ORDER:
+		ledger_ids.append(String(constellation_id))
+	ledger_ids.append("local_group")
+	for constellation_id in ledger_ids:
+		var label_text := ""
+		if constellation_id == "local_group":
+			label_text = tr(ChartData.LOCAL_GROUP_LABEL_KEY).split(" / ")[0]
+		else:
+			label_text = tr(String(ChartData.CONSTELLATIONS[constellation_id].label_key)).split("  /  ")[0]
+		var name_label := _spec_label(label_text, UITheme.sans("light"), 13.0, UITheme.TOOLTIP_BODY)
+		constellation_ledger.add_child(name_label)
+		constellation_ledger_names.append(name_label)
+		var leader := ColorRect.new()
+		leader.color = Color(UITheme.ACCENT_DEEP, 0.55)
+		leader.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		constellation_ledger.add_child(leader)
+		constellation_ledger_leaders.append(leader)
+		var note_label := _spec_label("", UITheme.mono(), 11.0, UITheme.INK_LOW, 1.0 / 11.0)
+		note_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		constellation_ledger.add_child(note_label)
+		constellation_ledger_notes.append(note_label)
+		var count_label := _spec_label("0 / 0", UITheme.mono_tabular(), 12.0, UITheme.INK_MID)
+		count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		constellation_ledger.add_child(count_label)
+		constellation_ledger_counts.append(count_label)
+
+
 func _build_node_tooltip() -> void:
 	tooltip_panel = PanelContainer.new()
-	tooltip_panel.name = "NodeTooltip"
+	tooltip_panel.name = "ConstellationInspector"
 	tooltip_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	tooltip_panel.custom_minimum_size = TOOLTIP_SIZE
+	tooltip_panel.custom_minimum_size = Vector2(UITheme.px(292.0), 0.0)
 	tooltip_panel.z_index = 100
 	tooltip_panel.visible = false
-	tooltip_panel.add_theme_stylebox_override("panel", _panel_style(UITheme.TOOLTIP_BACKGROUND, UITheme.TOOLTIP_BORDER, 0, 1))
+	tooltip_panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	overlay.add_child(tooltip_panel)
-	tooltip_panel.minimum_size_changed.connect(_request_tooltip_refit)
-	var margin := MarginContainer.new()
-	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	for side in ["margin_left", "margin_top", "margin_right", "margin_bottom"]:
-		margin.add_theme_constant_override(side, 14)
-	tooltip_panel.add_child(margin)
 	var column := VBoxContainer.new()
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	column.add_theme_constant_override("separation", 5)
-	margin.add_child(column)
-	tooltip_branch = _make_label("", 10, UITheme.TOOLTIP_LABEL)
+	column.add_theme_constant_override("separation", UITheme.size_px(11.0))
+	tooltip_panel.add_child(column)
+	tooltip_branch = _spec_label("", UITheme.mono(), 11.0, UITheme.INK_MID, 0.31)
 	tooltip_branch.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	tooltip_branch.custom_minimum_size.x = 290.0
 	column.add_child(tooltip_branch)
-	tooltip_name = _make_label("", 18, UITheme.TOOLTIP_NAME)
+	tooltip_name = _spec_label("", UITheme.sans(), 26.0, UITheme.TOOLTIP_NAME)
 	tooltip_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	tooltip_name.custom_minimum_size.x = 290.0
 	column.add_child(tooltip_name)
-	tooltip_star = _make_label("", 10, UITheme.TOOLTIP_VALUE)
+	tooltip_star = _spec_label("", UITheme.mono(), 13.0, UITheme.TOOLTIP_VALUE)
 	tooltip_star.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	tooltip_star.custom_minimum_size.x = 290.0
 	column.add_child(tooltip_star)
-	var divider := HSeparator.new()
+	var divider := ColorRect.new()
+	divider.custom_minimum_size.y = 1.0
+	divider.color = UITheme.ACCENT_DEEP
 	divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(divider)
-	tooltip_description = _make_label("", 11, UITheme.TOOLTIP_BODY)
-	tooltip_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	tooltip_description.custom_minimum_size.x = 290.0
-	column.add_child(tooltip_description)
-	tooltip_meta = _make_label("", 11, UITheme.TOOLTIP_LABEL)
-	tooltip_meta.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	tooltip_meta.custom_minimum_size.x = 290.0
-	column.add_child(tooltip_meta)
+	var fields := GridContainer.new()
+	fields.columns = 2
+	fields.add_theme_constant_override("h_separation", UITheme.size_px(14.0))
+	fields.add_theme_constant_override("v_separation", UITheme.size_px(7.0))
+	fields.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(fields)
+	for field_key in ["STATUS", "COST", "EFFECT"]:
+		var field_label := _spec_label(tr("TREE_CONSTELLATION_FIELD_%s" % field_key), UITheme.mono(), 11.0, UITheme.TOOLTIP_LABEL, 0.18)
+		field_label.name = "Field%sLabel" % field_key.capitalize()
+		field_label.custom_minimum_size.x = UITheme.px(44.0)
+		fields.add_child(field_label)
+		match field_key:
+			"STATUS":
+				tooltip_state = _spec_label("", UITheme.sans("light"), 13.0, UITheme.INK_MAX)
+				fields.add_child(tooltip_state)
+			"COST":
+				tooltip_cost = _spec_label("", UITheme.mono_tabular(), 13.0, UITheme.TOOLTIP_BODY)
+				fields.add_child(tooltip_cost)
+			"EFFECT":
+				tooltip_description = _spec_label("", UITheme.sans("light"), 13.0, UITheme.TOOLTIP_BODY)
+				tooltip_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+				tooltip_description.custom_minimum_size.x = UITheme.px(220.0)
+				fields.add_child(tooltip_description)
+	tooltip_action = _spec_label("", UITheme.mono(), 13.0, UITheme.TOOLTIP_ACTION, 0.6 / 13.0)
+	tooltip_action.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(tooltip_action)
+	var legend_spacer := Control.new()
+	legend_spacer.custom_minimum_size.y = UITheme.px(7.0)
+	legend_spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(legend_spacer)
+	var legend_title := _spec_label(tr("TREE_CONSTELLATION_STAR_STATES"), UITheme.mono(), 11.0, UITheme.INK_MID, 0.31)
+	legend_title.name = "LegendTitle"
+	column.add_child(legend_title)
+	var legend_rows := [
+		["●", UITheme.STAR_INSTALLED, "TREE_CONSTELLATION_LEGEND_INSTALLED"],
+		["●", UITheme.STAR_READY_FILL, "TREE_CONSTELLATION_LEGEND_READY"],
+		["●", UITheme.STAR_SHORT_BORDER, "TREE_CONSTELLATION_LEGEND_SHORT"],
+		["○", UITheme.STAR_LOCKED, "TREE_CONSTELLATION_LEGEND_LOCKED"],
+	]
+	for legend_index in range(legend_rows.size()):
+		var row_variant = legend_rows[legend_index]
+		var row: Array = row_variant
+		var legend_row := HBoxContainer.new()
+		legend_row.add_theme_constant_override("separation", UITheme.size_px(11.0))
+		legend_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		column.add_child(legend_row)
+		var marker := _spec_label(String(row[0]), UITheme.mono(), 15.0, Color(row[1]))
+		marker.custom_minimum_size.x = UITheme.px(12.0)
+		legend_row.add_child(marker)
+		var legend_text := _spec_label(tr(String(row[2])), UITheme.sans("light"), 12.0, UITheme.TOOLTIP_LABEL)
+		legend_text.name = "LegendText%d" % legend_index
+		legend_row.add_child(legend_text)
+	tooltip_meta = tooltip_action
 
 
 func _build_galactic_overlays() -> void:
@@ -2066,43 +2341,12 @@ func _refit_node_tooltip() -> void:
 
 
 func _resize_tooltip() -> void:
-	if tooltip_panel == null:
-		return
-	tooltip_panel.reset_size()
-	var limit := TOOLTIP_MAX_WIDTH
-	if overlay != null:
-		limit = minf(limit, maxf(120.0, overlay.size.x - TOOLTIP_SCREEN_MARGIN * 2.0))
-	if tooltip_panel.size.x > limit:
-		# Fixing the width re-wraps every autowrap label; the resulting height
-		# change comes back through minimum_size_changed and refits once.
-		tooltip_panel.size.x = limit
+	_layout_constellation_overlays()
 
 
-func _position_node_tooltip(cursor_position: Vector2) -> void:
-	if tooltip_panel == null or not tooltip_panel.visible or overlay == null:
-		return
-	var tooltip_size := tooltip_panel.size
-	# Control has no to_local/to_global, so the origin is mapped by hand: the chart
-	# point scales with the canvas, then shifts from global into overlay space.
-	var chart_origin_on_overlay: Vector2 = tree_canvas.global_position + CHART_ORIGIN * tree_canvas.scale - overlay.global_position
-	var away_from_origin: Vector2 = cursor_position - chart_origin_on_overlay
-	if away_from_origin.is_zero_approx():
-		away_from_origin = Vector2(1.0, -1.0)
-	var tooltip_position := Vector2(
-		cursor_position.x + (TOOLTIP_CURSOR_OFFSET if away_from_origin.x >= 0.0 else -tooltip_size.x - TOOLTIP_CURSOR_OFFSET),
-		cursor_position.y + (TOOLTIP_CURSOR_OFFSET if away_from_origin.y >= 0.0 else -tooltip_size.y - TOOLTIP_CURSOR_OFFSET)
-	)
-	if tooltip_position.x < TOOLTIP_SCREEN_MARGIN:
-		tooltip_position.x = cursor_position.x + TOOLTIP_CURSOR_OFFSET
-	elif tooltip_position.x + tooltip_size.x > overlay.size.x - TOOLTIP_SCREEN_MARGIN:
-		tooltip_position.x = cursor_position.x - tooltip_size.x - TOOLTIP_CURSOR_OFFSET
-	if tooltip_position.y < TOOLTIP_SCREEN_MARGIN:
-		tooltip_position.y = cursor_position.y + TOOLTIP_CURSOR_OFFSET
-	elif tooltip_position.y + tooltip_size.y > overlay.size.y - TOOLTIP_SCREEN_MARGIN:
-		tooltip_position.y = cursor_position.y - tooltip_size.y - TOOLTIP_CURSOR_OFFSET
-	tooltip_position.x = clampf(tooltip_position.x, TOOLTIP_SCREEN_MARGIN, maxf(TOOLTIP_SCREEN_MARGIN, overlay.size.x - tooltip_size.x - TOOLTIP_SCREEN_MARGIN))
-	tooltip_position.y = clampf(tooltip_position.y, TOOLTIP_SCREEN_MARGIN, maxf(TOOLTIP_SCREEN_MARGIN, overlay.size.y - tooltip_size.y - TOOLTIP_SCREEN_MARGIN))
-	tooltip_panel.position = tooltip_position
+func _position_node_tooltip(_cursor_position: Vector2) -> void:
+	# The redesign keeps node detail in the fixed 292-spec-pixel right column.
+	_layout_constellation_overlays()
 
 
 func _connection_points(source_id: String, target_id: String) -> PackedVector2Array:
@@ -2196,6 +2440,14 @@ func _draw_chart_background() -> void:
 	var structure_alpha := _galactic_structure_alpha() if galactic_unlocked else 1.0
 	if structure_alpha <= 0.01:
 		return
+	if constellation_halo != null:
+		var halo_size := Vector2(UITheme.px(2400.0), UITheme.px(1500.0)) / maxf(zoom, 0.001)
+		tree_canvas.draw_texture_rect(
+			constellation_halo,
+			Rect2(CHART_ORIGIN - halo_size * 0.5, halo_size),
+			false,
+			Color(1.0, 1.0, 1.0, structure_alpha)
+		)
 	for index in range(background_stars.size()):
 		var background_position := CHART_ORIGIN + (background_stars[index] - CHART_ORIGIN).rotated(rotation_offset)
 		if galactic_unlocked:
@@ -2513,47 +2765,36 @@ func _segment_states(constellation_id: String, segment: Array) -> PackedStringAr
 
 
 func _draw_chart_horizon(alpha: float = 1.0) -> void:
-	# The wheel turns about this point; without a mark the rotation reads as
-	# arbitrary rather than as a sky pivoting on due north.
-	var tick_height := UITheme.px(13.0)
+	# The hand-off uses one almost-flat, continuously visible ridge. It still owns
+	# occlusion because the ground fill is drawn after every constellation.
+	var overhang := TREE_SIZE.x
+	var ridge_line := PackedVector2Array()
+	var sample_count := 96
+	for index in range(sample_count + 1):
+		var x := lerpf(-overhang, TREE_SIZE.x + overhang, float(index) / float(sample_count))
+		var y := CHART_ORIGIN.y + sin(x * 0.0042) * 5.0 + sin(x * 0.0131 + 1.2) * 3.0
+		ridge_line.append(Vector2(x, y))
+	var ground_color := Color(UITheme.GROUND, UITheme.GROUND.a * alpha)
+	var ground_bottom := TREE_SIZE.y + overhang
+	for index in range(ridge_line.size() - 1):
+		var start := ridge_line[index]
+		var finish := ridge_line[index + 1]
+		tree_canvas.draw_colored_polygon(PackedVector2Array([
+			start,
+			finish,
+			Vector2(finish.x, ground_bottom),
+			Vector2(start.x, ground_bottom),
+		]), ground_color)
+	tree_canvas.draw_polyline(ridge_line, Color(UITheme.HORIZON, 0.90 * alpha), 1.4, true)
+	# Due north is a single instrument tick through the ridge, matching the fixed
+	# label in the bottom information band.
 	tree_canvas.draw_line(
-		Vector2(CHART_ORIGIN.x, CHART_ORIGIN.y - tick_height),
-		Vector2(CHART_ORIGIN.x, CHART_ORIGIN.y),
-		Color(UITheme.HORIZON_TICK, UITheme.HORIZON_TICK.a * alpha),
-		1.0,
+		Vector2(CHART_ORIGIN.x, CHART_ORIGIN.y - 4.0),
+		Vector2(CHART_ORIGIN.x, CHART_ORIGIN.y + 26.0),
+		Color(UITheme.HORIZON_TICK, 0.85 * alpha),
+		1.4,
 		true
 	)
-	var span := TREE_SIZE.x * 0.375
-	var steps := 24
-	for index in range(steps):
-		var a := float(index) / float(steps)
-		var b := float(index + 1) / float(steps)
-		for side in [-1.0, 1.0]:
-			tree_canvas.draw_line(
-				Vector2(CHART_ORIGIN.x + side * span * a, CHART_ORIGIN.y),
-				Vector2(CHART_ORIGIN.x + side * span * b, CHART_ORIGIN.y),
-				Color(UITheme.HORIZON, UITheme.HORIZON.a * (1.0 - (a + b) * 0.5) * alpha),
-				1.0,
-				true
-			)
-	var horizon_y := CHART_ORIGIN.y
-	# The ground runs well past the canvas. Now that the sky reaches beyond
-	# TREE_SIZE, a figure rotated below the horizon has to stay buried at any
-	# zoom, and a ridge that stopped at the canvas edge would let it show.
-	var overhang := TREE_SIZE.x
-	var ridge := PackedVector2Array([
-		Vector2(-overhang, horizon_y + 9.0), Vector2(TREE_SIZE.x * 0.18, horizon_y - 4.0),
-		Vector2(TREE_SIZE.x * 0.36, horizon_y + 2.0), Vector2(TREE_SIZE.x * 0.54, horizon_y - 8.0),
-		Vector2(TREE_SIZE.x * 0.76, horizon_y + 1.0), Vector2(TREE_SIZE.x, horizon_y - 5.0),
-		Vector2(TREE_SIZE.x + overhang, horizon_y + 4.0),
-		Vector2(TREE_SIZE.x + overhang, TREE_SIZE.y + overhang), Vector2(-overhang, TREE_SIZE.y + overhang)
-	])
-	tree_canvas.draw_colored_polygon(ridge, Color(UITheme.GROUND, UITheme.GROUND.a * alpha))
-	var dome_center := CHART_ORIGIN + Vector2(0, -2.0)
-	tree_canvas.draw_circle(dome_center, 24.0, Color(UITheme.GROUND, UITheme.GROUND.a * alpha))
-	tree_canvas.draw_rect(Rect2(dome_center.x - 26.0, dome_center.y, 52.0, 28.0), Color(UITheme.GROUND, UITheme.GROUND.a * alpha))
-	tree_canvas.draw_line(dome_center + Vector2(0, -22), dome_center + Vector2(15, -38), Color(UITheme.HORIZON, UITheme.HORIZON.a * alpha), 3.0, true)
-	tree_canvas.draw_circle(dome_center + Vector2(16, -39), 2.2, Color(UITheme.HORIZON_TICK, UITheme.HORIZON_TICK.a * alpha))
 
 
 func _draw_dashed_connection(start: Vector2, finish: Vector2, color: Color) -> void:

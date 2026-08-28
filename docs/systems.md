@@ -201,12 +201,16 @@ distance order while remapping into a 0.52-tilted 124–548-spec-pixel disc. The
 Catmull-Rom route has a glow underlay, two dashed reference orbits, two cached
 radial halo textures, edge-on rotated galaxy markers, and permanent code labels.
 Seventy-four deterministic, non-interactive blue-grey background points occupy
-the area outside the route ellipse. A galaxy-scale-only completion ledger and
-fixed inspector replace the cursor tooltip; chart scale retains the existing
-tooltip. Twenty-nine Local Group nodes extend that chart to 124 systems and
-build the host-star/transit layer from six reusable rule families. Sirius Bloom still schedules one warned Major Fireball
-at a randomized viable time in each subsequent round. Observing or losing it
-does not stop the night.
+the area outside the route ellipse. Both scales use fixed information columns:
+constellation scale owns a 13-row install ledger and a selected-star inspector
+with state legend, while galaxy scale swaps in its completion record and transit
+rule inspector. Hover changes the persistent selection instead of moving a
+cursor tooltip; the constellation sky itself stays free of node-name text, and
+the fixed right inspector alone identifies the selection. Twenty-nine Local Group nodes extend that chart
+to 124 systems and build the host-star/transit layer from six reusable rule
+families. Sirius Bloom still schedules one warned Major Fireball at a randomized
+viable time in each subsequent round. Observing or losing it does not stop the
+night.
 
 ### Time invariants
 
