@@ -83,7 +83,7 @@ func reset() -> void:
 	set_process(false)
 
 
-func spawn_success(world_position: Vector2, amount: float, color: Color, multiplier: float, strength: float = 0.0, grade: String = "", anchor: Vector2 = Vector2.ZERO) -> void:
+func spawn_success(world_position: Vector2, amount: float, color: Color, multiplier: float, strength: float = 0.0, grade: String = "", anchor: Vector2 = Vector2.ZERO, flash_scale: float = 1.0) -> void:
 	var power := clampf(strength, 0.0, 1.0)
 	var burst := int(round(lerpf(10.0, 34.0, power)))
 	var available_particle_slots := maxi(0, MAX_PARTICLES - particles.size())
@@ -143,8 +143,10 @@ func spawn_success(world_position: Vector2, amount: float, color: Color, multipl
 		"bow": _world_px(rng.randf_range(-34.0, 34.0))
 	})
 
-	flash_color = color
-	flash_strength = maxf(flash_strength, lerpf(0.07, 0.26, power))
+	var scaled_flash := lerpf(0.07, 0.26, power) * maxf(0.0, flash_scale)
+	if scaled_flash > 0.0:
+		flash_color = color
+		flash_strength = maxf(flash_strength, scaled_flash)
 	set_process(true)
 	queue_redraw()
 
