@@ -1826,19 +1826,22 @@ func _run() -> void:
 	_check(visible_galactic_buttons == 30, "the final galaxy frame exposes the interactive Milky Way anchor and all 29 Local Group research nodes")
 	_check(
 		open_night_game.upgrade_tree.galactic_background_stars.size() == open_night_game.upgrade_tree.GALACTIC_BACKGROUND_STAR_COUNT,
-		"the final galaxy frame retains exactly 30 sparse non-interactive background stars"
+		"the final galaxy frame retains exactly 74 sparse non-interactive background stars"
 	)
 	var galactic_background_clear := true
 	for background_star_variant in open_night_game.upgrade_tree.galactic_background_stars:
 		var background_star := Vector2(background_star_variant)
+		var background_offset: Vector2 = background_star - open_night_game.upgrade_tree.GALACTIC_MAP_CENTER_SPEC * open_night_game.upgrade_tree.UITheme.SCALE
 		var exclusion_distance := Vector2(
-			background_star.x / open_night_game.upgrade_tree.GALACTIC_BACKGROUND_EXCLUSION.x,
-			background_star.y / open_night_game.upgrade_tree.GALACTIC_BACKGROUND_EXCLUSION.y
+			background_offset.x / (open_night_game.upgrade_tree.GALACTIC_BACKGROUND_EXCLUSION_SPEC.x * open_night_game.upgrade_tree.UITheme.SCALE),
+			background_offset.y / (open_night_game.upgrade_tree.GALACTIC_BACKGROUND_EXCLUSION_SPEC.y * open_night_game.upgrade_tree.UITheme.SCALE)
 		).length()
 		if exclusion_distance < 1.0:
 			galactic_background_clear = false
 			break
 	_check(galactic_background_clear, "galactic background stars stay outside the route and node exclusion ellipse")
+	_check(open_night_game.upgrade_tree.galactic_panel.visible and open_night_game.upgrade_tree.galactic_ledger.visible, "the galaxy frame replaces the cursor tooltip with fixed inspector and completion-ledger columns")
+	_check(open_night_game.upgrade_tree.galactic_core_hit.visible and open_night_game.upgrade_tree.galactic_core_hit.mouse_filter == Control.MOUSE_FILTER_STOP, "the miniature completed chart exposes one dedicated galactic-core hit target")
 	_check(
 		Vector2(open_night_game.upgrade_tree.node_positions["galactic_reference_frame"]).is_equal_approx(open_night_game.upgrade_tree.CHART_ORIGIN),
 		"the original 95-node chart collapses into the interactive Galactic Reference Frame at the Milky Way centre"

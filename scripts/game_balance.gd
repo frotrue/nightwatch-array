@@ -788,7 +788,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "galactic_reference_frame", "name": "Galaxy Map", "icon": "MW", "cost": 400000000,
-		"description": "Pulls the completed research chart back to a view of the galaxy and adds more background stars to the night sky.",
+		"description": "Pulls the completed research chart back to galactic scale and reveals the Local Group route.",
 		"branch": "draco", "prerequisites": ["draco_apotheosis"],
 		"hidden_until": ["draco_apotheosis"], "effect_type": "unlock", "effect_notes": {"galactic_survey": true},
 		"major": true, "affects_pacing": false

@@ -169,16 +169,22 @@ head traces the installed Local Group path; each real node lights near its final
 screen position when the route reaches it and settles over only the last few
 percent of its radius. Its radial chart position compensates for the live camera
 zoom, so the revealed map does not contract after it appears. There is no
-centre-only hold or second expanding-map beat. The installed linear route and
-current frontier are the only lines retained there. Thirty deterministic,
-non-interactive blue-grey background points fade in late, remain screen-fixed,
-and are generated outside a central exclusion ellipse so they cannot compete
-with the route or its buttons at galactic scale. It is a
+centre-only hold or second expanding-map beat. The installed curved route and
+current frontier are the only research lines retained there. It is a
 non-terminal presentation state: it does not interrupt the active observation
 round or a later one, and Ctrl+wheel travels between the galaxy and completed
-chart scales after the one-time sequence. Twenty-nine Local Group nodes extend
-that chart to 124 systems and build the host-star/transit layer from six reusable
-rule families. Sirius Bloom still schedules one warned Major Fireball
+chart scales after the one-time sequence. At galaxy scale, a non-interactive
+104-spec-pixel miniature of the twelve completed constellations remains at the
+Milky Way centre; one 112-spec-pixel core target replaces the overlapping legacy
+buttons. The 29 Local Group positions preserve the data angles and normalized
+distance order while remapping into a 0.52-tilted 124–548-spec-pixel disc. Their
+Catmull-Rom route has a glow underlay, two dashed reference orbits, two cached
+radial halo textures, edge-on rotated galaxy markers, and permanent code labels.
+Seventy-four deterministic, non-interactive blue-grey background points occupy
+the area outside the route ellipse. A galaxy-scale-only completion ledger and
+fixed inspector replace the cursor tooltip; chart scale retains the existing
+tooltip. Twenty-nine Local Group nodes extend that chart to 124 systems and
+build the host-star/transit layer from six reusable rule families. Sirius Bloom still schedules one warned Major Fireball
 at a randomized viable time in each subsequent round. Observing or losing it
 does not stop the night.
 
