@@ -14,14 +14,8 @@ const MAX_ZOOM := 1.28
 const GALACTIC_ZOOM := 0.18
 const GALACTIC_DETAIL_ZOOM_START := 0.26
 const GALACTIC_DETAIL_ZOOM_END := 0.55
-const GALACTIC_CHART_SCALE := 0.075
-const GALACTIC_STAR_COUNT := 512
-const GALACTIC_TRANSITION_STAR_COUNT := 384
-const GALACTIC_FINAL_STAR_COUNT := 512
-const GALACTIC_STAR_SEED := 20260827
-const GALACTIC_BULGE_STAR_COUNT := 128
-const GALACTIC_DISK_STAR_COUNT := 32
-const GALACTIC_SPIRAL_RADIUS := 1250.0
+const GALACTIC_CHART_SCALE := 0.0
+const GALACTIC_NODE_SCREEN_SCALE := 0.72
 const GALACTIC_MODE_NORMAL := 0
 const GALACTIC_MODE_PULLBACK := 1
 const GALACTIC_MODE_FINAL := 2
@@ -29,11 +23,8 @@ const PULLBACK_DURATION := 3.60
 const PULLBACK_LINES_END := 0.65
 const PULLBACK_ZOOM_START := 0.55
 const PULLBACK_ZOOM_END := 1.85
-const PULLBACK_SPIRAL_END := 3.60
-# Fraction of the star morph spent reaching the band before the arms take over.
-# The disc, the band and the spiral are one path travelled on one clock; two
-# clocks handing off to each other put a stall and a kink in the middle of it.
-const PULLBACK_MORPH_BAND_SPLIT := 0.62
+const PULLBACK_NODES_START := 0.95
+const PULLBACK_NODES_END := 3.45
 const HOLD_PURCHASE_SECONDS := 0.75
 const CHART_ORIGIN := Vector2(TREE_SIZE.x * 0.5, TREE_SIZE.y * 0.91)
 const ROTATION_STEP := deg_to_rad(6.0)
@@ -231,6 +222,7 @@ var node_star_records: Dictionary = {}
 var base_star_positions: Dictionary = {}
 var star_node_ids: Dictionary = {}
 var local_group_node_positions: Dictionary = {}
+var local_group_node_order: Dictionary = {}
 
 var hovered_node_id: String = ""
 var tooltip_suppressed_until_motion: bool = false
@@ -243,17 +235,10 @@ var pan_position := Vector2.ZERO
 var rotation_offset: float = DEFAULT_ROTATION
 var pending_rotation_delta: float = 0.0
 var background_stars: PackedVector2Array = PackedVector2Array()
-var galactic_star_sources: PackedVector2Array = PackedVector2Array()
-var galactic_star_bands: PackedVector2Array = PackedVector2Array()
-var galactic_star_spirals: PackedVector2Array = PackedVector2Array()
-var galactic_star_screen_sizes: PackedFloat32Array = PackedFloat32Array()
-var galactic_star_alphas: PackedFloat32Array = PackedFloat32Array()
-var galactic_chart_anchor := CHART_ORIGIN
 var galactic_unlocked: bool = false
 var galactic_pullback_seen: bool = false
 var galactic_mode: int = GALACTIC_MODE_NORMAL
 var galactic_chart_detail: float = 1.0
-var galactic_chart_anchor_blend: float = 0.0
 var pullback_elapsed: float = 0.0
 var pullback_start_zoom: float = 0.78
 var pullback_start_pan := Vector2.ZERO
@@ -273,7 +258,6 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 	node_star_records = ChartData.node_star_map()
 	_build_background_stars()
-	_build_galactic_stars()
 	_cache_chart_geometry()
 	_build_interface()
 	set_process_input(true)
@@ -302,11 +286,9 @@ func configure_galactic_state(unlocked: bool, pullback_seen: bool) -> void:
 	if galactic_pullback_seen:
 		galactic_mode = GALACTIC_MODE_FINAL
 		galactic_chart_detail = 0.0
-		galactic_chart_anchor_blend = 1.0
 	else:
 		galactic_mode = GALACTIC_MODE_NORMAL
 		galactic_chart_detail = 1.0
-		galactic_chart_anchor_blend = 0.0
 	if tree_canvas != null:
 		_layout_chart()
 		_update_galactic_presentation()
@@ -348,7 +330,6 @@ func close_tree() -> void:
 	if galactic_mode == GALACTIC_MODE_PULLBACK and not galactic_pullback_seen:
 		galactic_mode = GALACTIC_MODE_NORMAL
 		galactic_chart_detail = 1.0
-		galactic_chart_anchor_blend = 0.0
 		pullback_elapsed = 0.0
 	_cancel_node_hold()
 	overlay.visible = false
@@ -510,7 +491,6 @@ func _start_galactic_pullback() -> void:
 	pullback_start_zoom = zoom
 	pullback_start_pan = pan_position
 	galactic_chart_detail = 1.0
-	galactic_chart_anchor_blend = 0.0
 	_update_galactic_presentation()
 
 
@@ -529,11 +509,6 @@ func _advance_galactic_pullback(delta: float) -> void:
 	var anchored_pan := _galactic_pan_for_zoom(zoom, galactic_chart_detail)
 	var canonical_start_pan := _galactic_pan_for_zoom(pullback_start_zoom, 1.0)
 	pan_position = anchored_pan + (pullback_start_pan - canonical_start_pan) * (1.0 - eased_pullback)
-	galactic_chart_anchor_blend = _ease_in_out(_timed_ratio(
-		pullback_elapsed,
-		PULLBACK_ZOOM_END,
-		PULLBACK_SPIRAL_END
-	))
 	_layout_chart()
 	_apply_transform()
 	_update_galactic_presentation()
@@ -549,7 +524,6 @@ func _finish_galactic_pullback() -> void:
 	galactic_mode = GALACTIC_MODE_FINAL
 	pullback_elapsed = PULLBACK_DURATION
 	galactic_chart_detail = 0.0
-	galactic_chart_anchor_blend = 1.0
 	_frame_galaxy()
 	_update_galactic_presentation()
 	galactic_pullback_finished.emit()
@@ -563,21 +537,12 @@ func _ease_in_out(value: float) -> float:
 	return value * value * (3.0 - 2.0 * value)
 
 
-func _polar_blend(from_point: Vector2, to_point: Vector2, ratio: float) -> Vector2:
-	# Structure that turns has to be interpolated as radius and angle. A
-	# straight line between two points cuts the chord, so the field reads as
-	# stars sliding into a picture instead of a disc winding up into arms.
-	var from_offset := from_point - CHART_ORIGIN
-	var to_offset := to_point - CHART_ORIGIN
-	var radius := lerpf(from_offset.length(), to_offset.length(), ratio)
-	var sweep := wrapf(to_offset.angle() - from_offset.angle(), -PI, PI)
-	return CHART_ORIGIN + Vector2.RIGHT.rotated(from_offset.angle() + sweep * ratio) * radius
-
-
 func _galactic_pan_for_zoom(target_zoom: float, chart_detail: float = 0.0) -> Vector2:
 	if content_clip == null:
 		return pan_position
-	var galaxy_origin_screen := content_clip.size * 0.5
+	# Keep the outer spiral clear of the persistent progress header while leaving
+	# enough room for its lower arc and the controls caption.
+	var galaxy_origin_screen := content_clip.size * 0.5 + Vector2(0.0, minf(36.0, content_clip.size.y * 0.055))
 	var chart_origin_screen := Vector2(content_clip.size.x * 0.5, content_clip.size.y - 18.0)
 	var origin_screen := galaxy_origin_screen.lerp(chart_origin_screen, clampf(chart_detail, 0.0, 1.0))
 	return origin_screen - CHART_ORIGIN * target_zoom
@@ -588,7 +553,6 @@ func _frame_galaxy() -> void:
 		return
 	zoom = GALACTIC_ZOOM
 	galactic_chart_detail = 0.0
-	galactic_chart_anchor_blend = 1.0
 	pan_position = _galactic_pan_for_zoom(zoom, galactic_chart_detail)
 	galactic_mode = GALACTIC_MODE_FINAL
 	_layout_chart()
@@ -606,7 +570,6 @@ func _zoom_galactic_chart(factor: float) -> void:
 		GALACTIC_DETAIL_ZOOM_START,
 		GALACTIC_DETAIL_ZOOM_END
 	))
-	galactic_chart_anchor_blend = 1.0 - galactic_chart_detail
 	pan_position = _galactic_pan_for_zoom(zoom, galactic_chart_detail)
 	_layout_chart()
 	_apply_transform()
@@ -622,20 +585,40 @@ func _is_local_group_node(node_id: String) -> bool:
 
 
 func _local_group_alpha() -> float:
-	if not galactic_unlocked or not galactic_pullback_seen:
+	if not galactic_unlocked:
+		return 0.0
+	if galactic_mode == GALACTIC_MODE_PULLBACK:
+		return _ease_in_out(_timed_ratio(pullback_elapsed, PULLBACK_NODES_START, PULLBACK_NODES_END))
+	if not galactic_pullback_seen:
 		return 0.0
 	return 1.0 - smoothstep(0.05, 0.34, galactic_chart_detail)
 
 
+func _local_group_node_reveal(node_id: String) -> float:
+	var group_alpha := _local_group_alpha()
+	if galactic_mode != GALACTIC_MODE_PULLBACK or group_alpha <= 0.0:
+		return group_alpha
+	var reveal_clock := _timed_ratio(pullback_elapsed, PULLBACK_NODES_START, PULLBACK_NODES_END)
+	var node_count := maxi(1, local_group_node_order.size())
+	var order_ratio := float(local_group_node_order.get(node_id, 0)) / float(maxi(1, node_count - 1))
+	# The reveal head travels down the real dependency order. Each node expands
+	# from the Milky Way only when the preceding part of the route has arrived.
+	return _ease_in_out(clampf((reveal_clock - order_ratio * 0.42) / 0.58, 0.0, 1.0))
+
+
 func _node_presentation_alpha(node_id: String) -> float:
 	if _is_local_group_node(node_id):
-		return _local_group_alpha()
+		return _local_group_node_reveal(node_id)
+	if node_id == "galactic_reference_frame" and galactic_unlocked:
+		return 1.0
 	return 1.0 if not galactic_unlocked else smoothstep(0.05, 0.34, galactic_chart_detail)
 
 
 func _node_interaction_ready(node_id: String) -> bool:
 	if _is_local_group_node(node_id):
 		return galactic_unlocked and galactic_pullback_seen and galactic_chart_detail <= 0.06
+	if node_id == "galactic_reference_frame" and galactic_unlocked:
+		return galactic_pullback_seen and (galactic_chart_detail <= 0.06 or _galactic_chart_is_readable())
 	return _galactic_chart_is_readable()
 
 
@@ -804,92 +787,11 @@ func _build_background_stars() -> void:
 		background_stars[index] = CHART_ORIGIN + Vector2.RIGHT.rotated(rng.randf_range(-PI, PI)) * distance
 
 
-func _build_galactic_stars() -> void:
-	var rng := RandomNumberGenerator.new()
-	rng.seed = GALACTIC_STAR_SEED
-	galactic_star_sources.resize(GALACTIC_STAR_COUNT)
-	galactic_star_bands.resize(GALACTIC_STAR_COUNT)
-	galactic_star_spirals.resize(GALACTIC_STAR_COUNT)
-	galactic_star_screen_sizes.resize(GALACTIC_STAR_COUNT)
-	galactic_star_alphas.resize(GALACTIC_STAR_COUNT)
-	var inner := BACKGROUND_STAR_MIN_RADIUS * BACKGROUND_STAR_MIN_RADIUS
-	var outer := BACKGROUND_STAR_MAX_RADIUS * BACKGROUND_STAR_MAX_RADIUS
-	for index in range(GALACTIC_STAR_COUNT):
-		if index < background_stars.size():
-			galactic_star_sources[index] = background_stars[index]
-		else:
-			var source_distance := sqrt(rng.randf_range(inner, outer))
-			galactic_star_sources[index] = CHART_ORIGIN + Vector2.RIGHT.rotated(rng.randf_range(-PI, PI)) * source_distance
-
-		var band_x := clampf(rng.randfn(0.0, GALACTIC_SPIRAL_RADIUS * 0.42), -GALACTIC_SPIRAL_RADIUS, GALACTIC_SPIRAL_RADIUS)
-		var band_edge := sqrt(maxf(0.0, 1.0 - pow(band_x / GALACTIC_SPIRAL_RADIUS, 2.0)))
-		var band_y := clampf(rng.randfn(0.0, 34.0 * maxf(0.22, band_edge)), -82.0, 82.0)
-		galactic_star_bands[index] = CHART_ORIGIN + Vector2(band_x, band_y).rotated(-0.12)
-
-		if index < GALACTIC_BULGE_STAR_COUNT:
-			var bulge_radius := 355.0 * pow(rng.randf(), 2.05)
-			galactic_star_spirals[index] = CHART_ORIGIN + Vector2.RIGHT.rotated(rng.randf_range(-PI, PI)) * bulge_radius
-		elif index < GALACTIC_BULGE_STAR_COUNT + GALACTIC_DISK_STAR_COUNT:
-			var dust_radius := pow(rng.randf(), 1.80) * GALACTIC_SPIRAL_RADIUS * 0.82
-			var dust_angle := rng.randf_range(-PI, PI)
-			galactic_star_spirals[index] = CHART_ORIGIN + Vector2.RIGHT.rotated(dust_angle) * dust_radius
-		else:
-			var arm_index := index - GALACTIC_BULGE_STAR_COUNT - GALACTIC_DISK_STAR_COUNT
-			var arm_star_count := GALACTIC_STAR_COUNT - GALACTIC_BULGE_STAR_COUNT - GALACTIC_DISK_STAR_COUNT
-			var arm := arm_index % 2
-			var points_per_arm := arm_star_count / 2
-			var arm_position := floori(float(arm_index) * 0.5)
-			var radial_ratio := pow((float(arm_position) + 0.5) / float(points_per_arm), 1.72)
-			var spiral_radius := lerpf(16.0, GALACTIC_SPIRAL_RADIUS, radial_ratio)
-			var spiral_angle := -1.15 + float(arm) * PI + radial_ratio * TAU * 1.02 + rng.randf_range(-0.025, 0.025)
-			var spiral_normal := Vector2.RIGHT.rotated(spiral_angle + PI * 0.5)
-			var arm_width := lerpf(7.0, 38.0, radial_ratio)
-			galactic_star_spirals[index] = (
-				CHART_ORIGIN
-				+ Vector2.RIGHT.rotated(spiral_angle) * spiral_radius
-				+ spiral_normal * rng.randfn(0.0, arm_width)
-			)
-		if index < GALACTIC_BULGE_STAR_COUNT:
-			galactic_star_screen_sizes[index] = rng.randf_range(0.82, 1.62)
-			galactic_star_alphas[index] = rng.randf_range(0.42, 0.90)
-		elif index < GALACTIC_BULGE_STAR_COUNT + GALACTIC_DISK_STAR_COUNT:
-			galactic_star_screen_sizes[index] = rng.randf_range(0.62, 1.02)
-			galactic_star_alphas[index] = rng.randf_range(0.12, 0.28)
-		else:
-			galactic_star_screen_sizes[index] = rng.randf_range(0.70, 1.34)
-			galactic_star_alphas[index] = rng.randf_range(0.30, 0.72)
-	var anchor_ratio := pow(0.80, 1.72)
-	var anchor_radius := lerpf(16.0, GALACTIC_SPIRAL_RADIUS, anchor_ratio)
-	var anchor_angle := -1.15 + anchor_ratio * TAU * 1.02
-	var anchor_normal := Vector2.RIGHT.rotated(anchor_angle + PI * 0.5)
-	galactic_chart_anchor = CHART_ORIGIN + Vector2.RIGHT.rotated(anchor_angle) * anchor_radius - anchor_normal * 92.0
-	_shuffle_galactic_targets(rng)
-
-
-func _shuffle_galactic_targets(rng: RandomNumberGenerator) -> void:
-	# Fallback counts use a deterministic prefix. Shuffle the completed target set
-	# once so 384 and 256 retain the whole bulge, disc, and both arm extents rather
-	# than truncating the spiral at an arbitrary radius.
-	for index in range(GALACTIC_STAR_COUNT - 1, 0, -1):
-		var swap_index := rng.randi_range(0, index)
-		var band := galactic_star_bands[index]
-		galactic_star_bands[index] = galactic_star_bands[swap_index]
-		galactic_star_bands[swap_index] = band
-		var spiral := galactic_star_spirals[index]
-		galactic_star_spirals[index] = galactic_star_spirals[swap_index]
-		galactic_star_spirals[swap_index] = spiral
-		var screen_size := galactic_star_screen_sizes[index]
-		galactic_star_screen_sizes[index] = galactic_star_screen_sizes[swap_index]
-		galactic_star_screen_sizes[swap_index] = screen_size
-		var alpha := galactic_star_alphas[index]
-		galactic_star_alphas[index] = galactic_star_alphas[swap_index]
-		galactic_star_alphas[swap_index] = alpha
-
-
 func _cache_chart_geometry() -> void:
 	base_star_positions.clear()
 	star_node_ids.clear()
 	local_group_node_positions.clear()
+	local_group_node_order.clear()
 	for constellation_id in ChartData.CONSTELLATIONS:
 		var constellation: Dictionary = ChartData.CONSTELLATIONS[constellation_id]
 		var placement: Dictionary = ChartData.PLACEMENTS[constellation_id]
@@ -904,9 +806,12 @@ func _cache_chart_geometry() -> void:
 			var node_id := String(star.get("node_id", ""))
 			if not node_id.is_empty():
 				star_node_ids[star_key] = node_id
-	for galaxy_variant in ChartData.LOCAL_GROUP_GALAXIES:
+	for index in range(ChartData.LOCAL_GROUP_GALAXIES.size()):
+		var galaxy_variant = ChartData.LOCAL_GROUP_GALAXIES[index]
 		var galaxy: Dictionary = galaxy_variant
-		local_group_node_positions[String(galaxy.node_id)] = CHART_ORIGIN + Vector2(galaxy.local_position)
+		var node_id := String(galaxy.node_id)
+		local_group_node_positions[node_id] = CHART_ORIGIN + Vector2(galaxy.local_position)
+		local_group_node_order[node_id] = index
 
 
 func _layout_chart() -> void:
@@ -925,7 +830,7 @@ func _layout_chart() -> void:
 			node_positions[String(star_node_ids[star_key])] = chart_position
 	for node_id_variant in local_group_node_positions:
 		var node_id := String(node_id_variant)
-		node_positions[node_id] = Vector2(local_group_node_positions[node_id])
+		node_positions[node_id] = _present_local_group_position(node_id)
 	for node_id in node_positions:
 		if not node_buttons.has(node_id):
 			continue
@@ -933,6 +838,7 @@ func _layout_chart() -> void:
 		var center := Vector2(node_positions[node_id])
 		button.position = center - button.size * 0.5
 		var presentation_alpha := _node_presentation_alpha(String(node_id))
+		button.scale = Vector2.ONE * _node_render_scale(String(node_id), presentation_alpha)
 		button.modulate.a = presentation_alpha
 		button.mouse_filter = Control.MOUSE_FILTER_STOP if presentation_alpha >= 0.92 and _node_interaction_ready(String(node_id)) else Control.MOUSE_FILTER_IGNORE
 		button.visible = (
@@ -947,8 +853,26 @@ func _present_chart_position(chart_position: Vector2) -> Vector2:
 	if not galactic_unlocked:
 		return chart_position
 	var chart_scale := lerpf(GALACTIC_CHART_SCALE, 1.0, galactic_chart_detail)
-	var anchor_offset := (galactic_chart_anchor - CHART_ORIGIN) * galactic_chart_anchor_blend
-	return CHART_ORIGIN + (chart_position - CHART_ORIGIN) * chart_scale + anchor_offset
+	return CHART_ORIGIN + (chart_position - CHART_ORIGIN) * chart_scale
+
+
+func _present_local_group_position(node_id: String) -> Vector2:
+	var final_position := Vector2(local_group_node_positions[node_id])
+	if galactic_mode != GALACTIC_MODE_PULLBACK:
+		return final_position
+	return CHART_ORIGIN.lerp(final_position, _local_group_node_reveal(node_id))
+
+
+func _node_render_scale(node_id: String, presentation_alpha: float) -> float:
+	var galaxy_presence := 0.0
+	if _is_local_group_node(node_id):
+		galaxy_presence = presentation_alpha
+	elif node_id == "galactic_reference_frame" and galactic_unlocked:
+		galaxy_presence = 1.0 - smoothstep(0.05, 0.34, galactic_chart_detail)
+	if galaxy_presence <= 0.0:
+		return 1.0
+	var screen_fixed_scale := GALACTIC_NODE_SCREEN_SCALE / maxf(zoom, 0.001)
+	return lerpf(1.0, screen_fixed_scale, galaxy_presence)
 
 
 func _galactic_horizon_active() -> bool:
@@ -1363,6 +1287,7 @@ func _build_node_button(definition: Dictionary) -> void:
 	button.position = Vector2.ZERO
 	button.size = STAR_HIT_SIZE
 	button.custom_minimum_size = STAR_HIT_SIZE
+	button.pivot_offset = STAR_HIT_SIZE * 0.5
 	button.clip_contents = false
 	button.mouse_filter = Control.MOUSE_FILTER_STOP
 	button.focus_mode = Control.FOCUS_NONE
@@ -1510,7 +1435,8 @@ func _connection_points(source_id: String, target_id: String) -> PackedVector2Ar
 func _node_visual_radius(node_id: String) -> float:
 	if node_hold_bars.has(node_id):
 		var star_visual: StarNodeVisual = node_hold_bars[node_id]
-		return star_visual.visual_radius()
+		var render_scale := float(node_buttons[node_id].scale.x) if node_buttons.has(node_id) else 1.0
+		return star_visual.visual_radius() * render_scale
 	var star_record: Dictionary = node_star_records[node_id]
 	return _magnitude_radius(float(star_record.star.magnitude))
 
@@ -1542,8 +1468,7 @@ func _cached_node_state(node_id: String) -> String:
 
 
 func _draw_tree() -> void:
-	var galactic_background: bool = progression != null and progression.galaxy_unlocked()
-	_draw_chart_background(galactic_background)
+	_draw_chart_background()
 	var structure_alpha := _galactic_structure_alpha()
 	for constellation_id in ChartData.CONSTELLATIONS:
 		var constellation: Dictionary = ChartData.CONSTELLATIONS[constellation_id]
@@ -1569,106 +1494,28 @@ func _draw_tree() -> void:
 						_draw_background_galaxy(point, star_radius, alpha)
 			tree_canvas.draw_circle(point, maxf(1.2, star_radius * 0.55), Color(UITheme.STAR_BACKGROUND, alpha))
 	if progression != null and (structure_alpha > 0.01 or _local_group_alpha() > 0.01):
+		_draw_local_group_route()
 		_draw_frontier_overlay()
 	# The ground goes on last. Half the sky now sits below the horizon at any
 	# one rotation, and it has to be buried by the ground rather than drawn
 	# over it.
 	if structure_alpha > 0.01:
 		_draw_chart_horizon(structure_alpha)
-	_draw_galactic_chart_point()
 
 
-func _draw_chart_background(galactic_background: bool) -> void:
-	if not galactic_unlocked:
-		for index in range(background_stars.size()):
-			var background_position := CHART_ORIGIN + (background_stars[index] - CHART_ORIGIN).rotated(rotation_offset)
-			var radius := 1.7 if index % 5 == 0 else 1.0
-			var alpha := 0.28 if index % 5 == 0 else 0.16
-			if galactic_background:
-				alpha += 0.08 if index % 5 == 0 else 0.05
-			tree_canvas.draw_circle(background_position, radius, Color(UITheme.STAR_BACKGROUND, alpha))
+func _draw_chart_background() -> void:
+	var structure_alpha := _galactic_structure_alpha() if galactic_unlocked else 1.0
+	if structure_alpha <= 0.01:
 		return
-
-	var morph_progress := 1.0
-	var galaxy_presence := 1.0 - galactic_chart_detail
-	var extra_alpha := galaxy_presence
-	if galactic_mode == GALACTIC_MODE_PULLBACK:
-		# One eased clock over the whole morph. Easing each beat separately made
-		# every beat decelerate to a stop while the next accelerated from one,
-		# so the sequence stalled at each handoff.
-		morph_progress = _ease_in_out(_timed_ratio(
-			pullback_elapsed,
-			PULLBACK_ZOOM_START,
-			PULLBACK_SPIRAL_END
-		))
-		galaxy_presence = morph_progress
-		extra_alpha = clampf(morph_progress / PULLBACK_MORPH_BAND_SPLIT, 0.0, 1.0)
-	var render_star_count := GALACTIC_TRANSITION_STAR_COUNT if galactic_mode == GALACTIC_MODE_PULLBACK else GALACTIC_FINAL_STAR_COUNT
-	for index in range(render_star_count):
-		var source := CHART_ORIGIN + (galactic_star_sources[index] - CHART_ORIGIN).rotated(rotation_offset)
-		var position := source
-		if galactic_mode == GALACTIC_MODE_PULLBACK:
-			if morph_progress <= PULLBACK_MORPH_BAND_SPLIT:
-				position = _polar_blend(
-					source,
-					galactic_star_bands[index],
-					morph_progress / PULLBACK_MORPH_BAND_SPLIT
-				)
-			else:
-				position = _polar_blend(
-					galactic_star_bands[index],
-					galactic_star_spirals[index],
-					(morph_progress - PULLBACK_MORPH_BAND_SPLIT) / (1.0 - PULLBACK_MORPH_BAND_SPLIT)
-				)
-		else:
-			position = _polar_blend(galactic_star_spirals[index], source, galactic_chart_detail)
-		var normal_radius := 1.7 if index % 5 == 0 else 1.0
-		var screen_radius := float(galactic_star_screen_sizes[index]) / maxf(zoom, 0.001)
-		var radius := lerpf(normal_radius, screen_radius, galaxy_presence)
-		var normal_alpha := 0.36 if index % 5 == 0 else 0.21
-		var galaxy_alpha := float(galactic_star_alphas[index])
-		var alpha := lerpf(normal_alpha, galaxy_alpha, galaxy_presence)
-		if index >= BACKGROUND_STAR_COUNT:
-			alpha *= extra_alpha
-		if galactic_mode == GALACTIC_MODE_FINAL and galaxy_presence > 0.80:
-			if position.distance_to(galactic_chart_anchor) < 112.0:
-				alpha *= 0.08
-			if _galactic_star_under_header(position):
-				alpha *= 0.02
-		if alpha > 0.004:
-			if galaxy_presence > 0.25 and index % 7 == 0:
-				tree_canvas.draw_circle(position, radius * 2.4, Color(UITheme.STAR_INSTALLED_GLOW, alpha * 0.10))
-			tree_canvas.draw_circle(position, radius, Color(UITheme.STAR_BACKGROUND, alpha))
+	for index in range(background_stars.size()):
+		var background_position := CHART_ORIGIN + (background_stars[index] - CHART_ORIGIN).rotated(rotation_offset)
+		if galactic_unlocked:
+			background_position = _present_chart_position(background_position)
+		var radius := 1.7 if index % 5 == 0 else 1.0
+		var alpha := (0.28 if index % 5 == 0 else 0.16) * structure_alpha
+		tree_canvas.draw_circle(background_position, radius, Color(UITheme.STAR_BACKGROUND, alpha))
 
 
-func _galactic_star_under_header(chart_position: Vector2) -> bool:
-	if content_clip == null:
-		return false
-	var screen_position := pan_position + chart_position * zoom
-	var header_width := minf(430.0, content_clip.size.x * 0.42)
-	var header_rect := Rect2(
-		content_clip.size.x * 0.5 - header_width * 0.5,
-		UITheme.px(24.0),
-		header_width,
-		UITheme.px(100.0)
-	)
-	return header_rect.has_point(screen_position)
-
-
-func _draw_galactic_chart_point() -> void:
-	if not galactic_unlocked:
-		return
-	var point_alpha := (1.0 - galactic_chart_detail) * galactic_chart_anchor_blend
-	if point_alpha <= 0.01:
-		return
-	var inverse_zoom := 1.0 / maxf(zoom, 0.001)
-	# Reuse the chart's M31 vocabulary for a unique non-interactive landmark.
-	# Cross rays were deliberately removed from the observing sky because their
-	# footprint competed with hazards; a short tilted glow stays project-native.
-	var axis := Vector2(1.0, 0.32).normalized()
-	tree_canvas.draw_line(galactic_chart_anchor - axis * 8.0 * inverse_zoom, galactic_chart_anchor + axis * 8.0 * inverse_zoom, Color(UITheme.INK_MAX, 0.10 * point_alpha), 3.6 * inverse_zoom, true)
-	tree_canvas.draw_line(galactic_chart_anchor - axis * 6.6 * inverse_zoom, galactic_chart_anchor + axis * 6.6 * inverse_zoom, Color(UITheme.INK_MAX, 0.76 * point_alpha), 1.05 * inverse_zoom, true)
-	tree_canvas.draw_circle(galactic_chart_anchor, 2.8 * inverse_zoom, Color(UITheme.INK_MAX, point_alpha))
 func _draw_background_cluster(center: Vector2, radius: float, alpha: float) -> void:
 	for index in range(CLUSTER_MARKER_OFFSETS.size()):
 		var point_radius := maxf(0.65, radius * (0.24 if index % 2 == 0 else 0.17))
@@ -1693,6 +1540,29 @@ func _draw_background_galaxy(center: Vector2, radius: float, alpha: float) -> vo
 	tree_canvas.draw_circle(center + axis * radius * 0.46, maxf(0.75, radius * 0.20), Color(UITheme.STAR_BACKGROUND, alpha * 0.72))
 
 
+func _draw_local_group_route() -> void:
+	# The Local Group is a single path, so its purchased history can stay visible
+	# without recreating the late-game DAG clutter of the constellation chart.
+	# Every segment terminates at real research buttons; none is decorative.
+	var source_id := "galactic_reference_frame"
+	for galaxy_variant in ChartData.LOCAL_GROUP_GALAXIES:
+		var galaxy: Dictionary = galaxy_variant
+		var target_id := String(galaxy.node_id)
+		if _cached_node_state(target_id) != "purchased":
+			break
+		var presentation_alpha := minf(_node_presentation_alpha(source_id), _node_presentation_alpha(target_id))
+		if presentation_alpha > 0.01:
+			var connection := _connection_points(source_id, target_id)
+			tree_canvas.draw_line(
+				connection[0],
+				connection[1],
+				Color(UITheme.LINE_INSTALLED, 0.18 * presentation_alpha),
+				0.85 / maxf(zoom, 0.001),
+				true
+			)
+		source_id = target_id
+
+
 func _draw_frontier_overlay() -> void:
 	# Only the current purchasable frontier stays lit. Purchased history is
 	# already encoded by stable bright stars, so late-game DAG clutter never grows.
@@ -1704,7 +1574,10 @@ func _draw_frontier_overlay() -> void:
 		var connection := _connection_points(source_id, target_id)
 		var start := connection[0]
 		var finish := connection[1]
-		tree_canvas.draw_line(start, finish, Color(UITheme.LINE_FRONTIER, 0.60 * presentation_alpha), 1.5, true)
+		var line_width := 1.5
+		if _is_local_group_node(target_id) or _is_local_group_node(source_id):
+			line_width /= maxf(zoom, 0.001)
+		tree_canvas.draw_line(start, finish, Color(UITheme.LINE_FRONTIER, 0.60 * presentation_alpha), line_width, true)
 	if not hovered_node_id.is_empty() and node_positions.has(hovered_node_id):
 		var hovered_state := _cached_node_state(hovered_node_id)
 		if hovered_state == "locked" or hovered_state == "hidden":
