@@ -162,10 +162,14 @@ _on_upgrade_tree_closed() → _begin_observation_phase(advance_round = true)
 The run currently has no ending. Installing the 86 non-Draco systems reveals
 Draco's root; installing all 95 original systems opens the saved Galactic
 Reference Frame state. The open chart also performs one saved 3.6-second
-pull-back: constellation structure and decorative background stars fade, the
-95-node chart collapses into the interactive Galactic Reference Frame node at
-the Milky Way centre, and the 29 real Local Group research nodes expand in
-dependency order to form the final spiral map. The installed linear route and
+pull-back: constellation structure and decorative background stars fade while
+the 95-node chart collapses into the interactive Galactic Reference Frame node
+at the Milky Way centre. Before that collapse completes, a constant-speed route
+head traces the installed Local Group path; each real node lights near its final
+screen position when the route reaches it and settles over only the last few
+percent of its radius. Its radial chart position compensates for the live camera
+zoom, so the revealed map does not contract after it appears. There is no
+centre-only hold or second expanding-map beat. The installed linear route and
 current frontier are the only lines retained there; no decorative point
 competes with those buttons at galactic scale. It is a
 non-terminal presentation state: it does not interrupt the active observation

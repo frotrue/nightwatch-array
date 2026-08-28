@@ -1797,6 +1797,21 @@ func _run() -> void:
 	open_night_game.upgrade_tree._input(purchase_release)
 	open_night_game.upgrade_tree._input(InputEventMouseMotion.new())
 	_check(open_night_game.upgrade_tree.galactic_mode == open_night_game.upgrade_tree.GALACTIC_MODE_PULLBACK, "the purchase release and passive pointer jitter do not skip the pull-back")
+	open_night_game.upgrade_tree._advance_galactic_pullback(1.35)
+	var overlap_legacy_alpha: float = open_night_game.upgrade_tree._node_presentation_alpha("better_lens")
+	var overlap_route_progress: float = open_night_game.upgrade_tree._galactic_route_progress()
+	_check(
+		overlap_legacy_alpha > 0.05 and overlap_legacy_alpha < 0.95 and overlap_route_progress > 0.05,
+		"the old chart fade overlaps the traced Local Group route instead of leaving a centre-only hold"
+	)
+	var lmc_final_position := Vector2(open_night_game.upgrade_tree.local_group_node_positions["large_magellanic_cloud"])
+	var lmc_presented_position := Vector2(open_night_game.upgrade_tree.node_positions["large_magellanic_cloud"])
+	var lmc_presented_screen_distance: float = lmc_presented_position.distance_to(open_night_game.upgrade_tree.CHART_ORIGIN) * float(open_night_game.upgrade_tree.zoom)
+	var lmc_final_screen_distance: float = lmc_final_position.distance_to(open_night_game.upgrade_tree.CHART_ORIGIN) * float(open_night_game.upgrade_tree.GALACTIC_ZOOM)
+	_check(
+		lmc_presented_screen_distance > lmc_final_screen_distance * 0.94,
+		"revealed galactic nodes light near their final screen positions instead of expanding from the centre"
+	)
 	var pullback_skip := InputEventKey.new()
 	pullback_skip.keycode = KEY_SPACE
 	pullback_skip.pressed = true
