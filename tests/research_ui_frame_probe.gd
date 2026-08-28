@@ -39,7 +39,7 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 
-	print("RESEARCH_UI_PROBE_ENV engine=%s renderer=%s viewport=%s window=%s refresh_hz=%.2f vsync=%d wheel_events_per_frame=%d phase_seconds=%.1f galactic_transition_stars=%d galactic_final_stars=%d pullback_seconds=%.1f target_p95_ms=16.7" % [
+	print("RESEARCH_UI_PROBE_ENV engine=%s renderer=%s viewport=%s window=%s refresh_hz=%.2f vsync=%d wheel_events_per_frame=%d phase_seconds=%.1f galactic_research_nodes=%d decorative_galactic_points=0 pullback_seconds=%.1f target_p95_ms=16.7" % [
 		Engine.get_version_info(),
 		RenderingServer.get_current_rendering_method(),
 		root.get_visible_rect().size,
@@ -48,8 +48,7 @@ func _run() -> void:
 		DisplayServer.window_get_vsync_mode(),
 		WHEEL_EVENTS_PER_FRAME,
 		PHASE_SECONDS,
-		int(tree.GALACTIC_TRANSITION_STAR_COUNT),
-		int(tree.GALACTIC_FINAL_STAR_COUNT),
+		int(tree.ChartData.LOCAL_GROUP_GALAXIES.size()),
 		float(tree.PULLBACK_DURATION),
 	])
 	await _measure_phase("idle", Callable())

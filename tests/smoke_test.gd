@@ -1807,7 +1807,11 @@ func _run() -> void:
 	for galactic_button_variant in open_night_game.upgrade_tree.node_buttons.values():
 		if galactic_button_variant.visible:
 			visible_galactic_buttons += 1
-	_check(visible_galactic_buttons == 29, "the final galaxy frame exposes all 29 Local Group research nodes")
+	_check(visible_galactic_buttons == 30, "the final galaxy frame exposes the interactive Milky Way anchor and all 29 Local Group research nodes")
+	_check(
+		Vector2(open_night_game.upgrade_tree.node_positions["galactic_reference_frame"]).is_equal_approx(open_night_game.upgrade_tree.CHART_ORIGIN),
+		"the original 95-node chart collapses into the interactive Galactic Reference Frame at the Milky Way centre"
+	)
 	open_night_game.upgrade_tree._zoom_at(open_night_game.upgrade_tree.content_clip.global_position + open_night_game.upgrade_tree.content_clip.size * 0.5, 4.0)
 	var readable_chart_buttons := 0
 	for chart_button_variant in open_night_game.upgrade_tree.node_buttons.values():
