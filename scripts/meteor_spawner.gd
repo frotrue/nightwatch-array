@@ -11,6 +11,22 @@ const MAX_TOTAL_METEORS := 32
 const FORECAST_INTERCEPT_DISTANCE := 190.0
 const MINIMUM_PAYABLE_TRACK_TIME := 0.95
 const ENTRY_MARGIN := 24.0
+const ENTRY_BOUNDARY_TOP := 0
+const ENTRY_BOUNDARY_LEFT := 1
+const ENTRY_BOUNDARY_RIGHT := 2
+# Bottom entry stays forbidden because it would cross the control shelf. Choose
+# the remaining boundary before solving the path so widening the sky cannot
+# silently multiply top candidates and pull the stream upward.
+const TOP_ENTRY_SHARE := 0.30
+const ENTRY_BOUNDARY_ORDER := [
+	ENTRY_BOUNDARY_LEFT, ENTRY_BOUNDARY_TOP, ENTRY_BOUNDARY_RIGHT,
+	ENTRY_BOUNDARY_LEFT, ENTRY_BOUNDARY_RIGHT, ENTRY_BOUNDARY_TOP,
+	ENTRY_BOUNDARY_LEFT, ENTRY_BOUNDARY_RIGHT, ENTRY_BOUNDARY_LEFT,
+	ENTRY_BOUNDARY_TOP, ENTRY_BOUNDARY_RIGHT, ENTRY_BOUNDARY_LEFT,
+	ENTRY_BOUNDARY_RIGHT, ENTRY_BOUNDARY_TOP, ENTRY_BOUNDARY_LEFT,
+	ENTRY_BOUNDARY_RIGHT, ENTRY_BOUNDARY_LEFT, ENTRY_BOUNDARY_TOP,
+	ENTRY_BOUNDARY_RIGHT, ENTRY_BOUNDARY_TOP,
+]
 const BURNOUT_GRID_COLUMNS := 4
 const BURNOUT_GRID_ROWS := 3
 # Meteors always entered from the true edges, but the burnout point stayed well
@@ -26,7 +42,6 @@ const OUTER_BURNOUT_CELLS := [0, 1, 2, 3, 4, 5, 6, 7, 8, 11]
 # never used their outer third. Widening it is what actually reaches the edge.
 const BURNOUT_JITTER_MIN := 0.10
 const BURNOUT_JITTER_MAX := 0.90
-const BURNOUT_JITTER_ATTEMPTS := 8
 const PLAN_SPEED_FACTOR_MIN := 0.96
 const PLAN_SPEED_FACTOR_MAX := 1.08
 const MIN_ECHO_PHASE_REMAINING := 2.0
@@ -64,6 +79,7 @@ var pending_contacts: Array[Dictionary] = []
 var next_contact_id: int = 1
 var phase_time_remaining: float = INF
 var burnout_cell_cursors: Dictionary = {}
+var entry_boundary_cursors: Dictionary = {}
 var leonid_storm_remaining: int = 0
 var leonid_storm_timer: float = 0.0
 var leonid_storm_interval: float = 0.0
@@ -110,6 +126,7 @@ func reset() -> void:
 	canis_major_spawned_this_round = false
 	phase_time_remaining = INF
 	burnout_cell_cursors.clear()
+	entry_boundary_cursors.clear()
 	leonid_storm_remaining = 0
 	leonid_storm_timer = 0.0
 	leonid_storm_interval = 0.0
@@ -316,34 +333,30 @@ func _plan_deconflicted_echo_entry(type_id: String, index: int, count: int, trig
 	var speed := float(spec.speed)
 	var lifetime_scale: float = progression.get_lifetime_multiplier() if progression != null else 1.0
 	var burn_distance := MeteorScript.burn_distance_for(speed, float(spec.lifetime) * lifetime_scale, float(spec.get("burn_terminal_ratio", 1.0)))
-	var reachable := _reachable_burnout_cells(type_id, activity, burn_distance)
-	if reachable.is_empty():
-		return plan_entry(type_id)
+	var sequence := echo_burst_serial * maxi(1, count) + index
+	var boundary_roll := fposmod((float(sequence) + 0.5) * 0.61803398875, 1.0)
+	var entry_boundary := _entry_boundary_from_roll(boundary_roll)
 	var wants_left := false
 	if progression.has_upgrade("mirror_echo_solution") and not trigger.is_empty():
 		wants_left = float(Vector2(trigger.entry).x) > activity.get_center().x
-		var mirrored_reachable: Array[int] = []
-		for reachable_cell_variant in reachable:
-			var reachable_cell := int(reachable_cell_variant)
-			var reachable_target := _burnout_cell_center(activity, reachable_cell)
-			for candidate in _entry_candidates(reachable_target, activity, burn_distance):
-				if (float(Vector2(candidate).x) <= activity.get_center().x) == wants_left:
-					mirrored_reachable.append(reachable_cell)
-					break
-		if mirrored_reachable.size() >= count:
-			reachable = mirrored_reachable
+		entry_boundary = ENTRY_BOUNDARY_LEFT if wants_left else ENTRY_BOUNDARY_RIGHT
+	var reachable := _reachable_burnout_cells(
+		type_id, activity, burn_distance, entry_boundary
+	)
+	if reachable.is_empty():
+		return plan_entry(type_id)
 	var spacing := maxi(1, reachable.size() / maxi(1, count))
 	var cell_index: int = int(reachable[(echo_burst_serial + index * spacing) % reachable.size()])
-	var target := _burnout_cell_center(activity, cell_index)
-	var candidates := _entry_candidates(target, activity, burn_distance)
-	if candidates.is_empty():
+	var jitter_x := fposmod((float(sequence) + 0.5) * 0.41421356237, 1.0)
+	var jitter_y := float(index) / float(maxi(1, count - 1))
+	var solution := _entry_solution_for_cell(
+		activity, cell_index, burn_distance, entry_boundary,
+		index, jitter_x, jitter_y
+	)
+	if solution.is_empty():
 		return plan_entry(type_id)
-	var chosen: Vector2 = candidates[index % candidates.size()]
-	if progression.has_upgrade("mirror_echo_solution") and not trigger.is_empty():
-		for candidate in candidates:
-			if (float(Vector2(candidate).x) <= activity.get_center().x) == wants_left:
-				chosen = Vector2(candidate)
-				break
+	var chosen := Vector2(solution.start)
+	var target := Vector2(solution.target)
 	return {
 		"start": chosen,
 		"velocity": (target - chosen).normalized() * speed,
@@ -482,60 +495,60 @@ func _plan_entry_with_rng(type_id: String, source_rng: RandomNumberGenerator) ->
 	var burn_distance := MeteorScript.burn_distance_for(
 		speed, lifetime, float(spec.get("burn_terminal_ratio", 1.0))
 	)
-	var reachable_cells := _reachable_burnout_cells(type_id, activity, burn_distance)
+	var entry_boundary := _next_entry_boundary(type_id)
+	var reachable_cells := _reachable_burnout_cells(
+		type_id, activity, burn_distance, entry_boundary
+	)
 	if reachable_cells.is_empty():
 		return _crossing_entry_plan(
-			activity, speed, burn_distance, entry_selector,
+			activity, speed, burn_distance, entry_boundary,
 			candidate_fraction, jitter_x, jitter_y
 		)
 	var cell_index := _next_burnout_cell(type_id, reachable_cells)
-	var target := _burnout_cell_center(activity, cell_index)
-	var entry_candidates: Array[Vector2] = []
-	for attempt in range(BURNOUT_JITTER_ATTEMPTS):
-		var center_blend := float(attempt) / float(maxi(1, BURNOUT_JITTER_ATTEMPTS - 1))
-		var jittered_target := _sample_burnout_cell(
-			activity, cell_index,
-			lerpf(jitter_x, 0.5, center_blend),
-			lerpf(jitter_y, 0.5, center_blend)
-		)
-		var jittered_candidates := _entry_candidates(jittered_target, activity, burn_distance)
-		if jittered_candidates.is_empty():
-			continue
-		target = jittered_target
-		entry_candidates = jittered_candidates
-		break
-	if entry_candidates.is_empty():
-		entry_candidates = _entry_candidates(target, activity, burn_distance)
-	var candidate_index := (
-		entry_selector + mini(entry_candidates.size() - 1, int(candidate_fraction * entry_candidates.size()))
-	) % entry_candidates.size()
-	var start: Vector2 = entry_candidates[candidate_index]
-	return {
-		"start": start,
-		"velocity": (target - start).normalized() * speed,
-		"burnout": target,
-		"burn_distance": burn_distance,
-	}
+	var boundary_solution := _entry_solution_for_cell(
+		activity, cell_index, burn_distance, entry_boundary,
+		entry_selector, jitter_x, jitter_y
+	)
+	if not boundary_solution.is_empty():
+		var solved_start := Vector2(boundary_solution.start)
+		var solved_target := Vector2(boundary_solution.target)
+		return {
+			"start": solved_start,
+			"velocity": (solved_target - solved_start).normalized() * speed,
+			"burnout": solved_target,
+			"burn_distance": burn_distance,
+		}
+	return _crossing_entry_plan(
+		activity, speed, burn_distance, entry_boundary,
+		candidate_fraction, jitter_x, jitter_y
+	)
 
 
-func _reachable_burnout_cells(type_id: String, activity: Rect2, burn_distance: float) -> Array[int]:
+func _reachable_burnout_cells(type_id: String, activity: Rect2, burn_distance: float, entry_boundary: int = -1) -> Array[int]:
 	var reachable: Array[int] = []
 	for ordered_index in BURNOUT_CELL_ORDER:
 		var cell_index := int(ordered_index)
 		if type_id in ["common", "fast"] and cell_index not in OUTER_BURNOUT_CELLS:
 			continue
 		var center := _burnout_cell_center(activity, cell_index)
-		if not _entry_candidates(center, activity, burn_distance).is_empty():
+		var is_reachable := (
+			_burnout_cell_reachable_from_boundary(
+				activity, cell_index, burn_distance, entry_boundary
+			)
+			if entry_boundary >= 0
+			else not _entry_candidates(center, activity, burn_distance).is_empty()
+		)
+		if is_reachable:
 			reachable.append(cell_index)
 	return reachable
 
 
-func _crossing_entry_plan(activity: Rect2, speed: float, burn_distance: float, entry_selector: int, candidate_fraction: float, jitter_x: float, jitter_y: float) -> Dictionary:
+func _crossing_entry_plan(activity: Rect2, speed: float, burn_distance: float, entry_boundary: int, candidate_fraction: float, jitter_x: float, jitter_y: float) -> Dictionary:
 	var start := Vector2.ZERO
-	match entry_selector:
-		0:
+	match entry_boundary:
+		ENTRY_BOUNDARY_TOP:
 			start = Vector2(lerpf(activity.position.x, activity.end.x, candidate_fraction), activity.position.y - ENTRY_MARGIN)
-		1:
+		ENTRY_BOUNDARY_LEFT:
 			start = Vector2(activity.position.x - ENTRY_MARGIN, lerpf(activity.position.y, activity.end.y, candidate_fraction))
 		_:
 			start = Vector2(activity.end.x + ENTRY_MARGIN, lerpf(activity.position.y, activity.end.y, candidate_fraction))
@@ -547,8 +560,8 @@ func _crossing_entry_plan(activity: Rect2, speed: float, burn_distance: float, e
 	var direction := (inward_target - start).normalized()
 	if direction.is_zero_approx():
 		direction = (
-			Vector2.DOWN if entry_selector == 0
-			else (Vector2.RIGHT if entry_selector == 1 else Vector2.LEFT)
+			Vector2.DOWN if entry_boundary == ENTRY_BOUNDARY_TOP
+			else (Vector2.RIGHT if entry_boundary == ENTRY_BOUNDARY_LEFT else Vector2.LEFT)
 		)
 	return {
 		"start": start,
@@ -593,7 +606,7 @@ func _burnout_cell_center(activity: Rect2, cell_index: int) -> Vector2:
 	)
 
 
-func _sample_burnout_cell(activity: Rect2, cell_index: int, jitter_x: float, jitter_y: float) -> Vector2:
+func _burnout_cell_sample_rect(activity: Rect2, cell_index: int) -> Rect2:
 	var safe_rect := _burnout_safe_rect(activity)
 	var cell_size := Vector2(
 		safe_rect.size.x / float(BURNOUT_GRID_COLUMNS),
@@ -601,10 +614,132 @@ func _sample_burnout_cell(activity: Rect2, cell_index: int, jitter_x: float, jit
 	)
 	var column := cell_index % BURNOUT_GRID_COLUMNS
 	var row := cell_index / BURNOUT_GRID_COLUMNS
-	return safe_rect.position + Vector2(
-		(float(column) + lerpf(BURNOUT_JITTER_MIN, BURNOUT_JITTER_MAX, clampf(jitter_x, 0.0, 1.0))) * cell_size.x,
-		(float(row) + lerpf(BURNOUT_JITTER_MIN, BURNOUT_JITTER_MAX, clampf(jitter_y, 0.0, 1.0))) * cell_size.y
+	return Rect2(
+		safe_rect.position + Vector2(column, row) * cell_size + cell_size * BURNOUT_JITTER_MIN,
+		cell_size * (BURNOUT_JITTER_MAX - BURNOUT_JITTER_MIN)
 	)
+
+
+func _burnout_cell_reachable_from_boundary(activity: Rect2, cell_index: int, burn_distance: float, entry_boundary: int) -> bool:
+	var sample_rect := _burnout_cell_sample_rect(activity, cell_index)
+	if entry_boundary == ENTRY_BOUNDARY_TOP:
+		var start_y := activity.position.y - ENTRY_MARGIN
+		var maximum_horizontal := maxf(
+			sample_rect.end.x - activity.position.x,
+			activity.end.x - sample_rect.position.x
+		)
+		var minimum_vertical := sqrt(maxf(
+			0.0, burn_distance * burn_distance - maximum_horizontal * maximum_horizontal
+		))
+		var cell_vertical_min := sample_rect.position.y - start_y
+		var cell_vertical_max := sample_rect.end.y - start_y
+		return maxf(cell_vertical_min, minimum_vertical) <= minf(cell_vertical_max, burn_distance)
+	var start_x := (
+		activity.position.x - ENTRY_MARGIN
+		if entry_boundary == ENTRY_BOUNDARY_LEFT
+		else activity.end.x + ENTRY_MARGIN
+	)
+	var maximum_vertical := maxf(
+		sample_rect.end.y - activity.position.y,
+		activity.end.y - sample_rect.position.y
+	)
+	var minimum_horizontal := sqrt(maxf(
+		0.0, burn_distance * burn_distance - maximum_vertical * maximum_vertical
+	))
+	var cell_horizontal_min := (
+		sample_rect.position.x - start_x
+		if entry_boundary == ENTRY_BOUNDARY_LEFT
+		else start_x - sample_rect.end.x
+	)
+	var cell_horizontal_max := (
+		sample_rect.end.x - start_x
+		if entry_boundary == ENTRY_BOUNDARY_LEFT
+		else start_x - sample_rect.position.x
+	)
+	return maxf(cell_horizontal_min, minimum_horizontal) <= minf(cell_horizontal_max, burn_distance)
+
+
+func _entry_solution_for_cell(activity: Rect2, cell_index: int, burn_distance: float, entry_boundary: int, entry_selector: int, jitter_x: float, jitter_y: float) -> Dictionary:
+	var sample_rect := _burnout_cell_sample_rect(activity, cell_index)
+	if entry_boundary == ENTRY_BOUNDARY_TOP:
+		var sampled_x := lerpf(sample_rect.position.x, sample_rect.end.x, jitter_x)
+		for target_x in [sampled_x, sample_rect.position.x, sample_rect.end.x]:
+			var top_solution := _top_entry_solution(
+				activity, sample_rect, burn_distance, float(target_x),
+				entry_selector, jitter_y
+			)
+			if not top_solution.is_empty():
+				return top_solution
+		return {}
+	var sampled_y := lerpf(sample_rect.position.y, sample_rect.end.y, jitter_y)
+	for target_y in [sampled_y, sample_rect.position.y, sample_rect.end.y]:
+		var side_solution := _side_entry_solution(
+			activity, sample_rect, burn_distance, entry_boundary,
+			float(target_y), entry_selector, jitter_x
+		)
+		if not side_solution.is_empty():
+			return side_solution
+	return {}
+
+
+func _top_entry_solution(activity: Rect2, sample_rect: Rect2, burn_distance: float, target_x: float, entry_selector: int, jitter_y: float) -> Dictionary:
+	var start_y := activity.position.y - ENTRY_MARGIN
+	var maximum_horizontal := maxf(
+		target_x - activity.position.x,
+		activity.end.x - target_x
+	)
+	var minimum_vertical := sqrt(maxf(
+		0.0, burn_distance * burn_distance - maximum_horizontal * maximum_horizontal
+	))
+	var feasible_min := maxf(sample_rect.position.y - start_y, minimum_vertical)
+	var feasible_max := minf(sample_rect.end.y - start_y, burn_distance)
+	if feasible_min > feasible_max:
+		return {}
+	var vertical_distance := lerpf(feasible_min, feasible_max, jitter_y)
+	var target := Vector2(target_x, start_y + vertical_distance)
+	var horizontal_distance := sqrt(maxf(
+		0.0, burn_distance * burn_distance - vertical_distance * vertical_distance
+	))
+	var starts: Array[Vector2] = []
+	for start_x in [target.x - horizontal_distance, target.x + horizontal_distance]:
+		if start_x >= activity.position.x and start_x <= activity.end.x:
+			starts.append(Vector2(start_x, start_y))
+	if starts.is_empty():
+		return {}
+	return {"start": starts[entry_selector % starts.size()], "target": target}
+
+
+func _side_entry_solution(activity: Rect2, sample_rect: Rect2, burn_distance: float, entry_boundary: int, target_y: float, entry_selector: int, jitter_x: float) -> Dictionary:
+	var starts_left := entry_boundary == ENTRY_BOUNDARY_LEFT
+	var start_x := activity.position.x - ENTRY_MARGIN if starts_left else activity.end.x + ENTRY_MARGIN
+	var maximum_vertical := maxf(
+		target_y - activity.position.y,
+		activity.end.y - target_y
+	)
+	var minimum_horizontal := sqrt(maxf(
+		0.0, burn_distance * burn_distance - maximum_vertical * maximum_vertical
+	))
+	var cell_horizontal_min := sample_rect.position.x - start_x if starts_left else start_x - sample_rect.end.x
+	var cell_horizontal_max := sample_rect.end.x - start_x if starts_left else start_x - sample_rect.position.x
+	var feasible_min := maxf(cell_horizontal_min, minimum_horizontal)
+	var feasible_max := minf(cell_horizontal_max, burn_distance)
+	if feasible_min > feasible_max:
+		return {}
+	var horizontal_distance := lerpf(feasible_min, feasible_max, jitter_x)
+	var target := Vector2(
+		start_x + horizontal_distance if starts_left else start_x - horizontal_distance,
+		target_y
+	)
+	var vertical_distance := sqrt(maxf(
+		0.0, burn_distance * burn_distance - horizontal_distance * horizontal_distance
+	))
+	var starts: Array[Vector2] = []
+	for candidate_y in [target.y - vertical_distance, target.y + vertical_distance]:
+		if candidate_y >= activity.position.y and candidate_y <= activity.end.y:
+			starts.append(Vector2(start_x, candidate_y))
+	if starts.is_empty():
+		return {}
+	return {"start": starts[entry_selector % starts.size()], "target": target}
 
 
 func _entry_candidates(target: Vector2, activity: Rect2, burn_distance: float) -> Array[Vector2]:
@@ -613,6 +748,20 @@ func _entry_candidates(target: Vector2, activity: Rect2, burn_distance: float) -
 	_append_vertical_entry_candidates(candidates, target, activity, burn_distance, activity.position.x - ENTRY_MARGIN)
 	_append_vertical_entry_candidates(candidates, target, activity, burn_distance, activity.end.x + ENTRY_MARGIN)
 	return candidates
+
+
+func _entry_boundary_from_roll(boundary_roll: float) -> int:
+	if boundary_roll < TOP_ENTRY_SHARE:
+		return ENTRY_BOUNDARY_TOP
+	if boundary_roll < TOP_ENTRY_SHARE + (1.0 - TOP_ENTRY_SHARE) * 0.5:
+		return ENTRY_BOUNDARY_LEFT
+	return ENTRY_BOUNDARY_RIGHT
+
+
+func _next_entry_boundary(type_id: String) -> int:
+	var cursor := int(entry_boundary_cursors.get(type_id, 0))
+	entry_boundary_cursors[type_id] = cursor + 1
+	return int(ENTRY_BOUNDARY_ORDER[cursor % ENTRY_BOUNDARY_ORDER.size()])
 
 
 func _append_horizontal_entry_candidates(candidates: Array[Vector2], target: Vector2, activity: Rect2, burn_distance: float) -> void:

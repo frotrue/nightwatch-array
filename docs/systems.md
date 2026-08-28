@@ -95,8 +95,15 @@ zoom. `ObservationView` exposes the coordinate and scale routing methods:
   contracts when a later stage raises the span.
 - `meteor_visual_scale()` applies square-root rather than full compensation, so
   meteor drawings recede while their interaction radii remain screen-fixed.
-- `meteor_screen_scale()` gives meteor-generated kick and shake the exact same
-  on-screen reduction; upgrade pulses and hitstop keep their own contracts.
+- Once `galactic_reference_frame` makes `galaxy_unlocked()` true, common and
+  fast meteors stop dispatching a success flash. Before then they keep it.
+  `meteor_screen_scale()` gives meteor-generated kick and all active success
+  flashes the same `1 / sqrt(span)` on-screen reduction as the drawing.
+- `meteor_shake_scale()` attenuates repeated meteor shake more strongly at
+  `1 / span`; upgrade pulses and hitstop keep their own contracts.
+- `game.gd` applies one additional `0.5` feedback scale to `fragment_piece`
+  success flashes and shake. Parent fragments, kick, audio, and reward keep
+  their existing paths.
 
 Meteor entry, burnout planning, and shower entry previews use the meteor
 activity rectangle. Dish homes keep the atmospheric rectangle. Background
@@ -315,6 +322,16 @@ starfield, twinkle, input, effects, and spawner consumers continue to derive
 their geometry from it. The starfield's gradient bands and horizon ridge follow
 the current visible-world frame, so the fixed atmospheric rectangle remains a
 vertical safety boundary and never appears as a rendered edge.
+
+`MeteorSpawner` chooses the entry boundary before solving the burnout geometry:
+30% top, 35% left, and 35% right, with bottom entry still forbidden by the HUD
+shelf. A low-discrepancy 20-entry cycle spreads the six top and seven entries
+from each side instead of allowing short random streaks. It intersects the
+chosen boundary's exact travel-distance circle with
+the safe 4×3 burnout cell interior instead of counting whatever point
+candidates happen to survive. This keeps the same entry mix at both opening and
+final observation spans, including after lifetime upgrades, and prevents the
+wider late-game sky from converting lateral entries into top entries.
 
 `HostStarLayer` is a separate `HostStarController`, not a child of
 `MeteorLayer`. LMC starts with one `HostStar` and one active window; M32 raises

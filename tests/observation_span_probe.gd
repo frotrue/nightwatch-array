@@ -4,6 +4,16 @@ const Balance = preload("res://scripts/game_balance.gd")
 const TEST_SEED := 20260827
 const TEST_SPAN := 1.05
 const PLAN_TYPES := ["common", "fast", "fragment", "fireball", "major", "satellite", "galaxy"]
+const DISTRIBUTION_SEED := 20260829
+const DISTRIBUTION_SAMPLE_COUNT := 1000
+const DISTRIBUTION_TYPES := [
+	"common", "fast", "fragment", "fireball", "satellite",
+	"variable_star", "comet", "binary_star", "galaxy",
+]
+const SAFE_BURNOUT_TYPES := [
+	"common", "fast", "fragment", "fireball",
+	"variable_star", "binary_star", "galaxy",
+]
 const SCREEN_BUDGETS := [36.0, 14.0, 150.0, 460.0, 190.0]
 
 var failures: Array[String] = []
@@ -62,6 +72,7 @@ func _run() -> void:
 	var expanded_plan_reaches_outer_sky := false
 	game.spawner.rng.seed = TEST_SEED
 	game.spawner.burnout_cell_cursors.clear()
+	game.spawner.entry_boundary_cursors.clear()
 	for type_id in PLAN_TYPES:
 		for _index in range(4):
 			var plan: Dictionary = game.spawner.plan_entry(type_id)
@@ -93,14 +104,16 @@ func _run() -> void:
 	var meteor_screen_radius: float = meteor.body_radius * meteor.observation_visual_scale * view.zoom.x
 	var expected_visual_scale := sqrt(TEST_SPAN)
 	var expected_screen_scale := 1.0 / expected_visual_scale
+	var expected_shake_scale := 1.0 / TEST_SPAN
 	_check(
 		is_equal_approx(meteor.observation_visual_scale, expected_visual_scale)
 		and is_equal_approx(meteor_screen_radius, meteor.body_radius / expected_visual_scale),
 		"meteor visuals receive half compensation and become gradually smaller on screen"
 	)
 	_check(
-		is_equal_approx(view.meteor_screen_scale(), expected_screen_scale),
-		"meteor camera feedback derives from the same reduced screen scale as its drawing"
+		is_equal_approx(view.meteor_screen_scale(), expected_screen_scale)
+		and is_equal_approx(view.meteor_shake_scale(), expected_shake_scale),
+		"meteor flash and kick follow its drawing while shake receives stronger attenuation"
 	)
 	var size_bonus := clampf((meteor.body_radius - 7.0) * 0.52, 0.0, 18.0)
 	var tracking_screen_radius: float = meteor.get_tracking_radius(view.screen_length_to_world(36.0)) * view.zoom.x
@@ -109,12 +122,30 @@ func _run() -> void:
 		"meteor interaction radius remains screen-fixed while its drawing shrinks"
 	)
 	game.effects.reset()
+	game.effects.spawn_success(centre, 1.0, Color.WHITE, 1.0, 1.0, "", Vector2.ZERO, game._meteor_flash_scale("common"))
+	_check(
+		is_equal_approx(game.effects.flash_strength, 0.26 * expected_screen_scale),
+		"common meteor success keeps its flash before the galaxy stage"
+	)
+	game.effects.reset()
+	game.effects.spawn_success(centre, 1.0, Color.WHITE, 1.0, 1.0, "", Vector2.ZERO, game._meteor_flash_scale("fireball"))
+	_check(
+		is_equal_approx(game.effects.flash_strength, 0.26 * expected_screen_scale),
+		"special meteor success flash recedes with the zoomed-out drawing"
+	)
+	_check(
+		is_equal_approx(game._meteor_flash_scale("fragment"), expected_screen_scale)
+		and is_equal_approx(game._meteor_flash_scale("fragment_piece"), expected_screen_scale * 0.5),
+		"split pieces receive half of their parent type's flash scale"
+	)
+	game.effects.reset()
 	game.effects.add_kick(centre + Vector2.RIGHT, 3.0, view.meteor_screen_scale())
-	game.effects.add_shake(0.6, view.meteor_screen_scale())
+	game.effects.add_shake(0.6, game._meteor_shake_scale("fragment_piece"))
 	_check(
 		is_equal_approx(game.effects.kick_amplitude, 3.0 * expected_screen_scale)
-		and is_equal_approx(game.effects.shake_pixel_scale, expected_screen_scale),
-		"meteor kick and shake amplitude recede with the meteor while preserving their timing"
+		and is_equal_approx(game._meteor_shake_scale("fragment"), expected_shake_scale)
+		and is_equal_approx(game.effects.shake_pixel_scale, expected_shake_scale * 0.5),
+		"split-piece shake is half scale while meteor kick and parent shake stay unchanged"
 	)
 	game.effects.reset()
 	_check(
@@ -143,10 +174,36 @@ func _run() -> void:
 		"the five-percent step and eight-step ceiling share the approved balance contract"
 	)
 
+	view.set_observation_span(1.0)
+	await process_frame
+	var opening_distribution := _capture_entry_distribution(
+		game.spawner, view.meteor_activity_rect()
+	)
+	_check_entry_distribution("opening", opening_distribution)
+	# This probe needs the purchased state, not 124 overlapping upgrade sounds,
+	# banners, and delayed audio callbacks while the process is about to exit.
+	game.progression.upgrade_purchased.disconnect(game._on_upgrade_purchased)
+	game.progression.debug_purchase_all()
+	game._sync_galactic_systems()
+	await process_frame
+	game.effects.reset()
+	game.effects.spawn_success(centre, 1.0, Color.WHITE, 1.0, 1.0, "", Vector2.ZERO, game._meteor_flash_scale("common"))
+	_check(
+		is_zero_approx(game.effects.flash_strength)
+		and is_zero_approx(game._meteor_flash_scale("fast"))
+		and game._meteor_flash_scale("fireball") > 0.0,
+		"galaxy entry removes common and fast meteor success flashes only"
+	)
+	game.effects.reset()
+	var final_distribution := _capture_entry_distribution(
+		game.spawner, view.meteor_activity_rect()
+	)
+	_check_entry_distribution("final", final_distribution)
+
 	game.queue_free()
 	await process_frame
 	if failures.is_empty():
-		print("OBSERVATION_SPAN_PASS: lateral meteor activity, three rectangles, screen budgets, reduced meteor visuals and view motion, and continuous outer sky")
+		print("OBSERVATION_SPAN_PASS: lateral meteor activity, balanced entry boundaries, three rectangles, screen budgets, reduced meteor visuals and view motion, and continuous outer sky")
 		quit(0)
 		return
 	print("OBSERVATION_SPAN_FAIL: %d failure(s)" % failures.size())
@@ -156,6 +213,7 @@ func _run() -> void:
 func _capture_plans(spawner: Node) -> Array[String]:
 	spawner.rng.seed = TEST_SEED
 	spawner.burnout_cell_cursors.clear()
+	spawner.entry_boundary_cursors.clear()
 	var serialized: Array[String] = []
 	for type_id in PLAN_TYPES:
 		for _index in range(4):
@@ -167,3 +225,67 @@ func _capture_plans(spawner: Node) -> Array[String]:
 				"velocity": plan.velocity,
 			}))
 	return serialized
+
+
+func _capture_entry_distribution(spawner: Node, activity: Rect2) -> Dictionary:
+	var distribution := {}
+	for type_id in DISTRIBUTION_TYPES:
+		spawner.rng.seed = DISTRIBUTION_SEED
+		spawner.burnout_cell_cursors.clear()
+		spawner.entry_boundary_cursors.clear()
+		var top_count := 0
+		var left_count := 0
+		var right_count := 0
+		var upper_half_count := 0
+		var exact_travel_distance := true
+		var burnout_stays_safe := true
+		var safe_rect: Rect2 = spawner._burnout_safe_rect(activity)
+		for _index in range(DISTRIBUTION_SAMPLE_COUNT):
+			var plan: Dictionary = spawner.plan_entry(type_id)
+			var start := Vector2(plan.start)
+			var burnout := Vector2(plan.burnout)
+			if is_equal_approx(start.y, activity.position.y - spawner.ENTRY_MARGIN):
+				top_count += 1
+			elif is_equal_approx(start.x, activity.position.x - spawner.ENTRY_MARGIN):
+				left_count += 1
+			elif is_equal_approx(start.x, activity.end.x + spawner.ENTRY_MARGIN):
+				right_count += 1
+			if start.y < activity.get_center().y:
+				upper_half_count += 1
+			exact_travel_distance = exact_travel_distance and is_equal_approx(
+				start.distance_to(burnout), float(plan.burn_distance)
+			)
+			if type_id in SAFE_BURNOUT_TYPES:
+				burnout_stays_safe = burnout_stays_safe and safe_rect.has_point(burnout)
+		distribution[type_id] = {
+			"top": float(top_count) / DISTRIBUTION_SAMPLE_COUNT,
+			"left": float(left_count) / DISTRIBUTION_SAMPLE_COUNT,
+			"right": float(right_count) / DISTRIBUTION_SAMPLE_COUNT,
+			"upper_half": float(upper_half_count) / DISTRIBUTION_SAMPLE_COUNT,
+			"exact_travel_distance": exact_travel_distance,
+			"burnout_stays_safe": burnout_stays_safe,
+		}
+	return distribution
+
+
+func _check_entry_distribution(label: String, distribution: Dictionary) -> void:
+	for type_id in DISTRIBUTION_TYPES:
+		var shares: Dictionary = distribution[type_id]
+		var top_share := float(shares.top)
+		var left_share := float(shares.left)
+		var right_share := float(shares.right)
+		var upper_half_share := float(shares.upper_half)
+		_check(
+			top_share >= 0.26 and top_share <= 0.34
+			and left_share >= 0.30 and left_share <= 0.40
+			and right_share >= 0.30 and right_share <= 0.40,
+			"%s %s entries retain the 30/35/35 top-left-right boundary mix" % [label, type_id]
+		)
+		_check(
+			upper_half_share >= 0.48 and upper_half_share <= 0.70,
+			"%s %s starts stay vertically balanced instead of crowding the upper half" % [label, type_id]
+		)
+		_check(
+			bool(shares.exact_travel_distance) and bool(shares.burnout_stays_safe),
+			"%s %s keeps its exact lifetime distance and safe burnout contract" % [label, type_id]
+		)

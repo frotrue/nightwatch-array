@@ -8,6 +8,8 @@ const HITSTOP_TIME_SCALE := 0.06
 const HITSTOP_COOLDOWN_MSEC := 400
 const COMBO_STRENGTH_STEP := 0.045
 const IMPACT_TARGET_TYPES := ["fireball", "major"]
+const FLASHLESS_METEOR_TYPES := ["common", "fast"]
+const FRAGMENT_PIECE_FEEDBACK_SCALE := 0.50
 # Every manual observation gets a directional kick; the rumble and the freeze
 # are reserved for rare fireballs and the Canis Major event so the game's repeated core
 # action never becomes a chain of camera motion and freezes.
@@ -458,6 +460,8 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 	# Base value is target identity, not economy. Quality and the live manual
 	# chain remain explicit feedback inputs inside _observation_strength.
 	var strength := _observation_strength(float(meteor.base_value), was_manual, quality_grade)
+	var meteor_type_id := String(meteor.type_id)
+	var meteor_screen_scale: float = observation_view.meteor_screen_scale()
 	effects.spawn_success(
 		meteor.global_position,
 		final_reward,
@@ -465,7 +469,8 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 		intrinsic_multiplier * reference_multiplier,
 		strength,
 		quality_grade,
-		hud.get_data_anchor()
+		hud.get_data_anchor(),
+		_meteor_flash_scale(meteor_type_id)
 	)
 	if was_manual:
 		sound.play_success(intrinsic_multiplier, progression.manual_combo_count, strength)
@@ -484,18 +489,17 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 	# and a chain of halts is the freeze this split was made to end, so it stays
 	# with punctuation targets.
 	if was_manual:
-		var meteor_screen_scale: float = observation_view.meteor_screen_scale()
 		effects.add_kick(
 			meteor.global_position,
 			lerpf(KICK_MIN_PIXELS, KICK_MAX_PIXELS, strength),
 			meteor_screen_scale
 		)
-		var is_impact_target := String(meteor.type_id) in IMPACT_TARGET_TYPES
+		var is_impact_target := meteor_type_id in IMPACT_TARGET_TYPES
 		if strength >= SHAKE_STRENGTH_FLOOR:
 			var weight := clampf((strength - SHAKE_STRENGTH_FLOOR) / (1.0 - SHAKE_STRENGTH_FLOOR), 0.0, 1.0)
 			effects.add_shake(
 				lerpf(SHAKE_TRAUMA_FLOOR, SHAKE_TRAUMA_CEILING, weight),
-				meteor_screen_scale
+				_meteor_shake_scale(meteor_type_id)
 			)
 		if is_impact_target and strength >= HITSTOP_STRENGTH_FLOOR:
 			var freeze_weight := clampf((strength - HITSTOP_STRENGTH_FLOOR) / (1.0 - HITSTOP_STRENGTH_FLOOR), 0.0, 1.0)
@@ -572,6 +576,20 @@ func _observation_strength(base_value: float, was_manual: bool, quality_grade: S
 	# 0.64 and cross the shake floor on the ninth. Persistence reaches the
 	# screen on its own, and a Perfect grade gets there in about half as many.
 	return minf(1.0, strength + minf(float(progression.manual_combo_count), 12.0) * COMBO_STRENGTH_STEP)
+
+
+func _meteor_flash_scale(type_id: String) -> float:
+	if progression.galaxy_unlocked() and type_id in FLASHLESS_METEOR_TYPES:
+		return 0.0
+	return observation_view.meteor_screen_scale() * _fragment_feedback_scale(type_id)
+
+
+func _meteor_shake_scale(type_id: String) -> float:
+	return observation_view.meteor_shake_scale() * _fragment_feedback_scale(type_id)
+
+
+func _fragment_feedback_scale(type_id: String) -> float:
+	return FRAGMENT_PIECE_FEEDBACK_SCALE if type_id == "fragment_piece" else 1.0
 
 
 func _apply_hitstop(duration: float) -> void:
