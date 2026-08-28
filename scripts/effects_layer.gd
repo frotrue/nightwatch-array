@@ -29,6 +29,7 @@ var rings: Array[Dictionary] = []
 var flash_strength: float = 0.0
 var flash_color := Color.WHITE
 var shake_trauma: float = 0.0
+var shake_pixel_scale: float = 1.0
 var shake_offset := Vector2.ZERO
 var shake_time: float = 0.0
 var shake_enabled: bool = true
@@ -69,6 +70,7 @@ func reset() -> void:
 	rings.clear()
 	flash_strength = 0.0
 	shake_trauma = 0.0
+	shake_pixel_scale = 1.0
 	shake_time = 0.0
 	shake_offset = Vector2.ZERO
 	kick_direction = Vector2.ZERO
@@ -147,22 +149,27 @@ func spawn_success(world_position: Vector2, amount: float, color: Color, multipl
 	queue_redraw()
 
 
-func add_shake(amount: float) -> void:
-	shake_trauma = minf(1.0, shake_trauma + maxf(amount, 0.0))
+func add_shake(amount: float, pixel_scale: float = 1.0) -> void:
+	var addition := maxf(amount, 0.0)
+	if addition <= 0.0:
+		return
+	shake_trauma = minf(1.0, shake_trauma + addition)
+	shake_pixel_scale = maxf(0.0, pixel_scale)
 	set_process(true)
 
 
-func add_kick(from_point: Vector2, amount: float) -> void:
-	if amount <= 0.0:
+func add_kick(from_point: Vector2, amount: float, pixel_scale: float = 1.0) -> void:
+	var scaled_amount := amount * maxf(0.0, pixel_scale)
+	if scaled_amount <= 0.0:
 		return
 	# Overwrite instead of accumulating. A manual chain lands several
 	# observations a second and a summing kick would fuse them into one drift
 	# instead of reading as separate hits.
-	if absf(_kick_envelope()) * kick_amplitude > amount:
+	if absf(_kick_envelope()) * kick_amplitude > scaled_amount:
 		return
 	var away := from_point - _atmospheric_rect().get_center()
 	kick_direction = away.normalized() if away.length() > 1.0 else Vector2.UP
-	kick_amplitude = minf(amount, MAX_KICK_OFFSET)
+	kick_amplitude = minf(scaled_amount, MAX_KICK_OFFSET)
 	kick_time = 0.0
 	set_process(true)
 
@@ -244,12 +251,13 @@ func _process(delta: float) -> void:
 
 func _update_shake(delta: float) -> void:
 	if shake_trauma <= 0.0:
+		shake_pixel_scale = 1.0
 		shake_offset = Vector2.ZERO
 		return
 	shake_time += delta
 	shake_trauma = maxf(0.0, shake_trauma - delta * SHAKE_DECAY)
 	# Squaring trauma keeps small hits subtle while leaving headroom for a major.
-	var magnitude := shake_trauma * shake_trauma * MAX_SHAKE_OFFSET
+	var magnitude := shake_trauma * shake_trauma * MAX_SHAKE_OFFSET * shake_pixel_scale
 	shake_offset = Vector2(
 		sin(shake_time * 73.0) * magnitude,
 		sin(shake_time * 61.0 + 1.9) * magnitude

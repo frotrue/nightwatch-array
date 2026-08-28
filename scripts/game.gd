@@ -484,11 +484,19 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 	# and a chain of halts is the freeze this split was made to end, so it stays
 	# with punctuation targets.
 	if was_manual:
-		effects.add_kick(meteor.global_position, lerpf(KICK_MIN_PIXELS, KICK_MAX_PIXELS, strength))
+		var meteor_screen_scale: float = observation_view.meteor_screen_scale()
+		effects.add_kick(
+			meteor.global_position,
+			lerpf(KICK_MIN_PIXELS, KICK_MAX_PIXELS, strength),
+			meteor_screen_scale
+		)
 		var is_impact_target := String(meteor.type_id) in IMPACT_TARGET_TYPES
 		if strength >= SHAKE_STRENGTH_FLOOR:
 			var weight := clampf((strength - SHAKE_STRENGTH_FLOOR) / (1.0 - SHAKE_STRENGTH_FLOOR), 0.0, 1.0)
-			effects.add_shake(lerpf(SHAKE_TRAUMA_FLOOR, SHAKE_TRAUMA_CEILING, weight))
+			effects.add_shake(
+				lerpf(SHAKE_TRAUMA_FLOOR, SHAKE_TRAUMA_CEILING, weight),
+				meteor_screen_scale
+			)
 		if is_impact_target and strength >= HITSTOP_STRENGTH_FLOOR:
 			var freeze_weight := clampf((strength - HITSTOP_STRENGTH_FLOOR) / (1.0 - HITSTOP_STRENGTH_FLOOR), 0.0, 1.0)
 			_apply_hitstop(lerpf(0.05, 0.11, freeze_weight))

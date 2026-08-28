@@ -1187,8 +1187,8 @@ func _run() -> void:
 	var meteor_script = load("res://scripts/meteor.gd")
 	game.spawner.rng.seed = 20260822
 	game.spawner.burnout_cell_cursors.clear()
-	var viewport_size: Vector2 = game.spawner.get_viewport().get_visible_rect().size
-	var burnout_safe_rect: Rect2 = game.spawner._burnout_safe_rect(viewport_size)
+	var meteor_activity_rect: Rect2 = game.observation_view.meteor_activity_rect()
+	var burnout_safe_rect: Rect2 = game.spawner._burnout_safe_rect(meteor_activity_rect)
 	var minimum_reachable_cells := {
 		"common": 10,
 		"fast": 8,
@@ -1205,7 +1205,7 @@ func _run() -> void:
 				float(reachability_spec.burn_terminal_ratio)
 			)
 			var reachable_cells: Array[int] = game.spawner._reachable_burnout_cells(
-				reachability_type, viewport_size, extreme_distance
+				reachability_type, meteor_activity_rect, extreme_distance
 			)
 			_check(reachable_cells.size() >= int(minimum_reachable_cells[reachability_type]), "%s keeps enough burnout cells at planning speed %.2f" % [reachability_type, speed_factor])
 			if reachability_type in ["common", "fast"]:
@@ -1223,11 +1223,11 @@ func _run() -> void:
 			var planned_burnout: Vector2 = entry_plan.burnout
 			_check(burnout_safe_rect.has_point(planned_burnout), "%s burnout stays inside the safe sky" % burnout_type)
 			var allowed_entry := (
-				is_equal_approx(planned_start.y, -game.spawner.ENTRY_MARGIN)
-				or is_equal_approx(planned_start.x, -game.spawner.ENTRY_MARGIN)
-				or is_equal_approx(planned_start.x, viewport_size.x + game.spawner.ENTRY_MARGIN)
+				is_equal_approx(planned_start.y, meteor_activity_rect.position.y - game.spawner.ENTRY_MARGIN)
+				or is_equal_approx(planned_start.x, meteor_activity_rect.position.x - game.spawner.ENTRY_MARGIN)
+				or is_equal_approx(planned_start.x, meteor_activity_rect.end.x + game.spawner.ENTRY_MARGIN)
 			)
-			_check(allowed_entry and not is_equal_approx(planned_start.y, viewport_size.y + game.spawner.ENTRY_MARGIN), "%s uses only top/side entry boundaries" % burnout_type)
+			_check(allowed_entry and not is_equal_approx(planned_start.y, meteor_activity_rect.end.y + game.spawner.ENTRY_MARGIN), "%s uses only top/side entry boundaries" % burnout_type)
 			_check(absf(planned_start.distance_to(planned_burnout) - float(entry_plan.burn_distance)) < 0.05, "%s entry reaches its exact planned burnout distance" % burnout_type)
 			var normalized_in_safe := (planned_burnout - burnout_safe_rect.position) / burnout_safe_rect.size
 			covered_columns[clampi(int(normalized_in_safe.x * game.spawner.BURNOUT_GRID_COLUMNS), 0, game.spawner.BURNOUT_GRID_COLUMNS - 1)] = true

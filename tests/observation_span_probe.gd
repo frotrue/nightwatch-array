@@ -33,6 +33,7 @@ func _run() -> void:
 	view.set_observation_span(1.0)
 	await process_frame
 	var atmospheric_at_one: Rect2 = view.atmospheric_rect()
+	var activity_at_one: Rect2 = view.meteor_activity_rect()
 	var plans_at_one := _capture_plans(game.spawner)
 
 	view.set_observation_span(TEST_SPAN)
@@ -40,15 +41,40 @@ func _run() -> void:
 	await process_frame
 	var atmospheric_at_test: Rect2 = view.atmospheric_rect()
 	var visible_at_test: Rect2 = view.visible_world_rect()
+	var activity_at_test: Rect2 = view.meteor_activity_rect()
 	var plans_at_test := _capture_plans(game.spawner)
 
-	_check(plans_at_one == plans_at_test, "fixed-seed atmospheric plans stay byte-for-byte identical at span 1.05")
+	_check(plans_at_one != plans_at_test, "fixed-seed meteor plans expand when observation span reaches 1.05")
 	_check(atmospheric_at_one == atmospheric_at_test, "atmospheric rectangle is independent of observation span")
+	_check(activity_at_one.is_equal_approx(atmospheric_at_one), "stage-zero meteor activity matches the original atmospheric rectangle")
 	_check(
 		visible_at_test.get_center().is_equal_approx(atmospheric_at_test.get_center())
 		and visible_at_test.size.is_equal_approx(atmospheric_at_test.size * TEST_SPAN),
 		"visible world expands five percent around the fixed atmospheric centre"
 	)
+	_check(
+		is_equal_approx(activity_at_test.position.x, visible_at_test.position.x)
+		and is_equal_approx(activity_at_test.size.x, visible_at_test.size.x)
+		and is_equal_approx(activity_at_test.position.y, atmospheric_at_test.position.y)
+		and is_equal_approx(activity_at_test.size.y, atmospheric_at_test.size.y),
+		"meteor activity follows the visible width while retaining the safe atmospheric height"
+	)
+	var expanded_plan_reaches_outer_sky := false
+	game.spawner.rng.seed = TEST_SEED
+	game.spawner.burnout_cell_cursors.clear()
+	for type_id in PLAN_TYPES:
+		for _index in range(4):
+			var plan: Dictionary = game.spawner.plan_entry(type_id)
+			var start := Vector2(plan.start)
+			var allowed_entry := (
+				is_equal_approx(start.y, activity_at_test.position.y - game.spawner.ENTRY_MARGIN)
+				or is_equal_approx(start.x, activity_at_test.position.x - game.spawner.ENTRY_MARGIN)
+				or is_equal_approx(start.x, activity_at_test.end.x + game.spawner.ENTRY_MARGIN)
+			)
+			_check(allowed_entry, "%s enters through the expanded top/side activity boundary" % type_id)
+			if start.x < atmospheric_at_test.position.x or start.x > atmospheric_at_test.end.x:
+				expanded_plan_reaches_outer_sky = true
+	_check(expanded_plan_reaches_outer_sky, "expanded meteor plans occupy lateral sky outside the atmospheric rectangle")
 
 	var centre := atmospheric_at_test.get_center()
 	for screen_budget in SCREEN_BUDGETS:
@@ -65,11 +91,32 @@ func _run() -> void:
 	var meteor = game.spawner.spawn_meteor("common", centre, Vector2.RIGHT, 10.0)
 	await process_frame
 	var meteor_screen_radius: float = meteor.body_radius * meteor.observation_visual_scale * view.zoom.x
+	var expected_visual_scale := sqrt(TEST_SPAN)
+	var expected_screen_scale := 1.0 / expected_visual_scale
 	_check(
-		is_equal_approx(meteor.observation_visual_scale, TEST_SPAN)
-		and is_equal_approx(meteor_screen_radius, meteor.body_radius),
-		"meteor visual radius remains screen-fixed at span 1.05"
+		is_equal_approx(meteor.observation_visual_scale, expected_visual_scale)
+		and is_equal_approx(meteor_screen_radius, meteor.body_radius / expected_visual_scale),
+		"meteor visuals receive half compensation and become gradually smaller on screen"
 	)
+	_check(
+		is_equal_approx(view.meteor_screen_scale(), expected_screen_scale),
+		"meteor camera feedback derives from the same reduced screen scale as its drawing"
+	)
+	var size_bonus := clampf((meteor.body_radius - 7.0) * 0.52, 0.0, 18.0)
+	var tracking_screen_radius: float = meteor.get_tracking_radius(view.screen_length_to_world(36.0)) * view.zoom.x
+	_check(
+		is_equal_approx(tracking_screen_radius, 36.0 + size_bonus),
+		"meteor interaction radius remains screen-fixed while its drawing shrinks"
+	)
+	game.effects.reset()
+	game.effects.add_kick(centre + Vector2.RIGHT, 3.0, view.meteor_screen_scale())
+	game.effects.add_shake(0.6, view.meteor_screen_scale())
+	_check(
+		is_equal_approx(game.effects.kick_amplitude, 3.0 * expected_screen_scale)
+		and is_equal_approx(game.effects.shake_pixel_scale, expected_screen_scale),
+		"meteor kick and shake amplitude recede with the meteor while preserving their timing"
+	)
+	game.effects.reset()
 	_check(
 		game.starfield._background_coverage_rect().encloses(visible_at_test)
 		and game.effects._visible_world_rect().is_equal_approx(visible_at_test),
@@ -99,7 +146,7 @@ func _run() -> void:
 	game.queue_free()
 	await process_frame
 	if failures.is_empty():
-		print("OBSERVATION_SPAN_PASS: atmospheric plans, two rectangles, screen budgets, meteor visuals, and continuous outer sky")
+		print("OBSERVATION_SPAN_PASS: lateral meteor activity, three rectangles, screen budgets, reduced meteor visuals and view motion, and continuous outer sky")
 		quit(0)
 		return
 	print("OBSERVATION_SPAN_FAIL: %d failure(s)" % failures.size())
