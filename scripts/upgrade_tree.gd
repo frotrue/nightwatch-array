@@ -27,6 +27,8 @@ const PULLBACK_LEGACY_FADE_START := 0.40
 const PULLBACK_LEGACY_FADE_END := 1.55
 const PULLBACK_ROUTE_START := 0.95
 const PULLBACK_ROUTE_END := 3.15
+const PULLBACK_GALACTIC_BACKGROUND_START := 1.45
+const PULLBACK_GALACTIC_BACKGROUND_END := 2.85
 const GALACTIC_NODE_SETTLE_SCALE := 0.965
 const GALACTIC_NODE_REVEAL_WINDOW := 0.04
 const HOLD_PURCHASE_SECONDS := 0.75
@@ -49,6 +51,12 @@ const BACKGROUND_STAR_COUNT := 150
 const BACKGROUND_STAR_MIN_RADIUS := 90.0
 const BACKGROUND_STAR_MAX_RADIUS := 1180.0
 const BACKGROUND_STAR_SEED := 20260824
+const GALACTIC_BACKGROUND_STAR_COUNT := 21
+const GALACTIC_BACKGROUND_STAR_SEED := 20260828
+const GALACTIC_BACKGROUND_X_RANGE := 0.46
+const GALACTIC_BACKGROUND_Y_RANGE := Vector2(-0.35, 0.38)
+const GALACTIC_BACKGROUND_EXCLUSION := Vector2(0.235, 0.36)
+const GALACTIC_BACKGROUND_MIN_SEPARATION := 0.065
 const CLUSTER_MARKER_OFFSETS := [
 	Vector2(-1.45, -0.42),
 	Vector2(-0.62, 0.88),
@@ -241,6 +249,7 @@ var pan_position := Vector2.ZERO
 var rotation_offset: float = DEFAULT_ROTATION
 var pending_rotation_delta: float = 0.0
 var background_stars: PackedVector2Array = PackedVector2Array()
+var galactic_background_stars: PackedVector2Array = PackedVector2Array()
 var galactic_unlocked: bool = false
 var galactic_pullback_seen: bool = false
 var galactic_mode: int = GALACTIC_MODE_NORMAL
@@ -264,6 +273,7 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 	node_star_records = ChartData.node_star_map()
 	_build_background_stars()
+	_build_galactic_background_stars()
 	_cache_chart_geometry()
 	_build_interface()
 	set_process_input(true)
@@ -615,6 +625,20 @@ func _local_group_alpha() -> float:
 	return 1.0 - smoothstep(0.05, 0.34, galactic_chart_detail)
 
 
+func _galactic_background_alpha() -> float:
+	if not galactic_unlocked:
+		return 0.0
+	if galactic_mode == GALACTIC_MODE_PULLBACK:
+		return _ease_in_out(_timed_ratio(
+			pullback_elapsed,
+			PULLBACK_GALACTIC_BACKGROUND_START,
+			PULLBACK_GALACTIC_BACKGROUND_END
+		))
+	if not galactic_pullback_seen:
+		return 0.0
+	return 1.0 - smoothstep(0.05, 0.34, galactic_chart_detail)
+
+
 func _local_group_node_reveal(node_id: String) -> float:
 	var group_alpha := _local_group_alpha()
 	if galactic_mode != GALACTIC_MODE_PULLBACK or group_alpha <= 0.0:
@@ -820,6 +844,35 @@ func _build_background_stars() -> void:
 		# Sampling the radius directly would crowd the stars at the pivot.
 		var distance := sqrt(rng.randf_range(inner, outer))
 		background_stars[index] = CHART_ORIGIN + Vector2.RIGHT.rotated(rng.randf_range(-PI, PI)) * distance
+
+
+func _build_galactic_background_stars() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GALACTIC_BACKGROUND_STAR_SEED
+	galactic_background_stars.clear()
+	var attempts := 0
+	while galactic_background_stars.size() < GALACTIC_BACKGROUND_STAR_COUNT and attempts < 1000:
+		attempts += 1
+		var candidate := Vector2(
+			rng.randf_range(-GALACTIC_BACKGROUND_X_RANGE, GALACTIC_BACKGROUND_X_RANGE),
+			rng.randf_range(GALACTIC_BACKGROUND_Y_RANGE.x, GALACTIC_BACKGROUND_Y_RANGE.y)
+		)
+		# Coordinates are normalized to the visible chart frame. The central
+		# ellipse is reserved for the real Local Group route and its buttons.
+		var exclusion_distance := Vector2(
+			candidate.x / GALACTIC_BACKGROUND_EXCLUSION.x,
+			candidate.y / GALACTIC_BACKGROUND_EXCLUSION.y
+		).length()
+		if exclusion_distance < 1.0:
+			continue
+		var separated := true
+		for existing_variant in galactic_background_stars:
+			var existing := Vector2(existing_variant)
+			if candidate.distance_to(existing) < GALACTIC_BACKGROUND_MIN_SEPARATION:
+				separated = false
+				break
+		if separated:
+			galactic_background_stars.append(candidate)
 
 
 func _cache_chart_geometry() -> void:
@@ -1534,6 +1587,7 @@ func _cached_node_state(node_id: String) -> String:
 
 func _draw_tree() -> void:
 	_draw_chart_background()
+	_draw_galactic_background()
 	var structure_alpha := _galactic_structure_alpha()
 	for constellation_id in ChartData.CONSTELLATIONS:
 		var constellation: Dictionary = ChartData.CONSTELLATIONS[constellation_id]
@@ -1579,6 +1633,29 @@ func _draw_chart_background() -> void:
 		var radius := 1.7 if index % 5 == 0 else 1.0
 		var alpha := (0.28 if index % 5 == 0 else 0.16) * structure_alpha
 		tree_canvas.draw_circle(background_position, radius, Color(UITheme.STAR_BACKGROUND, alpha))
+
+
+func _draw_galactic_background() -> void:
+	var field_alpha := _galactic_background_alpha()
+	if field_alpha <= 0.01 or content_clip == null:
+		return
+	# These positions live in normalized screen space so the sparse field does
+	# not rush inward with the camera. It follows the galactic frame centre but
+	# stays visually quiet behind the interactive route.
+	for index in range(galactic_background_stars.size()):
+		var normalized_position := galactic_background_stars[index]
+		var screen_offset := Vector2(
+			normalized_position.x * content_clip.size.x,
+			normalized_position.y * content_clip.size.y
+		)
+		var point := CHART_ORIGIN + screen_offset / maxf(zoom, 0.001)
+		var screen_radius := 1.15 if index % 6 == 0 else 0.75
+		var alpha := (0.28 if index % 6 == 0 else 0.18) * field_alpha
+		tree_canvas.draw_circle(
+			point,
+			screen_radius / maxf(zoom, 0.001),
+			Color(UITheme.GALACTIC_BACKGROUND_STAR, alpha)
+		)
 
 
 func _draw_background_cluster(center: Vector2, radius: float, alpha: float) -> void:
