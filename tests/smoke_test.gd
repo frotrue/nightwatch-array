@@ -1826,7 +1826,7 @@ func _run() -> void:
 	_check(visible_galactic_buttons == 30, "the final galaxy frame exposes the interactive Milky Way anchor and all 29 Local Group research nodes")
 	_check(
 		open_night_game.upgrade_tree.galactic_background_stars.size() == open_night_game.upgrade_tree.GALACTIC_BACKGROUND_STAR_COUNT,
-		"the final galaxy frame retains exactly 21 sparse non-interactive background stars"
+		"the final galaxy frame retains exactly 30 sparse non-interactive background stars"
 	)
 	var galactic_background_clear := true
 	for background_star_variant in open_night_game.upgrade_tree.galactic_background_stars:

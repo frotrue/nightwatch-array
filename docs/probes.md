@@ -352,7 +352,7 @@ the number of chart layout passes. The burst deliberately sends more wheel
 events than a frame should commit; `layout_passes` should stay at roughly one
 per rendered frame rather than eight. The candidate pull-back accepts only a
 windowed `galactic_transition` and `galactic_final` p95 below 16.7 ms. The ENV
-line records the 29 rendered galactic research nodes, 21 faint non-interactive
+line records the 29 rendered galactic research nodes, 30 faint non-interactive
 galactic background points, and pull-back duration.
 
 Run it windowed so the draw-call and primitive counts represent the shipped

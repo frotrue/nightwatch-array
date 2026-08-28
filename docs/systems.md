@@ -170,7 +170,7 @@ screen position when the route reaches it and settles over only the last few
 percent of its radius. Its radial chart position compensates for the live camera
 zoom, so the revealed map does not contract after it appears. There is no
 centre-only hold or second expanding-map beat. The installed linear route and
-current frontier are the only lines retained there. Twenty-one deterministic,
+current frontier are the only lines retained there. Thirty deterministic,
 non-interactive blue-grey background points fade in late, remain screen-fixed,
 and are generated outside a central exclusion ellipse so they cannot compete
 with the route or its buttons at galactic scale. It is a

@@ -51,12 +51,12 @@ const BACKGROUND_STAR_COUNT := 150
 const BACKGROUND_STAR_MIN_RADIUS := 90.0
 const BACKGROUND_STAR_MAX_RADIUS := 1180.0
 const BACKGROUND_STAR_SEED := 20260824
-const GALACTIC_BACKGROUND_STAR_COUNT := 21
+const GALACTIC_BACKGROUND_STAR_COUNT := 30
 const GALACTIC_BACKGROUND_STAR_SEED := 20260828
 const GALACTIC_BACKGROUND_X_RANGE := 0.46
 const GALACTIC_BACKGROUND_Y_RANGE := Vector2(-0.35, 0.38)
 const GALACTIC_BACKGROUND_EXCLUSION := Vector2(0.235, 0.36)
-const GALACTIC_BACKGROUND_MIN_SEPARATION := 0.065
+const GALACTIC_BACKGROUND_MIN_SEPARATION := 0.055
 const CLUSTER_MARKER_OFFSETS := [
 	Vector2(-1.45, -0.42),
 	Vector2(-0.62, 0.88),
@@ -1649,7 +1649,7 @@ func _draw_galactic_background() -> void:
 			normalized_position.y * content_clip.size.y
 		)
 		var point := CHART_ORIGIN + screen_offset / maxf(zoom, 0.001)
-		var screen_radius := 1.15 if index % 6 == 0 else 0.75
+		var screen_radius := 1.42 if index % 6 == 0 else 0.96
 		var alpha := (0.28 if index % 6 == 0 else 0.18) * field_alpha
 		tree_canvas.draw_circle(
 			point,
