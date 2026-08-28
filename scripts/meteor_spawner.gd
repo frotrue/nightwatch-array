@@ -295,9 +295,10 @@ func _plan_echo_entry(type_id: String, index: int, count: int, trigger: Dictiona
 	if progression.has_upgrade("echo_deconfliction"):
 		return _plan_deconflicted_echo_entry(type_id, index, count, trigger)
 	if progression.has_upgrade("mirror_echo_solution") and not trigger.is_empty():
-		var size := _atmospheric_rect().size
-		var mirrored_start := Vector2(size.x - float(Vector2(trigger.entry).x), float(Vector2(trigger.entry).y))
-		var mirrored_burnout := Vector2(size.x - float(Vector2(trigger.burnout).x), float(Vector2(trigger.burnout).y))
+		var activity := _meteor_activity_rect()
+		var mirror_x := activity.position.x + activity.end.x
+		var mirrored_start := Vector2(mirror_x - float(Vector2(trigger.entry).x), float(Vector2(trigger.entry).y))
+		var mirrored_burnout := Vector2(mirror_x - float(Vector2(trigger.burnout).x), float(Vector2(trigger.burnout).y))
 		var direction := (mirrored_burnout - mirrored_start).normalized()
 		var offset := (float(index) - float(count - 1) * 0.5) * 24.0
 		var perpendicular := Vector2(-direction.y, direction.x) * offset
@@ -310,37 +311,37 @@ func _plan_echo_entry(type_id: String, index: int, count: int, trigger: Dictiona
 
 
 func _plan_deconflicted_echo_entry(type_id: String, index: int, count: int, trigger: Dictionary) -> Dictionary:
-	var size := _atmospheric_rect().size
+	var activity := _meteor_activity_rect()
 	var spec := Balance.meteor_spec(type_id)
 	var speed := float(spec.speed)
 	var lifetime_scale: float = progression.get_lifetime_multiplier() if progression != null else 1.0
 	var burn_distance := MeteorScript.burn_distance_for(speed, float(spec.lifetime) * lifetime_scale, float(spec.get("burn_terminal_ratio", 1.0)))
-	var reachable := _reachable_burnout_cells(type_id, size, burn_distance)
+	var reachable := _reachable_burnout_cells(type_id, activity, burn_distance)
 	if reachable.is_empty():
 		return plan_entry(type_id)
 	var wants_left := false
 	if progression.has_upgrade("mirror_echo_solution") and not trigger.is_empty():
-		wants_left = float(Vector2(trigger.entry).x) > size.x * 0.5
+		wants_left = float(Vector2(trigger.entry).x) > activity.get_center().x
 		var mirrored_reachable: Array[int] = []
 		for reachable_cell_variant in reachable:
 			var reachable_cell := int(reachable_cell_variant)
-			var reachable_target := _burnout_cell_center(size, reachable_cell)
-			for candidate in _entry_candidates(reachable_target, size, burn_distance):
-				if (float(Vector2(candidate).x) <= size.x * 0.5) == wants_left:
+			var reachable_target := _burnout_cell_center(activity, reachable_cell)
+			for candidate in _entry_candidates(reachable_target, activity, burn_distance):
+				if (float(Vector2(candidate).x) <= activity.get_center().x) == wants_left:
 					mirrored_reachable.append(reachable_cell)
 					break
 		if mirrored_reachable.size() >= count:
 			reachable = mirrored_reachable
 	var spacing := maxi(1, reachable.size() / maxi(1, count))
 	var cell_index: int = int(reachable[(echo_burst_serial + index * spacing) % reachable.size()])
-	var target := _burnout_cell_center(size, cell_index)
-	var candidates := _entry_candidates(target, size, burn_distance)
+	var target := _burnout_cell_center(activity, cell_index)
+	var candidates := _entry_candidates(target, activity, burn_distance)
 	if candidates.is_empty():
 		return plan_entry(type_id)
 	var chosen: Vector2 = candidates[index % candidates.size()]
 	if progression.has_upgrade("mirror_echo_solution") and not trigger.is_empty():
 		for candidate in candidates:
-			if (float(Vector2(candidate).x) <= size.x * 0.5) == wants_left:
+			if (float(Vector2(candidate).x) <= activity.get_center().x) == wants_left:
 				chosen = Vector2(candidate)
 				break
 	return {
@@ -446,15 +447,16 @@ func _leonid_storm_entry(type_id: String, index: int) -> Dictionary:
 	var entry := plan_entry(type_id)
 	if not progression.has_upgrade("split_radiant_model"):
 		return entry
-	var size := _atmospheric_rect().size
+	var activity := _meteor_activity_rect()
 	var should_start_left := index % 2 == 0
-	var starts_left := float(Vector2(entry.start).x) <= size.x * 0.5
+	var starts_left := float(Vector2(entry.start).x) <= activity.get_center().x
 	if should_start_left == starts_left:
 		return entry
+	var mirror_x := activity.position.x + activity.end.x
 	return {
-		"start": Vector2(size.x - float(Vector2(entry.start).x), float(Vector2(entry.start).y)),
+		"start": Vector2(mirror_x - float(Vector2(entry.start).x), float(Vector2(entry.start).y)),
 		"velocity": Vector2(-float(Vector2(entry.velocity).x), float(Vector2(entry.velocity).y)),
-		"burnout": Vector2(size.x - float(Vector2(entry.burnout).x), float(Vector2(entry.burnout).y)),
+		"burnout": Vector2(mirror_x - float(Vector2(entry.burnout).x), float(Vector2(entry.burnout).y)),
 		"burn_distance": float(entry.get("burn_distance", 0.0)),
 	}
 
@@ -464,7 +466,7 @@ func plan_entry(type_id: String) -> Dictionary:
 
 
 func _plan_entry_with_rng(type_id: String, source_rng: RandomNumberGenerator) -> Dictionary:
-	var size := _atmospheric_rect().size
+	var activity := _meteor_activity_rect()
 	var spec := Balance.meteor_spec(type_id)
 	# Keep the planning stream at the legacy fixed five draws so changing spatial
 	# geometry cannot silently change later type rolls or spawn cadence.
@@ -480,30 +482,30 @@ func _plan_entry_with_rng(type_id: String, source_rng: RandomNumberGenerator) ->
 	var burn_distance := MeteorScript.burn_distance_for(
 		speed, lifetime, float(spec.get("burn_terminal_ratio", 1.0))
 	)
-	var reachable_cells := _reachable_burnout_cells(type_id, size, burn_distance)
+	var reachable_cells := _reachable_burnout_cells(type_id, activity, burn_distance)
 	if reachable_cells.is_empty():
 		return _crossing_entry_plan(
-			size, speed, burn_distance, entry_selector,
+			activity, speed, burn_distance, entry_selector,
 			candidate_fraction, jitter_x, jitter_y
 		)
 	var cell_index := _next_burnout_cell(type_id, reachable_cells)
-	var target := _burnout_cell_center(size, cell_index)
+	var target := _burnout_cell_center(activity, cell_index)
 	var entry_candidates: Array[Vector2] = []
 	for attempt in range(BURNOUT_JITTER_ATTEMPTS):
 		var center_blend := float(attempt) / float(maxi(1, BURNOUT_JITTER_ATTEMPTS - 1))
 		var jittered_target := _sample_burnout_cell(
-			size, cell_index,
+			activity, cell_index,
 			lerpf(jitter_x, 0.5, center_blend),
 			lerpf(jitter_y, 0.5, center_blend)
 		)
-		var jittered_candidates := _entry_candidates(jittered_target, size, burn_distance)
+		var jittered_candidates := _entry_candidates(jittered_target, activity, burn_distance)
 		if jittered_candidates.is_empty():
 			continue
 		target = jittered_target
 		entry_candidates = jittered_candidates
 		break
 	if entry_candidates.is_empty():
-		entry_candidates = _entry_candidates(target, size, burn_distance)
+		entry_candidates = _entry_candidates(target, activity, burn_distance)
 	var candidate_index := (
 		entry_selector + mini(entry_candidates.size() - 1, int(candidate_fraction * entry_candidates.size()))
 	) % entry_candidates.size()
@@ -516,28 +518,28 @@ func _plan_entry_with_rng(type_id: String, source_rng: RandomNumberGenerator) ->
 	}
 
 
-func _reachable_burnout_cells(type_id: String, size: Vector2, burn_distance: float) -> Array[int]:
+func _reachable_burnout_cells(type_id: String, activity: Rect2, burn_distance: float) -> Array[int]:
 	var reachable: Array[int] = []
 	for ordered_index in BURNOUT_CELL_ORDER:
 		var cell_index := int(ordered_index)
 		if type_id in ["common", "fast"] and cell_index not in OUTER_BURNOUT_CELLS:
 			continue
-		var center := _burnout_cell_center(size, cell_index)
-		if not _entry_candidates(center, size, burn_distance).is_empty():
+		var center := _burnout_cell_center(activity, cell_index)
+		if not _entry_candidates(center, activity, burn_distance).is_empty():
 			reachable.append(cell_index)
 	return reachable
 
 
-func _crossing_entry_plan(size: Vector2, speed: float, burn_distance: float, entry_selector: int, candidate_fraction: float, jitter_x: float, jitter_y: float) -> Dictionary:
+func _crossing_entry_plan(activity: Rect2, speed: float, burn_distance: float, entry_selector: int, candidate_fraction: float, jitter_x: float, jitter_y: float) -> Dictionary:
 	var start := Vector2.ZERO
 	match entry_selector:
 		0:
-			start = Vector2(lerpf(0.0, size.x, candidate_fraction), -ENTRY_MARGIN)
+			start = Vector2(lerpf(activity.position.x, activity.end.x, candidate_fraction), activity.position.y - ENTRY_MARGIN)
 		1:
-			start = Vector2(-ENTRY_MARGIN, lerpf(0.0, size.y, candidate_fraction))
+			start = Vector2(activity.position.x - ENTRY_MARGIN, lerpf(activity.position.y, activity.end.y, candidate_fraction))
 		_:
-			start = Vector2(size.x + ENTRY_MARGIN, lerpf(0.0, size.y, candidate_fraction))
-	var safe_rect := _burnout_safe_rect(size)
+			start = Vector2(activity.end.x + ENTRY_MARGIN, lerpf(activity.position.y, activity.end.y, candidate_fraction))
+	var safe_rect := _burnout_safe_rect(activity)
 	var inward_target := safe_rect.position + Vector2(
 		lerpf(0.25, 0.75, jitter_x) * safe_rect.size.x,
 		lerpf(0.25, 0.75, jitter_y) * safe_rect.size.y
@@ -571,14 +573,14 @@ func _next_burnout_cell(type_id: String, reachable_cells: Array[int]) -> int:
 	return reachable_cells[cursor % reachable_cells.size()]
 
 
-func _burnout_safe_rect(size: Vector2) -> Rect2:
-	var minimum := Vector2(size.x * BURNOUT_SAFE_MIN.x, size.y * BURNOUT_SAFE_MIN.y)
-	var maximum := Vector2(size.x * BURNOUT_SAFE_MAX.x, size.y * BURNOUT_SAFE_MAX.y)
+func _burnout_safe_rect(activity: Rect2) -> Rect2:
+	var minimum := activity.position + activity.size * BURNOUT_SAFE_MIN
+	var maximum := activity.position + activity.size * BURNOUT_SAFE_MAX
 	return Rect2(minimum, maximum - minimum)
 
 
-func _burnout_cell_center(size: Vector2, cell_index: int) -> Vector2:
-	var safe_rect := _burnout_safe_rect(size)
+func _burnout_cell_center(activity: Rect2, cell_index: int) -> Vector2:
+	var safe_rect := _burnout_safe_rect(activity)
 	var cell_size := Vector2(
 		safe_rect.size.x / float(BURNOUT_GRID_COLUMNS),
 		safe_rect.size.y / float(BURNOUT_GRID_ROWS)
@@ -591,8 +593,8 @@ func _burnout_cell_center(size: Vector2, cell_index: int) -> Vector2:
 	)
 
 
-func _sample_burnout_cell(size: Vector2, cell_index: int, jitter_x: float, jitter_y: float) -> Vector2:
-	var safe_rect := _burnout_safe_rect(size)
+func _sample_burnout_cell(activity: Rect2, cell_index: int, jitter_x: float, jitter_y: float) -> Vector2:
+	var safe_rect := _burnout_safe_rect(activity)
 	var cell_size := Vector2(
 		safe_rect.size.x / float(BURNOUT_GRID_COLUMNS),
 		safe_rect.size.y / float(BURNOUT_GRID_ROWS)
@@ -605,31 +607,32 @@ func _sample_burnout_cell(size: Vector2, cell_index: int, jitter_x: float, jitte
 	)
 
 
-func _entry_candidates(target: Vector2, size: Vector2, burn_distance: float) -> Array[Vector2]:
+func _entry_candidates(target: Vector2, activity: Rect2, burn_distance: float) -> Array[Vector2]:
 	var candidates: Array[Vector2] = []
-	_append_horizontal_entry_candidates(candidates, target, size, burn_distance)
-	_append_vertical_entry_candidates(candidates, target, size, burn_distance, -ENTRY_MARGIN)
-	_append_vertical_entry_candidates(candidates, target, size, burn_distance, size.x + ENTRY_MARGIN)
+	_append_horizontal_entry_candidates(candidates, target, activity, burn_distance)
+	_append_vertical_entry_candidates(candidates, target, activity, burn_distance, activity.position.x - ENTRY_MARGIN)
+	_append_vertical_entry_candidates(candidates, target, activity, burn_distance, activity.end.x + ENTRY_MARGIN)
 	return candidates
 
 
-func _append_horizontal_entry_candidates(candidates: Array[Vector2], target: Vector2, size: Vector2, burn_distance: float) -> void:
-	var normal_distance := target.y + ENTRY_MARGIN
+func _append_horizontal_entry_candidates(candidates: Array[Vector2], target: Vector2, activity: Rect2, burn_distance: float) -> void:
+	var start_y := activity.position.y - ENTRY_MARGIN
+	var normal_distance := target.y - start_y
 	if normal_distance > burn_distance:
 		return
 	var tangent_distance := sqrt(maxf(0.0, burn_distance * burn_distance - normal_distance * normal_distance))
 	for start_x in [target.x - tangent_distance, target.x + tangent_distance]:
-		if start_x >= 0.0 and start_x <= size.x:
-			candidates.append(Vector2(start_x, -ENTRY_MARGIN))
+		if start_x >= activity.position.x and start_x <= activity.end.x:
+			candidates.append(Vector2(start_x, start_y))
 
 
-func _append_vertical_entry_candidates(candidates: Array[Vector2], target: Vector2, size: Vector2, burn_distance: float, start_x: float) -> void:
+func _append_vertical_entry_candidates(candidates: Array[Vector2], target: Vector2, activity: Rect2, burn_distance: float, start_x: float) -> void:
 	var normal_distance := absf(target.x - start_x)
 	if normal_distance > burn_distance:
 		return
 	var tangent_distance := sqrt(maxf(0.0, burn_distance * burn_distance - normal_distance * normal_distance))
 	for start_y in [target.y - tangent_distance, target.y + tangent_distance]:
-		if start_y >= 0.0 and start_y <= size.y:
+		if start_y >= activity.position.y and start_y <= activity.end.y:
 			candidates.append(Vector2(start_x, start_y))
 
 
@@ -720,9 +723,9 @@ func spawn_for_perseid_outburst(index: int) -> void:
 
 
 func spawn_major_fireball():
-	var size := _atmospheric_rect().size
-	var start := Vector2(size.x + 80.0, size.y * 0.16)
-	var target := Vector2(-110.0, size.y * 0.72)
+	var activity := _meteor_activity_rect()
+	var start := Vector2(activity.end.x + 80.0, activity.position.y + activity.size.y * 0.16)
+	var target := Vector2(activity.position.x - 110.0, activity.position.y + activity.size.y * 0.72)
 	return spawn_meteor("major", start, (target - start).normalized() * 128.0, 14.0)
 
 
@@ -743,9 +746,9 @@ func refresh_active_features() -> void:
 
 
 func _spawn_first_meteor() -> void:
-	var size := _atmospheric_rect().size
-	var start := Vector2(size.x + 16.0, size.y * 0.18)
-	var target := Vector2(size.x * 0.31, size.y * 0.57)
+	var activity := _meteor_activity_rect()
+	var start := Vector2(activity.end.x + 16.0, activity.position.y + activity.size.y * 0.18)
+	var target := activity.position + activity.size * Vector2(0.31, 0.57)
 	var spec := Balance.meteor_spec("common")
 	spawn_meteor("common", start, (target - start).normalized() * float(spec.speed), 5.2)
 
@@ -906,8 +909,10 @@ func _regular_active_count() -> int:
 	return count
 
 
-func _atmospheric_rect() -> Rect2:
+func _meteor_activity_rect() -> Rect2:
 	if observation_view != null:
+		if observation_view.has_method("meteor_activity_rect"):
+			return observation_view.meteor_activity_rect()
 		return observation_view.atmospheric_rect()
 	return Rect2(Vector2.ZERO, get_viewport().get_visible_rect().size)
 

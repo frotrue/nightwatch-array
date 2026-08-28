@@ -292,7 +292,7 @@ func can_be_tracked() -> bool:
 
 func get_tracking_radius(base_radius: float) -> float:
 	var size_bonus := clampf((body_radius - 7.0) * 0.52, 0.0, 18.0)
-	return base_radius + size_bonus * observation_visual_scale
+	return base_radius + size_bonus * _interaction_scale()
 
 
 func get_progress() -> float:
@@ -477,6 +477,14 @@ func _draw() -> void:
 
 
 func _current_visual_scale() -> float:
+	if observation_view != null:
+		if observation_view.has_method("meteor_visual_scale"):
+			return observation_view.meteor_visual_scale()
+		return observation_view.screen_length_to_world(1.0)
+	return 1.0
+
+
+func _interaction_scale() -> float:
 	if observation_view != null:
 		return observation_view.screen_length_to_world(1.0)
 	return 1.0

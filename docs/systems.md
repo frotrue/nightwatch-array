@@ -43,7 +43,7 @@ content.
 | Script | Owns |
 |---|---|
 | `game.gd` | Round lifecycle, save/load orchestration, economy-independent feedback dispatch (kick/shake/hitstop), debug keys. The only node that knows about all the others. |
-| `observation_view.gd` | The fixed atmospheric playfield, dynamic camera-visible world rectangle, screen/world point conversion, screen-length conversion, and the Camera2D feedback offset. Eight Local Group steps expand its span from 1.0 to the 1.4774554 ceiling. |
+| `observation_view.gd` | The fixed atmospheric playfield, laterally expanding meteor-activity rectangle, dynamic camera-visible world rectangle, screen/world point conversion, interaction-length conversion, partial meteor visual scaling, and the Camera2D feedback offset. Eight Local Group steps expand its span from 1.0 to the 1.4774554 ceiling. |
 | `progression_controller.gd` | Data balance, purchased nodes, discovery gates, transient Taurus manual combo, persistent Leo storm charge, and systemic derived upgrade effects. Single source of truth: consumers ask it, not `game_balance.gd`. |
 | `game_balance.gd` | Static data only: the 124 upgrade definitions, six Local Group rule-family profiles, the meteor/long-watch-target spec table, and the final galactic observation-span ceiling. `RefCounted`, no state. |
 | `meteor_spawner.gd` | Spawn cadence, type rolls (including same-round satellites, variable stars, comets, binary stars, and distant galaxies), delayed/forecast Gemini observation echoes, paced Leo meteor-storm queues, sky-wide burnout endpoint planning, forecast contact announcements, fragment spawning, survey-requested custom-start spawns, shower and round-guarded Canis Major spawns, support-lane assignment. |
@@ -85,17 +85,22 @@ standalone probes on their original identity coordinate system.
 ## Observation coordinates
 
 The main sky now has an identity-scaled `Camera2D` even though stage 0 does not
-zoom. `ObservationView` exposes five routing methods:
+zoom. `ObservationView` exposes the coordinate and scale routing methods:
 
 - `atmospheric_rect()` stays at the shipped 1152×648 playfield.
+- `meteor_activity_rect()` keeps that height but follows the full visible width.
 - `visible_world_rect()` is the camera-visible area around the same centre.
 - `screen_to_world()` and `world_to_screen()` cross the input/HUD boundary.
 - `screen_length_to_world()` preserves pixel-sized interaction and drawing
   contracts when a later stage raises the span.
+- `meteor_visual_scale()` applies square-root rather than full compensation, so
+  meteor drawings recede while their interaction radii remain screen-fixed.
+- `meteor_screen_scale()` gives meteor-generated kick and shake the exact same
+  on-screen reduction; upgrade pulses and hitstop keep their own contracts.
 
-Meteor entry and burnout planning, dish homes, and shower entry previews use
-the atmospheric rectangle. Background coverage and full-screen feedback use
-the visible rectangle.
+Meteor entry, burnout planning, and shower entry previews use the meteor
+activity rectangle. Dish homes keep the atmospheric rectangle. Background
+coverage and full-screen feedback use the visible rectangle.
 
 Meteors always entered from the true edges, but `BURNOUT_SAFE_MIN/MAX` and the
 per-cell `BURNOUT_JITTER_MIN/MAX` stacked into a second inset that kept every
@@ -309,7 +314,7 @@ galaxy ids and compounds exact five-percent steps up to `1.4774554`.
 starfield, twinkle, input, effects, and spawner consumers continue to derive
 their geometry from it. The starfield's gradient bands and horizon ridge follow
 the current visible-world frame, so the fixed atmospheric rectangle remains a
-simulation boundary and never appears as a rendered edge.
+vertical safety boundary and never appears as a rendered edge.
 
 `HostStarLayer` is a separate `HostStarController`, not a child of
 `MeteorLayer`. LMC starts with one `HostStar` and one active window; M32 raises

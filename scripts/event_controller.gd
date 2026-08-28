@@ -129,12 +129,12 @@ func trigger_shower() -> bool:
 	shower_started.emit()
 	banner_requested.emit("EVENT_SHOWER_INCOMING", UITheme.ACCENT_TEXT)
 	if progression.has_upgrade("observatory_network"):
-		var size := _atmospheric_rect().size
+		var activity := _meteor_activity_rect()
 		forecast_requested.emit([
-			Vector2(size.x * 0.18, 54.0),
-			Vector2(size.x * 0.48, 54.0),
-			Vector2(size.x - 54.0, size.y * 0.28),
-			Vector2(54.0, size.y * 0.42)
+			activity.position + activity.size * Vector2(0.18, 0.0) + Vector2(0.0, 54.0),
+			activity.position + activity.size * Vector2(0.48, 0.0) + Vector2(0.0, 54.0),
+			Vector2(activity.end.x - 54.0, activity.position.y + activity.size.y * 0.28),
+			Vector2(activity.position.x + 54.0, activity.position.y + activity.size.y * 0.42)
 		])
 	sky_activity_changed.emit(0.55)
 	return true
@@ -170,6 +170,12 @@ func _atmospheric_rect() -> Rect2:
 	if observation_view != null:
 		return observation_view.atmospheric_rect()
 	return Rect2(Vector2.ZERO, get_viewport().get_visible_rect().size)
+
+
+func _meteor_activity_rect() -> Rect2:
+	if observation_view != null and observation_view.has_method("meteor_activity_rect"):
+		return observation_view.meteor_activity_rect()
+	return _atmospheric_rect()
 
 
 func trigger_canis_major_warning() -> bool:
