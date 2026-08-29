@@ -17,6 +17,7 @@ const COVERAGE_RADIUS := 105.0
 const DISH_TIME_MULTIPLIER := 2.3
 const CONTACT_HIT_RADIUS := 30.0
 const DISH_TRACKABLE_TYPES := ["common", "fast", "fragment", "fragment_piece"]
+const GALACTIC_MUTED_FORECAST_TYPES := ["common", "fast"]
 
 var progression: Node
 var meteor_layer: Node2D
@@ -39,6 +40,14 @@ func setup(target_layer: Node2D, progression_controller: Node, view: Camera2D = 
 
 func forecast_visible() -> bool:
 	return progression != null and progression.forecast_visible()
+
+
+func forecast_contact_visible(contact: Dictionary) -> bool:
+	return not (
+		progression != null
+		and progression.galaxy_unlocked()
+		and String(contact.get("type_id", "")) in GALACTIC_MUTED_FORECAST_TYPES
+	)
 
 
 func dish_active() -> bool:
@@ -124,6 +133,8 @@ func on_contact_resolved(contact: Dictionary, meteor) -> void:
 
 func _contact_at(point: Vector2) -> int:
 	for contact in contacts:
+		if not forecast_contact_visible(contact):
+			continue
 		if point.distance_to(_estimate_of(contact)) <= _world_px(CONTACT_HIT_RADIUS):
 			return int(contact.id)
 	return -1
@@ -372,7 +383,8 @@ func _draw() -> void:
 	for dish in dishes:
 		_draw_dish(dish)
 	for contact in contacts:
-		_draw_contact(contact)
+		if forecast_contact_visible(contact):
+			_draw_contact(contact)
 	_draw_abandoned_target_flash()
 
 
@@ -381,17 +393,20 @@ func _draw_dish(dish: Dictionary) -> void:
 	var arrived: bool = bool(dish.arrived)
 	var visual_scale := _world_px(1.0)
 	var coverage_radius := _world_px(COVERAGE_RADIUS)
+	var assigned_contact := _find_contact(int(dish.assigned_id))
+	var assignment_visual_visible := (
+		assigned_contact.is_empty() or forecast_contact_visible(assigned_contact)
+	)
 	# Parked and covering reads as the actionable accent; still slewing stays
 	# neutral, because it is not yet doing anything.
 	var color := UITheme.ACCENT_LINE if arrived else UITheme.INK_MID
 	draw_circle(position, coverage_radius, Color(color, 0.05 if arrived else 0.02))
 	draw_arc(position, coverage_radius, 0.0, TAU, 56, Color(color, 0.42 if arrived else 0.20),
 		(1.8 if arrived else 1.1) * visual_scale, true)
-	if not arrived:
+	if not arrived and assignment_visual_visible:
 		draw_line(position, Vector2(dish.target), Color(color, 0.34), 1.2 * visual_scale, true)
 		draw_arc(Vector2(dish.target), coverage_radius, 0.0, TAU, 56, Color(color, 0.14), 1.0 * visual_scale, true)
-	var assigned_contact := _find_contact(int(dish.assigned_id))
-	if not assigned_contact.is_empty():
+	if not assigned_contact.is_empty() and assignment_visual_visible:
 		var estimate := _estimate_of(assigned_contact)
 		draw_line(position, estimate, Color(UITheme.ACCENT_TEXT, 0.72), 1.6 * visual_scale, true)
 		draw_arc(estimate, 25.0 * visual_scale, 0.0, TAU, 32, Color(UITheme.ACCENT_TEXT, 0.72), 1.5 * visual_scale, true)

@@ -138,6 +138,15 @@ func _run() -> void:
 		and is_equal_approx(game._meteor_flash_scale("fragment_piece"), expected_screen_scale * 0.5),
 		"split pieces receive half of their parent type's flash scale"
 	)
+	var common_forecast := {"type_id": "common"}
+	var fast_forecast := {"type_id": "fast"}
+	var fragment_forecast := {"type_id": "fragment"}
+	_check(
+		game.sky_contacts.forecast_contact_visible(common_forecast)
+		and game.sky_contacts.forecast_contact_visible(fast_forecast)
+		and game.sky_contacts.forecast_contact_visible(fragment_forecast),
+		"all unlocked forecast types remain visible before the galaxy stage"
+	)
 	game.effects.reset()
 	game.effects.add_kick(centre + Vector2.RIGHT, 3.0, view.meteor_screen_scale())
 	game.effects.add_shake(0.6, game._meteor_shake_scale("fragment_piece"))
@@ -185,6 +194,7 @@ func _run() -> void:
 	game.progression.upgrade_purchased.disconnect(game._on_upgrade_purchased)
 	game.progression.debug_purchase_all()
 	game._sync_galactic_systems()
+	game.sky_contacts.refresh_dishes()
 	await process_frame
 	game.effects.reset()
 	game.effects.spawn_success(centre, 1.0, Color.WHITE, 1.0, 1.0, "", Vector2.ZERO, game._meteor_flash_scale("common"))
@@ -193,6 +203,35 @@ func _run() -> void:
 		and is_zero_approx(game._meteor_flash_scale("fast"))
 		and game._meteor_flash_scale("fireball") > 0.0,
 		"galaxy entry removes common and fast meteor success flashes only"
+	)
+	_check(
+		not game.sky_contacts.forecast_contact_visible(common_forecast)
+		and not game.sky_contacts.forecast_contact_visible(fast_forecast)
+		and game.sky_contacts.forecast_contact_visible(fragment_forecast),
+		"galaxy entry hides only common and fast forecast visuals"
+	)
+	game.sky_contacts.reset()
+	var hidden_contact := {
+		"id": 9001,
+		"type_id": "common",
+		"intercept": Vector2(game.sky_contacts.dishes[0].position),
+		"error_offset": Vector2.ZERO,
+		"countdown": 4.0,
+		"lead_time": 4.0,
+	}
+	game.sky_contacts.on_contact_announced(hidden_contact)
+	var hidden_contact_assigned := false
+	for dish_variant in game.sky_contacts.dishes:
+		var dish: Dictionary = dish_variant
+		if int(dish.assigned_id) == int(hidden_contact.id):
+			hidden_contact_assigned = true
+			break
+	_check(
+		game.sky_contacts.contacts.size() == 1
+		and int(game.sky_contacts.contacts[0].id) == int(hidden_contact.id)
+		and hidden_contact_assigned
+		and game.sky_contacts._contact_at(Vector2(hidden_contact.intercept)) == -1,
+		"muted routine forecasts still drive automatic dishes without a hover target"
 	)
 	game.effects.reset()
 	var final_distribution := _capture_entry_distribution(
@@ -203,7 +242,7 @@ func _run() -> void:
 	game.queue_free()
 	await process_frame
 	if failures.is_empty():
-		print("OBSERVATION_SPAN_PASS: lateral meteor activity, balanced entry boundaries, three rectangles, screen budgets, reduced meteor visuals and view motion, and continuous outer sky")
+		print("OBSERVATION_SPAN_PASS: lateral meteor activity, balanced entry boundaries, three rectangles, screen budgets, reduced meteor visuals and view motion, muted galactic routine forecasts, and continuous outer sky")
 		quit(0)
 		return
 	print("OBSERVATION_SPAN_FAIL: %d failure(s)" % failures.size())

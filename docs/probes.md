@@ -95,7 +95,9 @@ Runs identical fixed-seed atmospheric plans at span `1.0` and `1.1025`, requirin
 exact serialized equality. It also checks the expanded visible rectangle,
 screen-fixed input/effect/meteor budgets, background/flash coverage, and that
 the sky gradient and horizon span the visible frame rather than stopping at the
-fixed atmospheric boundary.
+fixed atmospheric boundary. The completed-tree row also requires common/fast
+forecast visuals and hover targets to disappear while their internal contact
+and automatic-dish assignment remain active.
 
 ```powershell
 & $godot --headless --path . --script res://tests/observation_span_probe.gd

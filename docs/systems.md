@@ -54,7 +54,7 @@ content.
 | `supernova_target.gd` | Peak/fade/remnant timing choice. A missed light-curve phase always ends in a trackable remnant. |
 | `black_hole_target.gd` | Full-ring and partial-arc cursor-path hit testing. Angular progress accumulates and never decays on release or exit. The coda target also carries the supernova phase state. |
 | `observation_controller.gd` | Cursor sampling, the tracking-versus-survey input latch, manual tracking across meteor/host/phenomena layers, point or annulus swept-path hit detection, tracking and hover rings, and the software cursor. |
-| `sky_contacts.gd` | Low-chrome forecast contact rendering and steerable dishes. Right-click moves the nearest dish; Predictive Dish Control automatically pre-positions an idle dish. Forecast Log narrows the expected-position ring instead of adding value/time text. |
+| `sky_contacts.gd` | Low-chrome forecast contact rendering and steerable dishes. Right-click moves the nearest dish; Predictive Dish Control automatically pre-positions an idle dish. Forecast Log narrows the expected-position ring instead of adding value/time text. After galaxy entry, common/fast contacts remain in the simulation and automatic assignment but omit their ring, label, countdown, hover target, and automatic-assignment tether. |
 | `survey_controller.gd` | Round-local blank-sky sweep charge, the 150 px live-meteor guard, isolated deterministic summon rolls, custom-start spawner calls, cooldown, and the cursor-local red-light arc. |
 | `event_controller.gd` | Meteor showers, Perseid outbursts, and the randomized warned Canis Major event schedule. |
 | `effects_layer.gd` | Success bursts, data packets, incoming markers, forecast markers, screen kick and shake. |
