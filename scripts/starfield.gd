@@ -120,8 +120,6 @@ func _draw() -> void:
 	# used to sit here read as a foreground object in a frame whose whole subject
 	# is the empty sky above it.
 	draw_colored_polygon(_horizon_ridge(sky_frame), Color("03050A"))
-
-
 func _draw_star(point: Vector2, star: Dictionary) -> void:
 	var pulse := 0.62 + sin(float(star.phase)) * 0.16
 	pulse += activity * 0.12

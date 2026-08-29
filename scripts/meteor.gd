@@ -1,5 +1,7 @@
 extends Node2D
 
+const UITheme = preload("res://scripts/ui_theme.gd")
+
 signal observed(meteor, reward, multiplier, was_manual, quality_grade)
 signal expired(meteor, was_major)
 signal fragment_requested(origin, velocity, parent_type, parent_is_echo, parent_is_leonid, parent_is_perseid)
@@ -417,14 +419,14 @@ func _draw() -> void:
 			var t := float(index) / float(maxi(1, trail_points.size() - 1))
 			var alpha := pow(1.0 - t, 1.35) * trail_visibility
 			trail_draw_points.append(trail_points[index] - global_position)
-			trail_glow_colors.append(Color(glow_color, alpha * 0.42))
-			trail_core_colors.append(Color(primary_color, alpha * 0.82))
+			trail_glow_colors.append(Color(glow_color, alpha * 0.30))
+			trail_core_colors.append(Color(primary_color, alpha * 0.72))
 		# Two batched Canvas commands replace two draw_line calls per segment.
-		draw_polyline_colors(trail_draw_points, trail_glow_colors, maxf(0.6, body_radius * 1.18 * burn_tail_scale) * visual_scale, true)
-		draw_polyline_colors(trail_draw_points, trail_core_colors, maxf(0.4, body_radius * 0.42 * burn_tail_scale) * visual_scale, true)
+		draw_polyline_colors(trail_draw_points, trail_glow_colors, maxf(0.5, body_radius * 0.72 * burn_tail_scale) * visual_scale, true)
+		draw_polyline_colors(trail_draw_points, trail_core_colors, maxf(0.32, body_radius * 0.24 * burn_tail_scale) * visual_scale, true)
 
 	if prediction_enabled and alive:
-		draw_multiline(prediction_draw_points, Color(glow_color, 0.22 * minf(1.0, burn_visibility)), 1.4 * visual_scale, true)
+		draw_multiline(prediction_draw_points, Color(UITheme.ACCENT_LINE, 0.30 * minf(1.0, burn_visibility)), 1.0 * visual_scale, true)
 
 	var visibility := burn_visibility
 	if not alive:
@@ -440,7 +442,7 @@ func _draw() -> void:
 	elif burn_style == "snap":
 		pulse_amount = 0.035
 	var pulse := 1.0 + sin(age * 13.0 + wobble_phase) * pulse_amount
-	var r := body_radius * visual_scale * pulse * success_bloom
+	var r := body_radius * visual_scale * pulse * success_bloom * _head_scale()
 	if type_id == "galaxy":
 		var galaxy_axis := Vector2(1.0, 0.34).rotated(travel_direction.angle()).normalized()
 		draw_line(-galaxy_axis * r * 2.7, galaxy_axis * r * 2.7, Color(glow_color, 0.12 * visibility), r * 1.4, true)
@@ -455,25 +457,55 @@ func _draw() -> void:
 			draw_circle(component, r * 0.62, Color(primary_color, clampf(visibility, 0.0, 1.0)))
 			draw_circle(component - travel_direction * r * 0.14, r * 0.24, Color(1.0, 1.0, 1.0, clampf(visibility, 0.0, 1.0)))
 	else:
-		draw_circle(Vector2.ZERO, r * 3.4, Color(glow_color, clampf(0.065 * visibility, 0.0, 1.0)))
-		draw_circle(Vector2.ZERO, r * 1.95, Color(glow_color, clampf(0.17 * visibility, 0.0, 1.0)))
-		draw_arc(Vector2.ZERO, r + (8.0 + sin(age * 4.0) * 1.5) * visual_scale, 0.0, TAU, 28, Color(glow_color, clampf(0.16 * visibility, 0.0, 1.0)), 1.2 * visual_scale, true)
+		draw_circle(Vector2.ZERO, r * 2.55, Color(glow_color, clampf(0.045 * visibility, 0.0, 1.0)))
+		draw_circle(Vector2.ZERO, r * 1.55, Color(glow_color, clampf(0.12 * visibility, 0.0, 1.0)))
 		draw_circle(Vector2.ZERO, r, Color(primary_color, clampf(visibility, 0.0, 1.0)))
-		draw_circle(-travel_direction * r * 0.22, r * 0.45, Color(1.0, 1.0, 1.0, clampf(visibility, 0.0, 1.0)))
+		draw_circle(-travel_direction * r * 0.20, r * 0.34, Color(1.0, 1.0, 1.0, clampf(0.90 * visibility, 0.0, 1.0)))
+		if burn_style == "split":
+			var split_visibility := smoothstep(0.18, split_progress, get_burn_progress()) * visibility
+			var split_axis := Vector2(-travel_direction.y, travel_direction.x)
+			for side in [-1.0, 1.0]:
+				var spark_center := -travel_direction * r * 0.85 + split_axis * r * 0.58 * float(side)
+				draw_circle(spark_center, r * 0.19, Color(primary_color, clampf(split_visibility * 0.78, 0.0, 1.0)))
 
 	if type_id == "fireball" or type_id == "major":
 		var flame_dir := -travel_direction
 		for index in range(3 if type_id == "fireball" else 6):
-			var side := Vector2(-flame_dir.y, flame_dir.x) * sin(age * 8.0 + index * 1.7) * r * 0.35
-			var center := flame_dir * r * (1.0 + index * 0.42) + side
-			draw_circle(center, r * (0.52 - index * 0.045), Color(glow_color, clampf((0.28 - index * 0.025) * visibility, 0.0, 1.0)))
+			var side := Vector2(-flame_dir.y, flame_dir.x) * sin(age * 8.0 + index * 1.7) * r * 0.24
+			var center := flame_dir * r * (1.15 + index * 0.55) + side
+			draw_circle(center, r * maxf(0.12, 0.30 - index * 0.028), Color(glow_color, clampf((0.24 - index * 0.024) * visibility, 0.0, 1.0)))
 
 	var scan_rate := get_automatic_rate()
 	if scan_rate > 0.0 and alive:
 		var scan_radius := (body_radius + 12.0 + sin(age * 5.0) * 2.0) * visual_scale
 		var start_angle := age * 2.5
-		draw_arc(Vector2.ZERO, scan_radius, start_angle, start_angle + PI * 1.25, 30, Color(0.39, 0.95, 0.82, minf(1.0, burn_visibility)), 1.6 * visual_scale, true)
-		draw_arc(Vector2.ZERO, scan_radius + 5.0 * visual_scale, -start_angle * 0.7, -start_angle * 0.7 + PI * 0.55, 18, Color(0.38, 0.95, 0.82, 0.38 * minf(1.0, burn_visibility)), 1.0 * visual_scale, true)
+		_draw_dashed_arc(scan_radius, start_angle, PI * 1.25, 10, Color(UITheme.INK_LOW, 0.58 * minf(1.0, burn_visibility)), 1.2 * visual_scale)
+		_draw_dashed_arc(scan_radius + 5.0 * visual_scale, -start_angle * 0.7, PI * 0.55, 5, Color(UITheme.ACCENT_DEEP, 0.52 * minf(1.0, burn_visibility)), 0.9 * visual_scale)
+
+
+func _head_scale() -> float:
+	match type_id:
+		"fast":
+			return 0.62
+		"fragment_piece":
+			return 0.68
+		"fragment":
+			return 0.80
+		"fireball":
+			return 0.50
+		"major":
+			return 0.43
+		"satellite", "variable_star", "comet", "binary_star", "galaxy":
+			return 0.84
+		_:
+			return 0.72
+
+
+func _draw_dashed_arc(radius: float, start_angle: float, arc_length: float, dash_count: int, color: Color, width: float) -> void:
+	var cell := arc_length / float(dash_count)
+	for index in range(dash_count):
+		var dash_start := start_angle + cell * float(index)
+		draw_arc(Vector2.ZERO, radius, dash_start, dash_start + cell * 0.46, 5, color, width, true)
 
 
 func _current_visual_scale() -> float:

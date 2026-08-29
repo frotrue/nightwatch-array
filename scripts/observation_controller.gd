@@ -386,7 +386,7 @@ func _draw_software_cursor() -> void:
 	# change is what says "you are measuring now".
 	var shadow_color := Color(0.03, 0.012, 0.008, 0.94)
 	var cursor_color := UITheme.INSTRUMENT_ARC if tracking else UITheme.INK_HIGH
-	var field_alpha := 0.065 if was_holding else 0.026
+	var field_alpha := 0.030 if tracking else (0.055 if was_holding else 0.020)
 	var reticle_alpha := 0.34 if tracking else (0.96 if was_holding else 0.72)
 	draw_circle(cursor_position, observation_radius, Color(cursor_color, field_alpha))
 	# The backing stroke only needs to be wide enough for whatever sits on it.
@@ -402,7 +402,7 @@ func _draw_software_cursor() -> void:
 			-PI * 0.5 + TAU * progress,
 			64,
 			cursor_color,
-			lerpf(2.2, 5.0, progress) * visual_scale,
+			lerpf(2.4, 3.8, progress) * visual_scale,
 			true
 		)
 	for direction in [Vector2.LEFT, Vector2.RIGHT, Vector2.UP, Vector2.DOWN]:
@@ -410,12 +410,14 @@ func _draw_software_cursor() -> void:
 		var range_tick_end: Vector2 = cursor_position + direction * (observation_radius + 5.0 * visual_scale)
 		draw_line(range_tick_start, range_tick_end, shadow_color, 4.2 * visual_scale, true)
 		draw_line(range_tick_start, range_tick_end, Color(cursor_color, reticle_alpha), 1.8 * visual_scale, true)
-		var center_mark_start: Vector2 = cursor_position + direction * 4.0 * visual_scale
-		var center_mark_end: Vector2 = cursor_position + direction * 8.0 * visual_scale
-		draw_line(center_mark_start, center_mark_end, shadow_color, 4.0 * visual_scale, true)
-		draw_line(center_mark_start, center_mark_end, Color(cursor_color, reticle_alpha), 1.6 * visual_scale, true)
-	draw_circle(cursor_position, 4.0 * visual_scale, shadow_color)
-	draw_circle(cursor_position, 1.8 * visual_scale, cursor_color)
+		if not tracking:
+			var center_mark_start: Vector2 = cursor_position + direction * 4.0 * visual_scale
+			var center_mark_end: Vector2 = cursor_position + direction * 8.0 * visual_scale
+			draw_line(center_mark_start, center_mark_end, shadow_color, 4.0 * visual_scale, true)
+			draw_line(center_mark_start, center_mark_end, Color(cursor_color, reticle_alpha), 1.6 * visual_scale, true)
+	if not tracking:
+		draw_circle(cursor_position, 4.0 * visual_scale, shadow_color)
+		draw_circle(cursor_position, 1.8 * visual_scale, cursor_color)
 	_draw_manual_combo(observation_radius)
 
 
@@ -470,7 +472,8 @@ func _draw_tracking_ring(target, is_primary: bool) -> void:
 	# the cursor drifts inside the grace radius the connector line is what says
 	# which object is still latched.
 	if is_primary:
-		draw_line(cursor_position, target.global_position, Color(UITheme.ACCENT_DEEP, 0.45), 1.0 * visual_scale, true)
+		if cursor_position.distance_to(target.global_position) > 2.0 * visual_scale:
+			draw_line(cursor_position, target.global_position, Color(UITheme.ACCENT_DEEP, 0.45), 1.0 * visual_scale, true)
 		return
 	# Secondary targets keep a ring of their own, on one radius: the dim full
 	# circle is the track and the bright arc fills it. The cursor gauge only ever

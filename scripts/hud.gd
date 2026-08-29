@@ -1001,7 +1001,7 @@ func _build_interface() -> void:
 	banner_root.add_child(banner_subtitle)
 	_layout_banner()
 
-	tutorial_label = _spec_label(tr("HUD_TUTORIAL_START"), UITheme.sans(), 15.0, UITheme.HINT)
+	tutorial_label = _spec_label(tr("HUD_TUTORIAL_START"), UITheme.sans(), 13.0, UITheme.HINT)
 	tutorial_label.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	tutorial_label.anchor_left = 0.0
 	tutorial_label.anchor_right = 1.0
@@ -1031,8 +1031,8 @@ func _build_interface() -> void:
 	settings_button.offset_bottom = -UITheme.px(50.0)
 	settings_button.alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	settings_button.add_theme_font_override("font", UITheme.mono())
-	settings_button.add_theme_font_size_override("font_size", UITheme.size_px(12.0))
-	settings_button.add_theme_constant_override("spacing_glyph", UITheme.tracking(UITheme.size_px(12.0), 0.20))
+	settings_button.add_theme_font_size_override("font_size", UITheme.size_px(11.0))
+	settings_button.add_theme_constant_override("spacing_glyph", UITheme.tracking(UITheme.size_px(11.0), 0.20))
 	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
 		settings_button.add_theme_color_override(state, UITheme.INK_LOW)
 	settings_button.add_theme_color_override("font_hover_color", UITheme.INK_MID)
@@ -1089,20 +1089,20 @@ func _build_data_readout() -> void:
 	var column := Control.new()
 	column.name = "DataReadout"
 	column.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	column.offset_left = UITheme.px(56.0)
-	column.offset_top = UITheme.px(46.0)
+	column.offset_left = UITheme.px(64.0)
+	column.offset_top = UITheme.px(54.0)
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root_control.add_child(column)
 
-	data_label = _spec_label("0", UITheme.mono_tabular(), 76.0, UITheme.INK_MAX, -0.03)
+	data_label = _spec_label("0", UITheme.mono_tabular(), 58.0, UITheme.INK_MAX, -0.02)
 	data_label.position = Vector2.ZERO
 	column.add_child(data_label)
 
-	data_gain_label = _spec_label(tr("HUD_DATA_GAIN") % 0, UITheme.mono_tabular(), 22.0, UITheme.GAIN)
+	data_gain_label = _spec_label(tr("HUD_DATA_GAIN") % 0, UITheme.mono_tabular(), 17.0, UITheme.GAIN)
 	data_gain_label.visible = false
 	column.add_child(data_gain_label)
 
-	data_caption_label = _spec_label(tr("HUD_DATA_CAPTION"), UITheme.mono(), 12.0, UITheme.INK_MID, 0.28)
+	data_caption_label = _spec_label(tr("HUD_DATA_CAPTION"), UITheme.mono(), 11.0, UITheme.INK_MID, 0.26)
 	column.add_child(data_caption_label)
 	_layout_data_readout()
 	data_label.resized.connect(_layout_data_readout)
@@ -1112,15 +1112,18 @@ func _layout_data_readout() -> void:
 	if data_label == null:
 		return
 	var value_size := data_label.get_combined_minimum_size()
+	var caption_size := data_caption_label.get_combined_minimum_size()
+	var value_top := caption_size.y + UITheme.px(8.0)
+	data_caption_label.position = Vector2.ZERO
+	data_label.position = Vector2(0.0, value_top)
 	data_label.size = value_size
 	# The gain sits on the value's baseline, not its box, so it does not drift when
 	# the counter gains a digit.
 	var gain_size := data_gain_label.get_combined_minimum_size()
 	data_gain_label.position = Vector2(
 		value_size.x + UITheme.px(14.0),
-		value_size.y * 0.86 - gain_size.y
+		value_top + value_size.y * 0.86 - gain_size.y
 	)
-	data_caption_label.position = Vector2(0.0, value_size.y * 0.86 + UITheme.px(12.0))
 
 
 func _build_phase_clock() -> void:
@@ -1130,11 +1133,11 @@ func _build_phase_clock() -> void:
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root_control.add_child(column)
 
-	phase_round_label = _spec_label("", UITheme.mono(), 12.0, UITheme.INK_MID, 0.30)
+	phase_round_label = _spec_label("", UITheme.mono(), 11.0, UITheme.INK_MID, 0.26)
 	phase_round_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(phase_round_label)
 
-	time_label = _spec_label(tr("HUD_TIME") % [0, 0], UITheme.mono_tabular(), 40.0, UITheme.INK_HIGH, 0.02)
+	time_label = _spec_label(tr("HUD_TIME") % [0, 0], UITheme.mono_tabular(), 54.0, UITheme.INK_HIGH, 0.02)
 	time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(time_label)
 
@@ -1157,15 +1160,15 @@ func _build_phase_clock() -> void:
 func _layout_phase_clock() -> void:
 	if time_label == null:
 		return
-	var width := UITheme.px(360.0)
+	var width := UITheme.px(300.0)
 	var round_height := phase_round_label.get_combined_minimum_size().y
 	var clock_height := time_label.get_combined_minimum_size().y
 	for label in [phase_round_label, time_label, save_mode_label]:
 		label.size.x = width
 		label.position.x = -width * 0.5
-	phase_round_label.position.y = UITheme.px(48.0)
-	time_label.position.y = phase_round_label.position.y + round_height + UITheme.px(9.0)
-	var line_y := time_label.position.y + clock_height + UITheme.px(14.0)
+	phase_round_label.position.y = UITheme.px(46.0)
+	time_label.position.y = phase_round_label.position.y + round_height + UITheme.px(7.0)
+	var line_y := time_label.position.y + clock_height + UITheme.px(11.0)
 	phase_window_track.position = Vector2(-width * 0.5, line_y)
 	phase_window_track.size = Vector2(width, 1.0)
 	phase_window_fill.position = phase_window_track.position
@@ -1183,11 +1186,11 @@ func _build_ready_notice() -> void:
 
 	ready_pip = ColorRect.new()
 	ready_pip.color = UITheme.ACCENT_PIP
-	ready_pip.size = Vector2(UITheme.px(7.0), UITheme.px(7.0))
+	ready_pip.size = Vector2(UITheme.px(5.0), UITheme.px(5.0))
 	ready_pip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ready_notice.add_child(ready_pip)
 
-	ready_label = _spec_label("", UITheme.sans(), 14.0, UITheme.ACCENT_TEXT, 0.06)
+	ready_label = _spec_label("", UITheme.mono(), 12.0, UITheme.ACCENT_TEXT, 0.14)
 	ready_notice.add_child(ready_label)
 
 
@@ -1198,8 +1201,8 @@ func _layout_ready_notice() -> void:
 	ready_label.size = text_size
 	var pip_gap := UITheme.px(10.0)
 	var total := text_size.x + pip_gap + ready_pip.size.x
-	var left := -UITheme.px(56.0) - total
-	var top := UITheme.px(46.0)
+	var left := -UITheme.px(64.0) - total
+	var top := UITheme.px(58.0)
 	ready_pip.position = Vector2(left, top + text_size.y * 0.5 - ready_pip.size.y * 0.5)
 	ready_label.position = Vector2(left + ready_pip.size.x + pip_gap, top)
 
@@ -1214,31 +1217,31 @@ func _build_tracking_cluster() -> void:
 	tracking_cluster.visible = false
 	root_control.add_child(tracking_cluster)
 
-	tracking_percent = _spec_label("0%", UITheme.mono_tabular(), 26.0, UITheme.INSTRUMENT_ARC)
+	tracking_percent = _spec_label("0%", UITheme.mono_tabular(), 24.0, UITheme.INSTRUMENT_ARC)
 	tracking_percent.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	tracking_cluster.add_child(tracking_percent)
 
-	tracking_target = _spec_label("", UITheme.sans(), 14.0, Color(UITheme.INSTRUMENT_LABEL, 0.80), 0.14)
+	tracking_target = _spec_label("", UITheme.sans(), 13.0, Color(UITheme.INSTRUMENT_LABEL, 0.78), 0.12)
 	tracking_target.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	tracking_cluster.add_child(tracking_target)
 
-	tracking_quality = _spec_label("", UITheme.mono(), 13.0, UITheme.INSTRUMENT_QUALITY, 0.12)
+	tracking_quality = _spec_label("", UITheme.mono(), 12.0, UITheme.INSTRUMENT_QUALITY, 0.12)
 	tracking_cluster.add_child(tracking_quality)
 	tracking_divider = ColorRect.new()
 	tracking_divider.color = UITheme.TOOLTIP_LABEL
 	tracking_divider.size = Vector2(1.0, UITheme.px(11.0))
 	tracking_divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	tracking_cluster.add_child(tracking_divider)
-	tracking_multiplier = _spec_label("", UITheme.mono_tabular(), 13.0, UITheme.INSTRUMENT_QUALITY)
+	tracking_multiplier = _spec_label("", UITheme.mono_tabular(), 12.0, UITheme.INSTRUMENT_QUALITY)
 	tracking_cluster.add_child(tracking_multiplier)
 
 
 func _layout_tracking_cluster() -> void:
 	tracking_layout_passes += 1
 	var cursor := tracking_cluster.cursor
-	var width := UITheme.px(420.0)
+	var width := UITheme.px(360.0)
 	# Clear of the cursor ring so glyphs never sit on the meteor being tracked.
-	var percent_top := cursor.y + tracking_cluster.ring_radius + UITheme.px(18.0)
+	var percent_top := cursor.y + tracking_cluster.ring_radius + UITheme.px(12.0)
 	if tracking_metrics_dirty:
 		tracking_percent.size.x = width
 		tracking_target.size.x = width
@@ -1252,8 +1255,8 @@ func _layout_tracking_cluster() -> void:
 	for label in [tracking_percent, tracking_target]:
 		label.position.x = cursor.x - width * 0.5
 	tracking_percent.position.y = percent_top
-	tracking_target.position.y = percent_top + tracking_percent_height + UITheme.px(5.0)
-	var row_top := tracking_target.position.y + tracking_target_height + UITheme.px(8.0)
+	tracking_target.position.y = percent_top + tracking_percent_height + UITheme.px(3.0)
+	var row_top := tracking_target.position.y + tracking_target_height + UITheme.px(6.0)
 
 	var gap := UITheme.px(8.0)
 	var show_divider := not tracking_multiplier.text.is_empty()
