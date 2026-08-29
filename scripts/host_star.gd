@@ -31,6 +31,7 @@ var visual_age: float = 0.0
 var observation_view: Camera2D
 var profile_id: String = "basic"
 var profile: Dictionary = {}
+var anchor_position := Vector2.ZERO
 var is_hidden: bool = false
 var reveal_hits: int = 0
 var reveal_angles: Array[float] = []
@@ -45,6 +46,7 @@ var linked_group_id: int = 0
 func configure(id: int, world_position: Vector2, reward: float, view: Camera2D = null) -> void:
 	stable_star_id = id
 	position = world_position
+	anchor_position = world_position
 	base_value = reward
 	observation_view = view
 	queue_redraw()
@@ -62,10 +64,10 @@ func configure_profile(id: String, definition: Dictionary) -> void:
 
 func _process(delta: float) -> void:
 	visual_age += delta
-	# A completed transit must be released before the same hold can become a
-	# harvest. This makes "cash now or wait" a deliberate second gesture.
-	if not is_hidden and state == "idle" and confirmation_count > 0 and not harvest_ready and not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
-		arm_harvest()
+	var drift_radius := _screen_length(float(profile.get("drift_radius_screen", 0.0)))
+	if drift_radius > 0.0:
+		var phase := visual_age * float(profile.get("drift_speed", 0.0)) + float(stable_star_id) * 0.71
+		position = anchor_position + Vector2(cos(phase), sin(phase * 0.73) * 0.46) * drift_radius
 	queue_redraw()
 
 
@@ -211,7 +213,8 @@ func apply_manual_observation(
 	manual_tracking_time += delta
 	quality_integral += quality * delta
 	var tracking_speed := lerpf(0.72, 1.42, quality) * maxf(1.0, manual_speed_multiplier)
-	observation_progress += delta * tracking_speed / REQUIRED_TRACK_TIME
+	var required_time := REQUIRED_TRACK_TIME * maxf(0.1, float(profile.get("tracking_time_multiplier", 1.0)))
+	observation_progress += delta * tracking_speed / required_time
 	if observation_progress >= 1.0:
 		if state == "decoy":
 			_finish_decoy()
@@ -402,17 +405,14 @@ func _draw() -> void:
 		var decoy_distance := (transit_phase_ratio - 0.5) / 0.22
 		dip = 1.0 + 0.30 * exp(-decoy_distance * decoy_distance)
 	var pulse := 1.0 + sin(visual_age * 2.3 + float(stable_star_id)) * 0.04
-	var radius := 4.6 * scale * pulse
+	var visual_scale := maxf(0.5, float(profile.get("visual_scale", 1.0)))
+	var brightness := clampf(float(profile.get("brightness", 1.0)), 0.25, 1.0)
+	var radius := 4.6 * scale * pulse * visual_scale
 	var color := get_visual_color()
-	var reference_radius := 132.0 * scale
-	for marker_index in range(28):
-		var marker_angle := TAU * float(marker_index) / 28.0
-		var marker_position := Vector2.from_angle(marker_angle) * reference_radius
-		draw_circle(marker_position, 1.1 * scale, Color(color, 0.24))
-	draw_circle(Vector2.ZERO, radius * 3.4, Color(color, 0.08 * dip))
-	draw_circle(Vector2.ZERO, radius * 1.8, Color(color, 0.20 * dip))
-	draw_circle(Vector2.ZERO, radius, Color(1.0, 0.93, 0.76, dip))
-	draw_circle(Vector2(-1.0, -1.0) * scale, radius * 0.34, Color(1.0, 1.0, 1.0, dip))
+	draw_circle(Vector2.ZERO, radius * 3.4, Color(color, 0.08 * dip * brightness))
+	draw_circle(Vector2.ZERO, radius * 1.8, Color(color, 0.20 * dip * brightness))
+	draw_circle(Vector2.ZERO, radius, Color(1.0, 0.93, 0.76, dip * brightness))
+	draw_circle(Vector2(-1.0, -1.0) * scale, radius * 0.34, Color(1.0, 1.0, 1.0, dip * brightness))
 	for confirmation_index in range(MAX_CONFIRMATIONS):
 		var pip_position := Vector2((float(confirmation_index) - 1.0) * 8.0, -24.0) * scale
 		var pip_color := Color(color, 0.92) if confirmation_index < confirmation_count else Color(color, 0.18)

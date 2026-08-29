@@ -2,7 +2,7 @@ extends SceneTree
 
 const Balance = preload("res://scripts/game_balance.gd")
 const TEST_SEED := 20260827
-const TEST_SPAN := 1.05
+const TEST_SPAN := 1.1025
 const PLAN_TYPES := ["common", "fast", "fragment", "fireball", "major", "satellite", "galaxy"]
 const DISTRIBUTION_SEED := 20260829
 const DISTRIBUTION_SAMPLE_COUNT := 1000
@@ -54,7 +54,7 @@ func _run() -> void:
 	var activity_at_test: Rect2 = view.meteor_activity_rect()
 	var plans_at_test := _capture_plans(game.spawner)
 
-	_check(plans_at_one != plans_at_test, "fixed-seed meteor plans expand when observation span reaches 1.05")
+	_check(plans_at_one != plans_at_test, "fixed-seed meteor plans expand at the 1.1025 chapter milestone")
 	_check(atmospheric_at_one == atmospheric_at_test, "atmospheric rectangle is independent of observation span")
 	_check(activity_at_one.is_equal_approx(atmospheric_at_one), "stage-zero meteor activity matches the original atmospheric rectangle")
 	_check(
@@ -96,7 +96,7 @@ func _run() -> void:
 		_check(
 			is_equal_approx(world_length, screen_budget * TEST_SPAN)
 			and is_equal_approx(screen_distance, screen_budget),
-			"screen-space budget %.0fpx remains unchanged at span 1.05" % screen_budget
+			"screen-space budget %.0fpx remains unchanged at span 1.1025" % screen_budget
 		)
 
 	var meteor = game.spawner.spawn_meteor("common", centre, Vector2.RIGHT, 10.0)
@@ -170,8 +170,8 @@ func _run() -> void:
 	)
 	_check(
 		is_equal_approx(Balance.GALACTIC_OBSERVATION_SPAN_STEP, TEST_SPAN)
-		and is_equal_approx(Balance.GALACTIC_FINAL_OBSERVATION_SPAN, pow(TEST_SPAN, 8)),
-		"the five-percent step and eight-step ceiling share the approved balance contract"
+		and is_equal_approx(Balance.GALACTIC_FINAL_OBSERVATION_SPAN, pow(TEST_SPAN, 4)),
+		"the 10.25-percent step and four-chapter ceiling share the approved balance contract"
 	)
 
 	view.set_observation_span(1.0)

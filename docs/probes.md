@@ -41,16 +41,20 @@ feel rather than correctness.
 
 ### Research contract test
 
-Checks all 124 research definitions against the three-layer effect schema. It
-requires every literal `has_upgrade("id")` reference to resolve, every research
+Checks 107 installable research definitions against the three-layer effect
+schema, while the chart independently asserts 17 non-interactive Local Group
+records. It requires every literal
+`has_upgrade("id")` reference to resolve, every functional research
 node to have one declared implementation connection, and the only production
-parameter keys to have live consumers. Fifty-five nodes have executable contracts:
+parameter keys to have live consumers. Thirty-eight nodes have executable contracts:
 ten global observation-value multipliers, four duration bonuses, four legacy
 plus three Canis plus one Draco regular active-contact capacity deltas, and
-three Canis plus one Draco regular-arrival floors, one host/transit unlock, one
-transit-only value multiplier, six later galactic span steps, two independent
-host/window capacity steps, and 19 six-family rule profiles. The other 69 ids are held as an exact
+three Canis plus one Draco regular-arrival floors, three simple Local Group
+observation profiles, four chapter milestones, and five phenomenon contracts.
+The other 69 functional ids are held as an exact
 unverified baseline that may shrink but cannot silently grow or exchange ids.
+The 17 decorative galaxies are separately required to remain chart records
+rather than upgrade definitions.
 
 For each executable contract, the test compares independent expected behavior
 against a public runtime accessor. It also checks English and Korean player
@@ -63,7 +67,7 @@ false claim on Storm Zenith.
 & $godot --headless --path . --script res://tests/research_contract_test.gd
 ```
 
-- Pass: `RESEARCH_CONTRACT_PASS: 124 nodes, 55 executable contracts, 69 exact unverified ids, and bidirectional en/ko claims`
+- Pass: `RESEARCH_CONTRACT_PASS: 107 installable research nodes, 38 executable contracts, 69 exact unverified ids, and bidirectional en/ko claims`
 - Fail: `RESEARCH_CONTRACT:` error lines, then `RESEARCH_CONTRACT_FAIL: N failure(s)`
 
 ### Smoke test
@@ -87,7 +91,7 @@ performance caps, stale references, and reset.
 
 ### Observation span gate
 
-Runs identical fixed-seed atmospheric plans at span `1.0` and `1.05`, requiring
+Runs identical fixed-seed atmospheric plans at span `1.0` and `1.1025`, requiring
 exact serialized equality. It also checks the expanded visible rectangle,
 screen-fixed input/effect/meteor budgets, background/flash coverage, and that
 the sky gradient and horizon span the visible frame rather than stopping at the
@@ -101,15 +105,16 @@ fixed atmospheric boundary.
 
 ### Galactic vertical-slice gate
 
-Checks the 124-node topology, exact eight-step span, independent one-to-two
-host/window capacities, all six reusable Local Group rule families,
-all three confirmation tiers and their shortened follow-up waits, explicit
-harvest, miss retention, round-boundary evidence retention, respawn, reference
-selection and no-stacking, active-transit save/load, unchanged meteor cap 32,
-and unchanged global `×8192` product. It also compares fixed 180-second
-1/2/3-confirmation policies: long-run rates must remain within 20%, while a
-small immediate need favors one confirmation, a middle need favors two, and a
-larger need favors three.
+Checks the 12-functional/17-decoration Local Group topology, exact four-step
+span, one-to-two distant-target capacities, and four presentation-only chapter-one
+profiles. It asserts that removed comparison, decoy, reveal, linked-priority,
+and forecast rules cannot re-enter those profiles; one hold both completes and
+pays a target without a second harvest gesture; M31 drifts visibly; and the
+two-target state survives save/load. It also covers persistent supernova
+recovery, the two-item phenomenon queue, ordinary hold observation on
+full/partial lens shapes, fixed-endpoint
+visual lens curves with automation still enabled, unchanged meteor cap 32,
+unchanged global `×8192`, and the 436.8 px/s dish regression.
 
 ```powershell
 & $godot --headless --path . --script res://tests/galactic_slice_test.gd
@@ -177,7 +182,15 @@ Header: `DURATION_PRICING_ENV`.
 
 ### Full-tree economy gate — `full_tree_economy_test.gd`
 
-Pass/fail gate for the expanded 124-system graph. It runs three deterministic
+This is currently a **historical measurement for the superseded 124-functional-
+node route**, not an acceptance gate for the 2026-08-30 Local Group simplification.
+The approved design deliberately leaves its economy and completion-time target
+unset; the four correctness gates above must pass without tuning prices to a
+duration. Update this driver to understand immediate-pay distant targets,
+supernova timing, and hold-observed lens shapes before using its output for the
+new 107-node graph.
+
+In its historical form it runs three deterministic
 scripted-engaged watches at `0.05s` steps until all research is purchased. It
 buys the cheapest currently available research at each intermission, applies
 purchased Lyra calibration automatically, reproduces purchased Taurus combo
@@ -204,7 +217,7 @@ and Local Group maximum intermission purchase-batch sizes. Host work must stay
 below half of measured busy cursor time, and a Local Group intermission may not
 batch more than one node. Multiplier spacing and overall purchase-batch size
 are playtest diagnostics, not automated pass/fail thresholds. This is the
-authoritative economy-tuning gate for the live graph.
+authoritative economy-tuning gate for the archived pre-redesign graph.
 
 ```powershell
 & $godot --headless --path . --script res://tests/full_tree_economy_test.gd
@@ -352,7 +365,8 @@ the number of chart layout passes. The burst deliberately sends more wheel
 events than a frame should commit; `layout_passes` should stay at roughly one
 per rendered frame rather than eight. The candidate pull-back accepts only a
 windowed `galactic_transition` and `galactic_final` p95 below 16.7 ms. The ENV
-line records the 29 rendered galactic research nodes, 74 faint non-interactive
+line records 12 rendered galactic research nodes plus 17 explicit muted
+placeholders, 74 faint non-interactive
 galactic background points, and pull-back duration. The final phase also includes
 the miniature 95-node decorative core, radial halos, dashed orbits, code labels,
 completion ledger, and fixed inspector introduced by the galaxy-map redesign.
@@ -379,7 +393,7 @@ $env:NIGHTWATCH_PRICING_SEEDS = "20"; & $godot --headless --path . --script res:
 `tests/research_chart_preview.gd`는 설계 검토용으로 연구 화면을 캡처해
 `build/research_chart_preview.png`로 저장한다. 렌더된 프레임이 필요하므로
 `--headless` 없이 창 모드로 실행한다. 기본 캡처는 목업과 직접 비교할 수 있도록
-앞의 열 계열을 완료하고 큰개자리 세 노드를 설치한 81/124 상태, 데이터
+앞의 열 계열을 완료하고 큰개자리 세 노드를 설치한 81/107 상태, 데이터
 1,284,000, 5차 관측 80초 문맥을 재현한다.
 
 ```powershell

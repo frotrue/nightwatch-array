@@ -478,7 +478,7 @@ UPGRADE_LEO_II_NAME,Leo II,사자자리 II
 UPGRADE_LEO_II_DESC,"Adds a hidden pulsation-decoy host with a generous reacquisition window; a fresh sweep always reveals it again.",넉넉한 재획득 시간이 있는 숨은 맥동 미끼 호스트를 추가합니다. 놓쳐도 다시 훑으면 항상 드러납니다.
 UPGRADE_ANDROMEDA_II_NAME,Andromeda II,안드로메다 II
 UPGRADE_ANDROMEDA_II_DESC,Adds a two-notch forecast host whose matched comparison star locks the final transit baseline.,두 눈금으로 예보되며 색이 맞는 비교별로 마지막 통과 기준선을 잠그는 호스트를 추가합니다.
-RESEARCH_GROUP_LOCAL_GROUP,LOCAL GROUP / TRANSITS,국부은하군 / 통과 관측
+RESEARCH_GROUP_LOCAL_GROUP,LOCAL GROUP / PHENOMENA,국부은하군 / 천체 현상
 GALAXY_LARGE_MAGELLANIC_CLOUD,LARGE MAGELLANIC CLOUD,대마젤란은하
 GALAXY_SMALL_MAGELLANIC_CLOUD,SMALL MAGELLANIC CLOUD,소마젤란은하
 GALAXY_ANDROMEDA,ANDROMEDA GALAXY,안드로메다은하
@@ -628,14 +628,35 @@ TREE_GALACTIC_COST,DATA %s,데이터 %s
 TREE_GALACTIC_FIELD_STATUS,STATUS,상태
 TREE_GALACTIC_FIELD_COST,COST,비용
 TREE_GALACTIC_FIELD_EFFECT,EFFECT,효과
-TREE_GALACTIC_FIELD_RULE,RULE,규칙
-TREE_GALACTIC_RULES_TITLE,TRANSIT OBSERVATION RULES,통과 관측 규칙
-TREE_GALACTIC_RULE_R1,Place reference stars and use only the nearest one.,기준별 배치와 가장 가까운 단일 기준 선택
-TREE_GALACTIC_RULE_R2,Let brightening decoys pass without tracking them.,밝아지는 미끼를 추적하지 않고 놓아 보내기
-TREE_GALACTIC_RULE_R3,Choose the correct comparison star to lock the baseline.,올바른 비교별을 먼저 골라 기준선 잠그기
-TREE_GALACTIC_RULE_R4,Sweep empty sky in the right direction to reveal hidden hosts.,빈 하늘을 올바른 방향으로 훑어 숨은 호스트 드러내기
-TREE_GALACTIC_RULE_R5,Read the forecast notches to time the next transit.,예보 눈금으로 다음 통과 시점 읽기
-TREE_GALACTIC_RULE_R6,Choose priority between two hosts and overlapping transits.,두 호스트와 겹친 통과 사이의 우선순위 선택
 TREE_GALACTIC_INNER_HINT,INNER MILKY WAY · LATER RESEARCH OUTWARD,안쪽 우리 은하 · 바깥으로 갈수록 나중 연구
 TREE_GALACTIC_RETURN,[U] RETURN TO OBSERVATION,[U] 관측으로 돌아가기
 TREE_GALACTIC_WATERMARK,LOCAL GROUP,LOCAL GROUP
+BANNER_GALACTIC_OBSERVATION,GALACTIC RECORD UPDATED,은하 관측 기록 갱신
+METEOR_SUPERNOVA,SUPERNOVA,초신성
+METEOR_EINSTEIN_RING,EINSTEIN RING,아인슈타인 고리
+METEOR_PARTIAL_LENS,PARTIAL LENS ARC,부분 중력렌즈 호
+METEOR_LENSED_SUPERNOVA,LENSED SUPERNOVA,중력렌즈 초신성
+UPGRADE_LMC_TRANSIT_WATCH_NAME,LMC Distant Watch,LMC 원거리 관측
+UPGRADE_LMC_TRANSIT_WATCH_DESC,Opens the first distant-galaxy target. Observe it with the same aim-and-hold gesture used everywhere else.,첫 원거리 은하 표적을 엽니다. 다른 표적과 같은 조준·유지 관측을 사용합니다.
+UPGRADE_SMC_REFERENCE_BASELINE_NAME,SMC Faint Watch,SMC 희미한 관측
+UPGRADE_SMC_REFERENCE_BASELINE_DESC,"Adds a fainter distant target that takes 35% longer to observe, without adding a new interaction rule.",새 규칙 없이 관측 시간이 35% 더 긴 희미한 원거리 표적을 추가합니다.
+UPGRADE_M31_HIDDEN_DECOY_SURVEY_NAME,M31 Drift Watch,M31 이동 관측
+UPGRADE_M31_HIDDEN_DECOY_SURVEY_DESC,Adds a large target that drifts slowly across the sky and is observed by ordinary tracking.,하늘을 천천히 이동하며 기존 추적으로 관측하는 대형 표적을 추가합니다.
+UPGRADE_M33_TRANSIT_NETWORK_NAME,M33 Twin Watch,M33 동시 관측
+UPGRADE_M33_TRANSIT_NETWORK_DESC,Lets two ordinary distant targets appear together and widens the field by 10.25%.,일반 원거리 표적 두 개가 함께 나타나게 하고 관측 범위를 10.25% 넓힙니다.
+UPGRADE_NGC6822_SUPERNOVA_WATCH_NAME,NGC 6822 Supernova Watch,NGC 6822 초신성 감시
+UPGRADE_NGC6822_SUPERNOVA_WATCH_DESC,"Introduces a persistent supernova with peak, fade, and recoverable remnant phases.",최대광·감광·복구 가능한 잔해 단계를 가진 지속 초신성을 도입합니다.
+UPGRADE_IC10_SUPERNOVA_OVERLAP_NAME,IC 10 Supernova Overlap,IC 10 초신성 중첩
+UPGRADE_IC10_SUPERNOVA_OVERLAP_DESC,Keeps two supernova light curves active at once for a timing choice.,두 초신성 광도 곡선을 동시에 유지해 관측 시점을 선택하게 합니다.
+UPGRADE_IC1613_SUPERNOVA_EPHEMERIS_NAME,IC 1613 Supernova Ephemeris,IC 1613 초신성 천체력
+UPGRADE_IC1613_SUPERNOVA_EPHEMERIS_DESC,Shows the remaining phase around active supernovae and widens the field by 10.25%.,활성 초신성 둘레에 남은 단계를 표시하고 관측 범위를 10.25% 넓힙니다.
+UPGRADE_WLM_EINSTEIN_RING_NAME,WLM Einstein Ring,WLM 아인슈타인 고리
+UPGRADE_WLM_EINSTEIN_RING_DESC,Adds a full lens ring that completes through the same aim-and-hold observation used for every target.,다른 표적과 같은 조준·유지 관측으로 완료하는 완전한 렌즈 고리를 추가합니다.
+UPGRADE_PEGASUS_PARTIAL_LENS_NAME,Pegasus Partial Lens,페가수스 부분 렌즈
+UPGRADE_PEGASUS_PARTIAL_LENS_DESC,Adds a partial lens ring with a smaller visible contact area but the same aim-and-hold observation.,보이는 접촉 영역이 더 작은 부분 렌즈 고리를 같은 조준·유지 방식으로 관측합니다.
+UPGRADE_PHOENIX_LENSED_METEORS_NAME,Phoenix Lensed Paths,피닉스 렌즈 궤도
+UPGRADE_PHOENIX_LENSED_METEORS_DESC,"Bends meteor paths as a visual tracking variation without changing observation or automation rules, and widens the field by 10.25%.",관측·자동화 규칙은 바꾸지 않고 유성 궤도를 시각적으로 굽히며 관측 범위를 10.25% 넓힙니다.
+UPGRADE_LEO_A_LENSED_SUPERNOVA_NAME,Leo A Lensed Supernova,사자자리 A 렌즈 초신성
+UPGRADE_LEO_A_LENSED_SUPERNOVA_DESC,Combines supernova timing with a partial lens shape while keeping the same aim-and-hold observation.,같은 조준·유지 관측을 유지하면서 초신성 시기 선택과 부분 렌즈 형태를 결합합니다.
+UPGRADE_AQUARIUS_LOCAL_GROUP_RECORD_NAME,Local Group Record,국부은하군 기록
+UPGRADE_AQUARIUS_LOCAL_GROUP_RECORD_DESC,Completes the four-chapter record and widens the field by the final 10.25% to its ceiling.,네 장의 기록을 완성하고 관측 범위를 마지막 10.25%만큼 넓혀 상한에 도달합니다.

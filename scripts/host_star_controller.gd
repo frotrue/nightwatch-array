@@ -162,35 +162,9 @@ func record_sweep_segment(from: Vector2, to: Vector2) -> int:
 
 
 func reference_bonus_for(world_position: Vector2) -> Dictionary:
-	var best_distance := INF
-	var best_id := 2147483647
-	var best_multiplier := 1.0
-	var best_source := "none"
-	var radius := _screen_length(REFERENCE_STAR_BONUS_SCREEN_RADIUS)
-	for star in host_stars:
-		if not is_instance_valid(star) or star.is_queued_for_deletion() or bool(star.is_hidden) or String(star.state) == "harvested":
-			continue
-		var normalized_distance: float = world_position.distance_to(star.global_position) / maxf(radius, 0.001)
-		var star_id := int(star.stable_star_id)
-		if normalized_distance < best_distance or (is_equal_approx(normalized_distance, best_distance) and star_id < best_id):
-			best_distance = normalized_distance
-			best_id = star_id
-			best_multiplier = REFERENCE_STAR_VALUE_MULTIPLIER
-			best_source = "host"
-	if progression != null and progression.has_weak_reference_chain():
-		var weak_index := 0
-		for weak_position in _weak_reference_positions():
-			var normalized_distance: float = world_position.distance_to(weak_position) / maxf(radius, 0.001)
-			var weak_id := 100000 + weak_index
-			if normalized_distance < best_distance or (is_equal_approx(normalized_distance, best_distance) and weak_id < best_id):
-				best_distance = normalized_distance
-				best_id = weak_id
-				best_multiplier = WEAK_REFERENCE_VALUE_MULTIPLIER
-				best_source = "weak_chain"
-			weak_index += 1
-	if best_distance > 1.0:
-		return {"applied": false, "multiplier": 1.0, "star_id": 0, "normalized_distance": best_distance, "source": "none"}
-	return {"applied": true, "multiplier": best_multiplier, "star_id": best_id, "normalized_distance": best_distance, "source": best_source}
+	# Local Group targets no longer add a separate reference-star economy rule.
+	# They are observed like every other target and pay their reward directly.
+	return {"applied": false, "multiplier": 1.0, "star_id": 0, "normalized_distance": INF, "source": "none"}
 
 
 func record_meteor_observation(world_position: Vector2) -> Dictionary:
@@ -342,7 +316,7 @@ func _spawn_host(from_respawn: bool = false) -> void:
 func _create_host(star_id: int, world_position: Vector2, profile_id: String):
 	var star = HostStar.new()
 	star.configure(star_id, world_position, BASE_TRANSIT_REWARD, observation_view)
-	var profile: Dictionary = GameBalance.GALACTIC_FEATURES.get(profile_id, {})
+	var profile: Dictionary = GameBalance.GALACTIC_OBSERVATION_PROFILES.get(profile_id, {})
 	star.configure_profile(profile_id, profile)
 	star.transit_completed.connect(_on_transit_completed)
 	star.harvest_completed.connect(_on_harvest_completed)
@@ -389,19 +363,10 @@ func _start_opportunity(star) -> void:
 	if star == null or bool(star.is_hidden) or String(star.state) != "idle" or int(star.confirmation_count) >= HostStar.MAX_CONFIRMATIONS:
 		return
 	var key := _key(star)
-	var opportunity := int(opportunity_counts.get(key, 0)) + 1
-	opportunity_counts[key] = opportunity
-	var decoy_kind := String(Dictionary(star.profile).get("decoy", ""))
-	if not decoy_kind.is_empty() and opportunity % 3 == 1:
-		star.begin_decoy(decoy_kind)
-		window_times[key] = DECOY_WINDOW
-		metrics.decoys_started = int(metrics.decoys_started) + 1
-		return
+	opportunity_counts[key] = int(opportunity_counts.get(key, 0)) + 1
 	star.begin_transit()
 	window_times[key] = TRANSIT_WINDOW
 	metrics.transits_started = int(metrics.transits_started) + 1
-	if int(Dictionary(star.profile).get("comparison_candidates", 0)) > 0:
-		_spawn_comparisons(star)
 
 
 func _spawn_comparisons(star) -> void:
@@ -470,9 +435,14 @@ func _on_transit_completed(star, multiplier: float, was_manual: bool, quality_gr
 	metrics.transits_completed = int(metrics.transits_completed) + 1
 	metrics.confirmations_recorded = int(metrics.confirmations_recorded) + 1
 	var confirmations := int(star.confirmation_count)
-	var projected_reward: float = star.get_harvest_reward()
-	transit_confirmed.emit(star, confirmations, projected_reward, multiplier, was_manual, quality_grade)
-	_schedule_transit(star)
+	var profile_multiplier := float(Dictionary(star.profile).get("reward_multiplier", 1.0))
+	var reward: float = maxf(1.0, round(float(star.base_value) * multiplier * profile_multiplier))
+	transit_confirmed.emit(star, confirmations, reward, multiplier, was_manual, quality_grade)
+	host_harvested.emit(star, reward, multiplier * profile_multiplier, was_manual, quality_grade, confirmations)
+	metrics.hosts_harvested = int(metrics.hosts_harvested) + 1
+	metrics.harvest_reward_total = float(metrics.harvest_reward_total) + reward
+	_remove_host(star, true)
+	_sync_compatibility()
 
 
 func _on_harvest_completed(star) -> void:
@@ -486,11 +456,7 @@ func _on_harvest_completed(star) -> void:
 	metrics.harvest_reward_total = float(metrics.harvest_reward_total) + reward
 	metrics["harvests_at_confirmation_%d" % confirmations] = int(metrics.get("harvests_at_confirmation_%d" % confirmations, 0)) + 1
 	host_harvested.emit(star, reward, multiplier, true, quality_grade, confirmations)
-	var linked := bool(Dictionary(star.profile).get("linked_pair", false))
 	_remove_host(star, true)
-	if linked and not host_stars.is_empty():
-		metrics.linked_candidates_abandoned = int(metrics.linked_candidates_abandoned) + 1
-		_remove_host(host_stars[0], true)
 	_sync_compatibility()
 
 
@@ -600,16 +566,7 @@ func _weak_reference_positions() -> Array[Vector2]:
 
 
 func _draw() -> void:
-	if progression == null or not progression.has_weak_reference_chain():
-		return
-	var scale := _screen_length(1.0)
-	var color := Color("ffd7a0")
-	for anchor in _weak_reference_positions():
-		var local := to_local(anchor)
-		draw_circle(local, 2.4 * scale, Color(color, 0.52))
-		for marker_index in range(18):
-			var angle := TAU * float(marker_index) / 18.0
-			draw_circle(local + Vector2.from_angle(angle) * REFERENCE_STAR_BONUS_SCREEN_RADIUS * scale, 0.8 * scale, Color(color, 0.10))
+	pass
 
 
 func _distance_to_segment(point: Vector2, start: Vector2, finish: Vector2) -> float:

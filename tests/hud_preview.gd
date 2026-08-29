@@ -31,12 +31,6 @@ func _run() -> void:
 		game.progression.debug_purchase_all()
 		if transit_preview:
 			game.host_stars.advance_time(game.host_stars.next_transit_remaining)
-			var host = game.host_stars.host_star
-			for _step in range(20):
-				if host == null or String(host.state) != "transiting":
-					break
-				host.apply_manual_observation(0.2, 0.0, host.get_tracking_radius(game.progression.get_tracking_radius()), 1.0)
-			game.host_stars.advance_time(game.host_stars.next_transit_remaining)
 			game.host_stars.advance_time(game.host_stars.TRANSIT_WINDOW * 0.48)
 		game.hud.hide_tracking()
 	elif survey_preview:

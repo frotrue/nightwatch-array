@@ -200,41 +200,49 @@ const LOCAL_GROUP_GALAXIES: Array[Dictionary] = [
 	{
 		"id": "large_magellanic_cloud", "name_key": "GALAXY_LARGE_MAGELLANIC_CLOUD",
 		"bayer": "LMC", "magnitude": 0.90, "local_position": Vector2(48.2, -214.7),
-		"node_id": "large_magellanic_cloud", "kind": "galaxy",
+		"node_id": "lmc_transit_watch", "kind": "galaxy",
 	},
 	{
 		"id": "small_magellanic_cloud", "name_key": "GALAXY_SMALL_MAGELLANIC_CLOUD",
 		"bayer": "SMC", "magnitude": 2.70, "local_position": Vector2(215.9, -243.4),
-		"node_id": "small_magellanic_cloud", "kind": "galaxy",
+		"node_id": "smc_reference_baseline", "kind": "galaxy",
 	},
-	{"id": "andromeda_galaxy_local", "name_key": "GALAXY_ANDROMEDA", "bayer": "M31", "magnitude": 3.44, "local_position": Vector2(370.9, -131.3), "node_id": "andromeda_galaxy", "kind": "galaxy"},
-	{"id": "messier_32", "name_key": "GALAXY_MESSIER_32", "bayer": "M32", "magnitude": 8.08, "local_position": Vector2(446.2, 74.2), "node_id": "messier_32", "kind": "galaxy"},
-	{"id": "messier_110", "name_key": "GALAXY_MESSIER_110", "bayer": "M110", "magnitude": 8.92, "local_position": Vector2(396.5, 313.9), "node_id": "messier_110", "kind": "galaxy"},
-	{"id": "ngc_147", "name_key": "GALAXY_NGC_147", "bayer": "NGC 147", "magnitude": 9.50, "local_position": Vector2(214.4, 512.5), "node_id": "ngc_147", "kind": "galaxy"},
-	{"id": "ngc_185", "name_key": "GALAXY_NGC_185", "bayer": "NGC 185", "magnitude": 9.20, "local_position": Vector2(-65.3, 599.1), "node_id": "ngc_185", "kind": "galaxy"},
-	{"id": "triangulum_galaxy", "name_key": "GALAXY_TRIANGULUM", "bayer": "M33", "magnitude": 5.72, "local_position": Vector2(-372.8, 529.5), "node_id": "triangulum_galaxy", "kind": "galaxy"},
-	{"id": "ngc_6822", "name_key": "GALAXY_NGC_6822", "bayer": "C57", "magnitude": 9.30, "local_position": Vector2(-621.2, 301.9), "node_id": "ngc_6822", "kind": "galaxy"},
-	{"id": "ic_10", "name_key": "GALAXY_IC_10", "bayer": "IC 10", "magnitude": 10.40, "local_position": Vector2(-731.3, -38.4), "node_id": "ic_10", "kind": "galaxy"},
-	{"id": "ic_1613", "name_key": "GALAXY_IC_1613", "bayer": "IC 1613", "magnitude": 9.90, "local_position": Vector2(-655.8, -408.8), "node_id": "ic_1613", "kind": "galaxy"},
-	{"id": "wolf_lundmark_melotte", "name_key": "GALAXY_WLM", "bayer": "WLM", "magnitude": 11.00, "local_position": Vector2(-395.3, -709.2), "node_id": "wolf_lundmark_melotte", "kind": "galaxy"},
-	{"id": "pegasus_dwarf_irregular", "name_key": "GALAXY_PEGASUS_DIRR", "bayer": "DDO 216", "magnitude": 12.30, "local_position": Vector2(-3.1, -850.2), "node_id": "pegasus_dwarf_irregular", "kind": "galaxy"},
-	{"id": "phoenix_dwarf", "name_key": "GALAXY_PHOENIX", "bayer": "PHX", "magnitude": 13.10, "local_position": Vector2(426.6, -778.4), "node_id": "phoenix_dwarf", "kind": "galaxy"},
-	{"id": "leo_a", "name_key": "GALAXY_LEO_A", "bayer": "Leo A", "magnitude": 12.70, "local_position": Vector2(780.8, -494.5), "node_id": "leo_a", "kind": "galaxy"},
-	{"id": "aquarius_dwarf", "name_key": "GALAXY_AQUARIUS", "bayer": "DDO 210", "magnitude": 14.00, "local_position": Vector2(958.4, -57.3), "node_id": "aquarius_dwarf", "kind": "galaxy"},
-	{"id": "sagittarius_dwarf_irregular", "name_key": "GALAXY_SAGDIG", "bayer": "SagDIG", "magnitude": 15.50, "local_position": Vector2(898.3, 428.6), "node_id": "sagittarius_dwarf_irregular", "kind": "galaxy"},
-	{"id": "tucana_dwarf", "name_key": "GALAXY_TUCANA", "bayer": "Tucana", "magnitude": 15.70, "local_position": Vector2(599.0, 837.8), "node_id": "tucana_dwarf", "kind": "galaxy"},
-	{"id": "cetus_dwarf", "name_key": "GALAXY_CETUS", "bayer": "Cetus", "magnitude": 14.40, "local_position": Vector2(122.9, 1056.8), "node_id": "cetus_dwarf", "kind": "galaxy"},
-	{"id": "sagittarius_dwarf_spheroidal", "name_key": "GALAXY_SAGITTARIUS_DSPH", "bayer": "Sgr dSph", "magnitude": 4.50, "local_position": Vector2(-416.3, 1015.4), "node_id": "sagittarius_dwarf_spheroidal", "kind": "galaxy"},
-	{"id": "fornax_dwarf", "name_key": "GALAXY_FORNAX", "bayer": "Fornax", "magnitude": 9.30, "local_position": Vector2(-881.3, 708.0), "node_id": "fornax_dwarf", "kind": "galaxy"},
-	{"id": "sculptor_dwarf", "name_key": "GALAXY_SCULPTOR", "bayer": "Sculptor", "magnitude": 10.10, "local_position": Vector2(-1145.8, 198.9), "node_id": "sculptor_dwarf", "kind": "galaxy"},
-	{"id": "carina_dwarf", "name_key": "GALAXY_CARINA", "bayer": "Carina", "magnitude": 11.30, "local_position": Vector2(-1129.4, -390.6), "node_id": "carina_dwarf", "kind": "galaxy"},
-	{"id": "draco_dwarf", "name_key": "GALAXY_DRACO", "bayer": "Draco", "magnitude": 10.90, "local_position": Vector2(-820.8, -911.8), "node_id": "draco_dwarf", "kind": "galaxy"},
-	{"id": "ursa_minor_dwarf", "name_key": "GALAXY_URSA_MINOR", "bayer": "Ursa Minor", "magnitude": 11.90, "local_position": Vector2(-284.4, -1225.6), "node_id": "ursa_minor_dwarf", "kind": "galaxy"},
-	{"id": "sextans_dwarf", "name_key": "GALAXY_SEXTANS", "bayer": "Sextans", "magnitude": 10.40, "local_position": Vector2(352.4, -1240.0), "node_id": "sextans_dwarf", "kind": "galaxy"},
-	{"id": "leo_i", "name_key": "GALAXY_LEO_I", "bayer": "Leo I", "magnitude": 10.20, "local_position": Vector2(929.8, -936.5), "node_id": "leo_i", "kind": "galaxy"},
-	{"id": "leo_ii", "name_key": "GALAXY_LEO_II", "bayer": "Leo II", "magnitude": 12.60, "local_position": Vector2(1295.9, -378.4), "node_id": "leo_ii", "kind": "galaxy"},
-	{"id": "andromeda_ii", "name_key": "GALAXY_ANDROMEDA_II", "bayer": "And II", "magnitude": 13.50, "local_position": Vector2(1346.5, 302.2), "node_id": "andromeda_ii", "kind": "galaxy"},
+	{"id": "andromeda_galaxy_local", "name_key": "GALAXY_ANDROMEDA", "bayer": "M31", "magnitude": 3.44, "local_position": Vector2(370.9, -131.3), "node_id": "m31_hidden_decoy_survey", "kind": "galaxy"},
+	{"id": "messier_32", "name_key": "GALAXY_MESSIER_32", "bayer": "M32", "magnitude": 8.08, "local_position": Vector2(446.2, 74.2), "node_id": "temporary_messier_32", "kind": "galaxy", "decorative": true},
+	{"id": "messier_110", "name_key": "GALAXY_MESSIER_110", "bayer": "M110", "magnitude": 8.92, "local_position": Vector2(396.5, 313.9), "node_id": "temporary_messier_110", "kind": "galaxy", "decorative": true},
+	{"id": "ngc_147", "name_key": "GALAXY_NGC_147", "bayer": "NGC 147", "magnitude": 9.50, "local_position": Vector2(214.4, 512.5), "node_id": "temporary_ngc_147", "kind": "galaxy", "decorative": true},
+	{"id": "ngc_185", "name_key": "GALAXY_NGC_185", "bayer": "NGC 185", "magnitude": 9.20, "local_position": Vector2(-65.3, 599.1), "node_id": "temporary_ngc_185", "kind": "galaxy", "decorative": true},
+	{"id": "triangulum_galaxy", "name_key": "GALAXY_TRIANGULUM", "bayer": "M33", "magnitude": 5.72, "local_position": Vector2(-372.8, 529.5), "node_id": "m33_transit_network", "kind": "galaxy"},
+	{"id": "ngc_6822", "name_key": "GALAXY_NGC_6822", "bayer": "C57", "magnitude": 9.30, "local_position": Vector2(-621.2, 301.9), "node_id": "ngc6822_supernova_watch", "kind": "galaxy"},
+	{"id": "ic_10", "name_key": "GALAXY_IC_10", "bayer": "IC 10", "magnitude": 10.40, "local_position": Vector2(-731.3, -38.4), "node_id": "ic10_supernova_overlap", "kind": "galaxy"},
+	{"id": "ic_1613", "name_key": "GALAXY_IC_1613", "bayer": "IC 1613", "magnitude": 9.90, "local_position": Vector2(-655.8, -408.8), "node_id": "ic1613_supernova_ephemeris", "kind": "galaxy"},
+	{"id": "wolf_lundmark_melotte", "name_key": "GALAXY_WLM", "bayer": "WLM", "magnitude": 11.00, "local_position": Vector2(-395.3, -709.2), "node_id": "wlm_einstein_ring", "kind": "galaxy"},
+	{"id": "pegasus_dwarf_irregular", "name_key": "GALAXY_PEGASUS_DIRR", "bayer": "DDO 216", "magnitude": 12.30, "local_position": Vector2(-3.1, -850.2), "node_id": "pegasus_partial_lens", "kind": "galaxy"},
+	{"id": "phoenix_dwarf", "name_key": "GALAXY_PHOENIX", "bayer": "PHX", "magnitude": 13.10, "local_position": Vector2(426.6, -778.4), "node_id": "phoenix_lensed_meteors", "kind": "galaxy"},
+	{"id": "leo_a", "name_key": "GALAXY_LEO_A", "bayer": "Leo A", "magnitude": 12.70, "local_position": Vector2(780.8, -494.5), "node_id": "leo_a_lensed_supernova", "kind": "galaxy"},
+	{"id": "aquarius_dwarf", "name_key": "GALAXY_AQUARIUS", "bayer": "DDO 210", "magnitude": 14.00, "local_position": Vector2(958.4, -57.3), "node_id": "aquarius_local_group_record", "kind": "galaxy"},
+	{"id": "sagittarius_dwarf_irregular", "name_key": "GALAXY_SAGDIG", "bayer": "SagDIG", "magnitude": 15.50, "local_position": Vector2(898.3, 428.6), "node_id": "temporary_sagittarius_dwarf_irregular", "kind": "galaxy", "decorative": true},
+	{"id": "tucana_dwarf", "name_key": "GALAXY_TUCANA", "bayer": "Tucana", "magnitude": 15.70, "local_position": Vector2(599.0, 837.8), "node_id": "temporary_tucana_dwarf", "kind": "galaxy", "decorative": true},
+	{"id": "cetus_dwarf", "name_key": "GALAXY_CETUS", "bayer": "Cetus", "magnitude": 14.40, "local_position": Vector2(122.9, 1056.8), "node_id": "temporary_cetus_dwarf", "kind": "galaxy", "decorative": true},
+	{"id": "sagittarius_dwarf_spheroidal", "name_key": "GALAXY_SAGITTARIUS_DSPH", "bayer": "Sgr dSph", "magnitude": 4.50, "local_position": Vector2(-416.3, 1015.4), "node_id": "temporary_sagittarius_dwarf_spheroidal", "kind": "galaxy", "decorative": true},
+	{"id": "fornax_dwarf", "name_key": "GALAXY_FORNAX", "bayer": "Fornax", "magnitude": 9.30, "local_position": Vector2(-881.3, 708.0), "node_id": "temporary_fornax_dwarf", "kind": "galaxy", "decorative": true},
+	{"id": "sculptor_dwarf", "name_key": "GALAXY_SCULPTOR", "bayer": "Sculptor", "magnitude": 10.10, "local_position": Vector2(-1145.8, 198.9), "node_id": "temporary_sculptor_dwarf", "kind": "galaxy", "decorative": true},
+	{"id": "carina_dwarf", "name_key": "GALAXY_CARINA", "bayer": "Carina", "magnitude": 11.30, "local_position": Vector2(-1129.4, -390.6), "node_id": "temporary_carina_dwarf", "kind": "galaxy", "decorative": true},
+	{"id": "draco_dwarf", "name_key": "GALAXY_DRACO", "bayer": "Draco", "magnitude": 10.90, "local_position": Vector2(-820.8, -911.8), "node_id": "temporary_draco_dwarf", "kind": "galaxy", "decorative": true},
+	{"id": "ursa_minor_dwarf", "name_key": "GALAXY_URSA_MINOR", "bayer": "Ursa Minor", "magnitude": 11.90, "local_position": Vector2(-284.4, -1225.6), "node_id": "temporary_ursa_minor_dwarf", "kind": "galaxy", "decorative": true},
+	{"id": "sextans_dwarf", "name_key": "GALAXY_SEXTANS", "bayer": "Sextans", "magnitude": 10.40, "local_position": Vector2(352.4, -1240.0), "node_id": "temporary_sextans_dwarf", "kind": "galaxy", "decorative": true},
+	{"id": "leo_i", "name_key": "GALAXY_LEO_I", "bayer": "Leo I", "magnitude": 10.20, "local_position": Vector2(929.8, -936.5), "node_id": "temporary_leo_i", "kind": "galaxy", "decorative": true},
+	{"id": "leo_ii", "name_key": "GALAXY_LEO_II", "bayer": "Leo II", "magnitude": 12.60, "local_position": Vector2(1295.9, -378.4), "node_id": "temporary_leo_ii", "kind": "galaxy", "decorative": true},
+	{"id": "andromeda_ii", "name_key": "GALAXY_ANDROMEDA_II", "bayer": "And II", "magnitude": 13.50, "local_position": Vector2(1346.5, 302.2), "node_id": "temporary_andromeda_ii", "kind": "galaxy", "decorative": true},
 ]
+
+
+static func is_local_group_decoration(node_id: String) -> bool:
+	for galaxy_variant in LOCAL_GROUP_GALAXIES:
+		var galaxy: Dictionary = galaxy_variant
+		if String(galaxy.node_id) == node_id:
+			return bool(galaxy.get("decorative", false))
+	return false
 
 # Placement is deliberately separate from factual star data. Anchors are polar
 # coordinates around the chart's bottom-centre horizon origin.
@@ -341,6 +349,8 @@ static func validation_errors(expected_node_ids: Array[String]) -> Array[String]
 	for galaxy_variant in LOCAL_GROUP_GALAXIES:
 		var galaxy: Dictionary = galaxy_variant
 		var node_id := String(galaxy.get("node_id", ""))
+		if bool(galaxy.get("decorative", false)):
+			continue
 		if node_id.is_empty():
 			errors.append("Local Group galaxy has no research node: %s" % String(galaxy.get("id", "")))
 			continue

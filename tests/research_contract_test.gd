@@ -3,7 +3,7 @@ extends SceneTree
 const Balance = preload("res://scripts/game_balance.gd")
 const ProgressionController = preload("res://scripts/progression_controller.gd")
 
-const EXPECTED_NODE_COUNT := 124
+const EXPECTED_NODE_COUNT := 107
 const EXPECTED_RUNTIME_PARAMETER_KEYS := [
 	"observation_duration_bonus",
 	"observation_value_multiplier",
@@ -13,12 +13,12 @@ const EXPECTED_CONTRACT_COUNTS := {
 	"observation_duration_bonus": 4,
 	"max_active_delta": 8,
 	"regular_spawn_interval_floor": 4,
-	"galactic_host_transit_unlock": 1,
-	"transit_value_multiplier": 1,
-	"galactic_span_step": 6,
-	"galactic_host_capacity": 1,
-	"galactic_active_transit_capacity": 1,
-	"galactic_rule_profile": 19,
+	"galactic_observation_profile": 3,
+	"galactic_chapter_milestone": 4,
+	"supernova_watch": 1,
+	"supernova_overlap": 1,
+	"lens_observation": 2,
+	"lensed_supernova": 1,
 }
 const EXPECTED_DYNAMIC_CONNECTION_IDS := [
 	"amber_band",
@@ -127,7 +127,8 @@ func _run() -> void:
 	var prerequisite_only_ids: Array[String] = []
 	var actual_unverified_ids: Array[String] = []
 
-	_check(Balance.UPGRADE_NODES.size() == EXPECTED_NODE_COUNT, "research node count is 124")
+	_check(Balance.UPGRADE_NODES.size() == EXPECTED_NODE_COUNT, "research definition count is exactly 107")
+	_check(Balance.research_node_count() == 107, "every research definition is installable")
 	for definition_variant in Balance.UPGRADE_NODES:
 		var definition: Dictionary = definition_variant
 		var node_id := String(definition.get("id", ""))
@@ -146,7 +147,7 @@ func _run() -> void:
 		var contract: Dictionary = definition.get("effect_contract", {})
 		if contract.is_empty():
 			actual_unverified_ids.append(node_id)
-		else:
+		elif not contract.is_empty():
 			var kind := String(contract.get("kind", ""))
 			_check(EXPECTED_CONTRACT_COUNTS.has(kind), node_id + " uses a registered contract kind: " + kind)
 			_check(contract.has("value") and contract.has("scope"), node_id + " contract declares value and scope")
@@ -204,8 +205,7 @@ func _run() -> void:
 			or not Dictionary(definition.get("runtime_parameters", {})).is_empty()
 			or not String(definition.get("implementation_connection", "")).is_empty()
 			or node_id in Balance.GALACTIC_SPAN_NODE_IDS
-			or Balance.GALACTIC_FEATURES.has(node_id)
-			or node_id in ["messier_32", "messier_110"]
+			or Balance.GALACTIC_OBSERVATION_PROFILES.has(node_id)
 		)
 		_check(connected, node_id + " has a literal, runtime-parameter, dynamic-id, or prerequisite-only implementation connection")
 
@@ -225,7 +225,7 @@ func _run() -> void:
 	_verify_claims_bidirectionally(contract_ids_by_kind)
 	print("RESEARCH_CONTRACT_UNVERIFIED: %d exact ids" % actual_unverified_ids.size())
 	if failures.is_empty():
-		print("RESEARCH_CONTRACT_PASS: 124 nodes, 55 executable contracts, 69 exact unverified ids, and bidirectional en/ko claims")
+		print("RESEARCH_CONTRACT_PASS: 107 installable research nodes, 38 executable contracts, 69 exact unverified ids, and bidirectional en/ko claims")
 		quit(0)
 	else:
 		push_error("RESEARCH_CONTRACT_FAIL: %d failure(s)" % failures.size())
@@ -261,37 +261,28 @@ func _verify_contract_behavior(progression, definition: Dictionary) -> void:
 			_check(String(contract.scope) == "regular_meteor_arrivals", node_id + " interval-floor contract has regular-arrival scope")
 			progression.purchased_nodes[node_id] = true
 			_check(is_equal_approx(progression.get_regular_spawn_interval_floor(), expected_value), node_id + " runtime interval floor matches its independent contract")
-		"galactic_host_transit_unlock":
-			_check(String(contract.scope) == "local_group_observation", node_id + " host-star contract has local-group scope")
+		"galactic_observation_profile":
+			_check("aim_and_hold" in String(contract.scope), node_id + " profile keeps the shared observation gesture")
+			progression.purchased_nodes[node_id] = true
+			_check(node_id in progression.get_galactic_observation_profile_ids(), node_id + " becomes an ordinary Local Group target profile")
+			if node_id == "lmc_transit_watch":
+				_check(progression.host_stars_unlocked(), node_id + " opens the distant-target layer")
+				_check(int(contract.max_host_stars) == 1 and int(contract.max_active_transits) == 1, node_id + " begins with one target and one active observation")
+		"galactic_chapter_milestone":
+			_check("visible_world" in String(contract.scope), node_id + " chapter milestone has visible-world scope")
 			var before_span: float = progression.get_observation_span()
 			progression.purchased_nodes[node_id] = true
-			_check(progression.host_stars_unlocked(), node_id + " unlocks the host-star layer")
-			_check(is_equal_approx(progression.get_observation_span() / before_span, float(contract.span_multiplier)), node_id + " applies one 5% span step")
-			_check(int(contract.max_host_stars) == 1 and int(contract.max_active_transits) == 1, node_id + " declares one host and one active transit")
-		"transit_value_multiplier":
-			_check(String(contract.scope) == "exoplanet_transits", node_id + " transit-value contract has transit-only scope")
-			var before_value: float = progression.get_transit_value_multiplier()
-			var before_span: float = progression.get_observation_span()
+			_check(is_equal_approx(progression.get_observation_span() / before_span, expected_value), node_id + " applies one exact 10.25% span step")
+			if node_id == "m33_transit_network":
+				_check(progression.get_host_star_capacity() == 2 and progression.get_active_transit_capacity() == 2, node_id + " also raises both host capacities to two")
+		"supernova_watch", "supernova_overlap", "lensed_supernova":
+			_check(String(contract.scope) == "galactic_phenomena_layer", node_id + " phenomenon contract is owned by the dedicated layer")
 			progression.purchased_nodes[node_id] = true
-			_check(is_equal_approx(progression.get_transit_value_multiplier() / before_value, expected_value), node_id + " runtime transit multiplier matches its contract")
-			_check(is_equal_approx(progression.get_observation_span() / before_span, float(contract.span_multiplier)), node_id + " applies one 5% span step")
-		"galactic_span_step":
-			_check(String(contract.scope) == "visible_world", node_id + " galactic span contract has visible-world scope")
-			var before_span: float = progression.get_observation_span()
+			_check(progression.has_upgrade(node_id), node_id + " has a live progression gate consumed by the phenomena layer")
+		"lens_observation":
+			_check(String(contract.scope) == "aim_and_hold", node_id + " lens contract keeps the ordinary observation gesture")
 			progression.purchased_nodes[node_id] = true
-			_check(is_equal_approx(progression.get_observation_span() / before_span, expected_value), node_id + " applies one exact 5% span step")
-		"galactic_host_capacity":
-			_check(String(contract.scope) == "host_star_layer", node_id + " host-capacity contract has host-star scope")
-			progression.purchased_nodes[node_id] = true
-			_check(progression.get_host_star_capacity() == int(expected_value), node_id + " raises the live host capacity to two")
-		"galactic_active_transit_capacity":
-			_check(String(contract.scope) == "host_star_layer", node_id + " active-capacity contract has host-star scope")
-			progression.purchased_nodes[node_id] = true
-			_check(progression.get_active_transit_capacity() == int(expected_value), node_id + " raises the overlapping transit capacity to two")
-		"galactic_rule_profile":
-			_check(String(contract.scope).begins_with("R"), node_id + " rule-profile contract names its approved rule family")
-			progression.purchased_nodes[node_id] = true
-			_check(node_id in progression.get_galactic_feature_ids(), node_id + " becomes an available Local Group rule profile")
+			_check(progression.has_upgrade(node_id), node_id + " has a live progression gate consumed by the phenomena layer")
 		_:
 			_check(false, node_id + " has no executable adapter for contract kind: " + kind)
 
@@ -315,12 +306,12 @@ func _verify_claims_bidirectionally(contract_ids_by_kind: Dictionary) -> void:
 		"observation_duration_bonus": [],
 		"max_active_delta": [],
 		"regular_spawn_interval_floor": [],
-		"galactic_host_transit_unlock": [],
-		"transit_value_multiplier": [],
-		"galactic_span_step": [],
-		"galactic_host_capacity": [],
-		"galactic_active_transit_capacity": [],
-		"galactic_rule_profile": [],
+		"galactic_observation_profile": [],
+		"galactic_chapter_milestone": [],
+		"supernova_watch": [],
+		"supernova_overlap": [],
+		"lens_observation": [],
+		"lensed_supernova": [],
 	}
 	var original_locale := TranslationServer.get_locale()
 	for definition_variant in Balance.UPGRADE_NODES:
@@ -337,11 +328,6 @@ func _verify_claims_bidirectionally(contract_ids_by_kind: Dictionary) -> void:
 			claimed_ids_by_kind["max_active_delta"].append(node_id)
 		if _claims_regular_spawn_interval_floor(english, korean):
 			claimed_ids_by_kind["regular_spawn_interval_floor"].append(node_id)
-		if _claims_galactic_host_transit_unlock(english, korean):
-			claimed_ids_by_kind["galactic_host_transit_unlock"].append(node_id)
-		if _claims_transit_value_multiplier(english, korean):
-			claimed_ids_by_kind["transit_value_multiplier"].append(node_id)
-
 		if not contract.is_empty():
 			match String(contract.kind):
 				"observation_value_multiplier":
@@ -366,28 +352,25 @@ func _verify_claims_bidirectionally(contract_ids_by_kind: Dictionary) -> void:
 					var seconds := "%.2f" % float(contract.value)
 					_check("shortest time between regular meteors to " + seconds + " seconds" in english, node_id + " English copy exposes the exact regular-arrival floor")
 					_check("일반 유성의 최소 출현 간격을 " + seconds + "초로" in korean, node_id + " Korean copy exposes the exact regular-arrival floor")
-				"galactic_host_transit_unlock":
-					_check("Widens the observation field by 5%" in english and "one stationary host star" in english, node_id + " English copy exposes the span and one-host contract")
-					_check("관측 범위를 5%" in korean and "고정된 호스트별 하나" in korean, node_id + " Korean copy exposes the span and one-host contract")
-				"transit_value_multiplier":
-					_check("another 5%" in english and "transit Data by 50%" in english, node_id + " English copy exposes the second span and transit-only value step")
-					_check("5% 더" in korean and "통과 관측 데이터가 50%" in korean, node_id + " Korean copy exposes the second span and transit-only value step")
-				"galactic_span_step":
-					_check("Widens the observation field by" in english, node_id + " English copy exposes the galactic observation-span step")
-					_check("관측 범위를" in korean, node_id + " Korean copy exposes the galactic observation-span step")
-					claimed_ids_by_kind["galactic_span_step"].append(node_id)
-				"galactic_host_capacity":
-					_check("two stationary host stars" in english, node_id + " English copy exposes the two-host capacity")
-					_check("고정된 호스트별 두 개" in korean, node_id + " Korean copy exposes the two-host capacity")
-					claimed_ids_by_kind["galactic_host_capacity"].append(node_id)
-				"galactic_active_transit_capacity":
-					_check("two exoplanet transit windows" in english, node_id + " English copy exposes the two-window capacity")
-					_check("외계행성 통과 창 두 개" in korean, node_id + " Korean copy exposes the two-window capacity")
-					claimed_ids_by_kind["galactic_active_transit_capacity"].append(node_id)
-				"galactic_rule_profile":
-					_check("Adds " in english, node_id + " English copy exposes its added Local Group rule profile")
-					_check(not korean.begins_with("UPGRADE_") and korean.length() >= 12, node_id + " has reviewed Korean copy for its Local Group rule profile")
-					claimed_ids_by_kind["galactic_rule_profile"].append(node_id)
+				"galactic_observation_profile":
+					_check(("aim-and-hold" in english or "tracking" in english or "35% longer" in english), node_id + " English copy exposes an ordinary observation variation")
+					_check("관측" in korean, node_id + " Korean copy keeps observation as the player verb")
+					claimed_ids_by_kind["galactic_observation_profile"].append(node_id)
+				"galactic_chapter_milestone":
+					_check("10.25%" in english and "10.25%" in korean, node_id + " exposes the exact chapter span in both locales")
+					claimed_ids_by_kind["galactic_chapter_milestone"].append(node_id)
+				"supernova_watch":
+					_check("supernova" in english.to_lower() and "초신성" in korean, node_id + " exposes the persistent supernova verb in both locales")
+					claimed_ids_by_kind["supernova_watch"].append(node_id)
+				"supernova_overlap":
+					_check("two supernova" in english.to_lower() and "두 초신성" in korean, node_id + " exposes the overlapping timing choice in both locales")
+					claimed_ids_by_kind["supernova_overlap"].append(node_id)
+				"lens_observation":
+					_check(("ring" in english.to_lower() or "lens" in english.to_lower()) and "aim-and-hold" in english and "관측" in korean, node_id + " exposes lens shape without a new verb")
+					claimed_ids_by_kind["lens_observation"].append(node_id)
+				"lensed_supernova":
+					_check("supernova" in english.to_lower() and "lens" in english.to_lower() and "초신성" in korean and "렌즈" in korean, node_id + " exposes the combined coda verb in both locales")
+					claimed_ids_by_kind["lensed_supernova"].append(node_id)
 	TranslationServer.set_locale(original_locale)
 
 	# The reverse comparison is essential: the 2026-08-26 audit checked that all
@@ -431,14 +414,6 @@ func _claims_max_active_delta(english: String, korean: String) -> bool:
 
 func _claims_regular_spawn_interval_floor(english: String, korean: String) -> bool:
 	return "shortest time between regular meteors to " in english or "일반 유성의 최소 출현 간격을 " in korean
-
-
-func _claims_galactic_host_transit_unlock(english: String, korean: String) -> bool:
-	return "one stationary host star" in english or "고정된 호스트별 하나" in korean
-
-
-func _claims_transit_value_multiplier(english: String, korean: String) -> bool:
-	return "transit Data by 50%" in english or "통과 관측 데이터가 50%" in korean
 
 
 func _localized_description(node_id: String, locale: String) -> String:

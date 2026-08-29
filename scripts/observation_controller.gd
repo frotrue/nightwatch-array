@@ -15,7 +15,7 @@ enum InteractionMode {
 }
 
 var meteor_layer: Node2D
-var secondary_target_layer: Node2D
+var additional_target_layers: Array[Node2D] = []
 var progression: Node
 var hud: CanvasLayer
 var survey: Node2D
@@ -34,9 +34,15 @@ var interaction_mode: InteractionMode = InteractionMode.NONE
 var pending_blank_distance: float = 0.0
 
 
-func setup(target_layer: Node2D, progression_controller: Node, hud_layer: CanvasLayer, survey_controller: Node2D = null, view: Camera2D = null, extra_target_layer: Node2D = null) -> void:
+func setup(target_layer: Node2D, progression_controller: Node, hud_layer: CanvasLayer, survey_controller: Node2D = null, view: Camera2D = null, extra_target_layer = null) -> void:
 	meteor_layer = target_layer
-	secondary_target_layer = extra_target_layer
+	additional_target_layers.clear()
+	if extra_target_layer is Array:
+		for layer_variant in extra_target_layer:
+			if layer_variant is Node2D:
+				additional_target_layers.append(layer_variant)
+	elif extra_target_layer is Node2D:
+		additional_target_layers.append(extra_target_layer)
 	progression = progression_controller
 	hud = hud_layer
 	survey = survey_controller
@@ -190,7 +196,7 @@ func _update_manual_tracking(delta: float) -> void:
 
 	var primary = selected_meteor
 	var tracking_radius: float = primary.get_tracking_radius(_world_px(progression.get_tracking_radius()))
-	var current_distance: float = cursor_position.distance_to(primary.global_position)
+	var current_distance: float = _target_contact_distance(primary, cursor_position)
 	if _apply_manual_contact(primary, delta):
 		tracking_grace_remaining = TRACKING_GRACE_SECONDS
 		_append_tracked_if_valid(primary)
@@ -221,7 +227,15 @@ func _apply_manual_contact(target, delta: float) -> bool:
 	if not _target_is_valid(target):
 		return false
 	var tracking_radius: float = target.get_tracking_radius(_world_px(progression.get_tracking_radius()))
-	var current_distance: float = cursor_position.distance_to(target.global_position)
+	if target.has_method("apply_manual_cursor_path"):
+		return target.apply_manual_cursor_path(
+			delta,
+			previous_cursor_position,
+			cursor_position,
+			tracking_radius,
+			progression.get_manual_analysis_speed_multiplier()
+		)
+	var current_distance: float = _target_contact_distance(target, cursor_position)
 	if current_distance <= tracking_radius:
 		target.apply_manual_observation(
 			delta,
@@ -230,7 +244,7 @@ func _apply_manual_contact(target, delta: float) -> bool:
 			progression.get_manual_analysis_speed_multiplier()
 		)
 		return true
-	var swept_distance := _distance_to_cursor_path(target.global_position)
+	var swept_distance := _target_cursor_path_distance(target)
 	if swept_distance <= tracking_radius:
 		# Credit only the estimated fraction of the frame spent inside the
 		# tracking radius; a fast flick can acquire but cannot grant free progress.
@@ -256,7 +270,7 @@ func _closest_valid_tracked_target():
 	for target in tracked_meteors:
 		if not _target_is_valid(target):
 			continue
-		var distance: float = cursor_position.distance_squared_to(target.global_position)
+		var distance: float = _target_contact_distance(target, cursor_position)
 		if distance < closest_distance:
 			closest = target
 			closest_distance = distance
@@ -298,7 +312,7 @@ func _find_target_under_cursor():
 		var tracking_radius: float = child.get_tracking_radius(_world_px(progression.get_tracking_radius()))
 		# Swept point-to-segment distance prevents fast mouse movement from
 		# tunnelling straight through a target between two rendered frames.
-		var distance: float = _distance_to_cursor_path(child.global_position)
+		var distance: float = _target_cursor_path_distance(child)
 		if distance <= tracking_radius and distance < closest_distance:
 			closest = child
 			closest_distance = distance
@@ -309,9 +323,22 @@ func _target_children() -> Array:
 	var targets: Array = []
 	if meteor_layer != null:
 		targets.append_array(meteor_layer.get_children())
-	if secondary_target_layer != null:
-		targets.append_array(secondary_target_layer.get_children())
+	for layer in additional_target_layers:
+		if layer != null:
+			targets.append_array(layer.get_children())
 	return targets
+
+
+func _target_contact_distance(target, point: Vector2) -> float:
+	if target.has_method("get_manual_contact_distance"):
+		return float(target.get_manual_contact_distance(point))
+	return point.distance_to(target.global_position)
+
+
+func _target_cursor_path_distance(target) -> float:
+	if target.has_method("get_cursor_path_contact_distance"):
+		return float(target.get_cursor_path_contact_distance(previous_cursor_position, cursor_position))
+	return _distance_to_cursor_path(target.global_position)
 
 
 func _distance_to_cursor_path(point: Vector2) -> float:
@@ -461,6 +488,8 @@ func _software_cursor_radius() -> float:
 
 
 func _draw_tracking_ring(target, is_primary: bool) -> void:
+	if target.has_method("get_manual_contact_distance"):
+		return
 	var visual_scale := _world_px(1.0)
 	var tracking_radius: float = target.get_tracking_radius(_world_px(progression.get_tracking_radius()))
 	var quality: float = target.get_quality()
@@ -493,6 +522,8 @@ func _draw_tracking_ring(target, is_primary: bool) -> void:
 
 
 func _draw_hover_ring(target) -> void:
+	if target.has_method("get_manual_contact_distance"):
+		return
 	var visual_scale := _world_px(1.0)
 	var tracking_radius: float = target.get_tracking_radius(_world_px(progression.get_tracking_radius()))
 	# A hint, not a gauge, so it stays below the tracking ring.

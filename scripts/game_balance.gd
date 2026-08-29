@@ -12,42 +12,36 @@ const CANIS_FINAL_ACTIVE_CAPACITY_DELTA := 2
 const CANIS_FINAL_REGULAR_SPAWN_INTERVAL_FLOOR := 0.70
 const REGULAR_SPAWN_INTERVAL_MIN := 1.6
 const REGULAR_SPAWN_INTERVAL_MAX := 2.4
-const GALACTIC_OBSERVATION_SPAN_STEP := 1.05
+const GALACTIC_OBSERVATION_SPAN_STEP := 1.1025
 # These are the galaxy nodes that move the observation camera. Keeping the list
 # here makes the automatic screen-space compensation and the research effects
 # share one source of truth.
 const GALACTIC_SPAN_NODE_IDS: Array[String] = [
-	"large_magellanic_cloud",
-	"small_magellanic_cloud",
-	"andromeda_galaxy",
-	"triangulum_galaxy",
-	"ngc_6822",
-	"wolf_lundmark_melotte",
-	"tucana_dwarf",
-	"cetus_dwarf",
+	"m33_transit_network",
+	"ic1613_supernova_ephemeris",
+	"phoenix_lensed_meteors",
+	"aquarius_local_group_record",
 ]
-const GALACTIC_FEATURES := {
-	"ngc_147": {"rules": ["R1"], "weak_references": 3},
-	"ngc_185": {"rules": ["R2"], "host_profile": true, "decoy": "nucleus"},
-	"ic_10": {"rules": ["R2"], "host_profile": true, "decoy": "flare"},
-	"ic_1613": {"rules": ["R4"], "host_profile": true, "hidden": true, "reveal_hits": 1},
-	"pegasus_dwarf_irregular": {"rules": ["R5"], "host_profile": true, "forecast_notches": 2},
-	"phoenix_dwarf": {"rules": ["R3"], "host_profile": true, "comparison_candidates": 1},
-	"leo_a": {"rules": ["R6"], "host_profile": true, "linked_pair": true},
-	"aquarius_dwarf": {"rules": ["R5"], "host_profile": true, "forecast_notches": 1},
-	"sagittarius_dwarf_irregular": {"rules": ["R3"], "host_profile": true, "comparison_candidates": 2},
-	"sagittarius_dwarf_spheroidal": {"rules": ["R4", "R5"], "host_profile": true, "hidden": true, "reveal_hits": 1, "forecast_notches": 2, "stream": true},
-	"fornax_dwarf": {"rules": ["R4", "R6"], "host_profile": true, "hidden": true, "reveal_hits": 1, "cluster": true},
-	"sculptor_dwarf": {"rules": ["R3", "R6"], "host_profile": true, "comparison_candidates": 2, "multi_pressure": true},
-	"carina_dwarf": {"rules": ["R5", "R6"], "host_profile": true, "forecast_notches": 1, "burst": true},
-	"draco_dwarf": {"rules": ["R2", "R5"], "host_profile": true, "decoy": "lensing", "forecast_notches": 2},
-	"ursa_minor_dwarf": {"rules": ["R2", "R3"], "host_profile": true, "decoy": "pulsation", "comparison_candidates": 1},
-	"sextans_dwarf": {"rules": ["R3", "R4"], "host_profile": true, "hidden": true, "reveal_hits": 3, "comparison_candidates": 2},
-	"leo_i": {"rules": ["R5", "R6"], "host_profile": true, "forecast_notches": 1, "multi_pressure": true},
-	"leo_ii": {"rules": ["R2", "R4"], "host_profile": true, "hidden": true, "reveal_hits": 1, "rehide_seconds": 12.0, "decoy": "pulsation"},
-	"andromeda_ii": {"rules": ["R3", "R5"], "host_profile": true, "comparison_candidates": 2, "forecast_notches": 2},
+const GALACTIC_OBSERVATION_PROFILES := {
+	"lmc_transit_watch": {
+		"tracking_time_multiplier": 1.0, "visual_scale": 1.0,
+		"brightness": 1.0, "reward_multiplier": 1.0,
+	},
+	"smc_reference_baseline": {
+		"tracking_time_multiplier": 1.35, "visual_scale": 0.82,
+		"brightness": 0.70, "reward_multiplier": 1.15,
+	},
+	"m31_hidden_decoy_survey": {
+		"tracking_time_multiplier": 1.12, "visual_scale": 1.36,
+		"brightness": 0.90, "reward_multiplier": 1.25,
+		"drift_radius_screen": 30.0, "drift_speed": 0.34,
+	},
+	"m33_transit_network": {
+		"tracking_time_multiplier": 1.0, "visual_scale": 1.04,
+		"brightness": 1.0, "reward_multiplier": 1.30,
+	},
 }
-# pow(1.05, 8): the single upper bound for the eight galactic pull-back steps.
+# pow(1.1025, 4): the single upper bound for the four chapter milestones.
 # Like CANIS_FINAL_REGULAR_SPAWN_INTERVAL_FLOOR, this is the rollback handle:
 # setting it to 1.0 disables the whole observation expansion without touching
 # research ids, prices, or saves.
@@ -65,7 +59,7 @@ const BRANCHES := {
 	"leo": {"name": "LEO / METEOR STORM", "color": Color("ff9a66")},
 	"canis_major": {"name": "CANIS MAJOR / CADENCE", "color": Color("8ad9ff")},
 	"draco": {"name": "DRACO / CULMINATION", "color": Color("e8a6ff")},
-	"local_group": {"name": "LOCAL GROUP / TRANSITS", "color": Color("ffd7a0")}
+	"local_group": {"name": "LOCAL GROUP / PHENOMENA", "color": Color("ffd7a0")}
 }
 
 # Existing upgrade ids are preserved so every gameplay consumer migrates without
@@ -794,210 +788,90 @@ const UPGRADE_NODES: Array[Dictionary] = [
 		"major": true, "affects_pacing": false
 	},
 	{
-		"id": "large_magellanic_cloud", "name": "Large Magellanic Cloud", "icon": "LMC", "cost": 550000000,
-		"description": "Widens the observation field by 5% and opens one stationary host star for repeat exoplanet transit confirmation.",
+		"id": "lmc_transit_watch", "name": "LMC Distant Watch", "icon": "LMC", "cost": 550000000,
+		"description": "Opens the first distant-galaxy target. Observe it with the same aim-and-hold gesture used everywhere else.",
 		"branch": "local_group", "prerequisites": ["galactic_reference_frame"],
 		"hidden_until": ["galactic_reference_frame"], "effect_type": "unlock",
-		"effect_notes": {"observation_span_steps": 1, "host_stars": 1, "active_transits": 1, "reference_astrometry": true},
-		"effect_contract": {"kind": "galactic_host_transit_unlock", "value": 1.0, "span_multiplier": 1.05, "max_host_stars": 1, "max_active_transits": 1, "scope": "local_group_observation"},
+		"effect_notes": {"distant_targets": 1, "active_targets": 1},
+		"effect_contract": {"kind": "galactic_observation_profile", "value": 1.0, "max_host_stars": 1, "max_active_transits": 1, "scope": "aim_and_hold"},
 		"major": true, "affects_pacing": false
 	},
 	{
-		"id": "small_magellanic_cloud", "name": "Small Magellanic Cloud", "icon": "SMC", "cost": 800000000,
-		"description": "Widens the observation field another 5% and increases transit Data by 50%.",
-		"branch": "local_group", "prerequisites": ["large_magellanic_cloud"],
-		"hidden_until": ["large_magellanic_cloud"], "effect_type": "amplifier",
-		"effect_notes": {"observation_span_steps": 1, "transit_value_multiplier": 1.5},
-		"effect_contract": {"kind": "transit_value_multiplier", "value": 1.5, "span_multiplier": 1.05, "scope": "exoplanet_transits"},
+		"id": "smc_reference_baseline", "name": "SMC Faint Watch", "icon": "SMC", "cost": 800000000,
+		"description": "Adds a fainter distant target that takes 35% longer to observe, without adding a new interaction rule.",
+		"branch": "local_group", "prerequisites": ["lmc_transit_watch"],
+		"hidden_until": ["lmc_transit_watch"], "effect_type": "unlock",
+		"effect_contract": {"kind": "galactic_observation_profile", "value": 1.35, "scope": "faint_aim_and_hold"},
 		"major": true, "affects_pacing": false
 	},
 	{
-		"id": "andromeda_galaxy", "name": "Andromeda Galaxy", "icon": "M31", "cost": 1100000000,
-		"description": "Widens the observation field by 5% and opens the Andromeda satellite route.",
-		"branch": "local_group", "prerequisites": ["small_magellanic_cloud"], "hidden_until": ["small_magellanic_cloud"],
-		"effect_type": "transformation", "effect_contract": {"kind": "galactic_span_step", "value": 1.05, "scope": "visible_world"},
+		"id": "m31_hidden_decoy_survey", "name": "M31 Drift Watch", "icon": "M31", "cost": 1100000000,
+		"description": "Adds a large target that drifts slowly across the sky and is observed by ordinary tracking.",
+		"branch": "local_group", "prerequisites": ["smc_reference_baseline"], "hidden_until": ["smc_reference_baseline"],
+		"effect_type": "unlock", "effect_contract": {"kind": "galactic_observation_profile", "value": 30.0, "scope": "drifting_aim_and_hold"},
 		"major": true, "affects_pacing": false
 	},
 	{
-		"id": "messier_32", "name": "Messier 32", "icon": "M32", "cost": 1500000000,
-		"description": "Keeps two stationary host stars in the observation field at once.",
-		"branch": "local_group", "prerequisites": ["andromeda_galaxy"], "hidden_until": ["andromeda_galaxy"],
-		"effect_type": "unlock", "effect_contract": {"kind": "galactic_host_capacity", "value": 2.0, "scope": "host_star_layer"},
+		"id": "m33_transit_network", "name": "M33 Twin Watch", "icon": "M33", "cost": 3200000000,
+		"description": "Lets two ordinary distant targets appear together and widens the field by 10.25%.",
+		"branch": "local_group", "prerequisites": ["m31_hidden_decoy_survey"], "hidden_until": ["m31_hidden_decoy_survey"],
+		"effect_type": "transformation", "effect_contract": {"kind": "galactic_chapter_milestone", "value": 1.1025, "max_host_stars": 2, "max_active_transits": 2, "scope": "visible_world+host_star_layer"},
 		"major": true, "affects_pacing": false
 	},
 	{
-		"id": "messier_110", "name": "Messier 110", "icon": "M110", "cost": 1900000000,
-		"description": "Allows two exoplanet transit windows to overlap, forcing a host priority choice.",
-		"branch": "local_group", "prerequisites": ["messier_32"], "hidden_until": ["messier_32"],
-		"effect_type": "unlock", "effect_contract": {"kind": "galactic_active_transit_capacity", "value": 2.0, "scope": "host_star_layer"},
+		"id": "ngc6822_supernova_watch", "name": "NGC 6822 Supernova Watch", "icon": "SN-I", "cost": 3600000000,
+		"description": "Introduces a persistent supernova with peak, fade, and recoverable remnant phases.",
+		"branch": "local_group", "prerequisites": ["m33_transit_network"], "hidden_until": ["m33_transit_network"],
+		"effect_type": "unlock", "effect_contract": {"kind": "supernova_watch", "value": 1.0, "scope": "galactic_phenomena_layer"},
 		"major": true, "affects_pacing": false
 	},
 	{
-		"id": "ngc_147", "name": "NGC 147", "icon": "147", "cost": 2400000000,
-		"description": "Adds a weak permanent reference-star chain; live harvestable hosts remain the stronger astrometric anchors.",
-		"branch": "local_group", "prerequisites": ["messier_110"], "hidden_until": ["messier_110"],
-		"effect_type": "unlock", "effect_contract": {"kind": "galactic_rule_profile", "value": 1.0, "scope": "R1_reference_placement"},
+		"id": "ic10_supernova_overlap", "name": "IC 10 Supernova Overlap", "icon": "SN-II", "cost": 4000000000,
+		"description": "Keeps two supernova light curves active at once for a timing choice.",
+		"branch": "local_group", "prerequisites": ["ngc6822_supernova_watch"], "hidden_until": ["ngc6822_supernova_watch"],
+		"effect_type": "unlock", "effect_contract": {"kind": "supernova_overlap", "value": 2.0, "scope": "galactic_phenomena_layer"},
 		"major": true, "affects_pacing": false
 	},
 	{
-		"id": "ngc_185", "name": "NGC 185", "icon": "185", "cost": 2800000000,
-		"description": "Adds an active-nucleus host pattern that teaches brightening decoys: release instead of tracking them.",
-		"branch": "local_group", "prerequisites": ["ngc_147"], "hidden_until": ["ngc_147"],
-		"effect_type": "unlock", "effect_contract": {"kind": "galactic_rule_profile", "value": 1.0, "scope": "R2_decoy"},
+		"id": "ic1613_supernova_ephemeris", "name": "IC 1613 Supernova Ephemeris", "icon": "SN-III", "cost": 4300000000,
+		"description": "Shows the remaining phase around active supernovae and widens the field by 10.25%.",
+		"branch": "local_group", "prerequisites": ["ic10_supernova_overlap"], "hidden_until": ["ic10_supernova_overlap"],
+		"effect_type": "transformation", "effect_contract": {"kind": "galactic_chapter_milestone", "value": 1.1025, "scope": "visible_world+supernova_ephemeris"},
 		"major": true, "affects_pacing": false
 	},
 	{
-		"id": "triangulum_galaxy", "name": "Triangulum Galaxy", "icon": "M33", "cost": 3200000000,
-		"description": "Widens the observation field by 5% and opens the independent-galaxy route.",
-		"branch": "local_group", "prerequisites": ["ngc_185"], "hidden_until": ["ngc_185"],
-		"effect_type": "transformation", "effect_contract": {"kind": "galactic_span_step", "value": 1.05, "scope": "visible_world"},
+		"id": "wlm_einstein_ring", "name": "WLM Einstein Ring", "icon": "ER-I", "cost": 4600000000,
+		"description": "Adds a full lens ring that completes through the same aim-and-hold observation used for every target.",
+		"branch": "local_group", "prerequisites": ["ic1613_supernova_ephemeris"], "hidden_until": ["ic1613_supernova_ephemeris"],
+		"effect_type": "unlock", "effect_contract": {"kind": "lens_observation", "value": 1.0, "scope": "aim_and_hold"},
 		"major": true, "affects_pacing": false
 	},
 	{
-		"id": "ngc_6822", "name": "NGC 6822", "icon": "C57", "cost": 3600000000,
-		"description": "Widens the observation field by 5%.",
-		"branch": "local_group", "prerequisites": ["triangulum_galaxy"], "hidden_until": ["triangulum_galaxy"],
-		"effect_type": "transformation", "effect_contract": {"kind": "galactic_span_step", "value": 1.05, "scope": "visible_world"},
+		"id": "pegasus_partial_lens", "name": "Pegasus Partial Lens", "icon": "ER-II", "cost": 4600000000,
+		"description": "Adds a partial lens ring with a smaller visible contact area but the same aim-and-hold observation.",
+		"branch": "local_group", "prerequisites": ["wlm_einstein_ring"], "hidden_until": ["wlm_einstein_ring"],
+		"effect_type": "transformation", "effect_contract": {"kind": "lens_observation", "value": 0.62, "scope": "aim_and_hold"},
 		"major": true, "affects_pacing": false
 	},
 	{
-		"id": "ic_10", "name": "IC 10", "icon": "IC10", "cost": 4000000000,
-		"description": "Adds a flaring host pattern that reuses the learned brightening-decoy release rule.",
-		"branch": "local_group", "prerequisites": ["ngc_6822"], "hidden_until": ["ngc_6822"],
-		"effect_type": "unlock", "effect_contract": {"kind": "galactic_rule_profile", "value": 1.0, "scope": "R2_decoy"},
+		"id": "phoenix_lensed_meteors", "name": "Phoenix Lensed Paths", "icon": "LENS", "cost": 4600000000,
+		"description": "Bends meteor paths as a visual tracking variation without changing observation or automation rules, and widens the field by 10.25%.",
+		"branch": "local_group", "prerequisites": ["pegasus_partial_lens"], "hidden_until": ["pegasus_partial_lens"],
+		"effect_type": "transformation", "effect_contract": {"kind": "galactic_chapter_milestone", "value": 1.1025, "scope": "visible_world+lensed_meteor_field"},
 		"major": true, "affects_pacing": false
 	},
 	{
-		"id": "ic_1613", "name": "IC 1613", "icon": "1613", "cost": 4300000000,
-		"description": "Adds a low-surface-brightness host pattern revealed by one blank-sky sweep.",
-		"branch": "local_group", "prerequisites": ["ic_10"], "hidden_until": ["ic_10"],
-		"effect_type": "unlock", "effect_contract": {"kind": "galactic_rule_profile", "value": 1.0, "scope": "R4_hidden_host"},
+		"id": "leo_a_lensed_supernova", "name": "Leo A Lensed Supernova", "icon": "LSN", "cost": 4600000000,
+		"description": "Combines supernova timing with a partial lens shape while keeping the same aim-and-hold observation.",
+		"branch": "local_group", "prerequisites": ["phoenix_lensed_meteors"], "hidden_until": ["phoenix_lensed_meteors"],
+		"effect_type": "transformation", "effect_contract": {"kind": "lensed_supernova", "value": 1.0, "scope": "galactic_phenomena_layer"},
 		"major": true, "affects_pacing": false
 	},
 	{
-		"id": "wolf_lundmark_melotte", "name": "Wolf-Lundmark-Melotte", "icon": "WLM", "cost": 4600000000,
-		"description": "Widens the observation field by 5%.",
-		"branch": "local_group", "prerequisites": ["ic_1613"], "hidden_until": ["ic_1613"],
-		"effect_type": "transformation", "effect_contract": {"kind": "galactic_span_step", "value": 1.05, "scope": "visible_world"},
-		"major": true, "affects_pacing": false
-	},
-	{
-		"id": "pegasus_dwarf_irregular", "name": "Pegasus Dwarf Irregular", "icon": "DDO216", "cost": 4600000000,
-		"description": "Adds a timing-variation host pattern whose two forecast notches narrow after confirmation.",
-		"branch": "local_group", "prerequisites": ["wolf_lundmark_melotte"], "hidden_until": ["wolf_lundmark_melotte"],
-		"effect_type": "unlock", "effect_contract": {"kind": "galactic_rule_profile", "value": 1.0, "scope": "R5_forecast"},
-		"major": true, "affects_pacing": false
-	},
-	{
-		"id": "phoenix_dwarf", "name": "Phoenix Dwarf", "icon": "PHX", "cost": 4600000000,
-		"description": "Adds an offset comparison-star host pattern: lock its baseline before tracking the transit.",
-		"branch": "local_group", "prerequisites": ["pegasus_dwarf_irregular"], "hidden_until": ["pegasus_dwarf_irregular"],
-		"effect_type": "unlock", "effect_contract": {"kind": "galactic_rule_profile", "value": 1.0, "scope": "R3_comparison"},
-		"major": true, "affects_pacing": false
-	},
-	{
-		"id": "leo_a", "name": "Leo A", "icon": "LEOA", "cost": 4600000000,
-		"description": "Adds a linked two-candidate host pattern; harvesting one candidate abandons its sibling.",
-		"branch": "local_group", "prerequisites": ["phoenix_dwarf"], "hidden_until": ["phoenix_dwarf"],
-		"effect_type": "unlock", "effect_contract": {"kind": "galactic_rule_profile", "value": 1.0, "scope": "R6_multi_host"},
-		"major": true, "affects_pacing": false
-	},
-	{
-		"id": "aquarius_dwarf", "name": "Aquarius Dwarf", "icon": "DDO210", "cost": 4600000000,
-		"description": "Adds an exact world-space ephemeris notch after the first confirmation.",
-		"branch": "local_group", "prerequisites": ["leo_a"], "hidden_until": ["leo_a"],
-		"effect_type": "unlock", "effect_contract": {"kind": "galactic_rule_profile", "value": 1.0, "scope": "R5_forecast"},
-		"major": true, "affects_pacing": false
-	},
-	{
-		"id": "sagittarius_dwarf_irregular", "name": "Sagittarius Dwarf Irregular", "icon": "SagDIG", "cost": 4600000000,
-		"description": "Adds a two-choice comparison-star host pattern; match the host color to lock its baseline.",
-		"branch": "local_group", "prerequisites": ["aquarius_dwarf"], "hidden_until": ["aquarius_dwarf"],
-		"effect_type": "unlock", "effect_contract": {"kind": "galactic_rule_profile", "value": 1.0, "scope": "R3_comparison"},
-		"major": true, "affects_pacing": false
-	},
-	{
-		"id": "tucana_dwarf", "name": "Tucana Dwarf", "icon": "TUC", "cost": 4600000000,
-		"description": "Widens the observation field by 5%.",
-		"branch": "local_group", "prerequisites": ["sagittarius_dwarf_irregular"], "hidden_until": ["sagittarius_dwarf_irregular"],
-		"effect_type": "transformation", "effect_contract": {"kind": "galactic_span_step", "value": 1.05, "scope": "visible_world"},
-		"major": true, "affects_pacing": false
-	},
-	{
-		"id": "cetus_dwarf", "name": "Cetus Dwarf", "icon": "CET", "cost": 4600000000,
-		"description": "Widens the observation field by the final 5%, reaching the galactic span ceiling.",
-		"branch": "local_group", "prerequisites": ["tucana_dwarf"], "hidden_until": ["tucana_dwarf"],
-		"effect_type": "transformation", "effect_contract": {"kind": "galactic_span_step", "value": 1.05, "scope": "visible_world"},
-		"major": true, "affects_pacing": false
-	},
-	{
-		"id": "sagittarius_dwarf_spheroidal", "name": "Sagittarius Dwarf Spheroidal", "icon": "SgrdSph", "cost": 4600000000,
-		"description": "Adds a swept-reveal stream host pattern whose next transit position is forecast along the chain.",
-		"branch": "local_group", "prerequisites": ["cetus_dwarf"], "hidden_until": ["cetus_dwarf"],
-		"effect_type": "unlock", "effect_contract": {"kind": "galactic_rule_profile", "value": 1.0, "scope": "R4_hidden_host+R5_forecast"},
-		"major": true, "affects_pacing": false
-	},
-	{
-		"id": "fornax_dwarf", "name": "Fornax Dwarf", "icon": "FOR", "cost": 4600000000,
-		"description": "Adds a swept-reveal clustered host pattern that creates overlapping priority choices.",
-		"branch": "local_group", "prerequisites": ["sagittarius_dwarf_spheroidal"], "hidden_until": ["sagittarius_dwarf_spheroidal"],
-		"effect_type": "unlock", "effect_contract": {"kind": "galactic_rule_profile", "value": 1.0, "scope": "R4_hidden_host+R6_multi_host"},
-		"major": true, "affects_pacing": false
-	},
-	{
-		"id": "sculptor_dwarf", "name": "Sculptor Dwarf", "icon": "SCL", "cost": 4600000000,
-		"description": "Adds a two-choice comparison-star pattern while another host transit can demand priority.",
-		"branch": "local_group", "prerequisites": ["fornax_dwarf"], "hidden_until": ["fornax_dwarf"],
-		"effect_type": "unlock", "effect_contract": {"kind": "galactic_rule_profile", "value": 1.0, "scope": "R3_comparison+R6_multi_host"},
-		"major": true, "affects_pacing": false
-	},
-	{
-		"id": "carina_dwarf", "name": "Carina Dwarf", "icon": "CAR", "cost": 4600000000,
-		"description": "Adds forecast transit bursts that crowd both active host slots into three round phases.",
-		"branch": "local_group", "prerequisites": ["sculptor_dwarf"], "hidden_until": ["sculptor_dwarf"],
-		"effect_type": "unlock", "effect_contract": {"kind": "galactic_rule_profile", "value": 1.0, "scope": "R5_forecast+R6_multi_host"},
-		"major": true, "affects_pacing": false
-	},
-	{
-		"id": "draco_dwarf", "name": "Draco Dwarf", "icon": "DRA", "cost": 4600000000,
-		"description": "Adds forecast symmetric-brightening decoys before true transit dips.",
-		"branch": "local_group", "prerequisites": ["carina_dwarf"], "hidden_until": ["carina_dwarf"],
-		"effect_type": "unlock", "effect_contract": {"kind": "galactic_rule_profile", "value": 1.0, "scope": "R2_decoy+R5_forecast"},
-		"major": true, "affects_pacing": false
-	},
-	{
-		"id": "ursa_minor_dwarf", "name": "Ursa Minor Dwarf", "icon": "UMi", "cost": 4600000000,
-		"description": "Adds periodic pulsation decoys that must be rejected after comparison-star baseline lock.",
-		"branch": "local_group", "prerequisites": ["draco_dwarf"], "hidden_until": ["draco_dwarf"],
-		"effect_type": "unlock", "effect_contract": {"kind": "galactic_rule_profile", "value": 1.0, "scope": "R2_decoy+R3_comparison"},
-		"major": true, "affects_pacing": false
-	},
-	{
-		"id": "sextans_dwarf", "name": "Sextans Dwarf", "icon": "SEX", "cost": 4600000000,
-		"description": "Adds a three-sweep hidden host whose matched comparison star must then be selected.",
-		"branch": "local_group", "prerequisites": ["ursa_minor_dwarf"], "hidden_until": ["ursa_minor_dwarf"],
-		"effect_type": "unlock", "effect_contract": {"kind": "galactic_rule_profile", "value": 1.0, "scope": "R3_comparison+R4_hidden_host"},
-		"major": true, "affects_pacing": false
-	},
-	{
-		"id": "leo_i", "name": "Leo I", "icon": "LEOI", "cost": 4600000000,
-		"description": "Adds exact ephemeris notches to overlapping host windows; no new spectrograph is introduced.",
-		"branch": "local_group", "prerequisites": ["sextans_dwarf"], "hidden_until": ["sextans_dwarf"],
-		"effect_type": "unlock", "effect_contract": {"kind": "galactic_rule_profile", "value": 1.0, "scope": "R5_forecast+R6_multi_host"},
-		"major": true, "affects_pacing": false
-	},
-	{
-		"id": "leo_ii", "name": "Leo II", "icon": "LEOII", "cost": 4600000000,
-		"description": "Adds a hidden pulsation-decoy host with a generous reacquisition window; a fresh sweep always reveals it again.",
-		"branch": "local_group", "prerequisites": ["leo_i"], "hidden_until": ["leo_i"],
-		"effect_type": "unlock", "effect_contract": {"kind": "galactic_rule_profile", "value": 1.0, "scope": "R2_decoy+R4_hidden_host"},
-		"major": true, "affects_pacing": false
-	},
-	{
-		"id": "andromeda_ii", "name": "Andromeda II", "icon": "AndII", "cost": 4600000000,
-		"description": "Adds a two-notch forecast host whose matched comparison star locks the final transit baseline.",
-		"branch": "local_group", "prerequisites": ["leo_ii"], "hidden_until": ["leo_ii"],
-		"effect_type": "unlock", "effect_contract": {"kind": "galactic_rule_profile", "value": 1.0, "scope": "R3_comparison+R5_forecast"},
+		"id": "aquarius_local_group_record", "name": "Local Group Record", "icon": "REC", "cost": 4600000000,
+		"description": "Completes the four-chapter record and widens the field by the final 10.25% to its ceiling.",
+		"branch": "local_group", "prerequisites": ["leo_a_lensed_supernova"], "hidden_until": ["leo_a_lensed_supernova"],
+		"effect_type": "capstone", "effect_contract": {"kind": "galactic_chapter_milestone", "value": 1.1025, "scope": "visible_world+local_group_record"},
 		"major": true, "affects_pacing": false
 	}
 ]
@@ -1008,6 +882,18 @@ static func upgrade_definition(id: String) -> Dictionary:
 		if String(definition.id) == id:
 			return definition
 	return {}
+
+
+static func research_node_count() -> int:
+	return UPGRADE_NODES.size()
+
+
+static func local_group_functional_node_count() -> int:
+	var count := 0
+	for definition in UPGRADE_NODES:
+		if String(definition.get("branch", "")) == "local_group":
+			count += 1
+	return count
 
 static func meteor_spec(type_id: String) -> Dictionary:
 	match type_id:

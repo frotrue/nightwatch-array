@@ -880,7 +880,7 @@ func _format_slot_details(summary: Dictionary) -> String:
 	return tr("SAVE_SLOT_META") % [
 		stamp, seconds / 60, seconds % 60,
 		int(summary.get("observation_data", 0.0)), int(summary.get("upgrade_level", 0)),
-		Balance.UPGRADE_NODES.size()
+		Balance.research_node_count()
 	]
 
 

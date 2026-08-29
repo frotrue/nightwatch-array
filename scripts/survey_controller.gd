@@ -13,7 +13,7 @@ const FAST_TYPE_CHANCE := 0.35
 var progression: Node
 var spawner: Node
 var meteor_layer: Node2D
-var discovery_layer: Node2D
+var discovery_layers: Array[Node2D] = []
 var observation_view: Camera2D
 var rng := RandomNumberGenerator.new()
 var active_round: int = 0
@@ -26,12 +26,18 @@ var summoned_this_round: int = 0
 var roll_count: int = 0
 
 
-func setup(progression_controller: Node, meteor_spawner: Node, target_layer: Node2D, view: Camera2D = null, hidden_target_layer: Node2D = null) -> void:
+func setup(progression_controller: Node, meteor_spawner: Node, target_layer: Node2D, view: Camera2D = null, hidden_target_layer = null) -> void:
 	progression = progression_controller
 	spawner = meteor_spawner
 	meteor_layer = target_layer
 	observation_view = view
-	discovery_layer = hidden_target_layer
+	discovery_layers.clear()
+	if hidden_target_layer is Array:
+		for layer_variant in hidden_target_layer:
+			if layer_variant is Node2D:
+				discovery_layers.append(layer_variant)
+	elif hidden_target_layer is Node2D:
+		discovery_layers.append(hidden_target_layer)
 	reset()
 
 
@@ -104,8 +110,9 @@ func apply_scan_segment(from: Vector2, to: Vector2, _active_delta: float = 0.0) 
 	if not is_blank_sky(to):
 		queue_redraw()
 		return 0
-	if discovery_layer != null and discovery_layer.has_method("record_sweep_segment"):
-		discovery_layer.record_sweep_segment(from, to)
+	for discovery_layer in discovery_layers:
+		if discovery_layer != null and discovery_layer.has_method("record_sweep_segment"):
+			discovery_layer.record_sweep_segment(from, to)
 	charge_distance += path_length
 	var required_distance: float = _world_px(progression.get_survey_required_distance())
 	var spawned_count := 0
@@ -137,6 +144,18 @@ func is_blank_sky(position: Vector2) -> bool:
 			and position.distance_to(child.global_position) <= _world_px(EMPTY_SKY_RADIUS)
 		):
 			return false
+	for discovery_layer in discovery_layers:
+		if discovery_layer == null:
+			continue
+		for child in discovery_layer.get_children():
+			if (
+				is_instance_valid(child)
+				and not child.is_queued_for_deletion()
+				and child.has_method("can_be_tracked")
+				and child.can_be_tracked()
+				and position.distance_to(child.global_position) <= _world_px(EMPTY_SKY_RADIUS)
+			):
+				return false
 	return true
 
 

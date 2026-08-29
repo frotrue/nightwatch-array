@@ -110,7 +110,7 @@ func _set_step(step: int) -> void:
 			title_label.text = tr("TUTORIAL_INSTALL_TITLE")
 			body_label.text = tr("TUTORIAL_INSTALL_BODY")
 			hint_label.text = tr("TUTORIAL_INSTALL_HINT")
-			if progression != null and progression.upgrade_level >= Balance.UPGRADE_NODES.size():
+			if progression != null and progression.upgrade_level >= Balance.research_node_count():
 				primary_button.visible = true
 				primary_button.text = tr("TUTORIAL_CONTINUE")
 		STEP_COMPLETE:

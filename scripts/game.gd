@@ -26,6 +26,7 @@ const SHAKE_TRAUMA_CEILING := 0.88
 @onready var starfield: Node2D = $Starfield
 @onready var twinkle_stars: Node2D = $TwinkleStars
 @onready var host_stars: Node2D = $HostStarLayer
+@onready var galactic_phenomena: Node2D = $GalacticPhenomenaLayer
 @onready var meteor_layer: Node2D = $MeteorLayer
 @onready var effects: Node2D = $EffectsLayer
 @onready var observer: Node2D = $ObservationController
@@ -99,16 +100,18 @@ func _ready() -> void:
 	twinkle_stars.setup(observation_view)
 	effects.setup(observation_view)
 	host_stars.setup(progression, observation_view)
+	galactic_phenomena.setup(progression, observation_view, meteor_layer)
 	sky_contacts.setup(meteor_layer, progression, observation_view)
 	spawner.setup(meteor_layer, progression, observation_view)
-	survey.setup(progression, spawner, meteor_layer, observation_view, host_stars)
-	observer.setup(meteor_layer, progression, hud, survey, observation_view, host_stars)
+	survey.setup(progression, spawner, meteor_layer, observation_view, [host_stars, galactic_phenomena])
+	observer.setup(meteor_layer, progression, hud, survey, observation_view, [host_stars, galactic_phenomena])
 	events.setup(spawner, progression, observation_view)
 
 	spawner.meteor_spawned.connect(_on_meteor_spawned)
 	host_stars.transit_confirmed.connect(_on_transit_confirmed)
 	host_stars.host_harvested.connect(_on_host_harvested)
 	host_stars.transit_missed.connect(_on_transit_missed)
+	galactic_phenomena.phenomenon_observed.connect(_on_galactic_phenomenon_observed)
 	spawner.rare_spawned.connect(_on_rare_spawned)
 	spawner.contact_announced.connect(sky_contacts.on_contact_announced)
 	spawner.contact_resolved.connect(sky_contacts.on_contact_resolved)
@@ -187,6 +190,7 @@ func reset_run() -> void:
 	events.reset()
 	spawner.reset()
 	host_stars.reset()
+	galactic_phenomena.reset()
 	progression.reset()
 	hud.hide_end()
 	hud.hide_phase_summary()
@@ -211,6 +215,7 @@ func _process(delta: float) -> void:
 	progression.update_manual_combo(real_delta)
 	survey.advance_time(real_delta)
 	host_stars.advance_time(real_delta)
+	galactic_phenomena.advance_time(real_delta)
 	if active_save_slot > 0:
 		autosave_elapsed += real_delta
 		if autosave_elapsed >= AUTOSAVE_INTERVAL_SECONDS:
@@ -245,6 +250,7 @@ func _begin_observation_phase(advance_round: bool = false, remaining_override: f
 	hud.set_observation_phase(observation_round, observation_phase_remaining, observation_phase_duration)
 	spawner.start_spawning()
 	host_stars.begin_round()
+	galactic_phenomena.begin_round()
 	survey.begin_round(observation_round)
 	events.run_time = elapsed_time
 	events.start()
@@ -262,6 +268,7 @@ func _end_observation_phase() -> void:
 	if completed or not observation_phase_active:
 		return
 	host_stars.end_round()
+	galactic_phenomena.end_round()
 	progression.reset_manual_combo()
 	var result := _build_round_result()
 	var previous_result := last_clean_round_result.duplicate(true)
@@ -413,6 +420,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 func _on_meteor_spawned(meteor) -> void:
 	meteor.observed.connect(_on_meteor_observed)
 	meteor.expired.connect(_on_meteor_expired)
+	galactic_phenomena.register_meteor(meteor)
 	if progression.has_upgrade("wide_field"):
 		# The edge marker is an instrument annotation, not the object, so it takes
 		# red light. The meteor keeps its own colour: the sky is what is being
@@ -616,6 +624,22 @@ func _on_meteor_expired(meteor, _was_major: bool) -> void:
 	observer.release_target(meteor)
 
 
+func _on_galactic_phenomenon_observed(target, reward: float, multiplier: float, quality_grade: String) -> void:
+	observer.release_target(target)
+	effects.spawn_success(
+		target.global_position,
+		reward,
+		target.get_visual_color(),
+		multiplier,
+		0.72,
+		quality_grade,
+		hud.get_data_anchor(),
+		0.0
+	)
+	sound.play_success(multiplier, progression.manual_combo_count, 0.72)
+	hud.show_banner(tr("BANNER_GALACTIC_OBSERVATION"), UITheme.BANNER_TITLE, 2.2)
+
+
 func _on_upgrade_purchased(definition: Dictionary) -> void:
 	tutorial.notify_upgrade_purchased()
 	sky_contacts.refresh_dishes()
@@ -817,6 +841,7 @@ func _build_save_data() -> Dictionary:
 		"best_round_rate": best_round_rate,
 		"galactic_pullback_seen": galactic_pullback_seen,
 		"host_stars": host_stars.get_save_data(),
+		"galactic_phenomena": galactic_phenomena.get_save_data(),
 		"progression": progression.get_save_data(),
 	}
 
@@ -830,6 +855,7 @@ func _apply_save_data(data: Dictionary) -> void:
 	events.reset()
 	spawner.reset()
 	host_stars.reset()
+	galactic_phenomena.reset()
 	completed = false
 	last_completion_success = false
 	elapsed_time = maxf(0.0, float(data.get("elapsed_time", 0.0)))
@@ -856,6 +882,8 @@ func _apply_save_data(data: Dictionary) -> void:
 	_sync_galactic_systems()
 	var host_data = data.get("host_stars", {})
 	host_stars.load_save_data(host_data if host_data is Dictionary else {})
+	var phenomena_data = data.get("galactic_phenomena", {})
+	galactic_phenomena.load_save_data(phenomena_data if phenomena_data is Dictionary else {})
 	starfield.set_galactic_mode(progression.galaxy_unlocked())
 	var saved_phase_active := bool(data.get("observation_phase_active", true))
 	if saved_phase_active:
@@ -888,6 +916,7 @@ func _apply_save_data(data: Dictionary) -> void:
 func _sync_galactic_systems() -> void:
 	observation_view.set_observation_span(progression.get_observation_span())
 	host_stars.refresh_unlock_state()
+	galactic_phenomena.refresh_unlock_state()
 
 
 func _validated_signature(value) -> Array[String]:
@@ -942,6 +971,7 @@ func get_debug_snapshot() -> Dictionary:
 		"upgrade_level": progression.upgrade_level,
 		"purchased_nodes": progression.purchased_nodes.keys(),
 		"meteor_count": meteor_layer.get_child_count(),
+		"galactic_phenomena": galactic_phenomena.get_metrics(),
 		"survey_summoned": survey.summoned_this_round,
 		"survey_charge": survey.get_charge_progress(),
 		"shower_state": events.shower_state,

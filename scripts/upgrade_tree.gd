@@ -71,7 +71,6 @@ const GALACTIC_LEDGER_ORDER := [
 	"cassiopeia", "big_dipper", "orion", "andromeda", "perseus", "lyra",
 	"gemini", "taurus", "leo", "ursa_minor", "canis_major", "draco",
 ]
-const GALACTIC_RULE_IDS := ["R1", "R2", "R3", "R4", "R5", "R6"]
 const CLUSTER_MARKER_OFFSETS := [
 	Vector2(-1.45, -0.42),
 	Vector2(-0.62, 0.88),
@@ -319,9 +318,6 @@ var galactic_panel_order: Label
 var galactic_panel_state: Label
 var galactic_panel_cost: Label
 var galactic_panel_effect: Label
-var galactic_panel_rule: Label
-var galactic_rule_ids: Array[Label] = []
-var galactic_rule_bodies: Array[Label] = []
 var galactic_core_hit: Button
 var galactic_inner_hint: Label
 var galactic_return_hint: Label
@@ -641,7 +637,7 @@ func _frame_galaxy() -> void:
 
 
 func _galactic_zoom_floor() -> float:
-	if progression != null and progression.upgrade_level >= Balance.UPGRADE_NODES.size():
+	if progression != null and progression.upgrade_level >= Balance.research_node_count():
 		return GALACTIC_ZOOM_COMPLETE
 	return GALACTIC_ZOOM
 
@@ -886,7 +882,7 @@ func _layout_chart_header() -> void:
 	progress_fill.position = progress_track.position
 	var ratio := 0.0
 	if progression != null:
-		ratio = float(progression.upgrade_level) / maxf(1.0, float(Balance.UPGRADE_NODES.size()))
+		ratio = float(progression.upgrade_level) / maxf(1.0, float(Balance.research_node_count()))
 	progress_fill.size = Vector2(line_width * clampf(ratio, 0.0, 1.0), UITheme.px(2.0))
 	tree_status.position.y = progress_track.position.y + progress_track.size.y + UITheme.px(10.0)
 	completion_detail_label.position.y = tree_status.position.y + tree_status.get_combined_minimum_size().y + UITheme.px(10.0)
@@ -1064,7 +1060,6 @@ func _layout_galactic_panel_content() -> void:
 		[galactic_panel.get_node("FieldStatusLabel"), galactic_panel_state],
 		[galactic_panel.get_node("FieldCostLabel"), galactic_panel_cost],
 		[galactic_panel.get_node("FieldEffectLabel"), galactic_panel_effect],
-		[galactic_panel.get_node("FieldRuleLabel"), galactic_panel_rule],
 	]
 	for pair in field_pairs:
 		var label: Label = pair[0]
@@ -1075,20 +1070,6 @@ func _layout_galactic_panel_content() -> void:
 		value.size.x = value_width
 		var row_height := maxf(label.get_combined_minimum_size().y + UITheme.px(2.0), value.get_combined_minimum_size().y)
 		cursor_y += row_height + UITheme.px(7.0)
-	cursor_y += UITheme.px(15.0)
-	var rules_title: Label = galactic_panel.get_node("RulesTitle")
-	rules_title.position = Vector2(0.0, cursor_y)
-	rules_title.size.x = width
-	cursor_y += rules_title.get_combined_minimum_size().y + UITheme.px(9.0)
-	for index in range(GALACTIC_RULE_IDS.size()):
-		var id_label := galactic_rule_ids[index]
-		var body_label := galactic_rule_bodies[index]
-		id_label.position = Vector2(0.0, cursor_y)
-		id_label.size.x = UITheme.px(20.0)
-		body_label.position = Vector2(UITheme.px(31.0), cursor_y)
-		body_label.size.x = width - body_label.position.x
-		var row_height := maxf(id_label.get_combined_minimum_size().y, body_label.get_combined_minimum_size().y)
-		cursor_y += row_height + UITheme.px(9.0)
 
 
 func _refresh_galactic_overlays() -> void:
@@ -1113,7 +1094,7 @@ func _refresh_galactic_overlays() -> void:
 	constellation_bottom_action.visible = constellation_active
 	galactic_inner_hint.visible = active
 	galactic_return_hint.visible = active
-	completion_detail_label.visible = constellation_active or (active and progression != null and progression.upgrade_level >= Balance.UPGRADE_NODES.size())
+	completion_detail_label.visible = constellation_active or (active and progression != null and progression.upgrade_level >= Balance.research_node_count())
 	galactic_core_hit.visible = active and galactic_pullback_seen and galactic_chart_detail <= 0.06
 	galactic_core_hit.mouse_filter = Control.MOUSE_FILTER_STOP if galactic_core_hit.visible else Control.MOUSE_FILTER_IGNORE
 	if node_hold_bars.has("galactic_reference_frame"):
@@ -1186,11 +1167,12 @@ func _refresh_constellation_overlays() -> void:
 	for galaxy_variant in ChartData.LOCAL_GROUP_GALAXIES:
 		if progression.get_node_state(String(galaxy_variant.node_id)) == "purchased":
 			local_group_installed += 1
-	var local_group_kind := "done" if local_group_installed == ChartData.LOCAL_GROUP_GALAXIES.size() else ("active" if galactic_unlocked else "locked")
+	var local_group_total := Balance.local_group_functional_node_count()
+	var local_group_kind := "done" if local_group_installed == local_group_total else ("active" if galactic_unlocked else "locked")
 	var local_group_tone := UITheme.TOOLTIP_BODY if local_group_kind == "done" else (UITheme.INK_MAX if local_group_kind == "active" else UITheme.INK_LOW)
 	constellation_ledger_names[local_group_index].add_theme_color_override("font_color", local_group_tone)
 	constellation_ledger_counts[local_group_index].add_theme_color_override("font_color", local_group_tone)
-	constellation_ledger_counts[local_group_index].text = "%d / %d" % [local_group_installed, ChartData.LOCAL_GROUP_GALAXIES.size()]
+	constellation_ledger_counts[local_group_index].text = "%d / %d" % [local_group_installed, local_group_total]
 	constellation_ledger_notes[local_group_index].text = tr("TREE_CONSTELLATION_IN_PROGRESS") if local_group_kind == "active" else ("" if local_group_kind == "done" else tr("TREE_CONSTELLATION_LOCKED"))
 	constellation_horizon_hint.text = tr("TREE_CONSTELLATION_HORIZON_HINT") % below_horizon_count
 	constellation_bottom_action.text = tr("TREE_BOTTOM_START_OBSERVATION") if intermission_active else tr("TREE_BOTTOM_CLOSE")
@@ -1262,21 +1244,11 @@ func _refresh_galactic_panel(node_id: String) -> void:
 		galactic_panel_group.text = tr(ChartData.LOCAL_GROUP_LABEL_KEY)
 		galactic_panel_name.text = tr(String(star.name_key))
 		galactic_panel_code.text = String(star.bayer)
-		galactic_panel_order.text = tr("TREE_GALACTIC_ORDER") % [int(local_group_node_order[node_id]) + 1, ChartData.LOCAL_GROUP_GALAXIES.size()]
+		galactic_panel_order.text = tr("TREE_GALACTIC_ORDER") % [_local_group_functional_order(node_id), Balance.local_group_functional_node_count()]
 	var state: String = progression.get_node_state(node_id)
 	galactic_panel_state.text = tr("STATE_%s" % state.to_upper())
 	galactic_panel_cost.text = tr("TREE_GALACTIC_COST") % _grouped(int(definition.cost))
 	galactic_panel_effect.text = _upgrade_description(definition)
-	var active_rules: Array[String] = []
-	if Balance.GALACTIC_FEATURES.has(node_id):
-		var feature: Dictionary = Balance.GALACTIC_FEATURES[node_id]
-		for rule_variant in feature.get("rules", []):
-			active_rules.append(String(rule_variant))
-	galactic_panel_rule.text = "+".join(active_rules) if not active_rules.is_empty() else "—"
-	for index in range(GALACTIC_RULE_IDS.size()):
-		var rule_active: bool = GALACTIC_RULE_IDS[index] in active_rules
-		galactic_rule_ids[index].add_theme_color_override("font_color", UITheme.ACCENT_TEXT if rule_active else UITheme.TOOLTIP_LABEL)
-		galactic_rule_bodies[index].add_theme_color_override("font_color", UITheme.TOOLTIP_VALUE if rule_active else UITheme.TOOLTIP_LABEL)
 	_layout_galactic_panel_content()
 
 
@@ -1318,13 +1290,9 @@ func _refresh_galactic_static_text() -> void:
 		var constellation: Dictionary = ChartData.CONSTELLATIONS[GALACTIC_LEDGER_ORDER[index]]
 		galactic_ledger_names[index].text = tr(String(constellation.label_key)).split("  /  ")[0]
 	galactic_ledger_names[-1].text = tr(ChartData.LOCAL_GROUP_LABEL_KEY).split(" / ")[0]
-	for field_name in ["STATUS", "COST", "EFFECT", "RULE"]:
+	for field_name in ["STATUS", "COST", "EFFECT"]:
 		var field_label: Label = galactic_panel.get_node("Field%sLabel" % field_name.capitalize())
 		field_label.text = tr("TREE_GALACTIC_FIELD_%s" % field_name)
-	var rules_title: Label = galactic_panel.get_node("RulesTitle")
-	rules_title.text = tr("TREE_GALACTIC_RULES_TITLE")
-	for index in range(GALACTIC_RULE_IDS.size()):
-		galactic_rule_bodies[index].text = tr("TREE_GALACTIC_RULE_%s" % GALACTIC_RULE_IDS[index])
 	completion_detail_label.text = tr("TREE_GALACTIC_COMPLETE_DETAIL")
 	galactic_inner_hint.text = tr("TREE_GALACTIC_INNER_HINT")
 	galactic_return_hint.text = tr("TREE_GALACTIC_RETURN")
@@ -1464,20 +1432,27 @@ func _cache_local_group_route() -> void:
 	var control_points := PackedVector2Array([CHART_ORIGIN])
 	for galaxy_variant in ChartData.LOCAL_GROUP_GALAXIES:
 		var galaxy: Dictionary = galaxy_variant
+		if ChartData.is_local_group_decoration(String(galaxy.node_id)):
+			continue
 		control_points.append(Vector2(local_group_node_positions[String(galaxy.node_id)]))
 	local_group_route_polyline = _sample_local_group_route(control_points)
 	local_group_route_length = _polyline_length(local_group_route_polyline)
 	if local_group_route_length <= 0.0:
 		return
 	var accumulated_length := 0.0
+	var functional_galaxies: Array[Dictionary] = []
+	for galaxy_variant in ChartData.LOCAL_GROUP_GALAXIES:
+		var galaxy: Dictionary = galaxy_variant
+		if not ChartData.is_local_group_decoration(String(galaxy.node_id)):
+			functional_galaxies.append(galaxy)
 	var next_node_index := 0
 	for point_index in range(1, local_group_route_polyline.size()):
 		accumulated_length += local_group_route_polyline[point_index - 1].distance_to(local_group_route_polyline[point_index])
 		if point_index % GALACTIC_ROUTE_SAMPLES_PER_SEGMENT != 0:
 			continue
-		if next_node_index >= ChartData.LOCAL_GROUP_GALAXIES.size():
+		if next_node_index >= functional_galaxies.size():
 			break
-		var galaxy: Dictionary = ChartData.LOCAL_GROUP_GALAXIES[next_node_index]
+		var galaxy: Dictionary = functional_galaxies[next_node_index]
 		local_group_node_route_ratios[String(galaxy.node_id)] = accumulated_length / local_group_route_length
 		next_node_index += 1
 
@@ -1699,9 +1674,9 @@ func _refresh() -> void:
 		return
 	refresh_pending = false
 	data_readout.text = _grouped(int(floor(progression.observation_data)))
-	systems_readout.text = tr("TREE_PROGRESS_COUNT") % [progression.upgrade_level, Balance.UPGRADE_NODES.size()]
+	systems_readout.text = tr("TREE_PROGRESS_COUNT") % [progression.upgrade_level, Balance.research_node_count()]
 	galactic_progress_installed.text = "%03d" % progression.upgrade_level
-	galactic_progress_total.text = "%03d" % Balance.UPGRADE_NODES.size()
+	galactic_progress_total.text = "%03d" % Balance.research_node_count()
 	_layout_chart_header()
 	var available_count := 0
 	var affordable_count := 0
@@ -1951,7 +1926,7 @@ func _build_interface() -> void:
 	installed_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	header.add_child(installed_caption)
 	systems_readout = _spec_label(
-		tr("TREE_PROGRESS_COUNT") % [0, Balance.UPGRADE_NODES.size()],
+		tr("TREE_PROGRESS_COUNT") % [0, Balance.research_node_count()],
 		UITheme.mono_tabular(),
 		64.0,
 		UITheme.INK_MAX
@@ -1965,7 +1940,7 @@ func _build_interface() -> void:
 	galactic_progress_separator = _spec_label("/", UITheme.mono(), 26.0, UITheme.INK_LOW)
 	galactic_progress_separator.name = "GalacticProgressSeparator"
 	header.add_child(galactic_progress_separator)
-	galactic_progress_total = _spec_label("%03d" % Balance.UPGRADE_NODES.size(), UITheme.mono_tabular(), 64.0, UITheme.INK_MID)
+	galactic_progress_total = _spec_label("%03d" % Balance.research_node_count(), UITheme.mono_tabular(), 64.0, UITheme.INK_MID)
 	galactic_progress_total.name = "GalacticProgressTotal"
 	header.add_child(galactic_progress_total)
 	progress_track = ColorRect.new()
@@ -2293,7 +2268,7 @@ func _build_galactic_overlays() -> void:
 	panel_divider.color = UITheme.ACCENT_DEEP
 	panel_divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	galactic_panel.add_child(panel_divider)
-	for field_name in ["Status", "Cost", "Effect", "Rule"]:
+	for field_name in ["Status", "Cost", "Effect"]:
 		var field_label := _spec_label(tr("TREE_GALACTIC_FIELD_%s" % field_name.to_upper()), UITheme.mono(), 11.0, UITheme.TOOLTIP_LABEL, 0.18)
 		field_label.name = "Field%sLabel" % field_name
 		galactic_panel.add_child(field_label)
@@ -2307,20 +2282,6 @@ func _build_galactic_overlays() -> void:
 	galactic_panel_effect.name = "FieldEffectValue"
 	galactic_panel_effect.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	galactic_panel.add_child(galactic_panel_effect)
-	galactic_panel_rule = _spec_label("", UITheme.mono(), 13.0, UITheme.ACCENT_TEXT)
-	galactic_panel_rule.name = "FieldRuleValue"
-	galactic_panel.add_child(galactic_panel_rule)
-	var rules_title := _spec_label(tr("TREE_GALACTIC_RULES_TITLE"), UITheme.mono(), 11.0, UITheme.INK_MID, 0.31)
-	rules_title.name = "RulesTitle"
-	galactic_panel.add_child(rules_title)
-	for rule_id in GALACTIC_RULE_IDS:
-		var id_label := _spec_label(rule_id, UITheme.mono(), 12.0, UITheme.TOOLTIP_LABEL)
-		galactic_panel.add_child(id_label)
-		galactic_rule_ids.append(id_label)
-		var body_label := _spec_label(tr("TREE_GALACTIC_RULE_%s" % rule_id), UITheme.sans("light"), 12.0, UITheme.TOOLTIP_LABEL)
-		body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		galactic_panel.add_child(body_label)
-		galactic_rule_bodies.append(body_label)
 	_layout_galactic_overlays()
 	_refresh_galactic_overlays()
 
@@ -2425,6 +2386,7 @@ func _draw_tree() -> void:
 						_draw_background_galaxy(point, star_radius, alpha)
 			tree_canvas.draw_circle(point, maxf(1.2, star_radius * 0.55), Color(UITheme.STAR_BACKGROUND, alpha))
 	if progression != null and (structure_alpha > 0.01 or _local_group_alpha() > 0.01):
+		_draw_local_group_decorations()
 		_draw_local_group_route()
 		_draw_frontier_overlay()
 	_draw_galactic_core()
@@ -2560,6 +2522,27 @@ func _galactic_label_alpha() -> float:
 	return clampf((zoom - GALACTIC_ZOOM_COMPLETE) / span, 0.0, 1.0)
 
 
+func _draw_local_group_decorations() -> void:
+	var group_alpha := _local_group_alpha()
+	if group_alpha <= 0.01:
+		return
+	for galaxy_variant in ChartData.LOCAL_GROUP_GALAXIES:
+		var galaxy: Dictionary = galaxy_variant
+		var node_id := String(galaxy.node_id)
+		if not ChartData.is_local_group_decoration(node_id) or not node_positions.has(node_id):
+			continue
+		var center := Vector2(node_positions[node_id])
+		var source_position := Vector2(galaxy.local_position)
+		var axis := Vector2.RIGHT.rotated(source_position.angle() + deg_to_rad(58.0))
+		var radius_spec := clampf(10.4 - float(galaxy.magnitude) * 0.38, 3.8, 9.5)
+		var major := UITheme.px(radius_spec) / maxf(zoom, 0.001)
+		var minor_axis := Vector2(-axis.y, axis.x)
+		var color := Color(UITheme.STAR_BACKGROUND, 0.30 * group_alpha)
+		tree_canvas.draw_line(center - axis * major, center + axis * major, color, UITheme.px(1.0) / maxf(zoom, 0.001), true)
+		tree_canvas.draw_line(center - minor_axis * major * 0.20, center + minor_axis * major * 0.20, Color(UITheme.STAR_BACKGROUND, 0.18 * group_alpha), UITheme.px(0.7) / maxf(zoom, 0.001), true)
+		tree_canvas.draw_circle(center, maxf(UITheme.px(0.8), major * 0.12), Color(UITheme.STAR_BACKGROUND, 0.38 * group_alpha))
+
+
 func _draw_local_group_labels() -> void:
 	var group_alpha := _local_group_alpha()
 	if group_alpha <= 0.01:
@@ -2571,7 +2554,10 @@ func _draw_local_group_labels() -> void:
 	for galaxy_variant in ChartData.LOCAL_GROUP_GALAXIES:
 		var galaxy: Dictionary = galaxy_variant
 		var node_id := String(galaxy.node_id)
-		if not node_positions.has(node_id) or not node_buttons.has(node_id) or not node_buttons[node_id].visible:
+		var decorative := ChartData.is_local_group_decoration(node_id)
+		if not node_positions.has(node_id):
+			continue
+		if not decorative and (not node_buttons.has(node_id) or not node_buttons[node_id].visible):
 			continue
 		var point := Vector2(node_positions[node_id])
 		var source_position := Vector2(galaxy.local_position)
@@ -2582,10 +2568,10 @@ func _draw_local_group_labels() -> void:
 		var label := String(galaxy.bayer)
 		if left:
 			label_position.x -= _tracked_text_width(font, label, font_size, tracking)
-		var active := hovered_node_id == node_id
+		var active := not decorative and hovered_node_id == node_id
 		# The hovered galaxy keeps its label at any zoom; it is the one the
 		# player is asking about.
-		var fade := 1.0 if active else label_alpha
+		var fade := 1.0 if active else label_alpha * (0.42 if decorative else 1.0)
 		if fade <= 0.01:
 			continue
 		_draw_tracked_text(
@@ -2593,7 +2579,7 @@ func _draw_local_group_labels() -> void:
 			label_position,
 			label,
 			font_size,
-			Color(UITheme.INK_MAX if active else UITheme.INK_MID, (1.0 if active else 0.70) * group_alpha * fade),
+			Color(UITheme.INK_MAX if active else UITheme.INK_MID, (1.0 if active else (0.52 if decorative else 0.70)) * group_alpha * fade),
 			tracking
 		)
 
@@ -2677,8 +2663,22 @@ func _current_local_group_route() -> PackedVector2Array:
 	for galaxy_variant in ChartData.LOCAL_GROUP_GALAXIES:
 		var galaxy: Dictionary = galaxy_variant
 		var node_id := String(galaxy.node_id)
+		if ChartData.is_local_group_decoration(node_id):
+			continue
 		control_points.append(Vector2(node_positions.get(node_id, local_group_node_positions[node_id])))
 	return _sample_local_group_route(control_points)
+
+
+func _local_group_functional_order(node_id: String) -> int:
+	var order := 0
+	for galaxy_variant in ChartData.LOCAL_GROUP_GALAXIES:
+		var candidate := String(Dictionary(galaxy_variant).node_id)
+		if ChartData.is_local_group_decoration(candidate):
+			continue
+		order += 1
+		if candidate == node_id:
+			return order
+	return 0
 
 
 func _polyline_slice(points: PackedVector2Array, start_ratio: float, end_ratio: float) -> PackedVector2Array:

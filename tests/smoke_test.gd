@@ -344,14 +344,14 @@ func _run() -> void:
 	_check(draco_probe.debug_purchase_node("draco_array") and draco_probe.get_dish_count() == 4 and draco_probe.get_secondary_slots() == 4, "Total Array expands both steerable dishes and automatic lanes to four")
 	_check(draco_probe.debug_purchase_node("draco_apotheosis") and is_equal_approx(draco_probe.get_observation_value_multiplier("common", 1), 8192.0), "Dragon's Eye raises the completed constellation economy to x8192")
 	_check(not draco_probe.galaxy_unlocked() and draco_probe.debug_purchase_node("galactic_reference_frame") and draco_probe.galaxy_unlocked(), "the final Draco node unlocks the galactic reference frame")
-	_check(not draco_probe.is_research_complete(), "the Draco culmination leaves the 29-node Local Group route uninstalled")
+	_check(not draco_probe.is_research_complete(), "the Draco culmination leaves the 12-node Local Group route uninstalled")
 	var purchased_local_group_nodes := 0
 	for local_definition_variant in balance.UPGRADE_NODES:
 		var local_definition: Dictionary = local_definition_variant
 		if String(local_definition.branch) == "local_group" and draco_probe.debug_purchase_node(String(local_definition.id)):
 			purchased_local_group_nodes += 1
-	_check(purchased_local_group_nodes == 29, "the prerequisite-safe Local Group route installs all 29 research nodes")
-	_check(draco_probe.is_research_complete(), "Draco plus the full Local Group route complete the 124-node research graph")
+	_check(purchased_local_group_nodes == 12, "the prerequisite-safe Local Group route installs all 12 functional research nodes")
+	_check(draco_probe.is_research_complete(), "Draco plus the full Local Group route complete the 107-node research graph")
 	var draco_save_probe = load("res://scripts/progression_controller.gd").new()
 	draco_save_probe.load_save_data(draco_probe.get_save_data())
 	_check(draco_save_probe.galaxy_unlocked() and is_equal_approx(draco_save_probe.get_observation_value_multiplier("common", 1), 8192.0), "Draco culmination and galaxy state survive ID-based saves")
@@ -701,7 +701,7 @@ func _run() -> void:
 			var prerequisite_node_id := String(prerequisite_variant)
 			var prerequisite_location: Dictionary = chart_node_stars[prerequisite_node_id]
 			if String(prerequisite_location.constellation_id) != String(target_location.constellation_id):
-				if not (prerequisite_node_id == "galactic_reference_frame" and target_node_id == "large_magellanic_cloud"):
+				if not (prerequisite_node_id == "galactic_reference_frame" and target_node_id == "lmc_transit_watch"):
 					all_prerequisites_internal = false
 				continue
 			if String(target_location.constellation_id) == "local_group":
@@ -1399,7 +1399,7 @@ func _run() -> void:
 	game.sky_contacts.reset()
 
 	game.progression.debug_purchase_all()
-	_check(game.progression.upgrade_level == balance.UPGRADE_NODES.size(), "all tree nodes unlock through prerequisite-safe debug purchase")
+	_check(game.progression.upgrade_level == balance.research_node_count(), "all functional tree nodes unlock through prerequisite-safe debug purchase")
 	_check(game.progression.is_research_complete(), "the progression controller recognizes the complete research graph")
 	_check(is_equal_approx(game.progression.get_observation_value_multiplier("common", 1), 8192.0), "the eight legacy leaves and two Draco multipliers produce exact unconditional x8192 observation value growth")
 	_check(game.progression.galaxy_unlocked() and game.starfield.galactic_mode, "the final Draco purchase switches the live sky into its galactic visual state")
@@ -1430,7 +1430,7 @@ func _run() -> void:
 	_check(installed_research_segments == 91 and all_research_segments_installed, "all ninety-one research-constellation segments reach the installed color at full completion")
 	_check(game.progression.get_max_active() == 18, "the completed Draco array raises the regular active-sky cap from twelve to eighteen")
 	_check(is_equal_approx(game.progression.get_regular_spawn_interval_floor(), 0.45), "the completed Draco array lowers the regular-arrival floor from 0.70 to 0.45 seconds")
-	_check(game.progression.upgrade_level == balance.UPGRADE_NODES.size(), "the run resolves to the full research array completion")
+	_check(game.progression.upgrade_level == balance.research_node_count(), "the run resolves to the full functional research completion")
 	_check(is_equal_approx(game.progression.get_progression_ratio(), 1.0), "the original pacing topology preserves the completed-tree density endpoint")
 	for legacy_id in ["better_lens", "long_exposure", "wide_field", "trajectory", "precision_multiplier", "secondary_camera", "shower_detector", "automated_tracking"]:
 		_check(game.progression.has_upgrade(legacy_id), "legacy upgrade migrated: " + legacy_id)
@@ -1806,8 +1806,8 @@ func _run() -> void:
 		"the old chart fade overlaps the traced Local Group route instead of leaving a centre-only hold"
 	)
 	_check(open_night_game.upgrade_tree._galactic_background_alpha() < 0.01, "the sparse galactic background waits until the legacy chart has nearly cleared")
-	var lmc_final_position := Vector2(open_night_game.upgrade_tree.local_group_node_positions["large_magellanic_cloud"])
-	var lmc_presented_position := Vector2(open_night_game.upgrade_tree.node_positions["large_magellanic_cloud"])
+	var lmc_final_position := Vector2(open_night_game.upgrade_tree.local_group_node_positions["lmc_transit_watch"])
+	var lmc_presented_position := Vector2(open_night_game.upgrade_tree.node_positions["lmc_transit_watch"])
 	var lmc_presented_screen_distance: float = lmc_presented_position.distance_to(open_night_game.upgrade_tree.CHART_ORIGIN) * float(open_night_game.upgrade_tree.zoom)
 	var lmc_final_screen_distance: float = lmc_final_position.distance_to(open_night_game.upgrade_tree.CHART_ORIGIN) * float(open_night_game.upgrade_tree.GALACTIC_ZOOM)
 	_check(
@@ -1824,7 +1824,7 @@ func _run() -> void:
 	for galactic_button_variant in open_night_game.upgrade_tree.node_buttons.values():
 		if galactic_button_variant.visible:
 			visible_galactic_buttons += 1
-	_check(visible_galactic_buttons == 30, "the final galaxy frame exposes the interactive Milky Way anchor and all 29 Local Group research nodes")
+	_check(visible_galactic_buttons == 13, "the final galaxy frame exposes the interactive Milky Way anchor and 12 Local Group research nodes")
 	_check(
 		open_night_game.upgrade_tree.galactic_background_stars.size() == open_night_game.upgrade_tree.GALACTIC_BACKGROUND_STAR_COUNT,
 		"the final galaxy frame retains exactly 74 sparse non-interactive background stars"

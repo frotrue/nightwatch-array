@@ -137,6 +137,20 @@ func add_transit_harvest(amount: float) -> float:
 	return final_amount
 
 
+func add_galactic_observation(amount: float, intrinsic_multiplier: float = 1.0) -> float:
+	# Persistent supernovae and lens arcs are a separate manual verb. They count
+	# as observations without consuming meteor combo/proc state or the global
+	# meteor-value product.
+	var final_amount := maxf(1.0, round(amount))
+	observation_data += final_amount
+	total_data_earned += final_amount
+	success_count += 1
+	manual_successes += 1
+	best_multiplier = maxf(best_multiplier, intrinsic_multiplier)
+	state_changed.emit()
+	return final_amount
+
+
 func add_debug_data(amount: float) -> void:
 	observation_data += amount
 	total_data_earned += amount
@@ -597,7 +611,7 @@ func get_observation_value_multiplier(type_id: String, active_target_count: int)
 
 
 func is_research_complete() -> bool:
-	return upgrade_level == Balance.UPGRADE_NODES.size()
+	return upgrade_level >= Balance.research_node_count()
 
 
 func galaxy_unlocked() -> bool:
@@ -605,24 +619,24 @@ func galaxy_unlocked() -> bool:
 
 
 func host_stars_unlocked() -> bool:
-	return has_upgrade("large_magellanic_cloud")
+	return has_upgrade("lmc_transit_watch")
 
 
 func get_transit_value_multiplier() -> float:
-	return 1.5 if has_upgrade("small_magellanic_cloud") else 1.0
+	return 1.0
 
 
 func get_host_star_capacity() -> int:
-	return 2 if has_upgrade("messier_32") else 1
+	return 2 if has_upgrade("m33_transit_network") else 1
 
 
 func get_active_transit_capacity() -> int:
-	return 2 if has_upgrade("messier_110") else 1
+	return 2 if has_upgrade("m33_transit_network") else 1
 
 
-func get_galactic_feature_ids() -> Array[String]:
+func get_galactic_observation_profile_ids() -> Array[String]:
 	var result: Array[String] = []
-	for node_id_variant in Balance.GALACTIC_FEATURES.keys():
+	for node_id_variant in Balance.GALACTIC_OBSERVATION_PROFILES.keys():
 		var node_id := String(node_id_variant)
 		if has_upgrade(node_id):
 			result.append(node_id)
@@ -630,15 +644,11 @@ func get_galactic_feature_ids() -> Array[String]:
 
 
 func get_galactic_host_profile_ids() -> Array[String]:
-	var result: Array[String] = []
-	for node_id in get_galactic_feature_ids():
-		if bool(Dictionary(Balance.GALACTIC_FEATURES[node_id]).get("host_profile", false)):
-			result.append(node_id)
-	return result
+	return get_galactic_observation_profile_ids()
 
 
-func has_weak_reference_chain() -> bool:
-	return has_upgrade("ngc_147")
+func galactic_record_complete() -> bool:
+	return has_upgrade("aquarius_local_group_record")
 
 
 func get_observation_span() -> float:
