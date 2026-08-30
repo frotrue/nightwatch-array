@@ -23,11 +23,20 @@ Read before changing anything:
 
 ## Commit Attribution
 
-Every commit created for this project must end with both of these trailers,
-separated from the commit message body by a blank line:
+Every commit created for this project must end with exactly one matching
+co-author trailer, separated from the commit message body by a blank line.
+Use the trailer for the model that created the commit; do not include the
+other model's trailer.
 
-```
+- Claude or Claude Code:
+
+```text
 Co-authored-by: claude-code-bot <claude-code-bot@users.noreply.github.com>
+```
+
+- Codex:
+
+```text
 Co-authored-by: codex-bot <codex-bot@noreply.example.com>
 ```
 
