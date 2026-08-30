@@ -11,6 +11,7 @@
 | [docs/systems.md](docs/systems.md) | 씬 트리, 시그널 배선, 스크립트별 책임 |
 | [docs/probes.md](docs/probes.md) | 테스트와 계측 프로브 실행법 |
 | [docs/duration-ladder-baseline.md](docs/duration-ladder-baseline.md) | 관측 시간 사다리의 가격 근거 |
+| [docs/full-tree-economy-baseline.md](docs/full-tree-economy-baseline.md) | 현행 107노드 경제의 3전략 × 3시드 기준선 |
 | [docs/campaign-prototype.md](docs/campaign-prototype.md) | 제거된 캠페인 프로토타입 기록 (일부 낡음) |
 | [docs/legacy-density-be11e42.md](docs/legacy-density-be11e42.md) | 동결된 레거시 계측 (참조용) |
 | [AGENTS.md](AGENTS.md) | 에이전트 작업 규약 |
@@ -41,9 +42,9 @@ C:\Users\user\AppData\Local\Temp\codex-godot-4.7.2\Godot_v4.7.2-stable_win64_con
 
 명령은 PowerShell 기준이다. 저장소의 다른 문서도 PowerShell 호출 구문을 쓴다.
 
-연구 계약 테스트는 124개 연구 노드의 실행 데이터·비실행 메모·독립 검증 계약이
-섞이지 않았는지 확인하고, 55개 계약의 실제 동작과 영·한 설명을 양방향으로
-검증한다.
+연구 계약 테스트는 설치 가능한 107개 연구를 검사한다. 38개는 실행 계약으로
+독립 검증하고, 나머지 69개 ID는 exact-unverified 기준선으로 보존한다. 국부은하군의
+비상호작용 장식 기록 17개도 연구 정의와 별도로 검사한다.
 
 ```powershell
 & "C:\Users\user\AppData\Local\Temp\codex-godot-4.7.2\Godot_v4.7.2-stable_win64_console.exe" --headless --path . --script res://tests/research_contract_test.gd
@@ -67,7 +68,9 @@ Layer 2 프로브 테스트도 통과/실패 게이트다.
 & "C:\Users\user\AppData\Local\Temp\codex-godot-4.7.2\Godot_v4.7.2-stable_win64_console.exe" --headless --path . --script res://tests/probe_layer2_test.gd
 ```
 
-계측 프로브 7개는 [docs/probes.md](docs/probes.md) 참고.
+계측 프로브 7개와 현행 107노드 전체 경제 게이트는
+[docs/probes.md](docs/probes.md) 참고. 경제 결과 기준선은
+[docs/full-tree-economy-baseline.md](docs/full-tree-economy-baseline.md)에 보존한다.
 
 ## 빌드
 
@@ -82,7 +85,7 @@ Windows `.exe` 내보내기. `build/`는 `.gitignore`에 있으므로 산출물�
 
 | 입력 | 동작 |
 |---|---|
-| 좌클릭 홀드 | 유성 관측. 커서 중심에 가깝게 유지할수록 빨리 채워지고 등급이 오른다 |
+| 좌클릭 홀드 | 유성과 후반 은하 표적 관측. 커서 중심에 가깝게 유지할수록 빨리 채워지고 등급이 오른다 |
 | 빈 하늘 좌클릭 드래그 | `polar_survey` 이후 주변 150px가 비었을 때 훑기 거리를 충전해 커서 위치에 유성을 부른다. 한 번 훑기로 들어가면 버튼을 놓을 때까지 유성 추적으로 바뀌지 않는다 |
 | 우클릭 | 가장 가까운 접시를 그 지점으로 이동 (`secondary_camera` 필요) |
 | `U` | 연구 성도 열기 / 관측 정산에서 계속하기 |
@@ -109,7 +112,7 @@ Windows `.exe` 내보내기. `build/`는 `.gitignore`에 있으므로 산출물�
 ```
 scenes/          main.tscn (게임 본편), probe_layer2.tscn (2층 실험용 테스트베드)
 scripts/         게임 로직. scripts/probe/ 는 probe_layer2 전용
-tests/           통과/실패 4개 + 계측 7개 + 시각 캡처 2개 + 수동 슬라이스 1개, 총 14개 (모두 SceneTree 스크립트)
+tests/           통과/실패 6개 + 계측 7개 + 시각 캡처 2개 + 수동 슬라이스 1개, 총 16개 (모두 SceneTree 스크립트)
 localization/    ui.csv 에서 생성된 en/ko 번역
 docs/            설계와 계측 문서
 build/           내보낸 exe (gitignore)

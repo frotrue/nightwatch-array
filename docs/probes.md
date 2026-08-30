@@ -138,10 +138,13 @@ Deterministic at seed `20260821`.
 
 ## Measurement probes
 
-These print tables. They do not pass or fail, except that they `push_error`
-when a measurement invariant breaks — a cutoff object leaking between rounds,
-or a shower crossing a round boundary. Treat those errors as a broken sample,
-not as a balance result.
+The ordinary probes print tables. They do not pass or fail, except that they
+`push_error` when a measurement invariant breaks — a cutoff object leaking
+between rounds, or a shower crossing a round boundary. Treat those errors as a
+broken sample, not as a balance result. The full-tree economy driver is the
+exception: it is also a gate for mechanical completion, source-ledger
+reconciliation, complete node timelines, and the approved 120-second maximum
+research-arrival gap. It does not gate on a target completion time.
 
 Each probe prints an `*_ENV` header line first, recording the engine version
 plus the run parameters that apply to it — seed and step size for the
@@ -184,48 +187,62 @@ Header: `DURATION_PRICING_ENV`.
 
 ### Full-tree economy gate — `full_tree_economy_test.gd`
 
-This is currently a **historical measurement for the superseded 124-functional-
-node route**, not an acceptance gate for the 2026-08-30 Local Group simplification.
-The approved design deliberately leaves its economy and completion-time target
-unset; the four correctness gates above must pass without tuning prices to a
-duration. Update this driver to understand immediate-pay distant targets,
-supernova timing, and hold-observed lens shapes before using its output for the
-new 107-node graph.
+This is the current 107-functional-node economy driver. It runs deterministic,
+scripted-engaged watches at `0.05s` steps until all research and all five
+galactic phenomena are complete. One primary cursor handles phenomena, correct
+comparison stars, distant hosts, and uncovered meteors in that order;
+Multi-target Analysis can affect additional targets only from that same cursor
+point and inside the production tracking radius. Predictive dishes, survey
+summons, purchased Lyra calibration, Taurus combo speed, Gemini echoes, Leo
+storms, immediate-pay hosts, supernova clocks, and lens contact shapes all run
+through their production controllers.
 
-In its historical form it runs three deterministic
-scripted-engaged watches at `0.05s` steps until all research is purchased. It
-buys the cheapest currently available research at each intermission, applies
-purchased Lyra calibration automatically, reproduces purchased Taurus combo
-speed, Gemini echo bursts, and Leo storm charge, and uses predictive dishes
-when installed. The engaged driver reveals hidden hosts with distinct sweep
-directions, selects correct comparison stars, rejects decoys, resolves every
-live host, waits for three confirmations, explicitly harvests, and routes the
-actual harvest and reference-star income through production accessors.
+The three purchase strategies are greedy intermission heuristics. `cheapest`
+uses price only. `automation_first` and `manual_first` rank nodes that are
+affordable at that moment, but neither reserves Data for a preferred node that
+is still unaffordable. They are comparison scenarios, not optimized builds or
+human behavior models. All three use the same fixed target priority; the probe
+records supernova phase outcomes but does not compare alternate phase-timing
+strategies.
 
-Every seed must reach 124/124, finish with exact unconditional `×8192` observation
-value, and keep the longest pre-completion interval without a newly available
-node at or below `2 × MAX_OBSERVATION_DURATION` (currently 120 seconds).
-Each Local Group node must also be purchased within 120 seconds of becoming
-available, and at least one three-confirmation host must be harvested.
-Completion time is reported, not asserted. A 14,400-second watchdog catches a
-stalled simulation without turning a target duration into design policy. Output
-also includes total earned/banked Data, 270/540/810-second success checkpoints,
-the purchase time of each `×2` leaf, the longest interval between those leaves,
-purchase batches, arrival gaps, Local Group availability-to-purchase gaps,
-transit income, post-M32/M110 harvest rates, cursor seconds split between host
-work and meteor tracking, confirmation and harvest-tier counts, miss counts,
-respawn and transit-wait gaps, live-host meteor bonus ratio, and both overall
-and Local Group maximum intermission purchase-batch sizes. Host work must stay
-below half of measured busy cursor time, and a Local Group intermission may not
-batch more than one node. Multiplier spacing and overall purchase-batch size
-are playtest diagnostics, not automated pass/fail thresholds. This is the
-authoritative economy-tuning gate for the archived pre-redesign graph.
+Each node records R/A/F/P: revealed, prerequisites-satisfied available, first
+affordable, and purchased. The driver separately accounts for manual meteors,
+automatic meteors, hosts, and phenomena, then reconciles both source total and
+`earned - purchased cost - bank`. Hosts are manual-only in the current runtime,
+so the automatic-host field is expected to remain zero.
+
+Every sample must satisfy:
+
+- 107/107 functional research and five/five phenomena;
+- a research completion time and a content completion time no earlier than it;
+- exact final `×8192` observation value and `1.4774554` observation span;
+- non-zero manual-meteor, automatic-meteor, host, and phenomenon income;
+- source and bank reconciliation errors no larger than `0.5` Data;
+- non-negative bank and complete R/A/F/P records for all 107 nodes; and
+- no pre-completion newly-available-node gap above the approved
+  `2 × MAX_OBSERVATION_DURATION` ceiling, currently 120 seconds.
+
+Completion time, strategy deltas, purchase-batch size, affordable-to-purchase
+delay, Local Group purchase gaps, phenomenon experience delay, round rates, and
+cursor shares are diagnostics rather than acceptance targets. The 14,400-second
+watchdog detects a stalled script without turning duration into balance policy.
 
 ```powershell
 & $godot --headless --path . --script res://tests/full_tree_economy_test.gd
 ```
 
-Header: `FULL_TREE_ECONOMY_ENV`. Pass line: `FULL_TREE_ECONOMY_PASS`.
+| Variable | Default | Effect |
+|---|---|---|
+| `NIGHTWATCH_ECONOMY_SEEDS` | `20260821,20260837,20260853` | Comma-separated integer seeds |
+| `NIGHTWATCH_ECONOMY_STRATEGIES` | `cheapest` | Comma-separated subset of `cheapest`, `automation_first`, `manual_first` |
+
+Output prefixes are `FULL_TREE_ECONOMY_ENV`, `RESULT`, `INCOME`, `PACING`,
+`LOCAL_GROUP`, `TIMELINE`, and `SUMMARY`, followed by
+`FULL_TREE_ECONOMY_PASS`. `TIMELINE` preserves all 107 raw R/A/F/P records.
+Failures use `FULL_TREE_ECONOMY_INVALID` and `FULL_TREE_ECONOMY_FAIL`.
+
+[full-tree-economy-baseline.md](full-tree-economy-baseline.md) records the
+2026-08-30 three-strategy, three-seed result and its interpretation limits.
 
 [`constellation-research-baseline.md`](constellation-research-baseline.md) is a
 stale historical 41-system snapshot; it is not a live acceptance target.

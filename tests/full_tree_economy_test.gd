@@ -5,11 +5,21 @@ const ComparisonStar = preload("res://scripts/comparison_star.gd")
 
 const STEP := 0.05
 const SEEDS := [20260821, 20260837, 20260853]
+const SEEDS_ENV := "NIGHTWATCH_ECONOMY_SEEDS"
+const STRATEGIES_ENV := "NIGHTWATCH_ECONOMY_STRATEGIES"
+const DEFAULT_STRATEGIES := ["cheapest"]
 const SURVEY_DRIVER_SPEED := 720.0
 const WATCHDOG_SECONDS := 14400.0
-const MAX_NO_ARRIVAL_SECONDS := Balance.MAX_OBSERVATION_DURATION * 2.0
+const NO_ARRIVAL_REFERENCE_SECONDS := Balance.MAX_OBSERVATION_DURATION * 2.0
 const EXPECTED_FINAL_VALUE_MULTIPLIER := 8192.0
-const HOST_HARVEST_CONFIRMATIONS := 3
+const EXPECTED_PHENOMENON_COUNT := 5
+const PHENOMENON_UNLOCK_NODES := {
+	"supernova_primary": "ngc6822_supernova_watch",
+	"supernova_secondary": "ic10_supernova_overlap",
+	"einstein_ring": "wlm_einstein_ring",
+	"partial_lens": "pegasus_partial_lens",
+	"lensed_supernova": "leo_a_lensed_supernova",
+}
 const MULTIPLIER_NODES := [
 	"perfect_observation",
 	"shower_detector",
@@ -22,16 +32,47 @@ const MULTIPLIER_NODES := [
 	"draco_synthesis",
 	"draco_apotheosis",
 ]
+const MILESTONE_NODES := [
+	"better_lens",
+	"polar_survey",
+	"secondary_camera",
+	"predictive_dish_control",
+	"automated_tracking",
+	"momentum_acquisition",
+	"echo_correlation_10",
+	"leonid_radiant",
+	"sirius_fireball",
+	"draco_synthesis",
+	"galactic_reference_frame",
+	"lmc_transit_watch",
+	"smc_reference_baseline",
+	"m31_hidden_decoy_survey",
+	"m33_transit_network",
+	"ngc6822_supernova_watch",
+	"ic10_supernova_overlap",
+	"ic1613_supernova_ephemeris",
+	"wlm_einstein_ring",
+	"pegasus_partial_lens",
+	"phoenix_lensed_meteors",
+	"leo_a_lensed_supernova",
+	"aquarius_local_group_record",
+]
 
 var game
+var current_strategy := "cheapest"
 var active_elapsed: float = 0.0
-var completion_time: float = -1.0
+var research_completion_time: float = -1.0
+var content_completion_time: float = -1.0
 var completion_successes: int = -1
 var completion_earned: float = -1.0
+var completion_bank: float = -1.0
+var phenomena_at_research_completion: int = -1
 var checkpoint_successes: Dictionary = {}
 var multiplier_purchase_times: Dictionary = {}
+var reveal_times: Dictionary = {}
 var seen_available_nodes: Dictionary = {}
 var availability_times: Dictionary = {}
+var affordable_times: Dictionary = {}
 var purchase_times: Dictionary = {}
 var last_arrival_time: float = 0.0
 var longest_no_arrival: float = 0.0
@@ -41,15 +82,24 @@ var arrival_gaps: Array[Dictionary] = []
 var simulated_round_index: int = 0
 var survey_driver_direction: int = 1
 var survey_driver_cursor := Vector2(240.0, 420.0)
-var transit_income: float = 0.0
-var m32_purchase_time: float = -1.0
-var m110_purchase_time: float = -1.0
-var post_m32_harvests: int = 0
-var post_m110_harvests: int = 0
-var galactic_observation_seconds: float = 0.0
-var transit_cursor_seconds: float = 0.0
+var manual_meteor_income: float = 0.0
+var automatic_meteor_income: float = 0.0
+var manual_host_income: float = 0.0
+var automatic_host_income: float = 0.0
+var phenomenon_income: float = 0.0
+var host_observation_count: int = 0
+var host_profile_metrics: Dictionary = {}
+var phenomenon_observation_times: Dictionary = {}
+var phenomenon_observation_stages: Dictionary = {}
+var first_manual_completion_time: float = -1.0
+var first_automatic_completion_time: float = -1.0
+var first_host_completion_time: float = -1.0
+var local_group_elapsed_seconds: float = 0.0
+var host_cursor_seconds: float = 0.0
+var phenomenon_cursor_seconds: float = 0.0
 var meteor_cursor_seconds: float = 0.0
 var max_local_group_purchase_batch: int = 0
+var round_reports: Array[Dictionary] = []
 
 
 func _initialize() -> void:
@@ -60,66 +110,37 @@ func _run() -> void:
 	var total_cost := 0
 	for definition in Balance.UPGRADE_NODES:
 		total_cost += int(definition.cost)
-	print("FULL_TREE_ECONOMY_ENV engine=%s watchdog_seconds=%.0f max_no_arrival_seconds=%.0f step_seconds=%.2f seeds=%s nodes=%d total_cost=%d" % [
-		Engine.get_version_info(), WATCHDOG_SECONDS, MAX_NO_ARRIVAL_SECONDS, STEP,
-		str(SEEDS), Balance.UPGRADE_NODES.size(), total_cost,
+	var seeds := _seeds_from_environment()
+	var strategies := _strategies_from_environment()
+	print("FULL_TREE_ECONOMY_ENV engine=%s watchdog_seconds=%.0f no_arrival_reference_seconds=%.0f step_seconds=%.2f seeds=%s strategies=%s nodes=%d total_cost=%d" % [
+		Engine.get_version_info(), WATCHDOG_SECONDS, NO_ARRIVAL_REFERENCE_SECONDS, STEP,
+		str(seeds), str(strategies), Balance.UPGRADE_NODES.size(), total_cost,
 	])
 	var failed := false
-	for seed in SEEDS:
-		var result: Dictionary = await _run_seed(seed)
-		print("FULL_TREE_ECONOMY_RESULT seed=%d purchased=%d/%d completion_seconds=%.1f successes=%d earned=%.0f bank=%.0f value_multiplier=%.2f next_node=%s next_cost=%.0f checkpoints=%s multiplier_times=%s longest_multiplier_gap=%.1f arrival_gaps=%s purchase_batches=%s max_purchase_batch=%d max_local_group_purchase_batch=%d longest_no_arrival=%.1f local_group_purchase_gaps=%s transit_income=%.0f post_m32_harvests=%d post_m32_rate_per_minute=%.3f post_m110_harvests=%d post_m110_rate_per_minute=%.3f galactic_observation_seconds=%.1f transit_cursor_seconds=%.1f meteor_cursor_seconds=%.1f transit_cursor_total_share=%.3f transit_cursor_busy_share=%.3f meteor_cursor_total_share=%.3f transit_metrics=%s" % [
-			seed,
-			int(result.purchased),
-			Balance.UPGRADE_NODES.size(),
-			float(result.completion_time),
-			int(result.successes),
-			float(result.earned),
-			float(result.bank),
-			float(result.value_multiplier),
-			String(result.next_node),
-			float(result.next_cost),
-			str(result.checkpoints),
-			str(result.multiplier_times),
-			float(result.longest_multiplier_gap),
-			str(result.arrival_gaps),
-			str(result.purchase_batches),
-			int(result.max_purchase_batch),
-			int(result.max_local_group_purchase_batch),
-			float(result.longest_no_arrival),
-			str(result.local_group_purchase_gaps),
-			float(result.transit_income),
-			int(result.post_m32_harvests),
-			float(result.post_m32_harvest_rate_per_minute),
-			int(result.post_m110_harvests),
-			float(result.post_m110_harvest_rate_per_minute),
-			float(result.galactic_observation_seconds),
-			float(result.transit_cursor_seconds),
-			float(result.meteor_cursor_seconds),
-			float(result.transit_cursor_total_share),
-			float(result.transit_cursor_busy_share),
-			float(result.meteor_cursor_total_share),
-			str(result.transit_metrics),
-		])
-		if (
-			int(result.purchased) != Balance.UPGRADE_NODES.size()
-			or float(result.completion_time) < 0.0
-			or float(result.longest_no_arrival) > MAX_NO_ARRIVAL_SECONDS + STEP
-			or not is_equal_approx(float(result.value_multiplier), EXPECTED_FINAL_VALUE_MULTIPLIER)
-			or not _all_local_group_gaps_within(Dictionary(result.local_group_purchase_gaps), 120.0 + STEP)
-			or int(Dictionary(result.transit_metrics).get("harvests_at_confirmation_3", 0)) <= 0
-			or int(result.post_m32_harvests) <= 0
-			or int(result.post_m110_harvests) <= 0
-			or float(result.transit_cursor_busy_share) >= 0.50
-			or int(result.max_local_group_purchase_batch) > 1
-			or float(result.transit_income) <= 0.0
-		):
-			failed = true
+	for strategy in strategies:
+		var strategy_completion_times: Array[float] = []
+		for seed in seeds:
+			current_strategy = String(strategy)
+			var result: Dictionary = await _run_seed(int(seed))
+			_print_result(int(seed), result)
+			if float(result.research_completion_time) >= 0.0:
+				strategy_completion_times.append(float(result.research_completion_time))
+			var errors := _validation_errors(result)
+			if not errors.is_empty():
+				failed = true
+				push_error("FULL_TREE_ECONOMY_INVALID strategy=%s seed=%d errors=%s" % [current_strategy, int(seed), str(errors)])
+		if not strategy_completion_times.is_empty():
+			strategy_completion_times.sort()
+			print("FULL_TREE_ECONOMY_SUMMARY strategy=%s samples=%d research_seconds_min=%.1f research_seconds_median=%.1f research_seconds_max=%.1f" % [
+				String(strategy), strategy_completion_times.size(), strategy_completion_times.front(),
+				_median(strategy_completion_times), strategy_completion_times.back(),
+			])
 	if failed:
-		push_error("FULL_TREE_ECONOMY_FAIL: completion, multiplier, or no-arrival invariant failed")
+		push_error("FULL_TREE_ECONOMY_FAIL: the current 107-node driver broke an economy lane, ledger, timeline, or the approved research-arrival contract")
 		quit(1)
 		return
-	print("FULL_TREE_ECONOMY_PASS: all %d research systems complete with x8192 value growth and no arrival gap above %.0f seconds" % [
-		Balance.UPGRADE_NODES.size(), MAX_NO_ARRIVAL_SECONDS,
+	print("FULL_TREE_ECONOMY_PASS: all %d research systems and %d galactic phenomena complete with reconciled source income and no research-arrival gap above %.0f seconds; duration and other pacing fields are diagnostics" % [
+		Balance.UPGRADE_NODES.size(), EXPECTED_PHENOMENON_COUNT, NO_ARRIVAL_REFERENCE_SECONDS,
 	])
 	quit(0)
 
@@ -134,25 +155,39 @@ func _run_seed(seed: int) -> Dictionary:
 	await process_frame
 	_prepare(seed)
 	active_elapsed = 0.0
-	completion_time = -1.0
+	research_completion_time = -1.0
+	content_completion_time = -1.0
 	completion_successes = -1
 	completion_earned = -1.0
+	completion_bank = -1.0
+	phenomena_at_research_completion = -1
 	checkpoint_successes.clear()
 	multiplier_purchase_times.clear()
 	for node_id in MULTIPLIER_NODES:
 		multiplier_purchase_times[node_id] = -1.0
+	reveal_times.clear()
 	seen_available_nodes.clear()
 	availability_times.clear()
+	affordable_times.clear()
 	purchase_times.clear()
-	transit_income = 0.0
-	m32_purchase_time = -1.0
-	m110_purchase_time = -1.0
-	post_m32_harvests = 0
-	post_m110_harvests = 0
-	galactic_observation_seconds = 0.0
-	transit_cursor_seconds = 0.0
+	manual_meteor_income = 0.0
+	automatic_meteor_income = 0.0
+	manual_host_income = 0.0
+	automatic_host_income = 0.0
+	phenomenon_income = 0.0
+	host_observation_count = 0
+	host_profile_metrics.clear()
+	phenomenon_observation_times.clear()
+	phenomenon_observation_stages.clear()
+	first_manual_completion_time = -1.0
+	first_automatic_completion_time = -1.0
+	first_host_completion_time = -1.0
+	local_group_elapsed_seconds = 0.0
+	host_cursor_seconds = 0.0
+	phenomenon_cursor_seconds = 0.0
 	meteor_cursor_seconds = 0.0
 	max_local_group_purchase_batch = 0
+	round_reports.clear()
 	last_arrival_time = 0.0
 	longest_no_arrival = 0.0
 	purchase_batches.clear()
@@ -160,53 +195,99 @@ func _run_seed(seed: int) -> Dictionary:
 	arrival_gaps.clear()
 	simulated_round_index = 0
 	_reset_survey_driver()
-	_record_available_arrivals()
-	while not game.progression.is_research_complete() and active_elapsed < WATCHDOG_SECONDS:
+	_record_node_states()
+	while (
+		(not game.progression.is_research_complete() or _completed_phenomenon_count() < EXPECTED_PHENOMENON_COUNT)
+		and active_elapsed < WATCHDOG_SECONDS
+	):
 		var round_duration: float = game.progression.get_observation_duration()
 		await _run_round(round_duration)
-		_record_available_arrivals()
-		_purchase_affordable_research()
-		if game.progression.is_research_complete():
-			completion_time = active_elapsed
+		_record_node_states()
+		if not game.progression.is_research_complete():
+			_purchase_affordable_research()
+		if game.progression.is_research_complete() and research_completion_time < 0.0:
+			research_completion_time = active_elapsed
 			completion_successes = game.progression.success_count
 			completion_earned = game.progression.total_data_earned
-			break
-		longest_no_arrival = maxf(longest_no_arrival, active_elapsed - last_arrival_time)
-	if completion_time >= 0.0:
-		longest_no_arrival = maxf(longest_no_arrival, completion_time - last_arrival_time)
+			completion_bank = game.progression.observation_data
+			phenomena_at_research_completion = _completed_phenomenon_count()
+			longest_no_arrival = maxf(longest_no_arrival, research_completion_time - last_arrival_time)
+		if research_completion_time < 0.0:
+			longest_no_arrival = maxf(longest_no_arrival, active_elapsed - last_arrival_time)
+	if game.progression.is_research_complete() and _completed_phenomenon_count() >= EXPECTED_PHENOMENON_COUNT:
+		content_completion_time = active_elapsed
 	var next_candidate := _cheapest_available_research()
+	var source_total := _source_income_total()
+	var total_cost := _purchased_cost_total()
 	var result := {
+		"strategy": current_strategy,
 		"purchased": game.progression.upgrade_level,
 		"successes": game.progression.success_count,
 		"earned": game.progression.total_data_earned,
 		"bank": game.progression.observation_data,
-		"completion_time": completion_time,
+		"research_completion_time": research_completion_time,
+		"content_completion_time": content_completion_time,
 		"completion_successes": completion_successes,
 		"completion_earned": completion_earned,
+		"completion_bank": completion_bank,
+		"phenomena_at_research_completion": phenomena_at_research_completion,
+		"rounds": simulated_round_index,
 		"checkpoints": checkpoint_successes.duplicate(true),
 		"value_multiplier": game.progression.get_observation_value_multiplier("common", 1),
+		"observation_span": game.progression.get_observation_span(),
 		"next_node": String(next_candidate.get("id", "")),
 		"next_cost": float(next_candidate.get("cost", 0.0)),
 		"multiplier_times": multiplier_purchase_times.duplicate(true),
 		"longest_multiplier_gap": _longest_multiplier_gap(),
-		"purchase_batches": purchase_batches.duplicate(true),
 		"max_purchase_batch": max_purchase_batch,
 		"max_local_group_purchase_batch": max_local_group_purchase_batch,
+		"large_purchase_batches": _large_purchase_batches(),
 		"arrival_gaps": arrival_gaps.duplicate(true),
 		"longest_no_arrival": longest_no_arrival,
 		"local_group_purchase_gaps": _local_group_purchase_gaps(),
-		"transit_income": transit_income,
-		"post_m32_harvests": post_m32_harvests,
-		"post_m32_harvest_rate_per_minute": _harvest_rate_per_minute(post_m32_harvests, m32_purchase_time),
-		"post_m110_harvests": post_m110_harvests,
-		"post_m110_harvest_rate_per_minute": _harvest_rate_per_minute(post_m110_harvests, m110_purchase_time),
-		"galactic_observation_seconds": galactic_observation_seconds,
-		"transit_cursor_seconds": transit_cursor_seconds,
+		"milestone_times": _milestone_purchase_times(),
+		"top_reveal_to_available_gaps": _top_timeline_gaps(reveal_times, availability_times, 5),
+		"top_cash_barriers": _top_timeline_gaps(availability_times, affordable_times, 5),
+		"top_affordable_to_purchase_gaps": _top_timeline_gaps(affordable_times, purchase_times, 5),
+		"top_available_to_purchase_gaps": _top_timeline_gaps(availability_times, purchase_times, 5),
+		"longest_purchase_gap": _longest_purchase_gap(),
+		"manual_meteor_income": manual_meteor_income,
+		"automatic_meteor_income": automatic_meteor_income,
+		"manual_host_income": manual_host_income,
+		"automatic_host_income": automatic_host_income,
+		"phenomenon_income": phenomenon_income,
+		"source_income_total": source_total,
+		"purchased_cost_total": total_cost,
+		"income_reconciliation_error": absf(game.progression.total_data_earned - source_total),
+		"bank_reconciliation_error": absf(game.progression.total_data_earned - total_cost - game.progression.observation_data),
+		"manual_income_share": _safe_ratio(manual_meteor_income + manual_host_income + phenomenon_income, source_total),
+		"automatic_income_share": _safe_ratio(automatic_meteor_income + automatic_host_income, source_total),
+		"host_observation_count": host_observation_count,
+		"host_profile_metrics": host_profile_metrics.duplicate(true),
+		"phenomenon_observation_times": phenomenon_observation_times.duplicate(true),
+		"phenomenon_observation_stages": phenomenon_observation_stages.duplicate(true),
+		"phenomenon_experience_gaps": _phenomenon_experience_gaps(),
+		"completed_phenomena": _completed_phenomenon_count(),
+		"first_manual_completion_time": first_manual_completion_time,
+		"first_automatic_completion_time": first_automatic_completion_time,
+		"first_host_completion_time": first_host_completion_time,
+		"local_group_elapsed_seconds": local_group_elapsed_seconds,
+		"host_cursor_seconds": host_cursor_seconds,
+		"phenomenon_cursor_seconds": phenomenon_cursor_seconds,
 		"meteor_cursor_seconds": meteor_cursor_seconds,
-		"transit_cursor_total_share": _safe_ratio(transit_cursor_seconds, galactic_observation_seconds),
-		"transit_cursor_busy_share": _safe_ratio(transit_cursor_seconds, transit_cursor_seconds + meteor_cursor_seconds),
-		"meteor_cursor_total_share": _safe_ratio(meteor_cursor_seconds, galactic_observation_seconds),
-		"transit_metrics": game.host_stars.get_metrics(),
+		"host_cursor_total_share": _safe_ratio(host_cursor_seconds, local_group_elapsed_seconds),
+		"phenomenon_cursor_total_share": _safe_ratio(phenomenon_cursor_seconds, local_group_elapsed_seconds),
+		"meteor_cursor_total_share": _safe_ratio(meteor_cursor_seconds, local_group_elapsed_seconds),
+		"host_metrics": game.host_stars.get_metrics(),
+		"phenomenon_metrics": game.galactic_phenomena.get_metrics(),
+		"round_rate_summary": _round_rate_summary(),
+		"timeline_counts": {
+			"revealed": reveal_times.size(),
+			"available": availability_times.size(),
+			"affordable": affordable_times.size(),
+			"purchased": purchase_times.size(),
+		},
+		"node_timelines": _node_timelines(),
 	}
 	game.queue_free()
 	game = null
@@ -235,6 +316,7 @@ func _prepare(seed: int) -> void:
 	game.sky_contacts.set_process(false)
 	game.observer.set_process(false)
 	game.host_stars.set_process(false)
+	game.galactic_phenomena.set_process(false)
 	# The gate advances simulated minutes in milliseconds and does not measure
 	# audio. Remove the runtime synth so queued WAV playbacks cannot outlive a seed.
 	if game.sound != null and is_instance_valid(game.sound):
@@ -242,6 +324,7 @@ func _prepare(seed: int) -> void:
 		game.sound = null
 	game.progression.reset()
 	game.host_stars.reset()
+	game.galactic_phenomena.reset()
 	game._sync_galactic_systems()
 	game.events.reset()
 	game.spawner.reset()
@@ -269,6 +352,10 @@ func _prepare(seed: int) -> void:
 	if game.host_stars.host_harvested.is_connected(game_harvest_handler):
 		game.host_stars.host_harvested.disconnect(game_harvest_handler)
 	game.host_stars.host_harvested.connect(_on_host_harvested)
+	var game_phenomenon_handler := Callable(game, "_on_galactic_phenomenon_observed")
+	if game.galactic_phenomena.phenomenon_observed.is_connected(game_phenomenon_handler):
+		game.galactic_phenomena.phenomenon_observed.disconnect(game_phenomenon_handler)
+	game.galactic_phenomena.phenomenon_observed.connect(_on_phenomenon_observed)
 	var game_banner_handler := Callable(game, "_on_event_banner")
 	if game.events.banner_requested.is_connected(game_banner_handler):
 		game.events.banner_requested.disconnect(game_banner_handler)
@@ -276,12 +363,14 @@ func _prepare(seed: int) -> void:
 
 func _run_round(duration: float) -> void:
 	simulated_round_index += 1
+	var source_income_before := _source_income_total()
 	game.progression.reset_manual_combo()
 	game.survey.begin_round(simulated_round_index)
 	_reset_survey_driver()
 	game.spawner.set_phase_time_remaining(duration)
 	game.spawner.start_spawning()
 	game.host_stars.begin_round()
+	game.galactic_phenomena.begin_round()
 	game.events.start()
 	if game.progression.leonid_storm_ready() and game.spawner.try_start_leonid_storm():
 		game.progression.consume_leonid_storm_charge()
@@ -295,10 +384,12 @@ func _run_round(duration: float) -> void:
 		game.events._process(delta)
 		game.survey.advance_time(delta)
 		game.host_stars.advance_time(delta)
+		game.galactic_phenomena.advance_time(delta)
 		if game.sky_contacts.dish_active():
 			game.sky_contacts._update_dishes(delta)
-		_process_targets(delta)
-		if _first_uncovered_target() == null:
+		var manual_target_used := _process_targets(delta)
+		_record_node_states()
+		if not manual_target_used:
 			_process_survey_gap(delta)
 		else:
 			game.survey.set_scanning(false, survey_driver_cursor)
@@ -307,71 +398,132 @@ func _run_round(duration: float) -> void:
 		_record_success_checkpoints()
 	game.events.pause_for_intermission()
 	game.host_stars.end_round()
+	game.galactic_phenomena.end_round()
 	game.spawner.reset()
 	game.sky_contacts.reset()
 	game.survey.end_round()
 	game.sky_contacts.refresh_dishes()
+	var round_income := _source_income_total() - source_income_before
+	round_reports.append({
+		"round": simulated_round_index,
+		"end_time": active_elapsed,
+		"duration": duration,
+		"income": round_income,
+		"rate_per_minute": round_income * 60.0 / maxf(duration, 0.001),
+	})
 	await process_frame
 
 
-func _process_targets(delta: float) -> void:
-	var host_activity := false
+func _process_targets(delta: float) -> bool:
+	_reveal_hidden_hosts()
+	var manual_target = _select_manual_target()
+	if manual_target != null:
+		var cursor_point := _manual_cursor_point(manual_target)
+		_apply_manual_target(manual_target, cursor_point, delta)
+		if game.progression.has_upgrade("multi_target_analysis"):
+			for candidate in _all_manual_targets():
+				if candidate == manual_target:
+					continue
+				_apply_manual_target(candidate, cursor_point, delta)
+	if game.progression.host_stars_unlocked():
+		local_group_elapsed_seconds += delta
+		match _target_lane(manual_target):
+			"host":
+				host_cursor_seconds += delta
+			"phenomenon":
+				phenomenon_cursor_seconds += delta
+			"meteor":
+				meteor_cursor_seconds += delta
+	for target in game.meteor_layer.get_children():
+		if not is_instance_valid(target):
+			continue
+		target._process(delta)
+		if not target.alive:
+			target.free()
+	return manual_target != null
+
+
+func _reveal_hidden_hosts() -> void:
 	for star in game.host_stars.host_stars.duplicate():
 		if not is_instance_valid(star) or not bool(star.is_hidden):
 			continue
 		for angle in [0.0, PI * 0.5, PI]:
 			var direction: Vector2 = Vector2.from_angle(float(angle)) * game.observation_view.screen_length_to_world(80.0)
 			game.host_stars.record_sweep_segment(star.global_position - direction, star.global_position + direction)
-		host_activity = true
+
+
+func _select_manual_target():
+	for target in game.galactic_phenomena.get_children():
+		if _target_is_trackable(target):
+			return target
 	for child in game.host_stars.get_children():
-		if child is ComparisonStar and bool(child.correct):
-			child.apply_manual_observation(
-				delta,
-				0.0,
-				child.get_tracking_radius(game.progression.get_tracking_radius()),
-				game.progression.get_manual_analysis_speed_multiplier()
-			)
-			host_activity = true
+		if child is ComparisonStar and bool(child.correct) and _target_is_trackable(child):
+			return child
 	for star in game.host_stars.host_stars.duplicate():
 		if not is_instance_valid(star):
 			continue
 		if String(star.state) == "transiting" and not bool(star.comparison_locked):
-			star.apply_manual_observation(
-				delta,
-				0.0,
-				star.get_tracking_radius(game.progression.get_tracking_radius()),
-				game.progression.get_manual_analysis_speed_multiplier()
-			)
-			host_activity = true
-		elif String(star.state) == "idle" and int(star.confirmation_count) >= HOST_HARVEST_CONFIRMATIONS:
-			star.arm_harvest()
-			star.apply_manual_observation(
-				delta,
-				0.0,
-				star.get_tracking_radius(game.progression.get_tracking_radius()),
-				game.progression.get_manual_analysis_speed_multiplier()
-			)
-			host_activity = true
-	var manual_target = null if host_activity else _first_uncovered_target()
-	if game.progression.host_stars_unlocked():
-		galactic_observation_seconds += delta
-		if host_activity:
-			transit_cursor_seconds += delta
-		elif manual_target != null:
-			meteor_cursor_seconds += delta
-	for target in game.meteor_layer.get_children():
-		if not is_instance_valid(target):
-			continue
-		if target == manual_target:
-			target.apply_manual_observation(
-				delta,
-				0.0,
-				game.progression.get_tracking_radius(),
-				game.progression.get_manual_analysis_speed_multiplier()
-			)
-		target._process(delta)
-		if not target.alive:
-			target.free()
+			return star
+	return _first_uncovered_target()
+
+
+func _all_manual_targets() -> Array:
+	var result: Array = []
+	result.append_array(game.galactic_phenomena.get_children())
+	result.append_array(game.host_stars.get_children())
+	result.append_array(game.meteor_layer.get_children())
+	return result
+
+
+func _target_is_trackable(target) -> bool:
+	return (
+		target != null
+		and is_instance_valid(target)
+		and not target.is_queued_for_deletion()
+		and target.has_method("can_be_tracked")
+		and target.can_be_tracked()
+	)
+
+
+func _manual_cursor_point(target) -> Vector2:
+	if target != null and target.has_method("get_manual_contact_distance"):
+		var radius: float = game.observation_view.screen_length_to_world(float(target.ring_radius_screen))
+		var angle := float(target.arc_start) + float(target.arc_span) * 0.5
+		return target.global_position + Vector2.from_angle(angle) * radius
+	return target.global_position if target != null else Vector2.ZERO
+
+
+func _apply_manual_target(target, cursor_point: Vector2, delta: float) -> bool:
+	if not _target_is_trackable(target):
+		return false
+	var default_radius: float = game.observation_view.screen_length_to_world(game.progression.get_tracking_radius())
+	var tracking_radius: float = target.get_tracking_radius(default_radius)
+	var distance := (
+		float(target.get_manual_contact_distance(cursor_point))
+		if target.has_method("get_manual_contact_distance")
+		else cursor_point.distance_to(target.global_position)
+	)
+	if distance > tracking_radius:
+		return false
+	target.apply_manual_observation(
+		delta,
+		distance,
+		tracking_radius,
+		game.progression.get_manual_analysis_speed_multiplier()
+	)
+	return true
+
+
+func _target_lane(target) -> String:
+	if target == null or not is_instance_valid(target):
+		return "idle"
+	if target.get_parent() == game.galactic_phenomena:
+		return "phenomenon"
+	if target.get_parent() == game.host_stars:
+		return "host"
+	if target.get_parent() == game.meteor_layer:
+		return "meteor"
+	return "idle"
 
 
 func _first_uncovered_target():
@@ -409,6 +561,7 @@ func _reset_survey_driver() -> void:
 
 func _on_target_spawned(target) -> void:
 	target.observed.connect(_on_target_observed)
+	game.galactic_phenomena.register_meteor(target)
 
 
 func _on_target_observed(target, reward: float, multiplier: float, was_manual: bool, _quality_grade: String) -> void:
@@ -420,11 +573,20 @@ func _on_target_observed(target, reward: float, multiplier: float, was_manual: b
 		String(target.type_id), active_target_count
 	)
 	var reference_result: Dictionary = game.host_stars.record_meteor_observation(target.global_position)
-	game.progression.add_observation(
+	var final_reward: float = game.progression.add_observation(
 		round(reward * research_multiplier * float(reference_result.get("multiplier", 1.0))),
 		was_manual,
 		multiplier * research_multiplier
 	)
+	if was_manual:
+		manual_meteor_income += final_reward
+		if first_manual_completion_time < 0.0:
+			first_manual_completion_time = active_elapsed
+	else:
+		automatic_meteor_income += final_reward
+		if first_automatic_completion_time < 0.0:
+			first_automatic_completion_time = active_elapsed
+	_record_node_states()
 	var is_proc_target := (
 		bool(target.get_meta("gemini_echo", false))
 		or bool(target.get_meta("leonid_storm", false))
@@ -447,39 +609,46 @@ func _on_transit_confirmed(_star, _confirmation_count: int, _projected_reward: f
 	game.progression.record_transit_confirmation(was_manual, multiplier)
 
 
-func _on_host_harvested(_star, reward: float, _multiplier: float, _was_manual: bool, _quality_grade: String, _confirmation_count: int) -> void:
+func _on_host_harvested(star, reward: float, _multiplier: float, was_manual: bool, _quality_grade: String, _confirmation_count: int) -> void:
 	var final_reward: float = game.progression.add_transit_harvest(
 		round(reward * game.progression.get_transit_value_multiplier())
 	)
-	transit_income += final_reward
-	if game.progression.has_upgrade("messier_32"):
-		post_m32_harvests += 1
-	if game.progression.has_upgrade("messier_110"):
-		post_m110_harvests += 1
+	if was_manual:
+		manual_host_income += final_reward
+	else:
+		automatic_host_income += final_reward
+	host_observation_count += 1
+	if first_host_completion_time < 0.0:
+		first_host_completion_time = active_elapsed
+	var profile_id := String(star.get("profile_id"))
+	var profile_record: Dictionary = host_profile_metrics.get(profile_id, {"count": 0, "income": 0.0})
+	profile_record.count = int(profile_record.count) + 1
+	profile_record.income = float(profile_record.income) + final_reward
+	host_profile_metrics[profile_id] = profile_record
+	_record_node_states()
+
+
+func _on_phenomenon_observed(target, reward: float, _multiplier: float, _quality_grade: String) -> void:
+	phenomenon_income += reward
+	var target_id := String(target.target_id)
+	phenomenon_observation_times[target_id] = active_elapsed
+	phenomenon_observation_stages[target_id] = String(target.get_stage()) if target.has_method("get_stage") else "unknown"
+	if first_manual_completion_time < 0.0:
+		first_manual_completion_time = active_elapsed
+	_record_node_states()
 
 
 func _purchase_affordable_research() -> void:
 	var batch_size := 0
 	var batch_nodes: Array[String] = []
 	var bank_before: float = game.progression.observation_data
-	var purchased_one := true
-	while purchased_one:
-		purchased_one = false
-		var candidate_id := ""
-		var candidate_cost := INF
-		for definition in Balance.UPGRADE_NODES:
-			var node_id := String(definition.id)
-			var cost := float(definition.cost)
-			if game.progression.can_purchase(node_id) and cost < candidate_cost:
-				candidate_id = node_id
-				candidate_cost = cost
-		if not candidate_id.is_empty():
-			game.progression.request_purchase(candidate_id)
+	while true:
+		var candidate := _next_purchase_candidate()
+		if candidate.is_empty():
+			break
+		var candidate_id := String(candidate.id)
+		if game.progression.request_purchase(candidate_id):
 			purchase_times[candidate_id] = active_elapsed
-			if candidate_id == "messier_32":
-				m32_purchase_time = active_elapsed
-			elif candidate_id == "messier_110":
-				m110_purchase_time = active_elapsed
 			batch_size += 1
 			batch_nodes.append(candidate_id)
 			if candidate_id in MULTIPLIER_NODES:
@@ -487,8 +656,10 @@ func _purchase_affordable_research() -> void:
 			game.sky_contacts.refresh_dishes()
 			game.spawner.refresh_active_features()
 			game._sync_galactic_systems()
-			_record_available_arrivals()
-			purchased_one = true
+			_record_node_states()
+		else:
+			push_error("FULL_TREE_ECONOMY_PURCHASE_REJECTED strategy=%s node=%s time=%.1f" % [current_strategy, candidate_id, active_elapsed])
+			break
 	if batch_size > 0:
 		var local_group_batch_size := 0
 		for node_id in batch_nodes:
@@ -503,6 +674,44 @@ func _purchase_affordable_research() -> void:
 			"nodes": batch_nodes,
 		})
 		max_purchase_batch = maxi(max_purchase_batch, batch_size)
+
+
+func _next_purchase_candidate() -> Dictionary:
+	var candidate: Dictionary = {}
+	var candidate_rank := 999
+	var candidate_cost := INF
+	for definition_variant in Balance.UPGRADE_NODES:
+		var definition: Dictionary = definition_variant
+		var node_id := String(definition.id)
+		if not game.progression.can_purchase(node_id):
+			continue
+		var rank := _strategy_rank(definition)
+		var cost := float(definition.cost)
+		if rank < candidate_rank or (rank == candidate_rank and cost < candidate_cost):
+			candidate = definition
+			candidate_rank = rank
+			candidate_cost = cost
+	return candidate
+
+
+func _strategy_rank(definition: Dictionary) -> int:
+	if current_strategy == "cheapest":
+		return 0
+	var branch := String(definition.get("branch", ""))
+	var node_id := String(definition.id)
+	var effect_type := String(definition.get("effect_type", ""))
+	var is_automation := (
+		effect_type == "automation"
+		or branch == "network"
+		or node_id in ["secondary_camera", "predictive_dish_control", "automated_tracking", "observatory_network", "draco_array"]
+	)
+	if current_strategy == "automation_first":
+		return 0 if is_automation else 1
+	if current_strategy == "manual_first":
+		if branch in ["optics", "taurus", "lyra", "ursa_minor", "perseus"]:
+			return 0
+		return 2 if is_automation else 1
+	return 0
 
 
 func _cheapest_available_research() -> Dictionary:
@@ -523,22 +732,27 @@ func _record_success_checkpoints() -> void:
 			checkpoint_successes[checkpoint] = game.progression.success_count
 
 
-func _record_available_arrivals() -> void:
+func _record_node_states() -> void:
 	var arriving_nodes: Array[String] = []
-	for definition in Balance.UPGRADE_NODES:
+	for definition_variant in Balance.UPGRADE_NODES:
+		var definition: Dictionary = definition_variant
 		var node_id := String(definition.id)
-		if seen_available_nodes.has(node_id) or game.progression.get_node_state(node_id) != "available":
-			continue
-		seen_available_nodes[node_id] = true
-		availability_times[node_id] = active_elapsed
-		arriving_nodes.append(node_id)
-	if arriving_nodes.is_empty():
-		return
-	var arrival_gap := active_elapsed - last_arrival_time
-	longest_no_arrival = maxf(longest_no_arrival, arrival_gap)
-	if arrival_gap > Balance.MAX_OBSERVATION_DURATION + STEP:
-		arrival_gaps.append({"time": active_elapsed, "gap": arrival_gap, "nodes": arriving_nodes})
-	last_arrival_time = active_elapsed
+		if not reveal_times.has(node_id) and game.progression.is_node_revealed(node_id):
+			reveal_times[node_id] = active_elapsed
+		var state: String = game.progression.get_node_state(node_id)
+		if state == "available":
+			if not seen_available_nodes.has(node_id):
+				seen_available_nodes[node_id] = true
+				availability_times[node_id] = active_elapsed
+				arriving_nodes.append(node_id)
+			if not affordable_times.has(node_id) and game.progression.observation_data >= float(definition.cost):
+				affordable_times[node_id] = active_elapsed
+	if not arriving_nodes.is_empty():
+		var arrival_gap := active_elapsed - last_arrival_time
+		longest_no_arrival = maxf(longest_no_arrival, arrival_gap)
+		if arrival_gap > Balance.MAX_OBSERVATION_DURATION + STEP:
+			arrival_gaps.append({"time": active_elapsed, "gap": arrival_gap, "nodes": arriving_nodes})
+		last_arrival_time = active_elapsed
 
 
 func _local_group_purchase_gaps() -> Dictionary:
@@ -553,23 +767,215 @@ func _local_group_purchase_gaps() -> Dictionary:
 	return result
 
 
-func _all_local_group_gaps_within(gaps: Dictionary, ceiling: float) -> bool:
-	var local_group_count := 0
+func _milestone_purchase_times() -> Dictionary:
+	var result := {}
+	for node_id in MILESTONE_NODES:
+		if purchase_times.has(node_id):
+			result[node_id] = purchase_times[node_id]
+	return result
+
+
+func _node_timelines() -> Dictionary:
+	var result := {}
 	for definition_variant in Balance.UPGRADE_NODES:
-		var definition: Dictionary = definition_variant
-		if String(definition.get("branch", "")) != "local_group":
+		var node_id := String(Dictionary(definition_variant).id)
+		result[node_id] = {
+			"r": float(reveal_times.get(node_id, -1.0)),
+			"a": float(availability_times.get(node_id, -1.0)),
+			"f": float(affordable_times.get(node_id, -1.0)),
+			"p": float(purchase_times.get(node_id, -1.0)),
+		}
+	return result
+
+
+func _phenomenon_experience_gaps() -> Dictionary:
+	var result := {}
+	for target_id_variant in PHENOMENON_UNLOCK_NODES:
+		var target_id := String(target_id_variant)
+		var node_id := String(PHENOMENON_UNLOCK_NODES[target_id])
+		if purchase_times.has(node_id) and phenomenon_observation_times.has(target_id):
+			result[target_id] = float(phenomenon_observation_times[target_id]) - float(purchase_times[node_id])
+	return result
+
+
+func _large_purchase_batches() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for batch_variant in purchase_batches:
+		var batch: Dictionary = batch_variant
+		if int(batch.count) >= 5:
+			result.append(batch.duplicate(true))
+	return result
+
+
+func _top_timeline_gaps(start_times: Dictionary, end_times: Dictionary, limit: int) -> Array[Dictionary]:
+	var entries: Array[Dictionary] = []
+	for node_id_variant in end_times:
+		var node_id := String(node_id_variant)
+		if not start_times.has(node_id):
 			continue
-		local_group_count += 1
-		var node_id := String(definition.id)
-		if not gaps.has(node_id) or float(gaps[node_id]) > ceiling:
-			return false
-	return gaps.size() == local_group_count
+		entries.append({
+			"node": node_id,
+			"gap": float(end_times[node_id]) - float(start_times[node_id]),
+			"start": float(start_times[node_id]),
+			"end": float(end_times[node_id]),
+		})
+	entries.sort_custom(_sort_gap_desc)
+	if entries.size() > limit:
+		entries.resize(limit)
+	return entries
 
 
-func _harvest_rate_per_minute(harvest_count: int, start_time: float) -> float:
-	if start_time < 0.0 or completion_time <= start_time:
+func _sort_gap_desc(left: Dictionary, right: Dictionary) -> bool:
+	return float(left.gap) > float(right.gap)
+
+
+func _longest_purchase_gap() -> float:
+	var times: Array[float] = [0.0]
+	for batch_variant in purchase_batches:
+		var batch: Dictionary = batch_variant
+		times.append(float(batch.time))
+	if research_completion_time >= 0.0:
+		times.append(research_completion_time)
+	times.sort()
+	var longest := 0.0
+	for index in range(1, times.size()):
+		longest = maxf(longest, times[index] - times[index - 1])
+	return longest
+
+
+func _source_income_total() -> float:
+	return manual_meteor_income + automatic_meteor_income + manual_host_income + automatic_host_income + phenomenon_income
+
+
+func _purchased_cost_total() -> float:
+	var result := 0.0
+	for node_id_variant in game.progression.purchased_nodes:
+		result += float(Balance.upgrade_definition(String(node_id_variant)).get("cost", 0.0))
+	return result
+
+
+func _completed_phenomenon_count() -> int:
+	return game.galactic_phenomena.completed_targets.size()
+
+
+func _round_rate_summary() -> Dictionary:
+	if round_reports.is_empty():
+		return {}
+	var rates: Array[float] = []
+	for report_variant in round_reports:
+		var report: Dictionary = report_variant
+		rates.append(float(report.rate_per_minute))
+	rates.sort()
+	return {
+		"rounds": rates.size(),
+		"minimum": rates.front(),
+		"median": _median(rates),
+		"maximum": rates.back(),
+		"last": float(round_reports.back().rate_per_minute),
+	}
+
+
+func _validation_errors(result: Dictionary) -> Array[String]:
+	var errors: Array[String] = []
+	if int(result.purchased) != Balance.UPGRADE_NODES.size():
+		errors.append("research_not_complete")
+	if float(result.research_completion_time) < 0.0:
+		errors.append("missing_research_completion_time")
+	if float(result.content_completion_time) < float(result.research_completion_time):
+		errors.append("galactic_content_not_complete")
+	if not is_equal_approx(float(result.value_multiplier), EXPECTED_FINAL_VALUE_MULTIPLIER):
+		errors.append("unexpected_global_value_multiplier")
+	if not is_equal_approx(float(result.observation_span), Balance.GALACTIC_FINAL_OBSERVATION_SPAN):
+		errors.append("unexpected_final_observation_span")
+	if int(result.completed_phenomena) != EXPECTED_PHENOMENON_COUNT:
+		errors.append("missing_galactic_phenomena")
+	if float(result.manual_meteor_income) <= 0.0 or float(result.automatic_meteor_income) <= 0.0:
+		errors.append("meteor_income_lane_not_exercised")
+	if float(result.manual_host_income) + float(result.automatic_host_income) <= 0.0:
+		errors.append("host_income_lane_not_exercised")
+	if float(result.phenomenon_income) <= 0.0:
+		errors.append("phenomenon_income_lane_not_exercised")
+	if float(result.income_reconciliation_error) > 0.5:
+		errors.append("source_income_does_not_reconcile")
+	if float(result.bank_reconciliation_error) > 0.5:
+		errors.append("bank_does_not_reconcile")
+	if float(result.bank) < 0.0:
+		errors.append("negative_bank")
+	if float(result.longest_no_arrival) > NO_ARRIVAL_REFERENCE_SECONDS + STEP:
+		errors.append("research_arrival_gap_exceeds_design_contract")
+	var counts: Dictionary = result.timeline_counts
+	for key in ["revealed", "available", "affordable", "purchased"]:
+		if int(counts.get(key, 0)) != Balance.UPGRADE_NODES.size():
+			errors.append("incomplete_%s_timeline" % key)
+	return errors
+
+
+func _print_result(seed: int, result: Dictionary) -> void:
+	print("FULL_TREE_ECONOMY_RESULT strategy=%s seed=%d purchased=%d/%d research_seconds=%.1f content_seconds=%.1f rounds=%d successes=%d earned=%.0f spent=%.0f bank=%.0f value_multiplier=%.2f observation_span=%.7f manual_income_share=%.4f automatic_income_share=%.4f longest_no_arrival=%.1f longest_purchase_gap=%.1f max_purchase_batch=%d max_local_group_purchase_batch=%d phenomena_at_research_completion=%d" % [
+		String(result.strategy), seed, int(result.purchased), Balance.UPGRADE_NODES.size(),
+		float(result.research_completion_time), float(result.content_completion_time), int(result.rounds),
+		int(result.successes), float(result.earned), float(result.purchased_cost_total), float(result.bank),
+		float(result.value_multiplier), float(result.observation_span), float(result.manual_income_share),
+		float(result.automatic_income_share), float(result.longest_no_arrival), float(result.longest_purchase_gap),
+		int(result.max_purchase_batch), int(result.max_local_group_purchase_batch), int(result.phenomena_at_research_completion),
+	])
+	print("FULL_TREE_ECONOMY_INCOME strategy=%s seed=%d manual_meteor=%.0f automatic_meteor=%.0f manual_host=%.0f automatic_host=%.0f phenomena=%.0f source_total=%.0f source_error=%.1f bank_error=%.1f host_observations=%d host_profiles=%s" % [
+		String(result.strategy), seed, float(result.manual_meteor_income), float(result.automatic_meteor_income),
+		float(result.manual_host_income), float(result.automatic_host_income), float(result.phenomenon_income),
+		float(result.source_income_total), float(result.income_reconciliation_error), float(result.bank_reconciliation_error),
+		int(result.host_observation_count), JSON.stringify(result.host_profile_metrics),
+	])
+	print("FULL_TREE_ECONOMY_PACING strategy=%s seed=%d checkpoints=%s round_rates=%s timeline_counts=%s top_reveal_to_available=%s top_cash_barriers=%s top_affordable_to_purchase=%s top_available_to_purchase=%s arrival_gaps=%s large_batches=%s" % [
+		String(result.strategy), seed, JSON.stringify(result.checkpoints), JSON.stringify(result.round_rate_summary),
+		JSON.stringify(result.timeline_counts), JSON.stringify(result.top_reveal_to_available_gaps),
+		JSON.stringify(result.top_cash_barriers), JSON.stringify(result.top_affordable_to_purchase_gaps),
+		JSON.stringify(result.top_available_to_purchase_gaps),
+		JSON.stringify(result.arrival_gaps), JSON.stringify(result.large_purchase_batches),
+	])
+	print("FULL_TREE_ECONOMY_LOCAL_GROUP strategy=%s seed=%d milestone_times=%s purchase_gaps=%s phenomenon_times=%s phenomenon_stages=%s phenomenon_experience_gaps=%s local_group_seconds=%.1f host_cursor_share=%.4f phenomenon_cursor_share=%.4f meteor_cursor_share=%.4f" % [
+		String(result.strategy), seed, JSON.stringify(result.milestone_times), JSON.stringify(result.local_group_purchase_gaps),
+		JSON.stringify(result.phenomenon_observation_times), JSON.stringify(result.phenomenon_observation_stages),
+		JSON.stringify(result.phenomenon_experience_gaps), float(result.local_group_elapsed_seconds),
+		float(result.host_cursor_total_share), float(result.phenomenon_cursor_total_share), float(result.meteor_cursor_total_share),
+	])
+	print("FULL_TREE_ECONOMY_TIMELINE strategy=%s seed=%d nodes=%s" % [
+		String(result.strategy), seed, JSON.stringify(result.node_timelines),
+	])
+
+
+func _seeds_from_environment() -> Array[int]:
+	var result: Array[int] = []
+	var configured := OS.get_environment(SEEDS_ENV).strip_edges()
+	if not configured.is_empty():
+		for token in configured.split(",", false):
+			var cleaned := String(token).strip_edges()
+			if cleaned.is_valid_int():
+				result.append(int(cleaned))
+	if result.is_empty():
+		result.assign(SEEDS)
+	return result
+
+
+func _strategies_from_environment() -> Array[String]:
+	var result: Array[String] = []
+	var configured := OS.get_environment(STRATEGIES_ENV).strip_edges()
+	if not configured.is_empty():
+		for token in configured.split(",", false):
+			var strategy := String(token).strip_edges().to_lower()
+			if strategy in ["cheapest", "automation_first", "manual_first"] and strategy not in result:
+				result.append(strategy)
+	if result.is_empty():
+		result.assign(DEFAULT_STRATEGIES)
+	return result
+
+
+func _median(sorted_values: Array[float]) -> float:
+	if sorted_values.is_empty():
 		return 0.0
-	return float(harvest_count) * 60.0 / (completion_time - start_time)
+	var middle := int(sorted_values.size() / 2)
+	if sorted_values.size() % 2 == 1:
+		return sorted_values[middle]
+	return (sorted_values[middle - 1] + sorted_values[middle]) * 0.5
 
 
 func _safe_ratio(numerator: float, denominator: float) -> float:
