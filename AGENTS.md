@@ -21,6 +21,16 @@ Read before changing anything:
 - If the executable export fails, do not report the task as complete. Report the failure and its cause.
 - Include the absolute path to the generated `.exe` in the final response.
 
+## Commit Attribution
+
+Every commit created for this project must end with both of these trailers,
+separated from the commit message body by a blank line:
+
+```
+Co-authored-by: claude-code-bot <claude-code-bot@users.noreply.github.com>
+Co-authored-by: codex-bot <codex-bot@noreply.example.com>
+```
+
 ## Agent Room Protocol
 
 When work is being run through an Agent Room meeting, the room is the
