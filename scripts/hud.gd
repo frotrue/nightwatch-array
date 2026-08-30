@@ -1,6 +1,8 @@
 extends CanvasLayer
 
-signal restart_requested
+signal catalogue_finish_requested
+signal catalogue_continue_requested
+signal catalogue_debug_preview_close_requested
 signal phase_summary_continue_requested
 signal save_slot_requested(slot: int)
 signal load_slot_requested(slot: int)
@@ -55,8 +57,16 @@ var debug_panel: PanelContainer
 var debug_label: Label
 var end_overlay: ColorRect
 var end_title: Label
+var end_subtitle: Label
+var end_body: Label
 var end_stats: Label
-var restart_button: Button
+var end_save_failure: Label
+var end_reveal_body: VBoxContainer
+var end_actions: HBoxContainer
+var end_finish_button: Button
+var end_continue_button: Button
+var end_reveal_tween: Tween
+var catalogue_save_failure_active: bool = false
 var phase_summary_overlay: Control
 var in_round_visibility: Dictionary = {}
 var phase_summary_title: Label
@@ -125,7 +135,6 @@ var last_observation_data: float = -1.0
 var data_gain_tween: Tween
 var data_pulse_tween: Tween
 var ready_pulse_tween: Tween
-var last_end_success: bool = false
 var paused_by_settings: bool = false
 var paused_by_startup: bool = false
 var active_save_slot: int = 0
@@ -388,21 +397,88 @@ func is_pointer_over_hud(pointer_position: Vector2) -> bool:
 	return false
 
 
-func show_end(success: bool, stats_text: String) -> void:
-	last_end_success = success
-	end_title.text = tr("HUD_END_SUCCESS") if success else tr("HUD_END_FAILURE")
-	# Outcome reads as brightness rather than hue. The whole layer is red light,
-	# so a red "failure" colour would say nothing; a sky that went dim on you does.
-	end_title.add_theme_color_override("font_color", UITheme.INK_MAX if success else UITheme.INK_MID)
-	end_stats.text = stats_text
+func show_catalogue_ending(stats_text: String) -> void:
+	# A save error belongs only to the ending presentation that reported it.
+	# Locale refreshes preserve the message, while a genuinely new ending starts
+	# with a clean record surface.
+	catalogue_save_failure_active = false
+	refresh_catalogue_ending_text(stats_text)
+	if end_reveal_tween != null and end_reveal_tween.is_valid():
+		end_reveal_tween.kill()
+	end_overlay.color = Color(0.016, 0.008, 0.006, 0.0)
+	end_reveal_body.modulate = Color(1.0, 0.76, 0.62, 0.0)
+	end_actions.modulate = Color(1.0, 0.82, 0.70, 0.0)
+	end_finish_button.disabled = true
+	end_continue_button.disabled = true
+	end_finish_button.release_focus()
+	end_continue_button.release_focus()
 	end_overlay.visible = true
 	end_overlay.move_to_front()
 	_refresh_in_round_readouts()
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	# The overlay owns input immediately. Its red-light scrim, record copy, and
+	# decisions then arrive as one six-second beat while the paused game remains
+	# still behind it.
+	end_reveal_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	end_reveal_tween.tween_property(end_overlay, "color:a", 0.94, 1.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	end_reveal_tween.tween_property(end_reveal_body, "modulate", Color.WHITE, 2.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	end_reveal_tween.tween_interval(0.8)
+	end_reveal_tween.tween_property(end_actions, "modulate", Color.WHITE, 1.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	end_reveal_tween.tween_interval(0.4)
+	end_reveal_tween.tween_callback(_complete_catalogue_reveal)
+
+
+func refresh_catalogue_ending_text(stats_text: String = "") -> void:
+	if end_title == null:
+		return
+	end_title.text = tr("HUD_END_TITLE")
+	end_subtitle.text = tr("HUD_END_SUBTITLE")
+	end_body.text = tr("HUD_END_BODY")
+	end_finish_button.text = tr("HUD_END_FINISH")
+	end_continue_button.text = tr("HUD_END_CONTINUE")
+	end_save_failure.text = tr("HUD_END_SAVE_FAILURE")
+	end_save_failure.visible = catalogue_save_failure_active
+	if not stats_text.is_empty():
+		end_stats.text = stats_text
+
+
+func show_catalogue_save_failure() -> void:
+	catalogue_save_failure_active = true
+	refresh_catalogue_ending_text()
+	if not is_end_open():
+		return
+	# A direct handler call can exercise a save failure before the reveal has
+	# finished. Bring the choices fully online so retry never waits behind the
+	# presentation beat.
+	if end_reveal_tween != null and end_reveal_tween.is_valid():
+		end_reveal_tween.kill()
+	end_reveal_tween = null
+	_complete_catalogue_reveal()
+
+
+func _complete_catalogue_reveal() -> void:
+	if not is_end_open():
+		return
+	end_overlay.color.a = 0.94
+	end_reveal_body.modulate = Color.WHITE
+	end_actions.modulate = Color.WHITE
+	end_finish_button.disabled = false
+	end_continue_button.disabled = false
+	end_finish_button.grab_focus()
 
 
 func hide_end() -> void:
+	if end_reveal_tween != null and end_reveal_tween.is_valid():
+		end_reveal_tween.kill()
+	end_reveal_tween = null
+	end_finish_button.release_focus()
+	end_continue_button.release_focus()
 	end_overlay.visible = false
 	_refresh_in_round_readouts()
+
+
+func is_end_open() -> bool:
+	return end_overlay != null and end_overlay.visible
 
 
 # Live readouts that belong to the round that just ended. The summary is
@@ -618,6 +694,20 @@ func _refresh_save_mode_label(just_saved: bool) -> void:
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
+	if (
+		is_end_open()
+		and event is InputEventKey
+		and event.pressed
+		and not event.echo
+		and event.ctrl_pressed
+		and event.shift_pressed
+		and event.keycode == KEY_E
+	):
+		# HUD processes while paused, unlike the gameplay root. It therefore owns
+		# the second half of the debug-preview toggle after the ending pauses play.
+		catalogue_debug_preview_close_requested.emit()
+		get_viewport().set_input_as_handled()
+		return
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
 		if reset_dialog != null and reset_dialog.visible:
 			reset_dialog.hide()
@@ -951,14 +1041,13 @@ func _apply_locale() -> void:
 	language_selector.set_item_text(0, tr("SETTINGS_ENGLISH"))
 	language_selector.set_item_text(1, tr("SETTINGS_KOREAN"))
 	tutorial_label.text = tr("HUD_TUTORIAL_DONE") if tutorial_complete else tr("HUD_TUTORIAL_START")
-	restart_button.text = tr("HUD_RESTART")
-	end_title.text = tr("HUD_END_SUCCESS") if last_end_success else tr("HUD_END_FAILURE")
+	refresh_catalogue_ending_text()
 	debug_label.text = "\n\n".join([
 		tr("HUD_DEBUG_TITLE"),
 		"\n".join([
 			tr("HUD_DEBUG_DATA"), tr("HUD_DEBUG_NEXT"), tr("HUD_DEBUG_ALL"),
 			tr("HUD_DEBUG_METEOR"), tr("HUD_DEBUG_RARE"), tr("HUD_DEBUG_SHOWER"),
-			tr("HUD_DEBUG_FINAL"), tr("HUD_DEBUG_RESET")
+			tr("HUD_DEBUG_FINAL"), tr("HUD_DEBUG_ENDING"), tr("HUD_DEBUG_RESET")
 		])
 	])
 	last_runtime_second = -1
@@ -1396,13 +1485,13 @@ func _build_debug_panel() -> void:
 	debug_panel.offset_left = -350.0
 	debug_panel.offset_top = 78.0
 	debug_panel.offset_right = -18.0
-	debug_panel.offset_bottom = 252.0
+	debug_panel.offset_bottom = 274.0
 	debug_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	debug_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.03, 0.025, 0.07, 0.96), Color(0.62, 0.45, 0.94, 0.7), 8))
 	debug_panel.visible = false
 	root_control.add_child(debug_panel)
 	debug_label = _make_label(
-		"\n\n".join([tr("HUD_DEBUG_TITLE"), "\n".join([tr("HUD_DEBUG_DATA"), tr("HUD_DEBUG_NEXT"), tr("HUD_DEBUG_ALL"), tr("HUD_DEBUG_METEOR"), tr("HUD_DEBUG_RARE"), tr("HUD_DEBUG_SHOWER"), tr("HUD_DEBUG_FINAL"), tr("HUD_DEBUG_RESET")])]),
+		"\n\n".join([tr("HUD_DEBUG_TITLE"), "\n".join([tr("HUD_DEBUG_DATA"), tr("HUD_DEBUG_NEXT"), tr("HUD_DEBUG_ALL"), tr("HUD_DEBUG_METEOR"), tr("HUD_DEBUG_RARE"), tr("HUD_DEBUG_SHOWER"), tr("HUD_DEBUG_FINAL"), tr("HUD_DEBUG_ENDING"), tr("HUD_DEBUG_RESET")])]),
 		13,
 		UITheme.INK_MID
 	)
@@ -1434,32 +1523,69 @@ func _build_end_overlay() -> void:
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	frame.add_child(column)
 
-	end_title = _spec_label(tr("HUD_END_SUCCESS"), UITheme.sans("medium"), 46.0, UITheme.INK_MAX, -0.01)
+	end_reveal_body = VBoxContainer.new()
+	end_reveal_body.alignment = BoxContainer.ALIGNMENT_CENTER
+	end_reveal_body.add_theme_constant_override("separation", int(UITheme.px(20.0)))
+	end_reveal_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(end_reveal_body)
+
+	end_subtitle = _spec_label(tr("HUD_END_SUBTITLE"), UITheme.mono(), 13.0, UITheme.INK_MID, 0.30)
+	end_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	end_reveal_body.add_child(end_subtitle)
+
+	end_title = _spec_label(tr("HUD_END_TITLE"), UITheme.sans("medium"), 46.0, UITheme.INK_MAX, -0.01)
 	end_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	column.add_child(end_title)
+	end_reveal_body.add_child(end_title)
 
 	var rule := CenterContainer.new()
 	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	column.add_child(rule)
+	end_reveal_body.add_child(rule)
 	var rule_line := ColorRect.new()
 	rule_line.color = UITheme.ACCENT_DEEP
 	rule_line.custom_minimum_size = Vector2(UITheme.px(420.0), 1.0)
 	rule_line.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	rule.add_child(rule_line)
 
-	# The run tally is a column of figures, so it takes the tabular mono the
+	end_body = _spec_label(tr("HUD_END_BODY"), UITheme.sans("light"), 17.0, UITheme.INK_MID, 0.02)
+	end_body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	end_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	end_body.custom_minimum_size.x = UITheme.px(680.0)
+	end_reveal_body.add_child(end_body)
+
+	# The catalogue tally is a column of figures, so it takes the tabular mono the
 	# rest of the instrument layer uses. Proportional digits would leave the
-	# six values ragged against each other.
+	# values ragged against each other.
 	end_stats = _spec_label("", UITheme.mono_tabular(), 20.0, UITheme.INK_HIGH, 0.04)
 	end_stats.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	column.add_child(end_stats)
+	end_reveal_body.add_child(end_stats)
 
-	restart_button = Button.new()
-	restart_button.text = tr("HUD_RESTART")
-	restart_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	_style_text_action(restart_button, 22.0, UITheme.BANNER_TITLE)
-	restart_button.pressed.connect(func(): restart_requested.emit())
-	column.add_child(restart_button)
+	end_save_failure = _spec_label(tr("HUD_END_SAVE_FAILURE"), UITheme.sans(), 15.0, UITheme.ALERT, 0.02)
+	end_save_failure.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	end_save_failure.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	end_save_failure.custom_minimum_size.x = UITheme.px(680.0)
+	end_save_failure.visible = false
+	end_reveal_body.add_child(end_save_failure)
+
+	end_actions = HBoxContainer.new()
+	end_actions.alignment = BoxContainer.ALIGNMENT_CENTER
+	end_actions.add_theme_constant_override("separation", int(UITheme.px(56.0)))
+	column.add_child(end_actions)
+
+	end_finish_button = Button.new()
+	end_finish_button.text = tr("HUD_END_FINISH")
+	end_finish_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_style_text_action(end_finish_button, 22.0, UITheme.BANNER_TITLE)
+	end_finish_button.focus_mode = Control.FOCUS_ALL
+	end_finish_button.pressed.connect(func(): catalogue_finish_requested.emit())
+	end_actions.add_child(end_finish_button)
+
+	end_continue_button = Button.new()
+	end_continue_button.text = tr("HUD_END_CONTINUE")
+	end_continue_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_style_text_action(end_continue_button, 20.0, UITheme.INK_MID)
+	end_continue_button.focus_mode = Control.FOCUS_ALL
+	end_continue_button.pressed.connect(func(): catalogue_continue_requested.emit())
+	end_actions.add_child(end_continue_button)
 
 
 func _build_phase_summary_overlay() -> void:
@@ -1568,7 +1694,7 @@ func _style_text_action(button: Button, spec_size: float, color: Color) -> void:
 		button.add_theme_color_override(state, color)
 	button.add_theme_color_override("font_disabled_color", UITheme.INK_LOW)
 	for state in ["normal", "hover", "pressed", "focus", "disabled"]:
-		button.add_theme_stylebox_override(state, _action_underline_style(state == "hover"))
+		button.add_theme_stylebox_override(state, _action_underline_style(state in ["hover", "focus"]))
 
 
 func _action_underline_style(bright: bool) -> StyleBoxFlat:

@@ -134,6 +134,25 @@ func get_lens_radius() -> float:
 	return _world_px(LENS_ZONE_RADIUS_SCREEN)
 
 
+func is_record_complete() -> bool:
+	for target_id_variant in TARGET_SPECS.keys():
+		if not completed_targets.has(String(target_id_variant)):
+			return false
+	return true
+
+
+func get_completed_record_count() -> int:
+	var count := 0
+	for target_id_variant in TARGET_SPECS.keys():
+		if completed_targets.has(String(target_id_variant)):
+			count += 1
+	return count
+
+
+func get_record_target_count() -> int:
+	return TARGET_SPECS.size()
+
+
 func get_save_data() -> Dictionary:
 	var targets: Array[Dictionary] = []
 	for child in get_children():

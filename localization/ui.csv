@@ -98,9 +98,12 @@ HUD_DATA_PROGRESS,%d / %d DATA,데이터 %d / %d
 HUD_ARRAY_COMPLETE,ARRAY COMPLETE,관측망 완성
 HUD_NETWORK_STABLE,NIGHTWATCH ARRAY STABLE,나이트워치 관측망 안정화 완료
 HUD_ALL_SYSTEMS_ONLINE,ALL SYSTEMS ONLINE,모든 시스템 가동
-HUD_END_SUCCESS,PROTOTYPE COMPLETE,프로토타입 완료
-HUD_END_FAILURE,MAJOR FIREBALL LOST,대형 화구 관측 실패
-HUD_RESTART,START A NEW GAME,새 게임
+HUD_END_TITLE,NIGHTWATCH RECORD COMPLETE,나이트워치 관측 기록 완성
+HUD_END_SUBTITLE,LOCAL GROUP OBSERVATION RECORD COMPLETE,국부은하군 관측 기록 완성
+HUD_END_BODY,The night sky does not end; the record of this night is complete.,밤하늘은 끝나지 않습니다. 하지만 이 밤의 기록은 완성되었습니다.
+HUD_END_FINISH,ARCHIVE RECORD AND FINISH,기록을 보관하고 마치기
+HUD_END_CONTINUE,CONTINUE OBSERVING THE OPEN NIGHT,열린 밤 계속 관측
+HUD_END_SAVE_FAILURE,The record could not be saved. Check the save slot and try again.,기록을 저장하지 못했습니다. 세이브 슬롯을 확인한 뒤 다시 시도하세요.
 HUD_DEBUG_TITLE,DEBUG ARRAY  [F9 hide],디버그 관측망  [F9 숨기기]
 HUD_DEBUG_DATA,Ctrl+Shift+D   +100 data,Ctrl+Shift+D   데이터 +100
 HUD_DEBUG_NEXT,Ctrl+Shift+N   Purchase next available node,Ctrl+Shift+N   다음 노드 구매
@@ -108,7 +111,8 @@ HUD_DEBUG_ALL,Ctrl+Shift+A   Purchase all nodes,Ctrl+Shift+A   모든 노드 구
 HUD_DEBUG_METEOR,Ctrl+Shift+M   Spawn meteor,Ctrl+Shift+M   유성 생성
 HUD_DEBUG_RARE,Ctrl+Shift+R   Spawn rare fireball,Ctrl+Shift+R   희귀 화구 생성
 HUD_DEBUG_SHOWER,Ctrl+Shift+S   Trigger shower,Ctrl+Shift+S   유성우 시작
-HUD_DEBUG_FINAL,Ctrl+Shift+F   Trigger final event,Ctrl+Shift+F   최종 이벤트 시작
+HUD_DEBUG_FINAL,Ctrl+Shift+F   Trigger Canis Major event,Ctrl+Shift+F   큰개자리 화구 이벤트 시작
+HUD_DEBUG_ENDING,Ctrl+Shift+E   Preview catalogue ending,Ctrl+Shift+E   카탈로그 엔딩 미리 보기
 HUD_DEBUG_RESET,Ctrl+Shift+Backspace   Reset game,Ctrl+Shift+Backspace   게임 초기화
 TREE_TITLE,RESEARCH CHART,연구 성도
 TREE_INTERMISSION_SUBTITLE,RESEARCH BREAK  /  OBSERVATION %d STARTS AT %d SECONDS,연구 시간  /  %d차 관측은 %d초
@@ -116,6 +120,7 @@ TREE_DATA,DATA  %d,데이터  %d
 TREE_CENTER,RESET NORTH,정북 복귀
 TREE_CLOSE,CLOSE  [U],닫기  [U]
 TREE_START_OBSERVATION,START OBSERVATION  [U],관측 시작  [U]
+TREE_CATALOGUE_SEAL_RECORD,SEAL RECORD  [U],기록 마치기  [U]
 TREE_CONTROLS,WHEEL ROTATE  /  CTRL+WHEEL ZOOM,휠 회전  /  Ctrl+휠 확대·축소
 TREE_STATUS_READY,%d UPGRADE READY,시스템 설치 가능 %d개
 TREE_STATUS_PATHS,%d OPEN PATHS  /  GATHER OBSERVATION DATA,열린 경로 %d개  /  관측 데이터 필요
@@ -569,12 +574,13 @@ EVENT_PERSEID_OUTBURST_INCOMING,PERSEID OUTBURST INCOMING,페르세우스 유성
 EVENT_PERSEID_OUTBURST,PERSEID OUTBURST,페르세우스 유성군 돌발
 EVENT_PERSEID_OUTBURST_PASSED,OUTBURST PASSED  •  ARRAY STABLE,돌발 통과  •  관측망 안정
 EVENT_MAJOR_FIREBALL,MAJOR FIREBALL,대형 화구
-END_RUN_TIME,RUN TIME   %02d:%02d,진행 시간   %02d:%02d
+END_ACTIVE_TIME,ACTIVE OBSERVATION TIME   %02d:%02d,활성 관측 시간   %02d:%02d
+END_ROUNDS,OBSERVATION ROUNDS   %d,관측 회차   %d
 END_OBSERVATIONS,OBSERVATIONS   %d,관측 횟수   %d
 END_MANUAL_AUTO,MANUAL / AUTO   %d / %d,수동 / 자동   %d / %d
 END_TOTAL_DATA,TOTAL DATA EARNED   %d,총 획득 데이터   %d
-END_SYSTEMS,ARRAY SYSTEMS   %d / %d,관측망 시스템   %d / %d
-END_BEST_MULTIPLIER,BEST MANUAL MULTIPLIER   x%.2f,최고 수동 관측 배율   x%.2f
+END_RESEARCH,RESEARCH   %d / %d,연구   %d / %d
+END_PHENOMENA,GALACTIC PHENOMENA   %d / %d,은하 현상   %d / %d
 HUD_READY_SYSTEMS,%d SYSTEMS READY  [U],설치 가능한 시스템 %d  [U]
 HUD_TRACK_MULTIPLIER,×%.2f,×%.2f
 HUD_PHASE_ROUND,OBSERVATION %d,%d차 관측
@@ -601,6 +607,7 @@ TREE_CONSTELLATION_LOCKED,LOCKED,잠김
 TREE_CONSTELLATION_HORIZON_HINT,%d CONSTELLATIONS BELOW THE HORIZON · USE THE WHEEL TO RAISE THEM,지평선 아래 별자리 %d개는 휠로 올라옵니다
 TREE_BOTTOM_START_OBSERVATION,[U] START OBSERVATION,[U] 관측 시작
 TREE_BOTTOM_CLOSE,[U] CLOSE CHART,[U] 성도 닫기
+TREE_BOTTOM_CATALOGUE_SEAL_RECORD,[U] SEAL RECORD,[U] 기록 마치기
 TREE_CONSTELLATION_FIELD_STATUS,STATUS,상태
 TREE_CONSTELLATION_FIELD_COST,COST,비용
 TREE_CONSTELLATION_FIELD_EFFECT,EFFECT,효과
@@ -616,6 +623,8 @@ TREE_CONSTELLATION_CURRENT_SKY,CURRENT SKY,현재 성도
 TREE_CONSTELLATION_DRACO_REMAINING,%s IN PROGRESS · DRACO OPENS AFTER %d MORE INSTALLS,%s 진행 중 · 용자리는 나머지 %d개 설치 후 열립니다
 TREE_CONSTELLATION_DRACO_OPEN,%s IN PROGRESS · DRACO FINAL OBSERVATION IS OPEN,%s 진행 중 · 용자리 최종 관측이 열렸습니다
 TREE_GALACTIC_COMPLETE_DETAIL,All research is installed. The night continues.,모든 연구를 설치했습니다. 밤은 계속됩니다.
+TREE_CATALOGUE_FINAL_WATCH_DETAIL,All research records are complete. Close the chart to begin the final full-array observation.,모든 연구 기록이 완성되었습니다. 성도를 닫아 관측망 전체의 마지막 관측 회차를 시작하세요.
+TREE_CATALOGUE_ENDING_READY_DETAIL,The observation record is ready to seal. Close the chart to see the ending.,관측 기록을 마칠 준비가 되었습니다. 성도를 닫아 엔딩을 확인하세요.
 TREE_GALACTIC_LEDGER,COMPLETION RECORD,완주 기록
 TREE_GALACTIC_SPAN,OBSERVATION SPAN,관측 폭
 TREE_GALACTIC_BRANCH_INSTALLS,INSTALLS BY BRANCH,계열별 설치

@@ -154,6 +154,7 @@ func _verify_simple_phenomena(view: Camera2D) -> void:
 	root.add_child(meteor_layer)
 	root.add_child(phenomena)
 	phenomena.setup(progression, view, meteor_layer)
+	_verify_phenomenon_record_contract(progression, view, meteor_layer)
 	phenomena.begin_round()
 	var metrics: Dictionary = phenomena.get_metrics()
 	_check(int(metrics.active_supernovae) == 2 and int(metrics.active_arcs) == 0, "the phenomenon queue exposes at most the first two observation targets")
@@ -220,6 +221,49 @@ func _verify_simple_phenomena(view: Camera2D) -> void:
 	restored_phenomena.queue_free()
 	meteor_layer.queue_free()
 	progression.queue_free()
+
+
+func _verify_phenomenon_record_contract(progression, view: Camera2D, meteor_layer: Node2D) -> void:
+	var canonical_targets: Array[String] = [
+		"supernova_primary",
+		"supernova_secondary",
+		"einstein_ring",
+		"partial_lens",
+		"lensed_supernova",
+	]
+	var record_probe = PhenomenaController.new()
+	root.add_child(record_probe)
+	record_probe.setup(progression, view, meteor_layer)
+	for index in range(canonical_targets.size() - 1):
+		record_probe.completed_targets[canonical_targets[index]] = true
+	record_probe.completed_targets["non_catalogue_junk"] = true
+	_check(
+		record_probe.get_record_target_count() == 5
+		and record_probe.get_completed_record_count() == 4
+		and not record_probe.is_record_complete(),
+		"four canonical phenomena plus an unknown id do not complete the galactic record"
+	)
+
+	record_probe.completed_targets[canonical_targets[-1]] = true
+	_check(
+		record_probe.get_completed_record_count() == record_probe.get_record_target_count()
+		and record_probe.is_record_complete(),
+		"record completion requires all five canonical galactic phenomena"
+	)
+
+	var saved_record := record_probe.get_save_data()
+	var restored_record = PhenomenaController.new()
+	root.add_child(restored_record)
+	restored_record.setup(progression, view, meteor_layer)
+	restored_record.load_save_data(saved_record)
+	_check(
+		restored_record.is_record_complete()
+		and restored_record.get_completed_record_count() == 5
+		and not restored_record.completed_targets.has("non_catalogue_junk"),
+		"save/load preserves canonical record completion and discards unknown ids"
+	)
+	record_probe.queue_free()
+	restored_record.queue_free()
 
 
 func _verify_global_regressions(progression) -> void:
