@@ -29,11 +29,14 @@ func _run() -> void:
 		game.events.set_process(false)
 		game.sky_contacts.set_process(false)
 	if ending_preview:
+		var preview_locale := OS.get_environment("NIGHTWATCH_ENDING_PREVIEW_LOCALE")
+		if preview_locale in ["en", "ko"]:
+			TranslationServer.set_locale(preview_locale)
 		game._show_catalogue_ending_debug_preview()
-		# Capture the late-middle composition: the route is readable, phenomena
-		# are converging, dawn has begun, and the record text is arriving.
+		# Capture the actual map at a chosen reveal beat (2.8 / 5.2 / 8.1s).
+		# By default retain the completed map beside the record and choices.
 		var requested_step := OS.get_environment("NIGHTWATCH_ENDING_PREVIEW_STEP").to_float()
-		game.hud.end_reveal_tween.custom_step(requested_step if requested_step > 0.0 else 5.8)
+		game.hud.end_reveal_tween.custom_step(requested_step if requested_step > 0.0 else 8.1)
 		if game.hud.end_reveal_tween != null and game.hud.end_reveal_tween.is_valid():
 			game.hud.end_reveal_tween.pause()
 		game.hud.end_coda.set_process(false)
@@ -65,10 +68,11 @@ func _run() -> void:
 	RenderingServer.force_sync()
 	if ending_preview:
 		print("ENDING_PREVIEW_STATE: ", JSON.stringify({
+			"constellations": game.hud.end_coda.constellation_progress,
 			"pullback": game.hud.end_coda.pullback_progress,
 			"route": game.hud.end_coda.route_progress,
-			"phenomena": game.hud.end_coda.phenomena_progress,
-			"dawn": game.hud.end_coda.dawn_progress,
+			"illumination": game.hud.end_coda.illumination_progress,
+			"settle": game.hud.end_coda.settle_progress,
 			"body_alpha": game.hud.end_reveal_body.modulate.a,
 			"actions_alpha": game.hud.end_actions.modulate.a,
 		}))

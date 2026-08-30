@@ -1451,21 +1451,16 @@ func _cache_chart_geometry() -> void:
 			galactic_core_max_length,
 			(Vector2(base_position_variant) - CHART_ORIGIN).length()
 		)
-	var local_group_max_radius := 1.0
-	for galaxy_variant in ChartData.LOCAL_GROUP_GALAXIES:
-		var galaxy: Dictionary = galaxy_variant
-		local_group_max_radius = maxf(local_group_max_radius, Vector2(galaxy.local_position).length())
+	var galactic_offsets := ChartData.galactic_map_offsets(
+		GALACTIC_ROUTE_INNER_RADIUS_SPEC,
+		GALACTIC_ROUTE_OUTER_RADIUS_SPEC,
+		GALACTIC_DISK_TILT
+	)
 	for index in range(ChartData.LOCAL_GROUP_GALAXIES.size()):
 		var galaxy_variant = ChartData.LOCAL_GROUP_GALAXIES[index]
 		var galaxy: Dictionary = galaxy_variant
 		var node_id := String(galaxy.node_id)
-		var source_position := Vector2(galaxy.local_position)
-		var source_radius := source_position.length()
-		var mapped_radius_spec := GALACTIC_ROUTE_INNER_RADIUS_SPEC + (source_radius / local_group_max_radius) * (GALACTIC_ROUTE_OUTER_RADIUS_SPEC - GALACTIC_ROUTE_INNER_RADIUS_SPEC)
-		var mapped_screen_offset := Vector2(
-			cos(source_position.angle()) * UITheme.px(mapped_radius_spec),
-			sin(source_position.angle()) * UITheme.px(mapped_radius_spec) * GALACTIC_DISK_TILT
-		)
+		var mapped_screen_offset := Vector2(galactic_offsets[node_id]) * UITheme.SCALE
 		local_group_node_positions[node_id] = CHART_ORIGIN + mapped_screen_offset / GALACTIC_ZOOM
 		local_group_node_order[node_id] = index
 	_cache_local_group_route()

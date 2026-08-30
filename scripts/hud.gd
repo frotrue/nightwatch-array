@@ -66,7 +66,7 @@ var end_body: Label
 var end_stats: Label
 var end_save_failure: Label
 var end_reveal_body: VBoxContainer
-var end_actions: HBoxContainer
+var end_actions: VBoxContainer
 var end_finish_button: Button
 var end_continue_button: Button
 var end_reveal_tween: Tween
@@ -427,17 +427,17 @@ func show_catalogue_ending(stats_text: String, debug_preview: bool = false) -> v
 	end_overlay.move_to_front()
 	_refresh_in_round_readouts()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	# The overlay owns input immediately. A parallel eight-second choreography
-	# pulls the procedural sky back, traces the completed array, gathers the five
-	# phenomena into the record, raises dawn, and only then exposes the choices.
+	# Replay the actual completed constellations, pull them into the Milky Way,
+	# then illuminate every Local Group marker. Choices wait for the map to settle.
 	end_reveal_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_parallel(true)
-	end_reveal_tween.tween_property(end_overlay, "color:a", 0.86, 1.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	end_reveal_tween.tween_property(end_coda, "pullback_progress", 1.0, 2.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	end_reveal_tween.tween_property(end_coda, "route_progress", 1.0, 3.0).set_delay(1.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	end_reveal_tween.tween_property(end_coda, "phenomena_progress", 1.0, 2.2).set_delay(3.7).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	end_reveal_tween.tween_property(end_coda, "dawn_progress", 1.0, 2.7).set_delay(4.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	end_reveal_tween.tween_property(end_reveal_body, "modulate", Color.WHITE, 1.8).set_delay(5.1).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	end_reveal_tween.tween_property(end_actions, "modulate", Color.WHITE, 1.0).set_delay(7.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	end_reveal_tween.tween_property(end_overlay, "color:a", 1.0, 0.65).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	end_reveal_tween.tween_property(end_coda, "constellation_progress", 1.0, 2.4).set_delay(0.25)
+	end_reveal_tween.tween_property(end_coda, "pullback_progress", 1.0, 2.2).set_delay(2.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	end_reveal_tween.tween_property(end_coda, "route_progress", 1.0, 2.7).set_delay(3.7)
+	end_reveal_tween.tween_property(end_coda, "illumination_progress", 1.0, 1.3).set_delay(6.0)
+	end_reveal_tween.tween_property(end_coda, "settle_progress", 1.0, 1.1).set_delay(6.1).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	end_reveal_tween.tween_property(end_reveal_body, "modulate", Color.WHITE, 1.0).set_delay(6.7).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	end_reveal_tween.tween_property(end_actions, "modulate", Color.WHITE, 0.8).set_delay(7.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	end_reveal_tween.tween_callback(_complete_catalogue_reveal).set_delay(END_REVEAL_TOTAL_SECONDS)
 
 
@@ -476,7 +476,7 @@ func _complete_catalogue_reveal() -> void:
 		end_reveal_tween.kill()
 	end_reveal_tween = null
 	end_reveal_complete = true
-	end_overlay.color.a = 0.86
+	end_overlay.color.a = 1.0
 	end_coda.complete_animation()
 	end_reveal_body.modulate = Color.WHITE
 	end_actions.modulate = Color.WHITE
@@ -1566,11 +1566,11 @@ func _build_end_overlay() -> void:
 	end_overlay.add_child(end_coda)
 	var frame := Control.new()
 	frame.name = "EndColumn"
-	frame.set_anchors_preset(Control.PRESET_CENTER)
-	frame.offset_left = -UITheme.px(640.0)
-	frame.offset_right = UITheme.px(640.0)
-	frame.offset_top = -UITheme.px(320.0)
-	frame.offset_bottom = UITheme.px(320.0)
+	# Keep the completed map unobscured on the left after its final pullback.
+	frame.anchor_left = 0.67
+	frame.anchor_right = 0.97
+	frame.anchor_top = 0.12
+	frame.anchor_bottom = 0.90
 	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	end_overlay.add_child(frame)
 	var column := VBoxContainer.new()
@@ -1588,10 +1588,12 @@ func _build_end_overlay() -> void:
 
 	end_subtitle = _spec_label(tr("HUD_END_SUBTITLE"), UITheme.mono(), 13.0, UITheme.INK_MID, 0.30)
 	end_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	end_subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	end_reveal_body.add_child(end_subtitle)
 
-	end_title = _spec_label(tr("HUD_END_TITLE"), UITheme.sans("medium"), 46.0, UITheme.INK_MAX, -0.01)
+	end_title = _spec_label(tr("HUD_END_TITLE"), UITheme.sans("medium"), 34.0, UITheme.INK_MAX, -0.01)
 	end_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	end_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	end_reveal_body.add_child(end_title)
 
 	var rule := CenterContainer.new()
@@ -1606,7 +1608,6 @@ func _build_end_overlay() -> void:
 	end_body = _spec_label(tr("HUD_END_BODY"), UITheme.sans("light"), 17.0, UITheme.INK_MID, 0.02)
 	end_body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	end_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	end_body.custom_minimum_size.x = UITheme.px(680.0)
 	end_reveal_body.add_child(end_body)
 
 	# The catalogue tally is a column of figures, so it takes the tabular mono the
@@ -1619,13 +1620,12 @@ func _build_end_overlay() -> void:
 	end_save_failure = _spec_label(tr("HUD_END_SAVE_FAILURE"), UITheme.sans(), 15.0, UITheme.ALERT, 0.02)
 	end_save_failure.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	end_save_failure.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	end_save_failure.custom_minimum_size.x = UITheme.px(680.0)
 	end_save_failure.visible = false
 	end_reveal_body.add_child(end_save_failure)
 
-	end_actions = HBoxContainer.new()
+	end_actions = VBoxContainer.new()
 	end_actions.alignment = BoxContainer.ALIGNMENT_CENTER
-	end_actions.add_theme_constant_override("separation", int(UITheme.px(56.0)))
+	end_actions.add_theme_constant_override("separation", int(UITheme.px(16.0)))
 	column.add_child(end_actions)
 
 	end_finish_button = Button.new()

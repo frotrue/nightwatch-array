@@ -301,6 +301,26 @@ static func chart_offsets() -> Array[Dictionary]:
 	return offsets
 
 
+static func galactic_map_offsets(inner_radius: float = 124.0, outer_radius: float = 548.0, disk_tilt: float = 0.52) -> Dictionary:
+	# Presentation geometry shared by the research chart and ending. Include
+	# decorative records, but return new positions without changing their data
+	# or research status. Callers own screen scale, origin, and camera zoom.
+	var offsets := {}
+	var maximum_source_radius := 1.0
+	for galaxy_variant in LOCAL_GROUP_GALAXIES:
+		var galaxy: Dictionary = galaxy_variant
+		maximum_source_radius = maxf(maximum_source_radius, Vector2(galaxy.local_position).length())
+	for galaxy_variant in LOCAL_GROUP_GALAXIES:
+		var galaxy: Dictionary = galaxy_variant
+		var source_position := Vector2(galaxy.local_position)
+		var mapped_radius := inner_radius + (source_position.length() / maximum_source_radius) * (outer_radius - inner_radius)
+		offsets[String(galaxy.node_id)] = Vector2(
+			cos(source_position.angle()) * mapped_radius,
+			sin(source_position.angle()) * mapped_radius * disk_tilt
+		)
+	return offsets
+
+
 static func node_star_map() -> Dictionary:
 	var result := {}
 	for constellation_id in CONSTELLATIONS:

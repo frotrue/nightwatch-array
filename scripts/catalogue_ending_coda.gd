@@ -1,32 +1,18 @@
 extends Control
 
-# A procedural ending plate. It deliberately reuses the observatory's red-light
-# vocabulary instead of introducing a separate illustrated cutscene asset.
-const STAR_COUNT := 58
-const GALACTIC_RING_COUNT := 5
-const ROUTE_POINTS := [
-	Vector2(0.50, 0.16),
-	Vector2(0.45, 0.13),
-	Vector2(0.39, 0.16),
-	Vector2(0.34, 0.09),
-	Vector2(0.28, 0.13),
-	Vector2(0.23, 0.05),
-	Vector2(0.18, 0.11),
-	Vector2(0.25, 0.20),
-	Vector2(0.34, 0.22),
-	Vector2(0.43, 0.19),
-	Vector2(0.55, 0.22),
-	Vector2(0.65, 0.16),
-	Vector2(0.74, 0.20),
-]
-const PHENOMENA_POINTS := [
-	Vector2(0.13, 0.22),
-	Vector2(0.30, 0.16),
-	Vector2(0.70, 0.18),
-	Vector2(0.87, 0.27),
-	Vector2(0.80, 0.58),
-]
+# Read-only replay of the completed chart. All Local Group decorations join the
+# ending, but never become research, purchase targets, or save-state entries.
+const ChartData = preload("res://scripts/research_chart_data.gd")
+const UITheme = preload("res://scripts/ui_theme.gd")
+const MAP_OUTER_RADIUS := 548.0
+const CORE_RADIUS := 104.0
+const DISK_TILT := 0.52
+const ROUTE_SAMPLES := 12
 
+var constellation_progress: float = 0.0:
+	set(value):
+		constellation_progress = clampf(value, 0.0, 1.0)
+		queue_redraw()
 var pullback_progress: float = 0.0:
 	set(value):
 		pullback_progress = clampf(value, 0.0, 1.0)
@@ -35,238 +21,267 @@ var route_progress: float = 0.0:
 	set(value):
 		route_progress = clampf(value, 0.0, 1.0)
 		queue_redraw()
-var phenomena_progress: float = 0.0:
+var illumination_progress: float = 0.0:
 	set(value):
-		phenomena_progress = clampf(value, 0.0, 1.0)
+		illumination_progress = clampf(value, 0.0, 1.0)
 		queue_redraw()
-var dawn_progress: float = 0.0:
+var settle_progress: float = 0.0:
 	set(value):
-		dawn_progress = clampf(value, 0.0, 1.0)
+		settle_progress = clampf(value, 0.0, 1.0)
 		queue_redraw()
 
-var star_samples: Array[Vector4] = []
-var galactic_ring_points: Array[PackedVector2Array] = []
+var constellation_figures: Array[Dictionary] = []
+var chart_star_offsets: Dictionary = {}
+var chart_max_radius: float = 1.0
+var galaxy_node_ids: Array[String] = []
+var galaxy_positions: Dictionary = {}
+var galaxy_codes: Array[String] = []
+var galaxy_route_points := PackedVector2Array()
+var route_lengths := PackedFloat32Array()
+var galaxy_arrivals := PackedFloat32Array()
+var route_total_length: float = 0.0
+var background_stars: Array[Vector3] = []
+var unit_ring := PackedVector2Array()
+var glow_texture: GradientTexture2D
 
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_build_star_samples()
-	resized.connect(_rebuild_galactic_ring_points)
-	_rebuild_galactic_ring_points()
-	# The ending is normally hidden; do not keep an idle redraw loop alive in the
-	# regular game HUD. reset_animation() enables it only for the reveal.
+	_cache_chart_geometry()
+	_cache_decoration()
+	resized.connect(queue_redraw)
 	set_process(false)
 	queue_redraw()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED:
+		queue_redraw()
 
 
 func _process(_delta: float) -> void:
-	if pullback_progress < 1.0 or route_progress < 1.0 or phenomena_progress < 1.0 or dawn_progress < 1.0:
-		queue_redraw()
-
-
-func reset_animation() -> void:
-	set_process(true)
-	pullback_progress = 0.0
-	route_progress = 0.0
-	phenomena_progress = 0.0
-	dawn_progress = 0.0
-	visible = true
 	queue_redraw()
 
 
+func reset_animation() -> void:
+	constellation_progress = 0.0
+	pullback_progress = 0.0
+	route_progress = 0.0
+	illumination_progress = 0.0
+	settle_progress = 0.0
+	visible = true
+	set_process(true)
+
+
 func complete_animation() -> void:
+	constellation_progress = 1.0
 	pullback_progress = 1.0
 	route_progress = 1.0
-	phenomena_progress = 1.0
-	dawn_progress = 1.0
+	illumination_progress = 1.0
+	settle_progress = 1.0
 	set_process(false)
 	queue_redraw()
 
 
-func _build_star_samples() -> void:
-	star_samples.clear()
+func _cache_chart_geometry() -> void:
+	constellation_figures.clear()
+	chart_star_offsets.clear()
+	chart_max_radius = 1.0
+	for record in ChartData.chart_offsets():
+		var key := "%s/%s" % [record.constellation_id, record.star_id]
+		chart_star_offsets[key] = Vector2(record.offset)
+		chart_max_radius = maxf(chart_max_radius, Vector2(record.offset).length())
+	for constellation_id in ChartData.CONSTELLATIONS:
+		var source: Dictionary = ChartData.CONSTELLATIONS[constellation_id]
+		var points := PackedVector2Array()
+		var magnitudes := PackedFloat32Array()
+		var indices := {}
+		var edges: Array[Vector2i] = []
+		for star in source.stars:
+			indices[String(star.id)] = points.size()
+			points.append(chart_star_offsets["%s/%s" % [constellation_id, star.id]])
+			magnitudes.append(float(star.magnitude))
+		for segment in source.segments:
+			edges.append(Vector2i(indices[String(segment[0])], indices[String(segment[1])]))
+		constellation_figures.append({"id": constellation_id, "points": points, "magnitudes": magnitudes, "edges": edges})
+
+	galaxy_node_ids.assign(["galactic_reference_frame"])
+	galaxy_codes.assign(["MILKY WAY"])
+	galaxy_positions = ChartData.galactic_map_offsets()
+	galaxy_positions["galactic_reference_frame"] = Vector2.ZERO
+	var controls := PackedVector2Array([Vector2.ZERO])
+	for galaxy in ChartData.LOCAL_GROUP_GALAXIES:
+		var node_id := String(galaxy.node_id)
+		galaxy_node_ids.append(node_id)
+		galaxy_codes.append(String(galaxy.bayer))
+		controls.append(galaxy_positions[node_id])
+	_cache_galaxy_route(controls)
+
+
+func _cache_galaxy_route(controls: PackedVector2Array) -> void:
+	galaxy_route_points = PackedVector2Array([controls[0]])
+	route_lengths = PackedFloat32Array([0.0])
+	galaxy_arrivals = PackedFloat32Array([0.0])
+	route_total_length = 0.0
+	# Same Catmull-Rom geometry as the chart, with all astronomical records as
+	# controls. This route is not the live functional prerequisite graph.
+	for index in range(controls.size() - 1):
+		var p0 := controls[maxi(0, index - 1)]
+		var p1 := controls[index]
+		var p2 := controls[index + 1]
+		var p3 := controls[mini(controls.size() - 1, index + 2)]
+		var c1 := p1 + (p2 - p0) / 6.0
+		var c2 := p2 - (p3 - p1) / 6.0
+		for sample_index in range(1, ROUTE_SAMPLES + 1):
+			var t := float(sample_index) / float(ROUTE_SAMPLES)
+			var u := 1.0 - t
+			var point := p1 * u * u * u + c1 * 3.0 * u * u * t + c2 * 3.0 * u * t * t + p2 * t * t * t
+			route_total_length += galaxy_route_points[-1].distance_to(point)
+			galaxy_route_points.append(point)
+			route_lengths.append(route_total_length)
+		galaxy_arrivals.append(route_total_length)
+	for index in range(galaxy_arrivals.size()):
+		galaxy_arrivals[index] /= maxf(1.0, route_total_length)
+
+
+func _cache_decoration() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 0x4E49574854415443
-	for _index in range(STAR_COUNT):
-		star_samples.append(Vector4(
-			rng.randf_range(0.06, 0.94),
-			rng.randf_range(0.06, 0.76),
-			rng.randf_range(0.65, 1.65),
-			rng.randf_range(0.42, 1.0)
-		))
+	for _index in range(74):
+		background_stars.append(Vector3(rng.randf(), rng.randf(), rng.randf_range(0.05, 0.25)))
+	for index in range(97):
+		unit_ring.append(Vector2.RIGHT.rotated(TAU * float(index) / 96.0))
+	var gradient := Gradient.new()
+	gradient.offsets = PackedFloat32Array([0.0, 0.16, 0.42, 1.0])
+	gradient.colors = PackedColorArray([Color(1, 1, 1, 0.85), Color(1, 1, 1, 0.36), Color(1, 1, 1, 0.10), Color(1, 1, 1, 0)])
+	glow_texture = GradientTexture2D.new()
+	glow_texture.width = 128
+	glow_texture.height = 128
+	glow_texture.gradient = gradient
+	glow_texture.fill = GradientTexture2D.FILL_RADIAL
+	glow_texture.fill_from = Vector2(0.5, 0.5)
+	glow_texture.fill_to = Vector2(1.0, 0.5)
 
 
-func _rebuild_galactic_ring_points() -> void:
-	galactic_ring_points.clear()
-	if size.x <= 1.0 or size.y <= 1.0:
-		queue_redraw()
-		return
-	var centre := Vector2(size.x * 0.5, size.y * 0.16)
-	for ring in range(GALACTIC_RING_COUNT):
-		var ratio := float(ring) / float(GALACTIC_RING_COUNT - 1)
-		var radii := Vector2(42.0 + ratio * 82.0, 14.0 + ratio * 25.0)
-		galactic_ring_points.append(_ellipse_points(centre, radii, 72, -0.18))
-	queue_redraw()
+func constellation_light(index: int) -> float:
+	return clampf(constellation_progress * float(constellation_figures.size()) - float(index), 0.0, 1.0)
+
+
+func galaxy_light(index: int) -> float:
+	if route_progress >= 1.0:
+		return 1.0
+	return smoothstep(galaxy_arrivals[index] - 0.008, galaxy_arrivals[index] + 0.018, route_progress)
 
 
 func _draw() -> void:
-	if size.x <= 1.0 or size.y <= 1.0:
+	if size.x <= 1.0 or size.y <= 1.0 or glow_texture == null:
 		return
-	# Keep the animated record in the upper sky so the final title and tallies
-	# retain a calm, readable field once the choreography settles.
-	var centre := Vector2(size.x * 0.5, size.y * 0.16)
-	_draw_dawn_horizon()
-	_draw_star_pullback(centre)
-	_draw_galactic_record(centre)
-	_draw_constellation_route(centre)
-	_draw_phenomena_transfer(centre)
+	for star in background_stars:
+		draw_circle(Vector2(star.x * size.x, star.y * size.y), 0.8, Color(0.73, 0.63, 0.60, star.z))
+	var centre := Vector2(size.x * lerpf(0.5, 0.33, settle_progress), size.y * 0.49)
+	var radius := lerpf(minf(size.x * 0.43, size.y * 0.55), minf(size.x * 0.285, size.y * 0.49), settle_progress)
+	var map_scale := radius / MAP_OUTER_RADIUS
+	_draw_galaxy_map(centre, map_scale)
+	var chart_radius := lerpf(minf(size.x * 0.43, size.y * 0.40), CORE_RADIUS * map_scale, pullback_progress)
+	_draw_constellations(centre, chart_radius)
+	_draw_completion_wave(centre, radius)
 
 
-func _draw_dawn_horizon() -> void:
-	if dawn_progress <= 0.001:
+func _draw_constellations(centre: Vector2, radius: float) -> void:
+	var scale_amount := radius / chart_max_radius
+	var point_scale := Vector2(scale_amount, scale_amount * lerpf(1.0, DISK_TILT, pullback_progress))
+	for index in range(constellation_figures.size()):
+		var figure: Dictionary = constellation_figures[index]
+		var light := constellation_light(index)
+		var points: PackedVector2Array = figure.points
+		var edges: Array = figure.edges
+		for edge_index in range(edges.size()):
+			var edge: Vector2i = edges[edge_index]
+			var start := centre + points[edge.x] * point_scale
+			var finish := centre + points[edge.y] * point_scale
+			draw_line(start, finish, Color(0.65, 0.28, 0.17, 0.10), 0.8, true)
+			var traced := clampf(light * float(edges.size()) - float(edge_index), 0.0, 1.0)
+			if traced > 0.0:
+				var endpoint := start.lerp(finish, traced)
+				draw_line(start, endpoint, Color(0.92, 0.32, 0.13, 0.10), lerpf(4.0, 2.0, pullback_progress), true)
+				draw_line(start, endpoint, Color(1.0, 0.61, 0.35, 0.70), lerpf(1.1, 0.65, pullback_progress), true)
+		for star_index in range(points.size()):
+			var point := centre + points[star_index] * point_scale
+			var alpha := 0.09 + smoothstep(0.0, 0.55, light) * 0.91
+			var star_radius := clampf(2.7 - float(figure.magnitudes[star_index]) * 0.22, 1.2, 3.1) * lerpf(1.0, 0.43, pullback_progress)
+			_draw_glow(point, Vector2.ONE * lerpf(13.0, 4.0, pullback_progress), alpha * 0.30)
+			draw_circle(point, star_radius, Color(1.0, 0.78, 0.53, alpha))
+
+
+func _draw_galaxy_map(centre: Vector2, map_scale: float) -> void:
+	var presence := smoothstep(0.12, 0.72, pullback_progress)
+	if presence <= 0.001:
 		return
-	var eased := _ease_out_cubic(dawn_progress)
-	var top_y := lerpf(size.y * 1.04, size.y * 0.61, eased)
-	var band_count := 36
-	for band in range(band_count):
-		var t0 := float(band) / float(band_count)
-		var t1 := float(band + 1) / float(band_count)
-		var y0 := lerpf(top_y, size.y, t0)
-		var y1 := lerpf(top_y, size.y, t1)
-		var horizon_weight := pow(1.0 - t0, 1.7)
-		var colour := Color(
-			lerpf(0.28, 0.12, t0),
-			lerpf(0.055, 0.018, t0),
-			lerpf(0.022, 0.012, t0),
-			eased * (0.04 + horizon_weight * 0.17)
-		)
-		draw_rect(Rect2(0.0, y0, size.x, maxf(1.0, y1 - y0 + 1.0)), colour)
-	draw_line(
-		Vector2(0.0, top_y),
-		Vector2(size.x, top_y),
-		Color(0.92, 0.24, 0.10, eased * 0.24),
-		1.0,
-		true
-	)
+	_draw_glow(centre, Vector2(210.0, 108.0) * map_scale, presence * 0.28)
+	draw_set_transform(centre, 0.0, Vector2.ONE * map_scale)
+	draw_polyline(galaxy_route_points, Color(0.78, 0.30, 0.16, presence * 0.09), 0.7 / map_scale, true)
+	var lit_route := _lit_route_points()
+	if lit_route.size() > 1:
+		draw_polyline(lit_route, Color(0.88, 0.22, 0.09, presence * 0.09), 7.0 / map_scale, true)
+		draw_polyline(lit_route, Color(0.97, 0.40, 0.17, presence * 0.22), 3.0 / map_scale, true)
+		draw_polyline(lit_route, Color(1.0, 0.64, 0.38, presence * 0.73), 1.0 / map_scale, true)
+	draw_set_transform(Vector2.ZERO)
+	var label_alpha := smoothstep(0.0, 0.8, settle_progress)
+	for index in range(1, galaxy_node_ids.size()):
+		var offset: Vector2 = galaxy_positions[galaxy_node_ids[index]] * map_scale
+		var point := centre + offset
+		var light := galaxy_light(index)
+		var alpha := presence * (0.13 + 0.87 * light)
+		var pulse := sin(PI * light)
+		_draw_glow(point, Vector2(18.0, 11.0) * (1.0 + pulse * 0.8), light * presence * 0.75)
+		var axis := Vector2(6.0, 0.0).rotated(-0.35 + float(index % 4) * 0.17)
+		draw_line(point - axis, point + axis, Color(1.0, 0.64, 0.40, alpha * 0.7), 2.8, true)
+		draw_line(point - axis * 0.82, point + axis * 0.82, Color(1.0, 0.87, 0.66, alpha), 1.0, true)
+		draw_circle(point, 1.7 + pulse, Color(1.0, 0.84, 0.61, alpha))
+		if label_alpha > 0.001:
+			_draw_code(point, offset, galaxy_codes[index], label_alpha * light * 0.68)
+	if label_alpha > 0.001:
+		var code := tr("TREE_GALACTIC_REFERENCE_CODE")
+		var font := UITheme.mono()
+		var font_size := 10
+		var width := font.get_string_size(code, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+		draw_string(font, centre + Vector2(-width * 0.5, CORE_RADIUS * map_scale * DISK_TILT + 20.0), code, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color(1.0, 0.66, 0.41, label_alpha * 0.80))
 
 
-func _draw_star_pullback(centre: Vector2) -> void:
-	var scale := lerpf(1.18, 0.96, _ease_out_cubic(pullback_progress))
-	var now := float(Time.get_ticks_msec()) * 0.001
-	for index in range(star_samples.size()):
-		var sample := star_samples[index]
-		var base := Vector2(sample.x * size.x, sample.y * size.y)
-		var point := centre + (base - centre) * scale
-		# Twinkle while the camera moves, then settle to a deterministic final
-		# brightness so natural completion and a skip produce the same plate.
-		var shimmer := 0.78 + sin(now * (0.75 + float(index % 4) * 0.13) + float(index) * 1.91) * 0.22 * (1.0 - pullback_progress)
-		var alpha := (0.035 + pullback_progress * 0.40) * sample.w * shimmer
-		draw_circle(point, sample.z, Color(0.93, 0.71, 0.57, alpha))
-
-
-func _draw_galactic_record(centre: Vector2) -> void:
-	var record_alpha := 0.04 + pullback_progress * 0.16 + phenomena_progress * 0.10
-	for ring in range(galactic_ring_points.size()):
-		var ratio := float(ring) / float(GALACTIC_RING_COUNT - 1)
-		draw_polyline(galactic_ring_points[ring], Color(0.72, 0.16, 0.09, record_alpha * (1.0 - ratio * 0.65)), 1.0, true)
-	var core_radius := lerpf(4.0, 13.0, phenomena_progress)
-	draw_circle(centre, core_radius, Color(0.95, 0.30, 0.13, 0.08 + phenomena_progress * 0.18))
-
-
-func _draw_constellation_route(centre: Vector2) -> void:
-	var points := PackedVector2Array()
-	var scale := lerpf(1.08, 0.94, _ease_out_cubic(pullback_progress))
-	for normalized in ROUTE_POINTS:
-		var base := Vector2(normalized.x * size.x, normalized.y * size.y)
-		points.append(centre + (base - centre) * scale)
-	_draw_progressive_route(points)
-	var glyph_slice := 1.0 / maxf(1.0, float(points.size()))
-	for index in range(points.size()):
-		var threshold := float(index) * glyph_slice
-		var local := clampf((route_progress - threshold) / glyph_slice, 0.0, 1.0)
-		if local <= 0.001:
+func _lit_route_points() -> PackedVector2Array:
+	if route_progress >= 1.0:
+		return galaxy_route_points
+	var result := PackedVector2Array([galaxy_route_points[0]])
+	var target_length := route_progress * route_total_length
+	for index in range(1, galaxy_route_points.size()):
+		if route_lengths[index] <= target_length:
+			result.append(galaxy_route_points[index])
 			continue
-		_draw_constellation_glyph(points[index], index, local)
+		var segment_length := maxf(0.0001, route_lengths[index] - route_lengths[index - 1])
+		result.append(galaxy_route_points[index - 1].lerp(galaxy_route_points[index], (target_length - route_lengths[index - 1]) / segment_length))
+		break
+	return result
 
 
-func _draw_progressive_route(points: PackedVector2Array) -> void:
-	if points.size() < 2 or route_progress <= 0.0:
+func _draw_code(point: Vector2, offset: Vector2, code: String, alpha: float) -> void:
+	var font := UITheme.mono()
+	var font_size := 10
+	var label_position := point + offset.normalized() * 11.0
+	if offset.x < 0.0:
+		label_position.x -= font.get_string_size(code, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	label_position.y += 3.0
+	draw_string(font, label_position, code, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color(0.91, 0.69, 0.51, alpha))
+
+
+func _draw_glow(point: Vector2, radii: Vector2, alpha: float) -> void:
+	draw_texture_rect(glow_texture, Rect2(point - radii, radii * 2.0), false, Color(1.0, 0.43, 0.20, alpha))
+
+
+func _draw_completion_wave(centre: Vector2, radius: float) -> void:
+	if illumination_progress <= 0.0 or illumination_progress >= 1.0:
 		return
-	var scaled := route_progress * float(points.size() - 1)
-	for index in range(points.size() - 1):
-		var local := clampf(scaled - float(index), 0.0, 1.0)
-		if local <= 0.0:
-			break
-		var endpoint := points[index].lerp(points[index + 1], _ease_out_cubic(local))
-		draw_line(points[index], endpoint, Color(0.80, 0.17, 0.09, 0.20), 4.0, true)
-		draw_line(points[index], endpoint, Color(0.98, 0.50, 0.29, 0.72), 1.2, true)
-
-
-func _draw_constellation_glyph(origin: Vector2, index: int, alpha: float) -> void:
-	var angle := -0.55 + float(index % 5) * 0.27
-	var offsets := [
-		Vector2(-8.0, 3.0).rotated(angle),
-		Vector2.ZERO,
-		Vector2(7.0, -5.0).rotated(angle),
-	]
-	for edge in range(offsets.size() - 1):
-		draw_line(
-			origin + offsets[edge],
-			origin + offsets[edge + 1],
-			Color(0.92, 0.34, 0.18, alpha * 0.55),
-			1.0,
-			true
-		)
-	for offset in offsets:
-		draw_circle(origin + offset, 1.2 + alpha * 1.15, Color(1.0, 0.78, 0.62, alpha))
-
-
-func _draw_phenomena_transfer(centre: Vector2) -> void:
-	if phenomena_progress <= 0.0:
-		return
-	for index in range(PHENOMENA_POINTS.size()):
-		var local := clampf(phenomena_progress * float(PHENOMENA_POINTS.size()) - float(index), 0.0, 1.0)
-		if local <= 0.0:
-			continue
-		var origin := Vector2(PHENOMENA_POINTS[index].x * size.x, PHENOMENA_POINTS[index].y * size.y)
-		var travel := _ease_in_out_cubic(local)
-		var particle := origin.lerp(centre, travel)
-		_draw_diamond(origin, 4.0, Color(0.96, 0.30, 0.15, (1.0 - travel * 0.65) * 0.78))
-		draw_line(origin, particle, Color(0.87, 0.18, 0.10, (1.0 - travel) * 0.28), 1.0, true)
-		draw_circle(particle, 2.0 + (1.0 - travel) * 1.2, Color(1.0, 0.72, 0.48, 0.92))
-		if local >= 0.999:
-			var pip_angle := -PI * 0.5 + TAU * float(index) / float(PHENOMENA_POINTS.size())
-			var pip := centre + Vector2.RIGHT.rotated(pip_angle) * 22.0
-			draw_circle(pip, 2.3, Color(1.0, 0.56, 0.32, 0.88))
-	if phenomena_progress >= 0.999:
-		draw_arc(centre, 28.0, 0.0, TAU, 48, Color(0.90, 0.24, 0.12, 0.48), 1.1, true)
-
-
-func _draw_diamond(centre: Vector2, radius: float, colour: Color) -> void:
-	var points := PackedVector2Array([
-		centre + Vector2(0.0, -radius),
-		centre + Vector2(radius, 0.0),
-		centre + Vector2(0.0, radius),
-		centre + Vector2(-radius, 0.0),
-		centre + Vector2(0.0, -radius),
-	])
-	draw_polyline(points, colour, 1.2, true)
-
-
-func _ellipse_points(centre: Vector2, radii: Vector2, segments: int, rotation: float) -> PackedVector2Array:
-	var points := PackedVector2Array()
-	for index in range(segments + 1):
-		var angle := TAU * float(index) / float(segments)
-		points.append(centre + Vector2(cos(angle) * radii.x, sin(angle) * radii.y).rotated(rotation))
-	return points
-
-
-func _ease_out_cubic(value: float) -> float:
-	return 1.0 - pow(1.0 - clampf(value, 0.0, 1.0), 3.0)
-
-
-func _ease_in_out_cubic(value: float) -> float:
-	var clamped := clampf(value, 0.0, 1.0)
-	if clamped < 0.5:
-		return 4.0 * clamped * clamped * clamped
-	return 1.0 - pow(-2.0 * clamped + 2.0, 3.0) * 0.5
+	var wave_radius := radius * lerpf(0.05, 1.12, illumination_progress)
+	var wave := PackedVector2Array()
+	for point in unit_ring:
+		wave.append(centre + point * Vector2(wave_radius, wave_radius * DISK_TILT))
+	draw_polyline(wave, Color(1.0, 0.66, 0.38, sin(PI * illumination_progress) * 0.28), 1.4, true)
