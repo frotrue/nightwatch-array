@@ -13,6 +13,9 @@ signal tutorial_replay_requested
 
 const Balance = preload("res://scripts/game_balance.gd")
 const UITheme = preload("res://scripts/ui_theme.gd")
+const CatalogueEndingCoda = preload("res://scripts/catalogue_ending_coda.gd")
+const END_REVEAL_TOTAL_SECONDS := 8.0
+const END_REVEAL_SKIP_DELAY_MSEC := 2000
 
 
 class TrackingCluster:
@@ -56,16 +59,20 @@ var ready_label: Label
 var debug_panel: PanelContainer
 var debug_label: Label
 var end_overlay: ColorRect
+var end_coda
 var end_title: Label
 var end_subtitle: Label
 var end_body: Label
 var end_stats: Label
 var end_save_failure: Label
 var end_reveal_body: VBoxContainer
-var end_actions: HBoxContainer
+var end_actions: VBoxContainer
 var end_finish_button: Button
 var end_continue_button: Button
 var end_reveal_tween: Tween
+var end_reveal_complete: bool = false
+var end_reveal_started_msec: int = 0
+var catalogue_debug_preview_active: bool = false
 var catalogue_save_failure_active: bool = false
 var phase_summary_overlay: Control
 var in_round_visibility: Dictionary = {}
@@ -397,14 +404,18 @@ func is_pointer_over_hud(pointer_position: Vector2) -> bool:
 	return false
 
 
-func show_catalogue_ending(stats_text: String) -> void:
+func show_catalogue_ending(stats_text: String, debug_preview: bool = false) -> void:
 	# A save error belongs only to the ending presentation that reported it.
 	# Locale refreshes preserve the message, while a genuinely new ending starts
 	# with a clean record surface.
 	catalogue_save_failure_active = false
+	catalogue_debug_preview_active = debug_preview
 	refresh_catalogue_ending_text(stats_text)
 	if end_reveal_tween != null and end_reveal_tween.is_valid():
 		end_reveal_tween.kill()
+	end_reveal_complete = false
+	end_reveal_started_msec = Time.get_ticks_msec()
+	end_coda.reset_animation()
 	end_overlay.color = Color(0.016, 0.008, 0.006, 0.0)
 	end_reveal_body.modulate = Color(1.0, 0.76, 0.62, 0.0)
 	end_actions.modulate = Color(1.0, 0.82, 0.70, 0.0)
@@ -416,16 +427,18 @@ func show_catalogue_ending(stats_text: String) -> void:
 	end_overlay.move_to_front()
 	_refresh_in_round_readouts()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	# The overlay owns input immediately. Its red-light scrim, record copy, and
-	# decisions then arrive as one six-second beat while the paused game remains
-	# still behind it.
-	end_reveal_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	end_reveal_tween.tween_property(end_overlay, "color:a", 0.94, 1.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	end_reveal_tween.tween_property(end_reveal_body, "modulate", Color.WHITE, 2.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	end_reveal_tween.tween_interval(0.8)
-	end_reveal_tween.tween_property(end_actions, "modulate", Color.WHITE, 1.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	end_reveal_tween.tween_interval(0.4)
-	end_reveal_tween.tween_callback(_complete_catalogue_reveal)
+	# Replay the actual completed constellations, pull them into the Milky Way,
+	# then illuminate every Local Group marker. Choices wait for the map to settle.
+	end_reveal_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_parallel(true)
+	end_reveal_tween.tween_property(end_overlay, "color:a", 1.0, 0.65).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	end_reveal_tween.tween_property(end_coda, "constellation_progress", 1.0, 2.4).set_delay(0.25)
+	end_reveal_tween.tween_property(end_coda, "pullback_progress", 1.0, 2.2).set_delay(2.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	end_reveal_tween.tween_property(end_coda, "route_progress", 1.0, 2.7).set_delay(3.7)
+	end_reveal_tween.tween_property(end_coda, "illumination_progress", 1.0, 1.3).set_delay(6.0)
+	end_reveal_tween.tween_property(end_coda, "settle_progress", 1.0, 1.1).set_delay(6.1).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	end_reveal_tween.tween_property(end_reveal_body, "modulate", Color.WHITE, 1.0).set_delay(6.7).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	end_reveal_tween.tween_property(end_actions, "modulate", Color.WHITE, 0.8).set_delay(7.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	end_reveal_tween.tween_callback(_complete_catalogue_reveal).set_delay(END_REVEAL_TOTAL_SECONDS)
 
 
 func refresh_catalogue_ending_text(stats_text: String = "") -> void:
@@ -459,7 +472,12 @@ func show_catalogue_save_failure() -> void:
 func _complete_catalogue_reveal() -> void:
 	if not is_end_open():
 		return
-	end_overlay.color.a = 0.94
+	if end_reveal_tween != null and end_reveal_tween.is_valid():
+		end_reveal_tween.kill()
+	end_reveal_tween = null
+	end_reveal_complete = true
+	end_overlay.color.a = 1.0
+	end_coda.complete_animation()
 	end_reveal_body.modulate = Color.WHITE
 	end_actions.modulate = Color.WHITE
 	end_finish_button.disabled = false
@@ -471,6 +489,9 @@ func hide_end() -> void:
 	if end_reveal_tween != null and end_reveal_tween.is_valid():
 		end_reveal_tween.kill()
 	end_reveal_tween = null
+	end_reveal_complete = false
+	catalogue_debug_preview_active = false
+	end_coda.set_process(false)
 	end_finish_button.release_focus()
 	end_continue_button.release_focus()
 	end_overlay.visible = false
@@ -693,21 +714,53 @@ func _refresh_save_mode_label(just_saved: bool) -> void:
 	save_mode_label.add_theme_color_override("font_color", UITheme.GAIN)
 
 
-func _unhandled_key_input(event: InputEvent) -> void:
+func _input(event: InputEvent) -> void:
 	if (
 		is_end_open()
-		and event is InputEventKey
-		and event.pressed
-		and not event.echo
-		and event.ctrl_pressed
-		and event.shift_pressed
-		and event.keycode == KEY_E
+		and catalogue_debug_preview_active
+		and _is_catalogue_debug_preview_chord(event)
 	):
 		# HUD processes while paused, unlike the gameplay root. It therefore owns
 		# the second half of the debug-preview toggle after the ending pauses play.
 		catalogue_debug_preview_close_requested.emit()
 		get_viewport().set_input_as_handled()
 		return
+	if not is_end_open() or end_reveal_complete or not _is_catalogue_reveal_skip_input(event):
+		return
+	if Time.get_ticks_msec() - end_reveal_started_msec >= END_REVEAL_SKIP_DELAY_MSEC:
+		_complete_catalogue_reveal()
+	# Before two seconds this still consumes deliberate input so it cannot leak to
+	# a covered interface. Afterwards the same input completes, but never also
+	# activates a newly enabled ending choice.
+	get_viewport().set_input_as_handled()
+
+
+func _is_catalogue_debug_preview_chord(event: InputEvent) -> bool:
+	return (
+		event is InputEventKey
+		and event.pressed
+		and not event.echo
+		and event.ctrl_pressed
+		and event.shift_pressed
+		and event.keycode == KEY_E
+	)
+
+
+func _is_catalogue_reveal_skip_input(event: InputEvent) -> bool:
+	if event is InputEventKey:
+		return (
+			event.pressed
+			and not event.echo
+			and event.keycode not in [KEY_CTRL, KEY_SHIFT, KEY_ALT, KEY_META]
+		)
+	if event is InputEventMouseButton:
+		return event.pressed and event.button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT, MOUSE_BUTTON_MIDDLE]
+	if event is InputEventJoypadButton:
+		return event.pressed
+	return false
+
+
+func _unhandled_key_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
 		if reset_dialog != null and reset_dialog.visible:
 			reset_dialog.hide()
@@ -1507,13 +1560,17 @@ func _build_end_overlay() -> void:
 	end_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	end_overlay.visible = false
 	root_control.add_child(end_overlay)
+	end_coda = CatalogueEndingCoda.new()
+	end_coda.name = "CatalogueEndingCoda"
+	end_coda.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	end_overlay.add_child(end_coda)
 	var frame := Control.new()
 	frame.name = "EndColumn"
-	frame.set_anchors_preset(Control.PRESET_CENTER)
-	frame.offset_left = -UITheme.px(640.0)
-	frame.offset_right = UITheme.px(640.0)
-	frame.offset_top = -UITheme.px(320.0)
-	frame.offset_bottom = UITheme.px(320.0)
+	# Keep the completed map unobscured on the left after its final pullback.
+	frame.anchor_left = 0.67
+	frame.anchor_right = 0.97
+	frame.anchor_top = 0.12
+	frame.anchor_bottom = 0.90
 	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	end_overlay.add_child(frame)
 	var column := VBoxContainer.new()
@@ -1531,10 +1588,12 @@ func _build_end_overlay() -> void:
 
 	end_subtitle = _spec_label(tr("HUD_END_SUBTITLE"), UITheme.mono(), 13.0, UITheme.INK_MID, 0.30)
 	end_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	end_subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	end_reveal_body.add_child(end_subtitle)
 
-	end_title = _spec_label(tr("HUD_END_TITLE"), UITheme.sans("medium"), 46.0, UITheme.INK_MAX, -0.01)
+	end_title = _spec_label(tr("HUD_END_TITLE"), UITheme.sans("medium"), 34.0, UITheme.INK_MAX, -0.01)
 	end_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	end_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	end_reveal_body.add_child(end_title)
 
 	var rule := CenterContainer.new()
@@ -1549,7 +1608,6 @@ func _build_end_overlay() -> void:
 	end_body = _spec_label(tr("HUD_END_BODY"), UITheme.sans("light"), 17.0, UITheme.INK_MID, 0.02)
 	end_body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	end_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	end_body.custom_minimum_size.x = UITheme.px(680.0)
 	end_reveal_body.add_child(end_body)
 
 	# The catalogue tally is a column of figures, so it takes the tabular mono the
@@ -1562,13 +1620,12 @@ func _build_end_overlay() -> void:
 	end_save_failure = _spec_label(tr("HUD_END_SAVE_FAILURE"), UITheme.sans(), 15.0, UITheme.ALERT, 0.02)
 	end_save_failure.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	end_save_failure.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	end_save_failure.custom_minimum_size.x = UITheme.px(680.0)
 	end_save_failure.visible = false
 	end_reveal_body.add_child(end_save_failure)
 
-	end_actions = HBoxContainer.new()
+	end_actions = VBoxContainer.new()
 	end_actions.alignment = BoxContainer.ALIGNMENT_CENTER
-	end_actions.add_theme_constant_override("separation", int(UITheme.px(56.0)))
+	end_actions.add_theme_constant_override("separation", int(UITheme.px(16.0)))
 	column.add_child(end_actions)
 
 	end_finish_button = Button.new()

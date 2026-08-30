@@ -59,6 +59,8 @@ content.
 | `event_controller.gd` | Meteor showers, Perseid outbursts, and the randomized warned Canis Major event schedule. |
 | `effects_layer.gd` | Success bursts, data packets, incoming markers, forecast markers, screen kick and shake. |
 | `hud.gd` | All in-round UI, round summary, neutral catalogue-completion record and its finish/continue actions, settings, save-slot dialogs, banners. |
+| `catalogue_ending_coda.gd` | Presentation-only ending plate: the chart's actual 95 stars and twelve constellation shapes light, collapse into the Milky Way, and reveal a connected 30-marker galaxy map. Owns no research, eligibility, or save state. |
+| `research_chart_data.gd` | Shared constellation records, shape edges, Local Group records, and galaxy-disc projection used by both the interactive research chart and the ending plate. |
 | `upgrade_tree.gd` | Research Chart rendering and purchase interaction, including the final-watch-pending and ending-ready completion detail shown at galaxy scale. |
 | `tutorial_controller.gd` | Four-step first-run guidance. |
 | `save_game_controller.gd` | Three save slots under `user://saves`, versioned at `SAVE_VERSION = 1`. |
@@ -213,14 +215,23 @@ the final watch. It finishes normally, preserves its ordinary phase summary,
 then routes through the completed chart. Closing that chart shows the neutral
 catalogue record instead of starting another round. `SoundSynth.play_complete()`
 plays the completion chord while the always-processing HUD owns input and runs
-an approximately six-second dawn/reveal tween; its choices stay disabled until
-the reveal completes. Both actions persist the ending acknowledgement before
+an eight-second procedural coda: the actual 95 chart stars and twelve
+constellation shapes light, pull back into the Milky Way, then connect and light
+all 30 galaxy-map markers (the Milky Way plus 29 Local Group records). The coda
+uses the chart's shared records, shape edges, and galaxy-disc projection instead
+of an invented route. Its 12 functional and 17 decorative Local Group records
+participate equally in this presentation only; no research, purchase, unlock,
+eligibility, or save state changes. The completed map settles on the left while
+record copy and choices appear on the right. The choices stay disabled until
+the reveal completes. Deliberate keyboard, mouse, or controller input
+after two seconds skips to the exact completed frame without also activating a
+choice. Both actions persist the ending acknowledgement before
 leaving that screen. A failed acknowledgement save therefore leaves the ending
 open. Finishing returns to the slot screen without deleting the run; continuing
 starts the next ordinary open-night round in the same save.
 Neither choice grants prestige or a replay bonus.
 
-`Ctrl+Shift+E` opens the same completion chord, reveal tween, statistics, and
+`Ctrl+Shift+E` opens the same completion chord, procedural coda, statistics, and
 choice layout as a non-persistent debug preview. It does not alter catalogue
 eligibility, the seen flag, the current round, or save data. Pressing the chord
 again—or either ending choice—closes the preview and restores the previous
@@ -378,7 +389,9 @@ the four existing target-conditional multipliers are applied.
 The Local Group chart still renders 29 astronomical records, but only 12 are
 functional research. The other 17 live only in `research_chart_data.gd` with
 `decorative = true`; they have no `UPGRADE_NODES` definition, button, state,
-cost, route edge, or inspector. The live research total is 107.
+cost, research-route edge, or inspector. The ending plate alone may connect
+and light these records as part of its completed 30-marker map. That visual
+exception does not change the interactive chart or the live research total of 107.
 `ProgressionController.get_observation_span()` counts the last node of
 each of the four chapters and compounds exact `×1.1025` steps up to
 `1.4774554`.

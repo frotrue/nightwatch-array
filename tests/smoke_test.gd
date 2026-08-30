@@ -1,6 +1,8 @@
 extends SceneTree
 
 const Balance = preload("res://scripts/game_balance.gd")
+const ChartData = preload("res://scripts/research_chart_data.gd")
+const UITheme = preload("res://scripts/ui_theme.gd")
 const StarfieldScript = preload("res://scripts/starfield.gd")
 const StarTwinkleScript = preload("res://scripts/star_twinkle.gd")
 
@@ -15,6 +17,118 @@ func _check(condition: bool, message: String) -> void:
 	if not condition:
 		failures.append(message)
 		push_error("SMOKE: " + message)
+
+
+func _check_ending_map_geometry(coda, live_chart) -> void:
+	_check(
+		coda.constellation_figures.size() == 12 and coda.chart_star_offsets.size() == 95,
+		"the ending replays twelve actual constellations and all 95 chart stars"
+	)
+	var expected_figure_ids: Array = ChartData.CONSTELLATIONS.keys()
+	var total_stars := 0
+	for figure_index in range(mini(coda.constellation_figures.size(), expected_figure_ids.size())):
+		var constellation_id: String = expected_figure_ids[figure_index]
+		var source: Dictionary = ChartData.CONSTELLATIONS[constellation_id]
+		var placement: Dictionary = ChartData.PLACEMENTS[constellation_id]
+		var figure: Dictionary = coda.constellation_figures[figure_index]
+		var star_indices := {}
+		_check(
+			String(figure.id) == constellation_id
+			and figure.points.size() == source.stars.size()
+			and figure.magnitudes.size() == source.stars.size()
+			and figure.edges.size() == source.segments.size(),
+			"ending figure preserves the source star and edge counts: " + constellation_id
+		)
+		for star_index in range(source.stars.size()):
+			var star: Dictionary = source.stars[star_index]
+			var key := "%s/%s" % [constellation_id, star.id]
+			star_indices[String(star.id)] = star_index
+			# Reconstruct from the factual position and placement instead of
+			# comparing the renderer to another call of its chart_offsets helper.
+			var angle := float(placement.anchor_angle)
+			var expected := Vector2(cos(angle), sin(angle)) * float(placement.anchor_radius)
+			expected += Vector2(star.local_position).rotated(float(placement.tilt)) * float(placement.scale)
+			_check(
+				coda.chart_star_offsets.has(key)
+				and Vector2(coda.chart_star_offsets.get(key, Vector2.INF)).is_equal_approx(expected)
+				and star_index < figure.points.size()
+				and Vector2(figure.points[star_index]).is_equal_approx(expected)
+				and star_index < figure.magnitudes.size()
+				and is_equal_approx(float(figure.magnitudes[star_index]), float(star.magnitude)),
+				"ending star keeps the chart's actual placement and brightness: " + key
+			)
+			total_stars += 1
+		for edge_index in range(mini(figure.edges.size(), source.segments.size())):
+			var segment: Array = source.segments[edge_index]
+			var expected_edge := Vector2i(star_indices[String(segment[0])], star_indices[String(segment[1])])
+			_check(
+				Vector2i(figure.edges[edge_index]) == expected_edge,
+				"ending connects the source constellation segment: %s/%s-%s" % [constellation_id, segment[0], segment[1]]
+			)
+	_check(total_stars == 95, "the ending does not omit a constellation's stars")
+
+	var expected_galaxy_ids: Array[String] = ["galactic_reference_frame"]
+	var functional_ids := {}
+	for definition in Balance.UPGRADE_NODES:
+		functional_ids[String(definition.id)] = true
+	var decorative_count := 0
+	var maximum_source_radius := 1.0
+	for galaxy in ChartData.LOCAL_GROUP_GALAXIES:
+		maximum_source_radius = maxf(maximum_source_radius, Vector2(galaxy.local_position).length())
+	var shared_offsets := ChartData.galactic_map_offsets()
+	_check(shared_offsets.size() == 29, "the shared galaxy projection includes all 29 Local Group records")
+	for galaxy in ChartData.LOCAL_GROUP_GALAXIES:
+		var node_id := String(galaxy.node_id)
+		expected_galaxy_ids.append(node_id)
+		var source_position := Vector2(galaxy.local_position)
+		var expected_radius := 124.0 + source_position.length() / maximum_source_radius * (548.0 - 124.0)
+		var expected := source_position.normalized() * expected_radius
+		expected.y *= 0.52
+		var live_offset: Vector2 = (Vector2(live_chart.local_group_node_positions[node_id]) - live_chart.CHART_ORIGIN) * live_chart.GALACTIC_ZOOM / UITheme.SCALE
+		_check(
+			Vector2(shared_offsets.get(node_id, Vector2.INF)).is_equal_approx(expected)
+			and Vector2(coda.galaxy_positions.get(node_id, Vector2.INF)).is_equal_approx(expected)
+			and live_offset.is_equal_approx(expected),
+			"ending and live chart share the source galaxy's radial placement and disc tilt: " + node_id
+		)
+		if bool(galaxy.get("decorative", false)):
+			decorative_count += 1
+			_check(not functional_ids.has(node_id), "an illuminated ending decoration is still not research: " + node_id)
+	var unique_galaxy_ids := {}
+	for node_id in coda.galaxy_node_ids:
+		unique_galaxy_ids[String(node_id)] = true
+	_check(
+		coda.galaxy_node_ids == expected_galaxy_ids
+		and unique_galaxy_ids.size() == 30
+		and coda.galaxy_positions.size() == 30
+		and Vector2(coda.galaxy_positions.get("galactic_reference_frame", Vector2.INF)).is_zero_approx()
+		and decorative_count == 17
+		and functional_ids.size() == 107,
+		"the ending uses the Milky Way plus all 29 unique galaxies without promoting 17 decorations to research"
+	)
+	_check(
+		coda.galaxy_arrivals.size() == 30
+		and coda.galaxy_route_points.size() == 1 + 29 * coda.ROUTE_SAMPLES,
+		"the ending route has an arrival and exact sampled endpoint for every galaxy marker"
+	)
+	for index in range(expected_galaxy_ids.size()):
+		var route_index: int = index * coda.ROUTE_SAMPLES
+		_check(
+			route_index < coda.galaxy_route_points.size()
+			and Vector2(coda.galaxy_route_points[route_index]).is_equal_approx(Vector2(coda.galaxy_positions.get(expected_galaxy_ids[index], Vector2.INF))),
+			"the ending route passes through its actual galaxy marker: " + expected_galaxy_ids[index]
+		)
+
+
+func _check_ending_map_illuminated(coda, context: String) -> void:
+	for index in range(coda.constellation_figures.size()):
+		_check(is_equal_approx(coda.constellation_light(index), 1.0), "%s fully lights constellation %d" % [context, index])
+	for index in range(coda.galaxy_node_ids.size()):
+		_check(is_equal_approx(coda.galaxy_light(index), 1.0), "%s fully lights galaxy %s" % [context, coda.galaxy_node_ids[index]])
+	_check(
+		coda._lit_route_points() == coda.galaxy_route_points,
+		context + " retains the complete connected route, including the final galaxy"
+	)
 
 
 func _run() -> void:
@@ -135,17 +249,78 @@ func _run() -> void:
 	debug_ending_chord.pressed = true
 	debug_ending_chord.ctrl_pressed = true
 	debug_ending_chord.shift_pressed = true
+	var debug_ending_release := debug_ending_chord.duplicate()
+	debug_ending_release.pressed = false
 	game.get_viewport().push_input(debug_ending_chord)
 	await process_frame
+	await process_frame
+	game.get_viewport().push_input(debug_ending_release)
 	_check(
 		game.catalogue_ending_debug_preview
 		and game.completed
 		and game.hud.is_end_open()
 		and paused
+		and game.hud.end_coda.is_processing()
+		and game.hud.end_coda.constellation_progress < 1.0
+		and is_zero_approx(game.hud.end_coda.pullback_progress)
+		and is_zero_approx(game.hud.end_coda.route_progress)
+		and is_zero_approx(game.hud.end_coda.illumination_progress)
+		and is_zero_approx(game.hud.end_coda.settle_progress)
+		and not game.hud.end_reveal_complete
+		and game.hud.end_finish_button.disabled
 		and JSON.stringify(game._build_save_data()) == debug_ending_snapshot,
-		"Ctrl+Shift+E opens the real catalogue ending presentation without changing save data"
+		"Ctrl+Shift+E opens the animated catalogue coda without changing save data"
 	)
-	game.hud._complete_catalogue_reveal()
+	_check_ending_map_geometry(game.hud.end_coda, game.upgrade_tree)
+	var ending_skip_mouse := InputEventMouseButton.new()
+	ending_skip_mouse.button_index = MOUSE_BUTTON_LEFT
+	ending_skip_mouse.pressed = true
+	var ending_skip_mouse_release := ending_skip_mouse.duplicate()
+	ending_skip_mouse_release.pressed = false
+	var ending_skip_pad := InputEventJoypadButton.new()
+	ending_skip_pad.button_index = JOY_BUTTON_A
+	ending_skip_pad.pressed = true
+	var ending_skip_pad_release := ending_skip_pad.duplicate()
+	ending_skip_pad_release.pressed = false
+	var ending_modifier_only := InputEventKey.new()
+	ending_modifier_only.keycode = KEY_CTRL
+	ending_modifier_only.pressed = true
+	_check(
+		game.hud._is_catalogue_reveal_skip_input(ending_skip_mouse)
+		and game.hud._is_catalogue_reveal_skip_input(ending_skip_pad)
+		and not game.hud._is_catalogue_reveal_skip_input(ending_modifier_only),
+		"mouse and controller buttons qualify as skip input while modifier-only presses do not"
+	)
+	_check(
+		game.hud.END_REVEAL_SKIP_DELAY_MSEC == 2000
+		and is_equal_approx(game.hud.END_REVEAL_TOTAL_SECONDS, 8.0),
+		"the approved coda keeps its two-second skip boundary and eight-second natural duration"
+	)
+	game.hud.end_reveal_started_msec = Time.get_ticks_msec()
+	game.get_viewport().push_input(ending_skip_mouse)
+	game.get_viewport().push_input(ending_skip_mouse_release)
+	_check(
+		not game.hud.end_reveal_complete
+		and game.hud.end_finish_button.disabled,
+		"a real paused-HUD mouse press before two seconds is consumed without skipping"
+	)
+	game.hud.end_reveal_started_msec = Time.get_ticks_msec() - game.hud.END_REVEAL_SKIP_DELAY_MSEC
+	game.get_viewport().push_input(ending_skip_pad)
+	game.get_viewport().push_input(ending_skip_pad_release)
+	_check(
+		game.hud.end_reveal_complete
+		and game.catalogue_ending_debug_preview
+		and game.hud.is_end_open()
+		and is_equal_approx(game.hud.end_coda.constellation_progress, 1.0)
+		and is_equal_approx(game.hud.end_coda.pullback_progress, 1.0)
+		and is_equal_approx(game.hud.end_coda.route_progress, 1.0)
+		and is_equal_approx(game.hud.end_coda.illumination_progress, 1.0)
+		and is_equal_approx(game.hud.end_coda.settle_progress, 1.0)
+		and not game.hud.end_coda.is_processing()
+		and not game.hud.end_finish_button.disabled,
+		"a real paused-HUD pad press at two seconds skips exactly once without choosing an action"
+	)
+	_check_ending_map_illuminated(game.hud.end_coda, "skipped debug ending")
 	game._on_catalogue_finish_requested()
 	_check(
 		not game.catalogue_ending_debug_preview
@@ -157,11 +332,51 @@ func _run() -> void:
 		and JSON.stringify(game._build_save_data()) == debug_ending_snapshot,
 		"an ending choice exits the debug preview and restores the live round without saving"
 	)
-	var debug_ending_release := debug_ending_chord.duplicate()
-	debug_ending_release.pressed = false
 	game.get_viewport().push_input(debug_ending_release)
 	game.get_viewport().push_input(debug_ending_chord)
 	await process_frame
+	var natural_coda_tween: Tween = game.hud.end_reveal_tween
+	natural_coda_tween.pause()
+	natural_coda_tween.custom_step(maxf(0.0, 2.8 - natural_coda_tween.get_total_elapsed_time()))
+	_check(
+		is_equal_approx(game.hud.end_coda.constellation_progress, 1.0)
+		and is_zero_approx(game.hud.end_coda.pullback_progress)
+		and is_zero_approx(game.hud.end_coda.route_progress)
+		and not game.hud.end_reveal_complete,
+		"the coda first finishes the player's constellation chart before the galaxy pullback"
+	)
+	natural_coda_tween.custom_step(maxf(0.0, 5.2 - natural_coda_tween.get_total_elapsed_time()))
+	_check(
+		is_equal_approx(game.hud.end_coda.pullback_progress, 1.0)
+		and game.hud.end_coda.route_progress > 0.0
+		and game.hud.end_coda.route_progress < 1.0
+		and is_equal_approx(game.hud.end_coda.galaxy_light(0), 1.0)
+		and is_zero_approx(game.hud.end_coda.galaxy_light(29))
+		and game.hud.end_finish_button.disabled,
+		"the completed chart becomes the Milky Way while the full galaxy route lights progressively"
+	)
+	var remaining_before_coda_endpoint := maxf(
+		0.0,
+		game.hud.END_REVEAL_TOTAL_SECONDS - 0.1 - natural_coda_tween.get_total_elapsed_time()
+	)
+	natural_coda_tween.custom_step(remaining_before_coda_endpoint)
+	_check(
+		not game.hud.end_reveal_complete
+		and game.hud.end_finish_button.disabled,
+		"the natural coda remains locked immediately before its eight-second endpoint"
+	)
+	natural_coda_tween.custom_step(0.2)
+	_check(
+		game.hud.end_reveal_complete
+		and is_equal_approx(game.hud.end_coda.constellation_progress, 1.0)
+		and is_equal_approx(game.hud.end_coda.pullback_progress, 1.0)
+		and is_equal_approx(game.hud.end_coda.route_progress, 1.0)
+		and is_equal_approx(game.hud.end_coda.illumination_progress, 1.0)
+		and is_equal_approx(game.hud.end_coda.settle_progress, 1.0)
+		and not game.hud.end_finish_button.disabled,
+		"the unskipped eight-second timeline reaches the same completed coda frame"
+	)
+	_check_ending_map_illuminated(game.hud.end_coda, "natural debug ending")
 	var debug_toggle_snapshot := JSON.stringify(game._build_save_data())
 	game.get_viewport().push_input(debug_ending_release)
 	game.get_viewport().push_input(debug_ending_chord)
@@ -2069,8 +2284,11 @@ func _run() -> void:
 		and open_night_game.hud.end_stats.text.split("\n").size() == 7
 		and open_night_game.hud.end_finish_button.disabled
 		and open_night_game.hud.end_continue_button.disabled
+		and open_night_game.hud.end_coda.visible
+		and open_night_game.hud.end_coda.is_processing()
+		and open_night_game.hud.end_coda.route_progress < 1.0
 		and is_equal_approx(open_night_game.hud.end_actions.modulate.a, 0.0),
-		"the ending is a neutral record with active-time statistics and two non-destructive choices"
+		"the ending begins an animated neutral record with active-time statistics and two non-destructive choices"
 	)
 	var reveal_tween_before_locale_refresh: Tween = open_night_game.hud.end_reveal_tween
 	var refreshed_stats_probe := "REFRESHED CATALOGUE STATS"
@@ -2081,16 +2299,29 @@ func _run() -> void:
 		and open_night_game.hud.end_stats.text == refreshed_stats_probe,
 		"refreshing translated ending copy and statistics does not restart or bypass the reveal beat"
 	)
-	open_night_game.hud._complete_catalogue_reveal()
+	open_night_game.hud.end_reveal_started_msec = Time.get_ticks_msec() - open_night_game.hud.END_REVEAL_SKIP_DELAY_MSEC
+	open_night_game.get_viewport().push_input(debug_ending_chord)
+	open_night_game.get_viewport().push_input(debug_ending_release)
 	_check(
-		not open_night_game.hud.end_finish_button.disabled
+		open_night_game.completed
+		and not open_night_game.catalogue_ending_debug_preview
+		and not open_night_game.hud.catalogue_debug_preview_active
+		and not open_night_game.hud.end_finish_button.disabled
 		and not open_night_game.hud.end_continue_button.disabled
 		and open_night_game.hud.end_finish_button.focus_mode == Control.FOCUS_ALL
 		and open_night_game.hud.end_continue_button.focus_mode == Control.FOCUS_ALL
 		and open_night_game.get_viewport().gui_get_focus_owner() == open_night_game.hud.end_finish_button
+		and open_night_game.hud.end_reveal_complete
+		and is_equal_approx(open_night_game.hud.end_coda.constellation_progress, 1.0)
+		and is_equal_approx(open_night_game.hud.end_coda.pullback_progress, 1.0)
+		and is_equal_approx(open_night_game.hud.end_coda.route_progress, 1.0)
+		and is_equal_approx(open_night_game.hud.end_coda.illumination_progress, 1.0)
+		and is_equal_approx(open_night_game.hud.end_coda.settle_progress, 1.0)
+		and not open_night_game.hud.end_coda.is_processing()
 		and open_night_game.hud.end_finish_button.get_theme_font_size("font_size") > open_night_game.hud.end_continue_button.get_theme_font_size("font_size"),
-		"the completed reveal enables keyboard navigation and gives the archival finish action primary focus"
+		"the actual ending treats Ctrl+Shift+E as skip input and completes with archival focus"
 	)
+	_check_ending_map_illuminated(open_night_game.hud.end_coda, "actual completed ending")
 	open_night_game.active_save_slot = 0
 	open_night_game.hud.set_active_save_slot(0)
 	open_night_game._on_catalogue_finish_requested()

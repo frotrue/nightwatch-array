@@ -85,10 +85,12 @@ Covers tutorial, saves, localization, phase summary, compact HUD, observation,
 the identity screen/world routing, fixed atmospheric rectangle, and background
 coverage above the single galactic span ceiling, progression, events,
 catalogue-ending eligibility and final-watch flow, ending finish/continue
-actions and their saved state, the six-second reveal and keyboard focus,
-save-failure retry, active-final-watch resume/signature validation, corrupt-slot
-recovery, the non-destructive ending-preview debug chord, performance caps,
-stale references, and reset.
+actions and their saved state, the eight-second completed-map coda (the chart's
+95 stars, twelve constellation shapes, and all 30 galaxy markers), the
+presentation-only inclusion of 17 decorative galaxies, the two-second skip
+boundary and identical natural/skip final frame, keyboard focus, save-failure
+retry, active-final-watch resume/signature validation, corrupt-slot recovery, the non-destructive
+ending-preview debug chord, performance caps, stale references, and reset.
 
 - Pass: a single `SMOKE_TEST_PASS:` line
 - Fail: `SMOKE:` error lines, then `SMOKE_TEST_FAIL: N failure(s)`
@@ -477,3 +479,24 @@ Remove-Item Env:NIGHTWATCH_GALACTIC_PREVIEW -ErrorAction SilentlyContinue
 `NIGHTWATCH_TRANSIT_PREVIEW=1`은 같은 완성 빌드에서 첫 확인을 마치고 두 번째
 통과를 절반쯤 진행시켜 기준별 반경, 확인 점, 광도 하락, 행성 점을
 `build/transit_preview.png`에 저장한다.
+
+### Catalogue-ending capture
+
+`NIGHTWATCH_ENDING_PREVIEW=1` selects the non-persistent ending preview in the
+same HUD capture script and writes `build/ending_preview.png`.
+`NIGHTWATCH_ENDING_PREVIEW_STEP` advances the paused reveal by a deterministic
+number of seconds; its default is `8.1`, the completed frame. Use `2.8` for the
+completed constellations, `5.2` for the galaxy transition, and `8.1` for the
+final map-and-record layout. Each run replaces the same image, so inspect or
+copy it before capturing another frame. Set `NIGHTWATCH_ENDING_PREVIEW_LOCALE`
+to `en` or `ko` to inspect either layout without changing saved settings.
+These are visual checks, not proof of
+real-time animation pacing or a replacement for the smoke gate.
+
+```powershell
+$env:NIGHTWATCH_ENDING_PREVIEW = "1"
+$env:NIGHTWATCH_ENDING_PREVIEW_STEP = "8.1"
+& $godot --path . --script res://tests/hud_preview.gd
+Remove-Item Env:NIGHTWATCH_ENDING_PREVIEW -ErrorAction SilentlyContinue
+Remove-Item Env:NIGHTWATCH_ENDING_PREVIEW_STEP -ErrorAction SilentlyContinue
+```

@@ -479,7 +479,7 @@ func _show_catalogue_ending_debug_preview() -> void:
 	_release_hitstop()
 	get_tree().paused = true
 	sound.play_complete()
-	hud.show_catalogue_ending(_catalogue_stats_text())
+	hud.show_catalogue_ending(_catalogue_stats_text(), true)
 
 
 func _close_catalogue_ending_debug_preview() -> void:
