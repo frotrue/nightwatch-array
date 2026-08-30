@@ -84,7 +84,10 @@ testbed.
 Covers tutorial, saves, localization, phase summary, compact HUD, observation,
 the identity screen/world routing, fixed atmospheric rectangle, and background
 coverage above the single galactic span ceiling, progression, events,
-performance caps, stale references, and reset.
+catalogue-ending eligibility and final-watch flow, ending finish/continue
+actions and their saved state, the six-second reveal and keyboard focus,
+save-failure retry, active-final-watch resume/signature validation, corrupt-slot
+recovery, performance caps, stale references, and reset.
 
 - Pass: a single `SMOKE_TEST_PASS:` line
 - Fail: `SMOKE:` error lines, then `SMOKE_TEST_FAIL: N failure(s)`
@@ -116,7 +119,8 @@ two-target state survives save/load. It also covers persistent supernova
 recovery, the two-item phenomenon queue, ordinary hold observation on
 full/partial lens shapes, fixed-endpoint
 visual lens curves with automation still enabled, unchanged meteor cap 32,
-unchanged global `×8192`, and the 436.8 px/s dish regression.
+unchanged global `×8192`, the canonical five-record completion predicate and
+its save/load filtering, and the 436.8 px/s dish regression.
 
 ```powershell
 & $godot --headless --path . --script res://tests/galactic_slice_test.gd
@@ -197,6 +201,13 @@ summons, purchased Lyra calibration, Taurus combo speed, Gemini echoes, Leo
 storms, immediate-pay hosts, supernova clocks, and lens contact shapes all run
 through their production controllers.
 
+That `107/107 + 5/5` stop is the content/economy measurement boundary, not a
+simulation of the shipped catalogue-ending presentation. The driver stops as
+soon as the conjunction is reached. It does not play the required fully
+researched final watch, traverse `phase summary → completed chart → ending`,
+press Finish or Continue, or test the ending's saved seen/pending state. Those
+contracts belong to the main-game correctness gate.
+
 The three purchase strategies are greedy intermission heuristics. `cheapest`
 uses price only. `automation_first` and `manual_first` rank nodes that are
 affordable at that moment, but neither reserves Data for a preferred node that
@@ -250,9 +261,10 @@ stale historical 41-system snapshot; it is not a live acceptance target.
 ### Duration matrix — `duration_matrix_probe.gd`
 
 Sweeps all five durations against a synthetic 1080-second timeline for several
-builds. This is a historical comparison horizon; the live run currently has no
-ending. Use this probe only when a change needs comparison with the old duration
-matrix.
+builds. This is a historical comparison horizon from before the content-driven
+catalogue ending. Its fixed 1080-second cutoff is not the live ending condition
+and does not model the final full-research watch or ending UI. Use this probe
+only when a change needs comparison with the old duration matrix.
 
 ```powershell
 & $godot --headless --path . --script res://tests/duration_matrix_probe.gd

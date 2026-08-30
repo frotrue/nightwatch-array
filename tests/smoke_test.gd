@@ -62,6 +62,17 @@ func _run() -> void:
 	var startup_save_directory := "user://nightwatch_startup_smoke_saves"
 	_cleanup_smoke_saves(startup_save_directory)
 	game.save_games.set_save_directory(startup_save_directory)
+	_check(game._preferred_startup_slot() == 1, "quick start chooses the first empty slot on a fresh installation")
+	var empty_slot_summaries: Dictionary = game.save_games.slot_summaries.duplicate(true)
+	for corrupt_slot in range(1, 4):
+		game.save_games.slot_summaries[corrupt_slot] = {"exists": true, "valid": false}
+	game._enter_preferred_save()
+	_check(
+		game.active_save_slot == 0 and game.hud.is_startup_slots_open() and paused,
+		"quick start keeps three corrupt records on the recovery surface instead of starting an unsavable slot-zero run"
+	)
+	game.hud.close_startup_slots()
+	game.save_games.slot_summaries = empty_slot_summaries
 	game.hud.open_startup_slots()
 	_check(game.hud.is_startup_slots_open() and paused, "startup save-slot picker pauses the game")
 	_check(game.hud.startup_slot_buttons.size() == 3, "startup picker exposes exactly three save slots")
@@ -1781,6 +1792,10 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	open_night_game.set_process(false)
+	open_night_game.save_games.set_save_directory(smoke_save_directory)
+	open_night_game.active_save_slot = 1
+	open_night_game.hud.set_active_save_slot(1)
+	open_night_game._autosave_active_slot()
 	open_night_game.events.run_time = 999999.0
 	open_night_game.events._process(0.05)
 	_check(open_night_game.events.canis_major_state == "idle", "elapsed run time cannot summon Sirius before its research is installed")
@@ -1788,9 +1803,40 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	_check(open_night_game.upgrade_tree.galactic_mode == open_night_game.upgrade_tree.GALACTIC_MODE_NORMAL and open_night_game.upgrade_tree.zoom >= open_night_game.upgrade_tree.MIN_ZOOM, "the pre-unlock research chart opens in its normal player zoom range")
-	# The run has no ending. A finished tree waits through the current round,
-	# then schedules Sirius as a recurrent event without closing the sky.
+	# The catalogue ending requires both semantic records. Neither side alone may
+	# close the sky, and a final purchase in a live mixed-build round must wait
+	# for one observation that began with the complete array.
+	for target_id_variant in open_night_game.galactic_phenomena.TARGET_SPECS:
+		open_night_game.galactic_phenomena.completed_targets[String(target_id_variant)] = true
+	open_night_game.galactic_phenomena.refresh_unlock_state()
+	open_night_game._refresh_catalogue_ending_requirement()
+	_check(
+		open_night_game.galactic_phenomena.is_record_complete()
+		and not open_night_game.progression.is_research_complete()
+		and not open_night_game._catalogue_record_complete()
+		and not open_night_game.ending_final_watch_pending,
+		"five galactic phenomena without the research tree cannot arm the catalogue ending"
+	)
+	open_night_game.galactic_phenomena.completed_targets.clear()
+	open_night_game.galactic_phenomena.refresh_unlock_state()
 	open_night_game.progression.debug_purchase_all()
+	_check(
+		open_night_game.progression.is_research_complete()
+		and not open_night_game.galactic_phenomena.is_record_complete()
+		and not open_night_game._catalogue_record_complete()
+		and not open_night_game.ending_final_watch_pending,
+		"the complete research tree without all phenomena cannot arm the catalogue ending"
+	)
+	for target_id_variant in open_night_game.galactic_phenomena.TARGET_SPECS:
+		open_night_game.galactic_phenomena.completed_targets[String(target_id_variant)] = true
+	open_night_game.galactic_phenomena.refresh_unlock_state()
+	open_night_game._refresh_catalogue_ending_requirement()
+	_check(
+		open_night_game._catalogue_record_complete()
+		and open_night_game.ending_final_watch_pending
+		and not open_night_game.phase_started_with_complete_research,
+		"completing the catalogue inside a mixed-build round arms one full-array final watch"
+	)
 	_check(open_night_game.upgrade_tree.galactic_mode == open_night_game.upgrade_tree.GALACTIC_MODE_PULLBACK and not open_night_game.galactic_pullback_seen, "buying Galactic Reference Frame in the open chart starts the one-time pull-back")
 	var purchase_release := InputEventMouseButton.new()
 	purchase_release.button_index = MOUSE_BUTTON_LEFT
@@ -1871,12 +1917,192 @@ func _run() -> void:
 	_check(open_night_game.upgrade_tree.galactic_mode == open_night_game.upgrade_tree.GALACTIC_MODE_FINAL and is_equal_approx(open_night_game.upgrade_tree.zoom, open_night_game.upgrade_tree.GALACTIC_ZOOM), "a seen pull-back reopens at the galaxy frame without replaying")
 	open_night_game.upgrade_tree.close_tree()
 	await process_frame
-	_check(open_night_game.observation_phase_active and open_night_game.observation_round == 2, "closing the completed research tree opens another observation round instead of an ending")
+	_check(
+		open_night_game.observation_phase_active
+		and open_night_game.observation_round == 2
+		and open_night_game.phase_started_with_complete_research
+		and open_night_game.ending_final_watch_pending
+		and not open_night_game.hud.is_end_open(),
+		"closing the chart after a mixed-build completion starts exactly one full-array final watch"
+	)
 	_check(open_night_game.events.canis_major_state == "scheduled", "the next viable round randomizes one warned Sirius event")
-	_check(not open_night_game.completed, "a finished research tree and its recurrent major never complete the run")
+	open_night_game.upgrade_tree.open_tree()
+	await process_frame
+	await process_frame
+	_check(
+		open_night_game.upgrade_tree.completion_detail_label.text != TranslationServer.translate("TREE_CATALOGUE_FINAL_WATCH_DETAIL")
+		and open_night_game.upgrade_tree.close_button.text == TranslationServer.translate("TREE_CLOSE")
+		and open_night_game.upgrade_tree.constellation_bottom_action.text == TranslationServer.translate("TREE_BOTTOM_CLOSE")
+		and open_night_game.upgrade_tree.galactic_return_hint.text == TranslationServer.translate("TREE_GALACTIC_RETURN")
+		and not open_night_game.upgrade_tree.data_context_label.visible,
+		"an active final watch hides pending-watch copy and keeps ordinary chart-close actions"
+	)
+	open_night_game.upgrade_tree.close_tree()
+	await process_frame
+	_check(open_night_game.observation_phase_active and open_night_game.observation_round == 2, "reviewing the chart during the final watch resumes that same round")
+	var active_final_watch_save: Dictionary = open_night_game._build_save_data()
+	_check(
+		bool(active_final_watch_save.get("observation_phase_active", false))
+		and bool(active_final_watch_save.get("phase_started_with_complete_research", false))
+		and bool(active_final_watch_save.get("ending_final_watch_pending", false)),
+		"an active final-watch save retains the complete-array qualification evidence"
+	)
+	var tampered_final_watch_save: Dictionary = active_final_watch_save.duplicate(true)
+	var tampered_phase_signature: Array = tampered_final_watch_save["phase_start_upgrade_signature"].duplicate()
+	tampered_phase_signature.pop_back()
+	tampered_final_watch_save["phase_start_upgrade_signature"] = tampered_phase_signature
+	tampered_final_watch_save["phase_started_with_complete_research"] = true
+	open_night_game._apply_save_data(tampered_final_watch_save)
+	_check(
+		open_night_game.observation_phase_active
+		and not open_night_game.phase_started_with_complete_research
+		and open_night_game.ending_final_watch_pending,
+		"a true final-watch flag cannot override an incomplete validated phase-start signature"
+	)
+	open_night_game._apply_save_data(active_final_watch_save)
+	_check(
+		open_night_game.observation_phase_active
+		and open_night_game.phase_started_with_complete_research
+		and open_night_game.ending_final_watch_pending
+		and open_night_game._catalogue_record_complete(),
+		"loading an active final watch preserves its qualification through the rest of that round"
+	)
+	var final_phenomenon_id := String(open_night_game.galactic_phenomena.TARGET_SPECS.keys().back())
+	open_night_game.galactic_phenomena.completed_targets.erase(final_phenomenon_id)
+	open_night_game._refresh_catalogue_ending_requirement()
+	_check(not open_night_game._catalogue_record_complete(), "the final-watch round remains non-terminal until its last phenomenon is recorded")
+	open_night_game.galactic_phenomena.completed_targets[final_phenomenon_id] = true
+	open_night_game._refresh_catalogue_ending_requirement()
+	_check(
+		open_night_game._catalogue_record_complete() and not open_night_game.ending_final_watch_pending,
+		"a last phenomenon recorded during a full-research round lets that same round qualify"
+	)
+	open_night_game._end_observation_phase()
+	_check(
+		not open_night_game.observation_phase_active
+		and open_night_game.hud.is_phase_summary_open()
+		and not open_night_game.ending_final_watch_pending
+		and open_night_game._catalogue_ending_ready(),
+		"the full-array final watch reaches its ordinary summary before arming the ending"
+	)
+	var unseen_ending_save: Dictionary = open_night_game._build_save_data()
+	_check(
+		not bool(unseen_ending_save.get("catalogue_ending_seen", true))
+		and not bool(unseen_ending_save.get("ending_final_watch_pending", true))
+		and not bool(unseen_ending_save.get("observation_phase_active", true)),
+		"an unseen ending save preserves the ready intermission without pretending it was acknowledged"
+	)
+	open_night_game._on_phase_summary_continue_requested()
+	await process_frame
+	await process_frame
+	_check(
+		open_night_game.upgrade_tree.is_open()
+		and open_night_game.upgrade_tree.completion_detail_label.text == TranslationServer.translate("TREE_CATALOGUE_ENDING_READY_DETAIL")
+		and open_night_game.upgrade_tree.close_button.text == TranslationServer.translate("TREE_CATALOGUE_SEAL_RECORD")
+		and open_night_game.upgrade_tree.constellation_bottom_action.text == TranslationServer.translate("TREE_BOTTOM_CATALOGUE_SEAL_RECORD")
+		and open_night_game.upgrade_tree.galactic_return_hint.text == TranslationServer.translate("TREE_BOTTOM_CATALOGUE_SEAL_RECORD")
+		and not open_night_game.upgrade_tree.data_context_label.visible,
+		"the completed chart labels both exits as sealing the record instead of advertising another observation"
+	)
+	var ending_round: int = int(open_night_game.observation_round)
+	open_night_game.upgrade_tree.close_tree()
+	await process_frame
+	_check(
+		open_night_game.completed
+		and open_night_game.hud.is_end_open()
+		and paused
+		and not open_night_game.observation_phase_active
+		and open_night_game.observation_round == ending_round,
+		"closing the completed chart shows the paused catalogue ending without starting another round"
+	)
+	_check(
+		open_night_game.hud.end_title.text == TranslationServer.translate("HUD_END_TITLE")
+		and open_night_game.hud.end_body.text == TranslationServer.translate("HUD_END_BODY")
+		and open_night_game.hud.end_finish_button.text == TranslationServer.translate("HUD_END_FINISH")
+		and open_night_game.hud.end_continue_button.text == TranslationServer.translate("HUD_END_CONTINUE")
+		and open_night_game.hud.end_stats.text.split("\n").size() == 7
+		and open_night_game.hud.end_finish_button.disabled
+		and open_night_game.hud.end_continue_button.disabled
+		and is_equal_approx(open_night_game.hud.end_actions.modulate.a, 0.0),
+		"the ending is a neutral record with active-time statistics and two non-destructive choices"
+	)
+	var reveal_tween_before_locale_refresh: Tween = open_night_game.hud.end_reveal_tween
+	var refreshed_stats_probe := "REFRESHED CATALOGUE STATS"
+	open_night_game.hud.refresh_catalogue_ending_text(refreshed_stats_probe)
+	_check(
+		open_night_game.hud.end_reveal_tween == reveal_tween_before_locale_refresh
+		and open_night_game.hud.end_finish_button.disabled
+		and open_night_game.hud.end_stats.text == refreshed_stats_probe,
+		"refreshing translated ending copy and statistics does not restart or bypass the reveal beat"
+	)
+	open_night_game.hud._complete_catalogue_reveal()
+	_check(
+		not open_night_game.hud.end_finish_button.disabled
+		and not open_night_game.hud.end_continue_button.disabled
+		and open_night_game.hud.end_finish_button.focus_mode == Control.FOCUS_ALL
+		and open_night_game.hud.end_continue_button.focus_mode == Control.FOCUS_ALL
+		and open_night_game.get_viewport().gui_get_focus_owner() == open_night_game.hud.end_finish_button
+		and open_night_game.hud.end_finish_button.get_theme_font_size("font_size") > open_night_game.hud.end_continue_button.get_theme_font_size("font_size"),
+		"the completed reveal enables keyboard navigation and gives the archival finish action primary focus"
+	)
+	open_night_game.active_save_slot = 0
+	open_night_game.hud.set_active_save_slot(0)
+	open_night_game._on_catalogue_finish_requested()
+	open_night_game.hud.refresh_catalogue_ending_text()
+	_check(
+		open_night_game.completed
+		and open_night_game.hud.is_end_open()
+		and not open_night_game.catalogue_ending_seen
+		and open_night_game.hud.end_save_failure.visible
+		and open_night_game.hud.end_save_failure.text == TranslationServer.translate("HUD_END_SAVE_FAILURE")
+		and not open_night_game.hud.end_finish_button.disabled
+		and not open_night_game.hud.end_continue_button.disabled
+		and open_night_game.get_viewport().gui_get_focus_owner() == open_night_game.hud.end_finish_button,
+		"a real finish save failure keeps the ending visible, translated, and retryable"
+	)
+	open_night_game.active_save_slot = 1
+	open_night_game.hud.set_active_save_slot(1)
+	var blocked_end_u := InputEventKey.new()
+	blocked_end_u.keycode = KEY_U
+	blocked_end_u.pressed = true
+	open_night_game._unhandled_key_input(blocked_end_u)
+	_check(not open_night_game.upgrade_tree.is_open(), "ending ownership blocks research-chart input behind the overlay")
+	open_night_game._on_catalogue_continue_requested()
+	_check(
+		open_night_game.catalogue_ending_seen
+		and not open_night_game.completed
+		and not open_night_game.hud.is_end_open()
+		and open_night_game.observation_phase_active
+		and open_night_game.observation_round == ending_round + 1
+		and not paused,
+		"continue observing acknowledges the ending and resumes the same completed save in the open night"
+	)
+	var continued_save: Dictionary = open_night_game.save_games.load_slot(1)
+	_check(bool(continued_save.get("catalogue_ending_seen", false)), "continuing autosaves the one-time ending acknowledgement")
+	open_night_game._end_observation_phase()
+	open_night_game._on_phase_summary_continue_requested()
+	await process_frame
+	await process_frame
+	open_night_game.upgrade_tree.close_tree()
+	await process_frame
+	_check(
+		open_night_game.observation_phase_active
+		and open_night_game.observation_round == ending_round + 2
+		and not open_night_game.hud.is_end_open(),
+		"later open-night rounds do not replay an acknowledged ending"
+	)
 	var legacy_galactic_save: Dictionary = seen_galactic_save.duplicate(true)
 	legacy_galactic_save.erase("galactic_pullback_seen")
+	legacy_galactic_save.erase("catalogue_ending_seen")
+	legacy_galactic_save.erase("ending_final_watch_pending")
+	legacy_galactic_save.erase("phase_started_with_complete_research")
 	open_night_game._apply_save_data(legacy_galactic_save)
+	_check(
+		open_night_game.ending_final_watch_pending
+		and not open_night_game.catalogue_ending_seen
+		and not open_night_game.completed,
+		"a completed legacy open-night save migrates to one safe final watch instead of ending during load"
+	)
 	open_night_game.upgrade_tree.open_tree()
 	await process_frame
 	await process_frame
@@ -1891,8 +2117,37 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	_check(open_night_game.upgrade_tree.galactic_mode == open_night_game.upgrade_tree.GALACTIC_MODE_FINAL and open_night_game.galactic_pullback_seen, "a save with the presentation flag restores the final frame without replay")
+	open_night_game._apply_save_data(unseen_ending_save)
+	await process_frame
+	await process_frame
+	_check(open_night_game.upgrade_tree.is_open() and not open_night_game.hud.is_end_open(), "loading an unseen ready save returns to the completed chart before replaying the ending")
+	open_night_game.upgrade_tree.close_tree()
+	await process_frame
+	_check(
+		open_night_game.hud.is_end_open()
+		and open_night_game.completed
+		and not open_night_game.hud.end_save_failure.visible,
+		"closing that restored chart safely replays a clean unseen ending without a stale save error"
+	)
+	open_night_game._on_catalogue_finish_requested()
+	var finished_record_save: Dictionary = open_night_game.save_games.load_slot(1)
+	_check(
+		open_night_game.hud.is_startup_slots_open()
+		and paused
+		and open_night_game.save_games.has_slot(1)
+		and bool(finished_record_save.get("catalogue_ending_seen", false)),
+		"finishing archives the acknowledgement and returns to slots without deleting the active record"
+	)
+	open_night_game.hud.close_startup_slots()
 	open_night_game.reset_run()
-	_check(not open_night_game.galactic_pullback_seen and not open_night_game.progression.galaxy_unlocked() and open_night_game.upgrade_tree.galactic_mode == open_night_game.upgrade_tree.GALACTIC_MODE_NORMAL, "reset clears both the galactic unlock and its one-time presentation flag")
+	_check(
+		not open_night_game.galactic_pullback_seen
+		and not open_night_game.progression.galaxy_unlocked()
+		and open_night_game.upgrade_tree.galactic_mode == open_night_game.upgrade_tree.GALACTIC_MODE_NORMAL
+		and not open_night_game.catalogue_ending_seen
+		and not open_night_game.ending_final_watch_pending,
+		"reset clears the galactic presentation and every catalogue-ending state"
+	)
 	open_night_game.queue_free()
 	await process_frame
 

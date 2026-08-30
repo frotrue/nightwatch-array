@@ -45,7 +45,8 @@ const SHAKE_TRAUMA_CEILING := 0.88
 var sound: Node
 var elapsed_time: float = 0.0
 var completed: bool = false
-var last_completion_success: bool = false
+var catalogue_ending_seen: bool = false
+var ending_final_watch_pending: bool = false
 var startup_slot_prompt_enabled: bool = true
 var tutorial_auto_start_after_slot: bool = false
 var active_save_slot: int = 0
@@ -59,6 +60,7 @@ var phase_start_manual_successes: int = 0
 var phase_start_automatic_successes: int = 0
 var phase_start_total_data: float = 0.0
 var phase_start_upgrade_signature: Array[String] = []
+var phase_started_with_complete_research: bool = false
 var phase_had_shower: bool = false
 var phase_resumed_from_save: bool = false
 var last_clean_round_result: Dictionary = {}
@@ -85,7 +87,8 @@ func _ready() -> void:
 		tutorial.auto_start_enabled = false
 	tutorial.setup(settings, progression)
 	settings.language_changed.connect(_on_language_changed)
-	hud.restart_requested.connect(reset_run)
+	hud.catalogue_finish_requested.connect(_on_catalogue_finish_requested)
+	hud.catalogue_continue_requested.connect(_on_catalogue_continue_requested)
 	hud.phase_summary_continue_requested.connect(_on_phase_summary_continue_requested)
 	hud.save_slot_requested.connect(_on_save_slot_requested)
 	hud.load_slot_requested.connect(_on_load_slot_requested)
@@ -133,8 +136,10 @@ func _enter_preferred_save() -> void:
 	if slot == 0:
 		active_save_slot = 0
 		hud.set_active_save_slot(0)
-		start_run()
-		_start_tutorial_after_slot_if_needed()
+		# No valid or empty slot means every record is corrupt. Keep the player on
+		# the recovery surface so one can be explicitly reset; starting an unsaved
+		# slot-zero run here would make every later autosave and ending choice fail.
+		hud.open_startup_slots()
 		return
 	_on_startup_slot_selected(slot)
 
@@ -161,7 +166,9 @@ func start_run() -> void:
 	elapsed_time = 0.0
 	autosave_elapsed = 0.0
 	completed = false
-	last_completion_success = false
+	catalogue_ending_seen = false
+	ending_final_watch_pending = false
+	phase_started_with_complete_research = false
 	observation_round = 1
 	last_clean_round_result.clear()
 	best_round_rate = 0.0
@@ -174,6 +181,7 @@ func start_run() -> void:
 	_sync_galactic_systems()
 	starfield.set_galactic_mode(progression.galaxy_unlocked())
 	upgrade_tree.configure_galactic_state(progression.galaxy_unlocked(), galactic_pullback_seen)
+	_sync_catalogue_ending_presentation()
 	_begin_observation_phase()
 
 
@@ -243,6 +251,7 @@ func _begin_observation_phase(advance_round: bool = false, remaining_override: f
 	phase_start_automatic_successes = progression.automatic_successes
 	phase_start_total_data = progression.total_data_earned
 	phase_start_upgrade_signature = _current_build_signature()
+	phase_started_with_complete_research = progression.is_research_complete()
 	phase_had_shower = false
 	phase_resumed_from_save = false
 	upgrade_tree.clear_intermission_context()
@@ -254,8 +263,8 @@ func _begin_observation_phase(advance_round: bool = false, remaining_override: f
 	survey.begin_round(observation_round)
 	events.run_time = elapsed_time
 	events.start()
-	# Completing the research no longer ends the run. Canis Major turns its old
-	# one-shot spectacle into a recurrent round event, and the sky remains open.
+	# Canis Major remains a recurrent round event. Catalogue completion is handled
+	# only after a full-research observation, its summary, and the completed chart.
 	var pending_leonid_count := _try_start_leonid_storm()
 	if pending_leonid_count > 0:
 		hud.show_banner(tr("BANNER_LEONID_STORM") % pending_leonid_count, UITheme.INK_MAX, 1.8)
@@ -291,6 +300,13 @@ func _end_observation_phase() -> void:
 		last_clean_round_result = result.duplicate(true)
 	observation_phase_active = false
 	observation_phase_remaining = 0.0
+	if catalogue_ending_seen or not _catalogue_record_complete():
+		ending_final_watch_pending = false
+	else:
+		# A mixed-build round can never seal the record. The next round must begin
+		# with the complete research array before the ending becomes eligible.
+		ending_final_watch_pending = not phase_started_with_complete_research
+	_sync_catalogue_ending_presentation()
 	events.pause_for_intermission()
 	observer.reset()
 	sky_contacts.reset()
@@ -338,6 +354,109 @@ func _current_build_signature() -> Array[String]:
 	return signature
 
 
+func _catalogue_record_complete() -> bool:
+	return progression.is_research_complete() and galactic_phenomena.is_record_complete()
+
+
+func _catalogue_ending_ready() -> bool:
+	return (
+		not catalogue_ending_seen
+		and not ending_final_watch_pending
+		and not observation_phase_active
+		and _catalogue_record_complete()
+	)
+
+
+func _refresh_catalogue_ending_requirement() -> void:
+	if catalogue_ending_seen or not _catalogue_record_complete():
+		ending_final_watch_pending = false
+	elif observation_phase_active:
+		# A final phenomenon found during a round that began with the full array
+		# may use that same round. Research installed after the start may not.
+		ending_final_watch_pending = not phase_started_with_complete_research
+	else:
+		ending_final_watch_pending = true
+	_sync_catalogue_ending_presentation()
+
+
+func _sync_catalogue_ending_presentation() -> void:
+	upgrade_tree.configure_catalogue_ending_state(
+		ending_final_watch_pending,
+		_catalogue_ending_ready()
+	)
+
+
+func _show_catalogue_ending() -> void:
+	if completed or not _catalogue_ending_ready():
+		return
+	completed = true
+	_release_hitstop()
+	get_tree().paused = true
+	sound.play_complete()
+	hud.show_catalogue_ending(_catalogue_stats_text())
+	# Save the unseen, ready state. If the application closes on this screen,
+	# loading returns to the completed chart and presents the ending again.
+	_autosave_active_slot()
+
+
+func _on_catalogue_continue_requested() -> void:
+	if not completed or not hud.is_end_open():
+		return
+	catalogue_ending_seen = true
+	ending_final_watch_pending = false
+	_sync_catalogue_ending_presentation()
+	# Persist the acknowledgement before leaving the one-time ending. A failed
+	# save keeps the record on screen instead of letting the player believe the
+	# choice was archived when it was not.
+	if not _autosave_active_slot():
+		catalogue_ending_seen = false
+		_sync_catalogue_ending_presentation()
+		hud.show_catalogue_save_failure()
+		return
+	completed = false
+	hud.hide_end()
+	_begin_observation_phase(true, -1.0, true)
+	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
+	# This second save advances the persisted phase too. If it fails, the first
+	# save still guarantees that the acknowledged ending will not replay.
+	_autosave_active_slot()
+
+
+func _on_catalogue_finish_requested() -> void:
+	if not completed or not hud.is_end_open():
+		return
+	catalogue_ending_seen = true
+	ending_final_watch_pending = false
+	_sync_catalogue_ending_presentation()
+	if not _autosave_active_slot():
+		catalogue_ending_seen = false
+		_sync_catalogue_ending_presentation()
+		hud.show_catalogue_save_failure()
+		return
+	completed = false
+	hud.hide_end()
+	# Startup slots are the project's title/records surface. Open them from an
+	# unpaused tree so the HUD owns the pause and later slot selection resumes.
+	get_tree().paused = false
+	hud.open_startup_slots()
+
+
+func _catalogue_stats_text() -> String:
+	var active_seconds := maxi(0, int(floor(elapsed_time)))
+	return "\n".join([
+		tr("END_ACTIVE_TIME") % [active_seconds / 60, active_seconds % 60],
+		tr("END_ROUNDS") % observation_round,
+		tr("END_OBSERVATIONS") % progression.success_count,
+		tr("END_MANUAL_AUTO") % [progression.manual_successes, progression.automatic_successes],
+		tr("END_TOTAL_DATA") % int(round(progression.total_data_earned)),
+		tr("END_RESEARCH") % [progression.upgrade_level, Balance.research_node_count()],
+		tr("END_PHENOMENA") % [
+			galactic_phenomena.get_completed_record_count(),
+			galactic_phenomena.get_record_target_count(),
+		],
+	])
+
+
 func _systems_since_baseline(result: Dictionary, previous_result: Dictionary) -> Array[String]:
 	# A resumed sky becomes its own baseline, so pre-load installs are not
 	# presented as fresh growth. A live purchase after resuming still takes the
@@ -363,6 +482,9 @@ func _on_phase_summary_continue_requested() -> void:
 func _on_upgrade_tree_closed() -> void:
 	if suppress_phase_transition or completed or observation_phase_active:
 		return
+	if _catalogue_ending_ready():
+		_show_catalogue_ending()
+		return
 	_begin_observation_phase(true, -1.0, true)
 
 
@@ -374,6 +496,9 @@ func _close_upgrade_tree_without_transition() -> void:
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if not (event is InputEventKey) or not event.pressed or event.echo:
+		return
+	if completed:
+		get_viewport().set_input_as_handled()
 		return
 	if hud.is_phase_summary_open():
 		if event.keycode in [KEY_U, KEY_ENTER, KEY_SPACE]:
@@ -638,6 +763,9 @@ func _on_galactic_phenomenon_observed(target, reward: float, multiplier: float, 
 	)
 	sound.play_success(multiplier, progression.manual_combo_count, 0.72)
 	hud.show_banner(tr("BANNER_GALACTIC_OBSERVATION"), UITheme.BANNER_TITLE, 2.2)
+	_refresh_catalogue_ending_requirement()
+	if _catalogue_record_complete():
+		_autosave_active_slot()
 
 
 func _on_upgrade_purchased(definition: Dictionary) -> void:
@@ -656,6 +784,7 @@ func _on_upgrade_purchased(definition: Dictionary) -> void:
 		hud.show_banner(tr("BANNER_SYSTEM_ONLINE") % _upgrade_name(definition), UITheme.BANNER_TITLE, 2.4)
 	starfield.set_activity(progression.get_progression_ratio() * 0.16)
 	starfield.set_galactic_mode(progression.galaxy_unlocked())
+	_refresh_catalogue_ending_requirement()
 	_autosave_active_slot()
 
 
@@ -695,7 +824,8 @@ func _on_shower_started() -> void:
 
 
 func _on_language_changed(_locale: String) -> void:
-	pass
+	if completed and hud.is_end_open():
+		hud.refresh_catalogue_ending_text(_catalogue_stats_text())
 
 
 func _upgrade_name(definition: Dictionary) -> String:
@@ -794,6 +924,7 @@ func _start_fresh_slot() -> void:
 	events.reset()
 	spawner.reset()
 	host_stars.reset()
+	galactic_phenomena.reset()
 	progression.reset()
 	hud.hide_end()
 	hud.reset_tutorial()
@@ -835,11 +966,14 @@ func _build_save_data() -> Dictionary:
 		"phase_start_automatic_successes": phase_start_automatic_successes,
 		"phase_start_total_data": phase_start_total_data,
 		"phase_start_upgrade_signature": phase_start_upgrade_signature.duplicate(),
+		"phase_started_with_complete_research": phase_started_with_complete_research,
 		"phase_had_shower": phase_had_shower,
 		"canis_major_spawned_this_round": spawner.canis_major_spawned_this_round,
 		"last_clean_round_result": last_clean_round_result.duplicate(true),
 		"best_round_rate": best_round_rate,
 		"galactic_pullback_seen": galactic_pullback_seen,
+		"catalogue_ending_seen": catalogue_ending_seen,
+		"ending_final_watch_pending": ending_final_watch_pending,
 		"host_stars": host_stars.get_save_data(),
 		"galactic_phenomena": galactic_phenomena.get_save_data(),
 		"progression": progression.get_save_data(),
@@ -857,7 +991,9 @@ func _apply_save_data(data: Dictionary) -> void:
 	host_stars.reset()
 	galactic_phenomena.reset()
 	completed = false
-	last_completion_success = false
+	catalogue_ending_seen = false
+	ending_final_watch_pending = false
+	phase_started_with_complete_research = false
 	elapsed_time = maxf(0.0, float(data.get("elapsed_time", 0.0)))
 	autosave_elapsed = 0.0
 	observation_round = maxi(1, int(data.get("observation_round", 1)))
@@ -884,6 +1020,15 @@ func _apply_save_data(data: Dictionary) -> void:
 	host_stars.load_save_data(host_data if host_data is Dictionary else {})
 	var phenomena_data = data.get("galactic_phenomena", {})
 	galactic_phenomena.load_save_data(phenomena_data if phenomena_data is Dictionary else {})
+	catalogue_ending_seen = bool(data.get("catalogue_ending_seen", false))
+	if catalogue_ending_seen or not _catalogue_record_complete():
+		ending_final_watch_pending = false
+	elif data.has("ending_final_watch_pending"):
+		ending_final_watch_pending = bool(data.get("ending_final_watch_pending", true))
+	else:
+		# A completed save from the former open-night build receives one safe
+		# full-array observation instead of opening an ending during load.
+		ending_final_watch_pending = true
 	starfield.set_galactic_mode(progression.galaxy_unlocked())
 	var saved_phase_active := bool(data.get("observation_phase_active", true))
 	if saved_phase_active:
@@ -901,16 +1046,32 @@ func _apply_save_data(data: Dictionary) -> void:
 		phase_start_automatic_successes = maxi(0, int(data.get("phase_start_automatic_successes", progression.automatic_successes)))
 		phase_start_total_data = maxf(0.0, float(data.get("phase_start_total_data", progression.total_data_earned)))
 		phase_start_upgrade_signature = _validated_signature(data.get("phase_start_upgrade_signature", _current_build_signature()))
+		var saved_phase_had_complete_research := (
+			phase_start_upgrade_signature.size() == Balance.research_node_count()
+		)
+		if data.has("phase_started_with_complete_research"):
+			# Never let a stale or edited flag claim that a mixed-build round began
+			# with the full array. The validated phase signature is authoritative.
+			phase_started_with_complete_research = (
+				bool(data.get("phase_started_with_complete_research", false))
+				and saved_phase_had_complete_research
+			)
+		elif data.has("phase_start_upgrade_signature"):
+			phase_started_with_complete_research = saved_phase_had_complete_research
+		else:
+			phase_started_with_complete_research = false
 		phase_had_shower = bool(data.get("phase_had_shower", false))
 		phase_resumed_from_save = true
 	else:
 		observation_phase_active = false
 		observation_phase_remaining = 0.0
+		phase_started_with_complete_research = false
 		survey.end_round()
 		hud.set_upgrade_phase(observation_round)
 		var next_round := observation_round + 1
 		upgrade_tree.set_intermission_context(next_round, int(_observation_duration()))
 		call_deferred("_resume_upgrade_intermission")
+	_sync_catalogue_ending_presentation()
 
 
 func _sync_galactic_systems() -> void:

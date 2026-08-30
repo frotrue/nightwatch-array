@@ -16,9 +16,14 @@ Purchases happen only at intermissions.
 
 The clock is **active observation time**. It excludes reading, deliberation,
 research-chart navigation, and intermission time, so it is a lower bound rather
-than a forecast of a person's wall-clock playtime. The game has no implemented
-ending; the driver stops when all 107 functional research nodes and all five
-galactic phenomena are complete.
+than a forecast of a person's wall-clock playtime. The driver stops when all
+107 functional research nodes and all five galactic phenomena are complete.
+That is the economy/content boundary, not the end of the shipped catalogue
+flow: the driver does not play the required fully researched final watch, move
+through the final summary and completed chart, display the ending record, or
+choose Finish/Continue. The additional full round—or the remainder of an
+already qualifying final watch—and intermission navigation are therefore absent
+from the measurement boundary.
 
 Three deterministic seeds run under three heuristic purchase orders:
 
@@ -67,6 +72,10 @@ future result.
 The functional research price total is `41,332,301,070` Data. Research and
 galactic-content completion occurred in the same round in all nine samples;
 all five phenomena were already complete when the last research was installed.
+Under the later catalogue-ending contract, each of these routes would next play
+one full round that starts with all research installed before the ending can be
+shown. The table deliberately preserves the original `107/107 + 5/5` stopping
+times rather than retroactively adding that round.
 
 | Strategy | Seed | Active time | Rounds | Earned Data | Bank after 107/107 | Automatic income | Largest batch |
 |---|---:|---:|---:|---:|---:|---:|---:|
@@ -139,10 +148,11 @@ zero in every sample.
    arrival reference and its phenomena resolve almost immediately. A human
    playtest should check whether host work and presentation fill that interval;
    the automated gate cannot judge feel.
-5. **Campaign length and ending.** The current graph's active lower bound is
-   roughly 50–55 minutes, well short of the design's eventual two-hour goal.
-   Continue to add meaningful content first. Price walls should not be used to
-   manufacture the missing hour, and an actual end-state remains a separate
-   design decision.
+5. **Campaign length and ending boundary.** The measured content boundary is
+   roughly 50–55 active minutes, well short of the design's eventual two-hour
+   goal. The shipped catalogue ending adds one normal fully researched watch,
+   but this baseline does not measure its screen flow or human intermission
+   time. Continue to add meaningful content first; price walls and the final
+   watch should not be used to manufacture the missing hour.
 
 No runtime balance value was changed while recording this baseline.

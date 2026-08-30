@@ -44,13 +44,13 @@ content.
 
 | Script | Owns |
 |---|---|
-| `game.gd` | Round lifecycle, save/load orchestration, economy-independent feedback dispatch (kick/shake/hitstop), debug keys. The only node that knows about all the others. |
+| `game.gd` | Round lifecycle, catalogue-ending eligibility and final-watch routing, save/load orchestration, economy-independent feedback dispatch (kick/shake/hitstop), debug keys. The only node that knows about all the others. |
 | `observation_view.gd` | The fixed atmospheric playfield, laterally expanding meteor-activity rectangle, dynamic camera-visible world rectangle, screen/world point conversion, interaction-length conversion, partial meteor visual scaling, and the Camera2D feedback offset. Four Local Group chapter milestones expand its span from 1.0 to the 1.4774554 ceiling. |
 | `progression_controller.gd` | Data balance, purchased nodes, discovery gates, transient Taurus manual combo, persistent Leo storm charge, and systemic derived upgrade effects. Single source of truth: consumers ask it, not `game_balance.gd`. |
 | `game_balance.gd` | Static data only: 107 installable research definitions, four simple Local Group observation profiles, the meteor/long-watch-target spec table, and the final galactic observation-span ceiling. `RefCounted`, no state. |
 | `meteor_spawner.gd` | Spawn cadence, type rolls (including same-round satellites, variable stars, comets, binary stars, and distant galaxies), delayed/forecast Gemini observation echoes, paced Leo meteor-storm queues, sky-wide burnout endpoint planning, forecast contact announcements, fragment spawning, survey-requested custom-start spawns, shower and round-guarded Canis Major spawns, support-lane assignment. |
 | `meteor.gd` | One object's burn-progress motion, optional fixed-endpoint quadratic lens curve, explicit in-zone lensed state, trail and terminal fade, observation progress, quality grading, split behaviour, and passive spectral calibration result. |
-| `galactic_phenomena_controller.gd` | Persistent supernova and black-hole target lifecycle, active-observation-time phase advancement, save/load, lens-zone rendering, and lensed-meteor curve assignment. |
+| `galactic_phenomena_controller.gd` | Persistent supernova and black-hole target lifecycle, semantic five-record completion queries, active-observation-time phase advancement, save/load, lens-zone rendering, and lensed-meteor curve assignment. |
 | `supernova_target.gd` | Peak/fade/remnant timing choice. A missed light-curve phase always ends in a trackable remnant. |
 | `black_hole_target.gd` | Full-ring and partial-arc cursor-path hit testing. Angular progress accumulates and never decays on release or exit. The coda target also carries the supernova phase state. |
 | `observation_controller.gd` | Cursor sampling, the tracking-versus-survey input latch, manual tracking across meteor/host/phenomena layers, point or annulus swept-path hit detection, tracking and hover rings, and the software cursor. |
@@ -58,8 +58,8 @@ content.
 | `survey_controller.gd` | Round-local blank-sky sweep charge, the 150 px live-meteor guard, isolated deterministic summon rolls, custom-start spawner calls, cooldown, and the cursor-local red-light arc. |
 | `event_controller.gd` | Meteor showers, Perseid outbursts, and the randomized warned Canis Major event schedule. |
 | `effects_layer.gd` | Success bursts, data packets, incoming markers, forecast markers, screen kick and shake. |
-| `hud.gd` | All in-round UI, round summary, settings, save-slot dialogs, banners. |
-| `upgrade_tree.gd` | Research Chart rendering and purchase interaction. |
+| `hud.gd` | All in-round UI, round summary, neutral catalogue-completion record and its finish/continue actions, settings, save-slot dialogs, banners. |
+| `upgrade_tree.gd` | Research Chart rendering and purchase interaction, including the final-watch-pending and ending-ready completion detail shown at galaxy scale. |
 | `tutorial_controller.gd` | Four-step first-run guidance. |
 | `save_game_controller.gd` | Three save slots under `user://saves`, versioned at `SAVE_VERSION = 1`. |
 | `game_settings.gd` | Locale and tutorial-completed flag in `user://settings.cfg`. |
@@ -76,10 +76,14 @@ hud.bind_save_games(save_games)        tutorial.setup(settings, progression)
 
 starfield.setup(observation_view)         twinkle_stars.setup(observation_view)
 effects.setup(observation_view)
+host_stars.setup(progression, observation_view)
+galactic_phenomena.setup(progression, observation_view, meteor_layer)
 sky_contacts.setup(meteor_layer, progression, observation_view)
 spawner.setup(meteor_layer, progression, observation_view)
-survey.setup(progression, spawner, meteor_layer, observation_view)
-observer.setup(meteor_layer, progression, hud, survey, observation_view)
+survey.setup(progression, spawner, meteor_layer, observation_view,
+    [host_stars, galactic_phenomena])
+observer.setup(meteor_layer, progression, hud, survey, observation_view,
+    [host_stars, galactic_phenomena])
 events.setup(spawner, progression, observation_view)
 ```
 
@@ -137,6 +141,11 @@ spawner.rare_spawned          → game._on_rare_spawned
 spawner.contact_announced     → sky_contacts.on_contact_announced
 spawner.contact_resolved      → sky_contacts.on_contact_resolved
 
+host_stars.transit_confirmed / host_harvested / transit_missed
+                              → game handlers
+galactic_phenomena.phenomenon_observed
+                              → game._on_galactic_phenomenon_observed
+
 progression.upgrade_purchased → game._on_upgrade_purchased
 effects.packet_landed         → game._on_packet_landed
 
@@ -148,8 +157,12 @@ events.shower_started         → game._on_shower_started
 settings.language_changed     → game._on_language_changed
 upgrade_tree.tree_opened      → tutorial.notify_upgrade_tree_opened
 upgrade_tree.tree_closed      → game._on_upgrade_tree_closed
+upgrade_tree.galactic_pullback_finished
+                              → game._on_galactic_pullback_finished
 
-hud.restart_requested / phase_summary_continue_requested /
+hud.catalogue_finish_requested   → game._on_catalogue_finish_requested
+hud.catalogue_continue_requested → game._on_catalogue_continue_requested
+hud.phase_summary_continue_requested /
     save_slot_requested / load_slot_requested / startup_slot_selected /
     new_game_slot_requested / reset_slot_requested /
     tutorial_replay_requested → game handlers
@@ -181,12 +194,43 @@ _end_observation_phase()
     ↓  player presses U / Enter / Space
 _on_phase_summary_continue_requested() → upgrade_tree.open_tree()
     ↓  player closes the tree
-_on_upgrade_tree_closed() → _begin_observation_phase(advance_round = true)
+_on_upgrade_tree_closed()
+    → show the catalogue ending when a qualified final watch has completed
+    → otherwise _begin_observation_phase(advance_round = true)
 ```
 
-The run currently has no ending. Installing the 86 non-Draco systems reveals
-Draco's root; installing all 95 original systems opens the saved Galactic
-Reference Frame state. The open chart also performs one saved 3.6-second
+The catalogue ending requires both semantic completion predicates: all 107
+functional research nodes are installed and all five canonical galactic
+phenomena are recorded. The 17 decorative Local Group records are presentation
+only and never participate in this predicate. Merely reaching either half does
+not end a round.
+
+The qualifying final watch must have **started with all research installed**.
+If the last research is bought during the preceding intermission, the next full
+round is therefore still played with the completed array. If the fifth
+phenomenon is recorded during a fully researched round, that same round can be
+the final watch. It finishes normally, preserves its ordinary phase summary,
+then routes through the completed chart. Closing that chart shows the neutral
+catalogue record instead of starting another round. `SoundSynth.play_complete()`
+plays the completion chord while the always-processing HUD owns input and runs
+an approximately six-second dawn/reveal tween; its choices stay disabled until
+the reveal completes. Both actions persist the ending acknowledgement before
+leaving that screen. A failed acknowledgement save therefore leaves the ending
+open. Finishing returns to the slot screen without deleting the run; continuing
+starts the next ordinary open-night round in the same save.
+Neither choice grants prestige or a replay bonus.
+
+`game.gd` remains the owner of the state machine. It passes the two display
+facts to `upgrade_tree.configure_catalogue_ending_state()`: during an
+intermission while a final watch is still owed, the galaxy-scale completion
+line tells the player to close the chart and begin it; if that watch is already
+active, the chart reverts to ordinary close/resume copy. Once the qualified
+watch has ended, the same line and both close actions say that they will seal
+the record. The chart does not derive completion from node counts itself.
+
+Installing the 86 non-Draco systems reveals Draco's root; installing all 95
+original systems opens the saved Galactic Reference Frame state. The open chart
+also performs one saved 3.6-second
 pull-back: constellation structure and decorative background stars fade while
 the 95-node chart collapses into the interactive Galactic Reference Frame node
 at the Milky Way centre. Before that collapse completes, a constant-speed route
@@ -196,9 +240,10 @@ percent of its radius. Its radial chart position compensates for the live camera
 zoom, so the revealed map does not contract after it appears. There is no
 centre-only hold or second expanding-map beat. The installed curved route and
 current frontier are the only research lines retained there. It is a
-non-terminal presentation state: it does not interrupt the active observation
-round or a later one, and Ctrl+wheel travels between the galaxy and completed
-chart scales after the one-time sequence. At galaxy scale, a non-interactive
+non-terminal presentation state by itself: it does not interrupt an active
+observation round, and Ctrl+wheel travels between the galaxy and completed
+chart scales after the one-time sequence. Only the separate catalogue-ending
+predicate can turn a later chart close into the ending. At galaxy scale, a non-interactive
 104-spec-pixel miniature of the twelve completed constellations remains at the
 Milky Way centre; one 112-spec-pixel core target replaces the overlapping legacy
 buttons. The 29 Local Group positions preserve the data angles and normalized
@@ -211,9 +256,9 @@ constellation scale owns a 13-row install ledger and a selected-star inspector
 with state legend, while galaxy scale swaps in its completion record and transit
 rule inspector. Hover changes the persistent selection instead of moving a
 cursor tooltip; the constellation sky itself stays free of node-name text, and
-the fixed right inspector alone identifies the selection. Twenty-nine Local Group nodes extend that chart
-to 124 systems and build the host-star/transit layer from six reusable rule
-families. Sirius Bloom still schedules one warned Major Fireball at a randomized
+the fixed right inspector alone identifies the selection. The Local Group disc
+contains 12 functional research nodes and 17 non-interactive astronomical
+records, bringing the installable total to 107. Sirius Bloom still schedules one warned Major Fireball at a randomized
 viable time in each subsequent round. Observing or losing it does not stop the
 night.
 
@@ -222,7 +267,8 @@ night.
 These are load-bearing. Breaking them silently corrupts the Data/min series.
 
 - `elapsed_time` accrues **only** while an observation phase is active. An
-  intermission costs no run time.
+  intermission or ending screen costs no run time. The required fully researched
+  final watch does count because it is a normal observation round.
 - `_process` divides by `Engine.time_scale` to convert back to real seconds, so
   a hitstop freeze cannot buy the player extra observation time.
 - Canis Major scheduling happens only in `EventController.start()`, after the
@@ -366,6 +412,10 @@ two persistent supernova targets. Their `discovered → peak → fading → remn
 clocks advance only while an observation round is active; intermissions and
 offline time do not advance them. The remnant is indefinitely trackable, so a
 miss changes reward quality but cannot permanently lose catalogue completion.
+`is_record_complete()`, `get_completed_record_count()`, and
+`get_record_target_count()` enumerate the canonical `TARGET_SPECS` keys rather
+than trusting the raw saved dictionary; unknown ids cannot satisfy or inflate
+the ending record.
 The layer exposes at most the first two unlocked incomplete phenomena. Once
 both supernovae are recorded, the full and partial lens shapes take their
 places; once those are recorded, the lensed supernova becomes visible.
@@ -457,6 +507,11 @@ comparison baseline instead of presenting pre-load installs as fresh growth.
 Autosave runs every 60 seconds of observation time, and on every purchase,
 round end, and slot change.
 
+Quick start selects the newest valid record or, when no record exists, the
+first empty slot. If all three files exist but fail validation, it opens the
+startup recovery surface so the player can reset one explicitly; it never
+starts an unsavable slot-zero run.
+
 `galactic_pullback_seen` is a flat game-save presentation flag, separate from
 the ID-based progression payload. A missing field is false. A legacy save that
 already owns `galactic_reference_frame` therefore plays the sequence once on
@@ -464,3 +519,18 @@ its next chart open; a save with the flag true opens directly at the galaxy
 scale. Resetting a run clears both progression and this flag. If the process
 ends between the purchase autosave and the completion autosave, replaying the
 short sequence is the safe fallback.
+
+The catalogue ending uses three flat fields. `catalogue_ending_seen` suppresses
+automatic replay after either Finish or Continue. `ending_final_watch_pending`
+means the complete catalogue still owes a round that began with all research
+installed; a completed-at-intermission record clears it when that qualifying
+round ends, while a fifth phenomenon recorded during an already-qualified round
+never needs to set it. The saved
+`phase_started_with_complete_research` bit lets a resumed in-progress round
+retain that qualification. Load accepts that bit only when the validated saved
+phase-start signature also contains every functional research node, preventing
+a stale flag from qualifying a mixed-build round. A complete save from the
+former open-night build has none of these fields, so load deliberately marks
+the final watch pending instead of opening an ending over the load screen. A
+pending, unseen ending is resumed through the ordinary intermission/chart
+boundary; it is never injected mid-round.

@@ -280,6 +280,8 @@ var galactic_inner_halo: GradientTexture2D
 var constellation_halo: GradientTexture2D
 var galactic_unlocked: bool = false
 var galactic_pullback_seen: bool = false
+var catalogue_final_watch_pending: bool = false
+var catalogue_ending_ready: bool = false
 var galactic_mode: int = GALACTIC_MODE_NORMAL
 var galactic_chart_detail: float = 1.0
 var pullback_elapsed: float = 0.0
@@ -366,6 +368,15 @@ func configure_galactic_state(unlocked: bool, pullback_seen: bool) -> void:
 		_update_galactic_presentation()
 
 
+func configure_catalogue_ending_state(final_watch_pending: bool, ending_ready: bool) -> void:
+	catalogue_final_watch_pending = final_watch_pending
+	catalogue_ending_ready = ending_ready
+	# Ending state changes the chart's exit semantics as well as its explanatory
+	# copy. Refresh the whole phase context so the header and lower action cannot
+	# keep advertising another ordinary observation.
+	_refresh_phase_context()
+
+
 func begin_galactic_pullback() -> void:
 	galactic_unlocked = true
 	if galactic_pullback_seen or not is_open():
@@ -435,7 +446,10 @@ func clear_intermission_context() -> void:
 func _refresh_phase_context() -> void:
 	if subtitle_label == null or close_button == null:
 		return
-	if intermission_active:
+	if catalogue_ending_ready:
+		subtitle_label.text = tr("TREE_SUBTITLE")
+		close_button.text = tr("TREE_CATALOGUE_SEAL_RECORD")
+	elif intermission_active:
 		subtitle_label.text = tr("TREE_NEXT_OBSERVATION") % [intermission_next_round, intermission_next_duration]
 		close_button.text = tr("TREE_START_OBSERVATION")
 	else:
@@ -443,9 +457,27 @@ func _refresh_phase_context() -> void:
 		close_button.text = tr("TREE_CLOSE")
 	if data_context_label != null:
 		data_context_label.text = tr("TREE_DATA_CONTEXT") % [intermission_next_round, intermission_next_duration]
+		# A ready ending owns this close, while an already-running final watch has
+		# no pending next-observation context to advertise.
+		data_context_label.visible = not catalogue_ending_ready and not (catalogue_final_watch_pending and not intermission_active)
 	if constellation_bottom_action != null:
-		constellation_bottom_action.text = tr("TREE_BOTTOM_START_OBSERVATION") if intermission_active else tr("TREE_BOTTOM_CLOSE")
+		constellation_bottom_action.text = _phase_bottom_action_text()
+	if galactic_return_hint != null:
+		galactic_return_hint.text = _phase_galactic_return_text()
+	_refresh_galactic_completion_detail()
 	_layout_chart_header()
+
+
+func _phase_bottom_action_text() -> String:
+	if catalogue_ending_ready:
+		return tr("TREE_BOTTOM_CATALOGUE_SEAL_RECORD")
+	return tr("TREE_BOTTOM_START_OBSERVATION") if intermission_active else tr("TREE_BOTTOM_CLOSE")
+
+
+func _phase_galactic_return_text() -> String:
+	if catalogue_ending_ready:
+		return tr("TREE_BOTTOM_CATALOGUE_SEAL_RECORD")
+	return tr("TREE_GALACTIC_RETURN")
 
 
 func _input(event: InputEvent) -> void:
@@ -1175,7 +1207,7 @@ func _refresh_constellation_overlays() -> void:
 	constellation_ledger_counts[local_group_index].text = "%d / %d" % [local_group_installed, local_group_total]
 	constellation_ledger_notes[local_group_index].text = tr("TREE_CONSTELLATION_IN_PROGRESS") if local_group_kind == "active" else ("" if local_group_kind == "done" else tr("TREE_CONSTELLATION_LOCKED"))
 	constellation_horizon_hint.text = tr("TREE_CONSTELLATION_HORIZON_HINT") % below_horizon_count
-	constellation_bottom_action.text = tr("TREE_BOTTOM_START_OBSERVATION") if intermission_active else tr("TREE_BOTTOM_CLOSE")
+	constellation_bottom_action.text = _phase_bottom_action_text()
 	_refresh_constellation_detail_line()
 	if not selected_node_id.is_empty():
 		_refresh_constellation_inspector(selected_node_id)
@@ -1293,11 +1325,22 @@ func _refresh_galactic_static_text() -> void:
 	for field_name in ["STATUS", "COST", "EFFECT"]:
 		var field_label: Label = galactic_panel.get_node("Field%sLabel" % field_name.capitalize())
 		field_label.text = tr("TREE_GALACTIC_FIELD_%s" % field_name)
-	completion_detail_label.text = tr("TREE_GALACTIC_COMPLETE_DETAIL")
+	_refresh_galactic_completion_detail()
 	galactic_inner_hint.text = tr("TREE_GALACTIC_INNER_HINT")
-	galactic_return_hint.text = tr("TREE_GALACTIC_RETURN")
+	galactic_return_hint.text = _phase_galactic_return_text()
 	galactic_watermark.text = tr("TREE_GALACTIC_WATERMARK")
 	_refresh_galactic_overlays()
+
+
+func _refresh_galactic_completion_detail() -> void:
+	if completion_detail_label == null:
+		return
+	if catalogue_ending_ready:
+		completion_detail_label.text = tr("TREE_CATALOGUE_ENDING_READY_DETAIL")
+	elif catalogue_final_watch_pending and intermission_active:
+		completion_detail_label.text = tr("TREE_CATALOGUE_FINAL_WATCH_DETAIL")
+	else:
+		completion_detail_label.text = tr("TREE_GALACTIC_COMPLETE_DETAIL")
 
 
 func _build_background_stars() -> void:
