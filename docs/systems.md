@@ -59,6 +59,7 @@ content.
 | `event_controller.gd` | Meteor showers, Perseid outbursts, and the randomized warned Canis Major event schedule. |
 | `effects_layer.gd` | Success bursts, data packets, incoming markers, forecast markers, screen kick and shake. |
 | `hud.gd` | All in-round UI, round summary, neutral catalogue-completion record and its finish/continue actions, settings, save-slot dialogs, banners. |
+| `catalogue_ending_coda.gd` | Procedural ending plate: deterministic star pull-back, completed-array route trace, five phenomenon transfers, and dawn horizon. |
 | `upgrade_tree.gd` | Research Chart rendering and purchase interaction, including the final-watch-pending and ending-ready completion detail shown at galaxy scale. |
 | `tutorial_controller.gd` | Four-step first-run guidance. |
 | `save_game_controller.gd` | Three save slots under `user://saves`, versioned at `SAVE_VERSION = 1`. |
@@ -213,14 +214,17 @@ the final watch. It finishes normally, preserves its ordinary phase summary,
 then routes through the completed chart. Closing that chart shows the neutral
 catalogue record instead of starting another round. `SoundSynth.play_complete()`
 plays the completion chord while the always-processing HUD owns input and runs
-an approximately six-second dawn/reveal tween; its choices stay disabled until
-the reveal completes. Both actions persist the ending acknowledgement before
+an eight-second procedural coda: star pull-back, 12-step array route, five
+phenomenon transfers, dawn horizon, record copy, then choices. The choices stay
+disabled until it completes. Deliberate keyboard, mouse, or controller input
+after two seconds skips to the exact completed frame without also activating a
+choice. Both actions persist the ending acknowledgement before
 leaving that screen. A failed acknowledgement save therefore leaves the ending
 open. Finishing returns to the slot screen without deleting the run; continuing
 starts the next ordinary open-night round in the same save.
 Neither choice grants prestige or a replay bonus.
 
-`Ctrl+Shift+E` opens the same completion chord, reveal tween, statistics, and
+`Ctrl+Shift+E` opens the same completion chord, procedural coda, statistics, and
 choice layout as a non-persistent debug preview. It does not alter catalogue
 eligibility, the seen flag, the current round, or save data. Pressing the chord
 again—or either ending choice—closes the preview and restores the previous
