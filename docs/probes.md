@@ -87,7 +87,8 @@ coverage above the single galactic span ceiling, progression, events,
 catalogue-ending eligibility and final-watch flow, ending finish/continue
 actions and their saved state, the six-second reveal and keyboard focus,
 save-failure retry, active-final-watch resume/signature validation, corrupt-slot
-recovery, performance caps, stale references, and reset.
+recovery, the non-destructive ending-preview debug chord, performance caps,
+stale references, and reset.
 
 - Pass: a single `SMOKE_TEST_PASS:` line
 - Fail: `SMOKE:` error lines, then `SMOKE_TEST_FAIL: N failure(s)`

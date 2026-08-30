@@ -111,7 +111,8 @@ HUD_DEBUG_ALL,Ctrl+Shift+A   Purchase all nodes,Ctrl+Shift+A   모든 노드 구
 HUD_DEBUG_METEOR,Ctrl+Shift+M   Spawn meteor,Ctrl+Shift+M   유성 생성
 HUD_DEBUG_RARE,Ctrl+Shift+R   Spawn rare fireball,Ctrl+Shift+R   희귀 화구 생성
 HUD_DEBUG_SHOWER,Ctrl+Shift+S   Trigger shower,Ctrl+Shift+S   유성우 시작
-HUD_DEBUG_FINAL,Ctrl+Shift+F   Trigger final event,Ctrl+Shift+F   최종 이벤트 시작
+HUD_DEBUG_FINAL,Ctrl+Shift+F   Trigger Canis Major event,Ctrl+Shift+F   큰개자리 화구 이벤트 시작
+HUD_DEBUG_ENDING,Ctrl+Shift+E   Preview catalogue ending,Ctrl+Shift+E   카탈로그 엔딩 미리 보기
 HUD_DEBUG_RESET,Ctrl+Shift+Backspace   Reset game,Ctrl+Shift+Backspace   게임 초기화
 TREE_TITLE,RESEARCH CHART,연구 성도
 TREE_INTERMISSION_SUBTITLE,RESEARCH BREAK  /  OBSERVATION %d STARTS AT %d SECONDS,연구 시간  /  %d차 관측은 %d초

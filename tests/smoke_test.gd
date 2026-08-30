@@ -128,6 +128,52 @@ func _run() -> void:
 	_cleanup_smoke_saves(smoke_save_directory)
 	game.save_games.set_save_directory(smoke_save_directory)
 	game.reset_run()
+	var debug_ending_snapshot := JSON.stringify(game._build_save_data())
+	var debug_ending_mouse_mode: int = Input.mouse_mode
+	var debug_ending_chord := InputEventKey.new()
+	debug_ending_chord.keycode = KEY_E
+	debug_ending_chord.pressed = true
+	debug_ending_chord.ctrl_pressed = true
+	debug_ending_chord.shift_pressed = true
+	game.get_viewport().push_input(debug_ending_chord)
+	await process_frame
+	_check(
+		game.catalogue_ending_debug_preview
+		and game.completed
+		and game.hud.is_end_open()
+		and paused
+		and JSON.stringify(game._build_save_data()) == debug_ending_snapshot,
+		"Ctrl+Shift+E opens the real catalogue ending presentation without changing save data"
+	)
+	game.hud._complete_catalogue_reveal()
+	game._on_catalogue_finish_requested()
+	_check(
+		not game.catalogue_ending_debug_preview
+		and not game.completed
+		and not game.hud.is_end_open()
+		and not paused
+		and game.observation_phase_active
+		and Input.mouse_mode == debug_ending_mouse_mode
+		and JSON.stringify(game._build_save_data()) == debug_ending_snapshot,
+		"an ending choice exits the debug preview and restores the live round without saving"
+	)
+	var debug_ending_release := debug_ending_chord.duplicate()
+	debug_ending_release.pressed = false
+	game.get_viewport().push_input(debug_ending_release)
+	game.get_viewport().push_input(debug_ending_chord)
+	await process_frame
+	var debug_toggle_snapshot := JSON.stringify(game._build_save_data())
+	game.get_viewport().push_input(debug_ending_release)
+	game.get_viewport().push_input(debug_ending_chord)
+	game.get_viewport().push_input(debug_ending_release)
+	_check(
+		not game.catalogue_ending_debug_preview
+		and not game.completed
+		and not game.hud.is_end_open()
+		and not paused
+		and JSON.stringify(game._build_save_data()) == debug_toggle_snapshot,
+		"pressing Ctrl+Shift+E again closes the non-destructive ending preview"
+	)
 	var engine_version: Dictionary = Engine.get_version_info()
 	var has_high_polling_fix := (
 		int(engine_version.major) > 4

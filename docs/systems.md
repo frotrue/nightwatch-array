@@ -220,6 +220,12 @@ open. Finishing returns to the slot screen without deleting the run; continuing
 starts the next ordinary open-night round in the same save.
 Neither choice grants prestige or a replay bonus.
 
+`Ctrl+Shift+E` opens the same completion chord, reveal tween, statistics, and
+choice layout as a non-persistent debug preview. It does not alter catalogue
+eligibility, the seen flag, the current round, or save data. Pressing the chord
+again—or either ending choice—closes the preview and restores the previous
+pause and mouse state.
+
 `game.gd` remains the owner of the state machine. It passes the two display
 facts to `upgrade_tree.configure_catalogue_ending_state()`: during an
 intermission while a final watch is still owed, the galaxy-scale completion

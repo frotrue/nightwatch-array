@@ -2,6 +2,7 @@ extends CanvasLayer
 
 signal catalogue_finish_requested
 signal catalogue_continue_requested
+signal catalogue_debug_preview_close_requested
 signal phase_summary_continue_requested
 signal save_slot_requested(slot: int)
 signal load_slot_requested(slot: int)
@@ -693,6 +694,20 @@ func _refresh_save_mode_label(just_saved: bool) -> void:
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
+	if (
+		is_end_open()
+		and event is InputEventKey
+		and event.pressed
+		and not event.echo
+		and event.ctrl_pressed
+		and event.shift_pressed
+		and event.keycode == KEY_E
+	):
+		# HUD processes while paused, unlike the gameplay root. It therefore owns
+		# the second half of the debug-preview toggle after the ending pauses play.
+		catalogue_debug_preview_close_requested.emit()
+		get_viewport().set_input_as_handled()
+		return
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
 		if reset_dialog != null and reset_dialog.visible:
 			reset_dialog.hide()
@@ -1032,7 +1047,7 @@ func _apply_locale() -> void:
 		"\n".join([
 			tr("HUD_DEBUG_DATA"), tr("HUD_DEBUG_NEXT"), tr("HUD_DEBUG_ALL"),
 			tr("HUD_DEBUG_METEOR"), tr("HUD_DEBUG_RARE"), tr("HUD_DEBUG_SHOWER"),
-			tr("HUD_DEBUG_FINAL"), tr("HUD_DEBUG_RESET")
+			tr("HUD_DEBUG_FINAL"), tr("HUD_DEBUG_ENDING"), tr("HUD_DEBUG_RESET")
 		])
 	])
 	last_runtime_second = -1
@@ -1470,13 +1485,13 @@ func _build_debug_panel() -> void:
 	debug_panel.offset_left = -350.0
 	debug_panel.offset_top = 78.0
 	debug_panel.offset_right = -18.0
-	debug_panel.offset_bottom = 252.0
+	debug_panel.offset_bottom = 274.0
 	debug_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	debug_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.03, 0.025, 0.07, 0.96), Color(0.62, 0.45, 0.94, 0.7), 8))
 	debug_panel.visible = false
 	root_control.add_child(debug_panel)
 	debug_label = _make_label(
-		"\n\n".join([tr("HUD_DEBUG_TITLE"), "\n".join([tr("HUD_DEBUG_DATA"), tr("HUD_DEBUG_NEXT"), tr("HUD_DEBUG_ALL"), tr("HUD_DEBUG_METEOR"), tr("HUD_DEBUG_RARE"), tr("HUD_DEBUG_SHOWER"), tr("HUD_DEBUG_FINAL"), tr("HUD_DEBUG_RESET")])]),
+		"\n\n".join([tr("HUD_DEBUG_TITLE"), "\n".join([tr("HUD_DEBUG_DATA"), tr("HUD_DEBUG_NEXT"), tr("HUD_DEBUG_ALL"), tr("HUD_DEBUG_METEOR"), tr("HUD_DEBUG_RARE"), tr("HUD_DEBUG_SHOWER"), tr("HUD_DEBUG_FINAL"), tr("HUD_DEBUG_ENDING"), tr("HUD_DEBUG_RESET")])]),
 		13,
 		UITheme.INK_MID
 	)

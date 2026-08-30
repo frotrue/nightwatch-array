@@ -47,6 +47,9 @@ var elapsed_time: float = 0.0
 var completed: bool = false
 var catalogue_ending_seen: bool = false
 var ending_final_watch_pending: bool = false
+var catalogue_ending_debug_preview: bool = false
+var catalogue_debug_previous_pause: bool = false
+var catalogue_debug_previous_mouse_mode: int = Input.MOUSE_MODE_HIDDEN
 var startup_slot_prompt_enabled: bool = true
 var tutorial_auto_start_after_slot: bool = false
 var active_save_slot: int = 0
@@ -89,6 +92,7 @@ func _ready() -> void:
 	settings.language_changed.connect(_on_language_changed)
 	hud.catalogue_finish_requested.connect(_on_catalogue_finish_requested)
 	hud.catalogue_continue_requested.connect(_on_catalogue_continue_requested)
+	hud.catalogue_debug_preview_close_requested.connect(_close_catalogue_ending_debug_preview)
 	hud.phase_summary_continue_requested.connect(_on_phase_summary_continue_requested)
 	hud.save_slot_requested.connect(_on_save_slot_requested)
 	hud.load_slot_requested.connect(_on_load_slot_requested)
@@ -168,6 +172,7 @@ func start_run() -> void:
 	completed = false
 	catalogue_ending_seen = false
 	ending_final_watch_pending = false
+	catalogue_ending_debug_preview = false
 	phase_started_with_complete_research = false
 	observation_round = 1
 	last_clean_round_result.clear()
@@ -389,6 +394,7 @@ func _sync_catalogue_ending_presentation() -> void:
 func _show_catalogue_ending() -> void:
 	if completed or not _catalogue_ending_ready():
 		return
+	catalogue_ending_debug_preview = false
 	completed = true
 	_release_hitstop()
 	get_tree().paused = true
@@ -401,6 +407,9 @@ func _show_catalogue_ending() -> void:
 
 func _on_catalogue_continue_requested() -> void:
 	if not completed or not hud.is_end_open():
+		return
+	if catalogue_ending_debug_preview:
+		_close_catalogue_ending_debug_preview()
 		return
 	catalogue_ending_seen = true
 	ending_final_watch_pending = false
@@ -424,6 +433,9 @@ func _on_catalogue_continue_requested() -> void:
 
 func _on_catalogue_finish_requested() -> void:
 	if not completed or not hud.is_end_open():
+		return
+	if catalogue_ending_debug_preview:
+		_close_catalogue_ending_debug_preview()
 		return
 	catalogue_ending_seen = true
 	ending_final_watch_pending = false
@@ -455,6 +467,29 @@ func _catalogue_stats_text() -> String:
 			galactic_phenomena.get_record_target_count(),
 		],
 	])
+
+
+func _show_catalogue_ending_debug_preview() -> void:
+	if completed:
+		return
+	catalogue_ending_debug_preview = true
+	catalogue_debug_previous_pause = get_tree().paused
+	catalogue_debug_previous_mouse_mode = Input.mouse_mode
+	completed = true
+	_release_hitstop()
+	get_tree().paused = true
+	sound.play_complete()
+	hud.show_catalogue_ending(_catalogue_stats_text())
+
+
+func _close_catalogue_ending_debug_preview() -> void:
+	if not catalogue_ending_debug_preview:
+		return
+	catalogue_ending_debug_preview = false
+	completed = false
+	hud.hide_end()
+	get_tree().paused = catalogue_debug_previous_pause
+	Input.mouse_mode = catalogue_debug_previous_mouse_mode
 
 
 func _systems_since_baseline(result: Dictionary, previous_result: Dictionary) -> Array[String]:
@@ -498,6 +533,13 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if not (event is InputEventKey) or not event.pressed or event.echo:
 		return
 	if completed:
+		if (
+			catalogue_ending_debug_preview
+			and event.ctrl_pressed
+			and event.shift_pressed
+			and event.keycode == KEY_E
+		):
+			_close_catalogue_ending_debug_preview()
 		get_viewport().set_input_as_handled()
 		return
 	if hud.is_phase_summary_open():
@@ -535,6 +577,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		KEY_F:
 			if events.trigger_canis_major_warning():
 				sound.play_warning()
+		KEY_E:
+			_show_catalogue_ending_debug_preview()
 		KEY_BACKSPACE:
 			reset_run()
 		_:
@@ -993,6 +1037,7 @@ func _apply_save_data(data: Dictionary) -> void:
 	completed = false
 	catalogue_ending_seen = false
 	ending_final_watch_pending = false
+	catalogue_ending_debug_preview = false
 	phase_started_with_complete_research = false
 	elapsed_time = maxf(0.0, float(data.get("elapsed_time", 0.0)))
 	autosave_elapsed = 0.0
