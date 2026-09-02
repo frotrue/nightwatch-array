@@ -53,10 +53,12 @@ var split_done: bool = false
 var linger_time: float = 0.0
 var linger_duration: float = 0.20
 var trail_points: Array[Vector2] = []
-var trail_draw_points := PackedVector2Array()
-var trail_glow_colors := PackedColorArray()
-var trail_core_colors := PackedColorArray()
+var trail_glow_ribbon := PackedVector2Array()
+var trail_glow_ribbon_colors := PackedColorArray()
+var trail_core_ribbon := PackedVector2Array()
+var trail_core_ribbon_colors := PackedColorArray()
 var prediction_draw_points := PackedVector2Array()
+var debris_draw_points := PackedVector2Array()
 var travel_direction := Vector2.ZERO
 var trail_sample_accumulator: float = 0.0
 var wobble_phase: float = 0.0
@@ -442,22 +444,11 @@ func _draw() -> void:
 	var burn_visibility := get_burn_visibility()
 	var burn_tail_scale := get_burn_tail_scale()
 	if trail_points.size() > 1:
-		trail_draw_points.clear()
-		trail_glow_colors.clear()
-		trail_core_colors.clear()
 		var linger_alpha := 1.0 if alive else clampf(linger_time / maxf(linger_duration, 0.001), 0.0, 1.0)
 		if not alive and not observed_successfully:
 			linger_alpha *= 0.12
 		var trail_visibility := burn_visibility * burn_tail_scale * linger_alpha
-		for index in range(trail_points.size()):
-			var t := float(index) / float(maxi(1, trail_points.size() - 1))
-			var alpha := pow(1.0 - t, 1.35) * trail_visibility
-			trail_draw_points.append(trail_points[index] - global_position)
-			trail_glow_colors.append(Color(glow_color, alpha * 0.30))
-			trail_core_colors.append(Color(primary_color, alpha * 0.72))
-		# Two batched Canvas commands replace two draw_line calls per segment.
-		draw_polyline_colors(trail_draw_points, trail_glow_colors, maxf(0.5, body_radius * 0.72 * burn_tail_scale) * visual_scale, true)
-		draw_polyline_colors(trail_draw_points, trail_core_colors, maxf(0.32, body_radius * 0.24 * burn_tail_scale) * visual_scale, true)
+		_draw_tapered_trail(trail_visibility, burn_tail_scale, visual_scale)
 
 	if prediction_enabled and alive:
 		draw_multiline(prediction_draw_points, Color(UITheme.ACCENT_LINE, 0.30 * minf(1.0, burn_visibility)), 1.0 * visual_scale, true)
@@ -469,7 +460,9 @@ func _draw() -> void:
 			visibility *= 0.12
 	var success_bloom := 1.0
 	if observed_successfully:
-		success_bloom = 1.0 + (1.0 - visibility) * 3.0
+		# The external success burst already carries the completion beat. Keep the
+		# meteor itself directional instead of inflating it into a circular flash.
+		success_bloom = 1.0 + (1.0 - visibility) * (1.15 if type_id == "major" else 0.72)
 	var pulse_amount := 0.06
 	if burn_style == "split":
 		pulse_amount += 0.08 * smoothstep(0.25, split_progress, get_burn_progress())
@@ -477,37 +470,7 @@ func _draw() -> void:
 		pulse_amount = 0.035
 	var pulse := 1.0 + sin(age * 13.0 + wobble_phase) * pulse_amount
 	var r := body_radius * visual_scale * pulse * success_bloom * _head_scale()
-	if type_id == "galaxy":
-		var galaxy_axis := Vector2(1.0, 0.34).rotated(travel_direction.angle()).normalized()
-		draw_line(-galaxy_axis * r * 2.7, galaxy_axis * r * 2.7, Color(glow_color, 0.12 * visibility), r * 1.4, true)
-		draw_line(-galaxy_axis * r * 2.2, galaxy_axis * r * 2.2, Color(primary_color, 0.72 * visibility), maxf(1.0 * visual_scale, r * 0.34), true)
-		draw_circle(Vector2.ZERO, r * 0.48, Color(1.0, 1.0, 1.0, 0.82 * visibility))
-	elif type_id == "binary_star":
-		var binary_axis := Vector2(-travel_direction.y, travel_direction.x)
-		var separation := r * (0.58 + 0.16 * sin(age * 2.6 + wobble_phase))
-		for side in [-1.0, 1.0]:
-			var component: Vector2 = binary_axis * separation * float(side)
-			draw_circle(component, r * 2.3, Color(glow_color, clampf(0.08 * visibility, 0.0, 1.0)))
-			draw_circle(component, r * 0.62, Color(primary_color, clampf(visibility, 0.0, 1.0)))
-			draw_circle(component - travel_direction * r * 0.14, r * 0.24, Color(1.0, 1.0, 1.0, clampf(visibility, 0.0, 1.0)))
-	else:
-		draw_circle(Vector2.ZERO, r * 2.55, Color(glow_color, clampf(0.045 * visibility, 0.0, 1.0)))
-		draw_circle(Vector2.ZERO, r * 1.55, Color(glow_color, clampf(0.12 * visibility, 0.0, 1.0)))
-		draw_circle(Vector2.ZERO, r, Color(primary_color, clampf(visibility, 0.0, 1.0)))
-		draw_circle(-travel_direction * r * 0.20, r * 0.34, Color(1.0, 1.0, 1.0, clampf(0.90 * visibility, 0.0, 1.0)))
-		if burn_style == "split":
-			var split_visibility := smoothstep(0.18, split_progress, get_burn_progress()) * visibility
-			var split_axis := Vector2(-travel_direction.y, travel_direction.x)
-			for side in [-1.0, 1.0]:
-				var spark_center := -travel_direction * r * 0.85 + split_axis * r * 0.58 * float(side)
-				draw_circle(spark_center, r * 0.19, Color(primary_color, clampf(split_visibility * 0.78, 0.0, 1.0)))
-
-	if type_id == "fireball" or type_id == "major":
-		var flame_dir := -travel_direction
-		for index in range(3 if type_id == "fireball" else 6):
-			var side := Vector2(-flame_dir.y, flame_dir.x) * sin(age * 8.0 + index * 1.7) * r * 0.24
-			var center := flame_dir * r * (1.15 + index * 0.55) + side
-			draw_circle(center, r * maxf(0.12, 0.30 - index * 0.028), Color(glow_color, clampf((0.24 - index * 0.024) * visibility, 0.0, 1.0)))
+	_draw_type_silhouette(r, visibility, visual_scale)
 
 	var scan_rate := get_automatic_rate()
 	if scan_rate > 0.0 and alive:
@@ -515,6 +478,424 @@ func _draw() -> void:
 		var start_angle := age * 2.5
 		_draw_dashed_arc(scan_radius, start_angle, PI * 1.25, 10, Color(UITheme.INK_LOW, 0.58 * minf(1.0, burn_visibility)), 1.2 * visual_scale)
 		_draw_dashed_arc(scan_radius + 5.0 * visual_scale, -start_angle * 0.7, PI * 0.55, 5, Color(UITheme.ACCENT_DEEP, 0.52 * minf(1.0, burn_visibility)), 0.9 * visual_scale)
+
+
+func _draw_tapered_trail(visibility: float, tail_scale: float, visual_scale: float) -> void:
+	# A pair of filled ribbons gives the trail a real width taper while keeping
+	# the whole tail to two Canvas draw commands, even for long fireballs.
+	var point_count := mini(
+		trail_points.size(),
+		maxi(2, ceili(float(trail_points.size()) * maxf(0.16, tail_scale)))
+	)
+	var widths := _trail_half_widths() * visual_scale
+	trail_glow_ribbon.clear()
+	trail_glow_ribbon_colors.clear()
+	trail_core_ribbon.clear()
+	trail_core_ribbon_colors.clear()
+
+	for index in range(point_count):
+		var t := float(index) / float(maxi(1, point_count - 1))
+		var taper := pow(maxf(0.0, 1.0 - t), 0.78)
+		var normal := _trail_normal(index, point_count)
+		var local_point := trail_points[index] - global_position
+		var alpha := pow(maxf(0.0, 1.0 - t), 1.28) * visibility
+		var turbulence := _trail_turbulence(t)
+		trail_glow_ribbon.append(local_point + normal * maxf(0.02, widths.x * taper * (1.0 + turbulence)))
+		trail_glow_ribbon_colors.append(Color(glow_color, alpha * 0.17))
+		trail_core_ribbon.append(local_point + normal * maxf(0.01, widths.y * taper * (1.0 + turbulence * 0.38)))
+		trail_core_ribbon_colors.append(Color(primary_color, alpha * 0.74))
+
+	for index in range(point_count - 1, -1, -1):
+		var t := float(index) / float(maxi(1, point_count - 1))
+		var taper := pow(maxf(0.0, 1.0 - t), 0.78)
+		var normal := _trail_normal(index, point_count)
+		var local_point := trail_points[index] - global_position
+		var alpha := pow(maxf(0.0, 1.0 - t), 1.28) * visibility
+		var turbulence := _trail_turbulence(t)
+		trail_glow_ribbon.append(local_point - normal * maxf(0.02, widths.x * taper * (1.0 - turbulence * 0.68)))
+		trail_glow_ribbon_colors.append(Color(glow_color, alpha * 0.17))
+		trail_core_ribbon.append(local_point - normal * maxf(0.01, widths.y * taper * (1.0 - turbulence * 0.26)))
+		trail_core_ribbon_colors.append(Color(primary_color, alpha * 0.74))
+
+	if trail_glow_ribbon.size() >= 4:
+		draw_polygon(trail_glow_ribbon, trail_glow_ribbon_colors)
+		draw_polygon(trail_core_ribbon, trail_core_ribbon_colors)
+
+
+func _trail_turbulence(t: float) -> float:
+	var profile := _trail_turbulence_profile()
+	return sin(wobble_phase + age * profile.y - t * 8.7) * profile.x * smoothstep(0.0, 0.24, t)
+
+
+func _trail_turbulence_profile() -> Vector2:
+	match type_id:
+		"fast":
+			return Vector2(0.018, 13.0)
+		"fragment":
+			return Vector2(0.16, 9.5)
+		"fragment_piece":
+			return Vector2(0.11, 14.0)
+		"fireball":
+			return Vector2(0.12, 6.6)
+		"major":
+			return Vector2(0.10, 4.2)
+		"comet":
+			return Vector2(0.055, 3.4)
+		_:
+			return Vector2(0.035, 7.6)
+
+
+func _trail_normal(index: int, point_count: int) -> Vector2:
+	var tangent: Vector2
+	if index <= 0:
+		tangent = trail_points[0] - trail_points[1]
+	elif index >= point_count - 1:
+		tangent = trail_points[point_count - 2] - trail_points[point_count - 1]
+	else:
+		tangent = trail_points[index - 1] - trail_points[index + 1]
+	if tangent.is_zero_approx():
+		tangent = _safe_travel_direction()
+	else:
+		tangent = tangent.normalized()
+	return Vector2(-tangent.y, tangent.x)
+
+
+func _trail_half_widths() -> Vector2:
+	# X is the subdued optical spread; Y is the bright exposure line. Values are
+	# deliberately not derived directly from hit radius so rare targets do not
+	# turn into broad neon bars.
+	match type_id:
+		"fast":
+			return Vector2(1.25, 0.38)
+		"fragment":
+			return Vector2(2.45, 0.72)
+		"fragment_piece":
+			return Vector2(1.10, 0.32)
+		"fireball":
+			return Vector2(3.20, 1.02)
+		"major":
+			return Vector2(5.10, 1.65)
+		"satellite":
+			return Vector2(0.72, 0.24)
+		"variable_star":
+			return Vector2(0.90, 0.28)
+		"comet":
+			return Vector2(4.10, 0.72)
+		"binary_star":
+			return Vector2(1.45, 0.38)
+		"galaxy":
+			return Vector2(2.50, 0.34)
+		_:
+			return Vector2(1.82, 0.54)
+
+
+func _draw_type_silhouette(radius: float, visibility: float, visual_scale: float) -> void:
+	match type_id:
+		"fast":
+			_draw_directional_head(radius, visibility, 1.10, 1.60, 0.34, 1.48, 2.70, 0.60)
+		"fragment":
+			_draw_directional_head(radius, visibility, 0.88, 1.02, 0.78, 1.18, 1.85, 1.08)
+			_draw_fragment_sparks(radius, visibility)
+		"fragment_piece":
+			_draw_directional_head(radius, visibility, 1.02, 1.24, 0.42, 1.42, 2.25, 0.66)
+		"fireball":
+			_draw_directional_head(radius, visibility, 0.96, 1.32, 0.72, 1.34, 2.45, 1.12)
+			_draw_irregular_debris(radius, visibility, 3)
+		"major":
+			_draw_directional_head(radius, visibility, 1.04, 1.58, 0.78, 1.50, 2.85, 1.20)
+			_draw_irregular_debris(radius, visibility, 5)
+		"satellite":
+			_draw_satellite_head(radius, visibility, visual_scale)
+		"variable_star":
+			_draw_variable_head(radius, visibility)
+		"comet":
+			_draw_directional_head(radius, visibility, 0.76, 1.08, 0.62, 1.05, 2.20, 0.98)
+		"binary_star":
+			_draw_binary_head(radius, visibility, visual_scale)
+		"galaxy":
+			_draw_galaxy_head(radius, visibility)
+		_:
+			_draw_directional_head(radius, visibility, 0.82, 1.08, 0.66, 1.12, 1.95, 1.06)
+
+
+func _draw_directional_head(
+	radius: float,
+	visibility: float,
+	forward_scale: float,
+	rear_scale: float,
+	width_scale: float,
+	bloom_forward_scale: float,
+	bloom_rear_scale: float,
+	bloom_width_scale: float
+) -> void:
+	var direction := _safe_travel_direction()
+	var normal := Vector2(-direction.y, direction.x)
+	var optical_profile := _head_optical_profile()
+	var phase := age * optical_profile.y + wobble_phase
+	var deformation := optical_profile.x
+	var bloom_points := _organic_head_points(
+		direction,
+		normal,
+		radius * bloom_forward_scale,
+		radius * bloom_rear_scale,
+		radius * bloom_width_scale,
+		deformation * 0.72,
+		phase + 0.36
+	)
+	var sheath_shift := (
+		-direction * radius * 0.05
+		+ normal * radius * deformation * 0.24 * sin(phase * 0.91 + 1.7)
+	)
+	for index in range(bloom_points.size()):
+		bloom_points[index] += sheath_shift
+	var optical_flicker := 0.94 + 0.06 * sin(phase * 1.71 + 0.8)
+	draw_colored_polygon(bloom_points, Color(glow_color, clampf(0.086 * visibility * optical_flicker, 0.0, 1.0)))
+
+	var core_points := _organic_head_points(
+		direction,
+		normal,
+		radius * forward_scale,
+		radius * rear_scale,
+		radius * width_scale,
+		deformation,
+		phase
+	)
+	var warm_primary := primary_color.lerp(Color.WHITE, 0.18)
+	draw_colored_polygon(
+		core_points,
+		Color(warm_primary, clampf(0.76 * visibility * optical_flicker, 0.0, 1.0))
+	)
+
+	# A small overexposed patch wanders inside the leading half. It supplies life
+	# without turning the whole meteor into a white shaft or a concentric orb.
+	var hotspot_profile := _head_hotspot_profile()
+	var hotspot_axis := direction.rotated(sin(phase * 0.83) * deformation * 0.32)
+	var hotspot_center := (
+		direction * radius * (0.22 + 0.07 * sin(phase * 1.13 + 0.4))
+		+ normal * radius * deformation * 0.72 * sin(phase * 1.47 + 1.1)
+	)
+	var hotspot_points := _ellipse_points(
+		hotspot_axis,
+		radius * hotspot_profile.x * (0.92 + 0.08 * sin(phase * 1.31)),
+		radius * hotspot_profile.y * (0.90 + 0.10 * sin(phase * 1.67 + 0.5)),
+		hotspot_center,
+		deformation * 0.22
+	)
+	draw_colored_polygon(
+		hotspot_points,
+		Color(
+			primary_color.lerp(Color.WHITE, 0.76),
+			clampf((0.66 + 0.10 * sin(phase * 1.89)) * visibility, 0.0, 1.0)
+		)
+	)
+
+
+func _organic_head_points(
+	direction: Vector2,
+	normal: Vector2,
+	forward_length: float,
+	rear_length: float,
+	half_width: float,
+	deformation: float,
+	phase: float
+) -> PackedVector2Array:
+	var upper := 1.0 + deformation * sin(phase)
+	var lower := 1.0 + deformation * 0.82 * sin(phase + 2.18)
+	var front := 1.0 + deformation * 0.30 * sin(phase * 1.27 + 0.5)
+	var rear_sway := normal * half_width * (0.04 + deformation * 0.72) * sin(phase * 0.73 + 1.2)
+	return PackedVector2Array([
+		-direction * rear_length + rear_sway + normal * half_width * 0.10,
+		-direction * rear_length * 0.58 + normal * half_width * 0.38 * upper,
+		-direction * rear_length * 0.14 + normal * half_width * 0.82 * upper,
+		direction * forward_length * 0.42 + normal * half_width * 0.70 * upper,
+		direction * forward_length * 0.84 * front + normal * half_width * 0.36 * upper,
+		direction * forward_length * 0.98 * front + normal * half_width * 0.12,
+		direction * forward_length * 0.97 * front - normal * half_width * 0.13,
+		direction * forward_length * 0.84 * front - normal * half_width * 0.36 * lower,
+		direction * forward_length * 0.55 - normal * half_width * 0.58 * lower,
+		-direction * rear_length * 0.06 - normal * half_width * 0.72 * lower,
+		-direction * rear_length * 0.56 - normal * half_width * 0.30 * lower,
+		-direction * rear_length * 0.96 + rear_sway - normal * half_width * 0.10,
+	])
+
+
+func _head_optical_profile() -> Vector2:
+	# X is silhouette deformation, Y is its visual-only frequency.
+	match type_id:
+		"fast":
+			return Vector2(0.025, 12.5)
+		"fragment":
+			return Vector2(0.115, 9.6)
+		"fragment_piece":
+			return Vector2(0.095, 14.2)
+		"fireball":
+			return Vector2(0.082, 6.2)
+		"major":
+			return Vector2(0.070, 3.8)
+		"comet":
+			return Vector2(0.045, 3.4)
+		_:
+			return Vector2(0.048, 7.4)
+
+
+func _head_hotspot_profile() -> Vector2:
+	match type_id:
+		"fast":
+			return Vector2(0.54, 0.13)
+		"fragment_piece":
+			return Vector2(0.42, 0.16)
+		"fragment":
+			return Vector2(0.32, 0.24)
+		"fireball":
+			return Vector2(0.42, 0.24)
+		"major":
+			return Vector2(0.46, 0.28)
+		"comet":
+			return Vector2(0.34, 0.20)
+		_:
+			return Vector2(0.36, 0.20)
+
+
+func _draw_fragment_sparks(radius: float, visibility: float) -> void:
+	var split_visibility := smoothstep(0.18, split_progress, get_burn_progress()) * visibility
+	if split_visibility <= 0.001:
+		return
+	var direction := _safe_travel_direction()
+	var normal := Vector2(-direction.y, direction.x)
+	var spark_flicker := 0.18 + 0.82 * pow(maxf(0.0, sin(age * 17.0 + wobble_phase)), 4.0)
+	debris_draw_points.clear()
+	for index in range(3):
+		var sequence := float(index)
+		var spark_phase := wobble_phase + age * (8.5 + sequence) + sequence * 2.37
+		var center := (
+			-direction * radius * (0.72 + sequence * 0.48)
+			+ normal * radius * sin(spark_phase) * (0.34 + sequence * 0.16)
+		)
+		var shard_direction := (direction + normal * 0.42 * sin(spark_phase + 0.8)).normalized()
+		var shard_length := radius * (0.16 + sequence * 0.035)
+		debris_draw_points.append(center - shard_direction * shard_length)
+		debris_draw_points.append(center + shard_direction * shard_length * 0.52)
+	draw_multiline(
+		debris_draw_points,
+		Color(primary_color, clampf(0.62 * split_visibility * spark_flicker, 0.0, 1.0)),
+		maxf(0.48, radius * 0.10),
+		true
+	)
+
+
+func _draw_irregular_debris(radius: float, visibility: float, count: int) -> void:
+	var direction := _safe_travel_direction()
+	var normal := Vector2(-direction.y, direction.x)
+	debris_draw_points.clear()
+	for index in range(count):
+		var sequence := float(index)
+		var shard_phase := wobble_phase + sequence * 2.17 + age * (2.4 + sequence * 0.08)
+		var distance := radius * (1.62 + sequence * 0.76 + 0.18 * sin(shard_phase * 0.72 + sequence * 0.63))
+		var spread := radius * (0.24 + sequence * 0.07)
+		var side_offset := sin(shard_phase) * spread
+		var center := -direction * distance + normal * side_offset
+		var shard_length := radius * (0.16 + 0.12 * (0.5 + 0.5 * sin(wobble_phase * 0.7 + sequence * 1.91)))
+		var shard_direction := (direction + normal * 0.48 * sin(shard_phase + 0.9)).normalized()
+		debris_draw_points.append(center - shard_direction * shard_length * 0.72)
+		debris_draw_points.append(center + shard_direction * shard_length)
+	if debris_draw_points.is_empty():
+		return
+	# Both passes are batched, so a seven-piece Major Fireball costs two draw
+	# commands instead of a circle command per fragment.
+	var debris_flicker := 0.72 + 0.28 * (0.5 + 0.5 * sin(age * (5.2 if type_id == "fireball" else 3.6) + wobble_phase))
+	draw_multiline(
+		debris_draw_points,
+		Color(glow_color, clampf(0.25 * visibility * debris_flicker, 0.0, 1.0)),
+		maxf(0.72, radius * 0.17),
+		true
+	)
+	draw_multiline(
+		debris_draw_points,
+		Color(primary_color, clampf(0.58 * visibility * debris_flicker, 0.0, 1.0)),
+		maxf(0.44, radius * 0.065),
+		true
+	)
+
+
+func _draw_binary_head(radius: float, visibility: float, visual_scale: float) -> void:
+	var direction := _safe_travel_direction()
+	var normal := Vector2(-direction.y, direction.x)
+	var separation := radius * (0.66 + 0.11 * sin(age * 2.6 + wobble_phase))
+	var first := normal * separation + direction * radius * 0.10
+	var second := -normal * separation - direction * radius * 0.12
+	var component_lines := PackedVector2Array([
+		first - direction * radius * 0.42,
+		first + direction * radius * 0.55,
+		second - direction * radius * 0.34,
+		second + direction * radius * 0.46,
+	])
+	draw_line(first, second, Color(glow_color, clampf(0.10 * visibility, 0.0, 1.0)), maxf(0.50, radius * 0.08), true)
+	draw_multiline(component_lines, Color(glow_color, clampf(0.16 * visibility, 0.0, 1.0)), maxf(1.0 * visual_scale, radius * 0.48), true)
+	draw_multiline(component_lines, Color(primary_color.lerp(Color.WHITE, 0.48), clampf(0.92 * visibility, 0.0, 1.0)), maxf(0.55 * visual_scale, radius * 0.18), true)
+
+
+func _draw_galaxy_head(radius: float, visibility: float) -> void:
+	var axis := _safe_travel_direction().rotated(0.28)
+	var center := axis * radius * 0.10 + Vector2(-axis.y, axis.x) * radius * 0.04
+	var outer := _ellipse_points(axis, radius * 3.05, radius * 0.86, center, 0.10)
+	var body := _ellipse_points(axis, radius * 2.34, radius * 0.48, center, 0.06)
+	var core := _ellipse_points(axis, radius * 0.72, radius * 0.23, center + axis * radius * 0.08, 0.02)
+	draw_colored_polygon(outer, Color(glow_color, clampf(0.075 * visibility, 0.0, 1.0)))
+	draw_colored_polygon(body, Color(primary_color, clampf(0.36 * visibility, 0.0, 1.0)))
+	draw_colored_polygon(core, Color(primary_color.lerp(Color.WHITE, 0.65), clampf(0.76 * visibility, 0.0, 1.0)))
+
+
+func _ellipse_points(
+	axis: Vector2,
+	half_length: float,
+	half_width: float,
+	center: Vector2,
+	irregularity: float
+) -> PackedVector2Array:
+	var normal := Vector2(-axis.y, axis.x)
+	var points := PackedVector2Array()
+	for index in range(16):
+		var angle := TAU * float(index) / 16.0
+		var distortion := 1.0 + irregularity * sin(angle * 3.0 + wobble_phase)
+		points.append(
+			center
+			+ axis * cos(angle) * half_length * distortion
+			+ normal * sin(angle) * half_width * (2.0 - distortion)
+		)
+	return points
+
+
+func _draw_satellite_head(radius: float, visibility: float, visual_scale: float) -> void:
+	var direction := _safe_travel_direction()
+	var normal := Vector2(-direction.y, direction.x)
+	var wing_points := PackedVector2Array([
+		-normal * radius * 0.95,
+		normal * radius * 0.95,
+		-direction * radius * 0.46,
+		direction * radius * 0.58,
+	])
+	draw_multiline(wing_points, Color(glow_color, clampf(0.22 * visibility, 0.0, 1.0)), maxf(1.3 * visual_scale, radius * 0.24), true)
+	draw_line(-direction * radius * 0.32, direction * radius * 0.46, Color(primary_color, clampf(0.92 * visibility, 0.0, 1.0)), maxf(0.65 * visual_scale, radius * 0.15), true)
+
+
+func _draw_variable_head(radius: float, visibility: float) -> void:
+	var pulse := 0.86 + 0.14 * (0.5 + 0.5 * sin(age * 2.7 + wobble_phase))
+	var points := PackedVector2Array()
+	for index in range(8):
+		var angle := TAU * float(index) / 8.0 + PI * 0.125
+		var point_radius := radius * pulse * (1.22 if index % 2 == 0 else 0.31)
+		points.append(Vector2.from_angle(angle) * point_radius)
+	var outer_points := PackedVector2Array()
+	for point in points:
+		outer_points.append(point * 1.48)
+	draw_colored_polygon(outer_points, Color(glow_color, clampf(0.075 * visibility, 0.0, 1.0)))
+	draw_colored_polygon(points, Color(primary_color.lerp(Color.WHITE, 0.28), clampf(0.82 * visibility, 0.0, 1.0)))
+
+
+func _safe_travel_direction() -> Vector2:
+	if travel_direction.is_zero_approx():
+		return Vector2.RIGHT
+	return travel_direction.normalized()
 
 
 func _head_scale() -> float:
