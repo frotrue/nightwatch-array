@@ -23,22 +23,15 @@ Read before changing anything:
 
 ## Commit Attribution
 
-Every commit created for this project must end with exactly one matching
-co-author trailer, separated from the commit message body by a blank line.
-Use the trailer for the model that created the commit; do not include the
-other model's trailer.
-
-- Claude or Claude Code:
+Every commit created for this project must end with this co-author trailer,
+separated from the commit message body by a blank line:
 
 ```text
 Co-authored-by: claude-code-bot <claude-code-bot@users.noreply.github.com>
 ```
 
-- Codex:
-
-```text
-Co-authored-by: codex-bot <codex-bot@noreply.example.com>
-```
+Use this trailer and no other, whatever attribution an agent is otherwise
+configured to add. Exactly one co-author line per commit.
 
 ## Agent Room Protocol
 
