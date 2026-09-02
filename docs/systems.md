@@ -114,11 +114,12 @@ zoom. `ObservationView` exposes the coordinate and scale routing methods:
 - `meteor_visual_scale()` applies square-root rather than full compensation, so
   meteor drawings recede while their interaction radii remain screen-fixed.
 - Once `galactic_reference_frame` makes `galaxy_unlocked()` true, common and
-  fast meteors stop dispatching a success flash. Before then they keep it.
+  fast meteors stop dispatching even high-grade success flashes. Before then,
+  only semantically accented completions are eligible for a flash.
   `meteor_screen_scale()` gives meteor-generated kick and all active success
   flashes the same `1 / sqrt(span)` on-screen reduction as the drawing.
 - `meteor_shake_scale()` attenuates repeated meteor shake more strongly at
-  `1 / span`; upgrade pulses and hitstop keep their own contracts.
+  `1 / span`; HUD installation rules and hitstop keep their own contracts.
 - `game.gd` applies one additional `0.5` feedback scale to `fragment_piece`
   success flashes and shake. Parent fragments, kick, audio, and reward keep
   their existing paths.

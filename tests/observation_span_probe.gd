@@ -122,13 +122,13 @@ func _run() -> void:
 		"meteor interaction radius remains screen-fixed while its drawing shrinks"
 	)
 	game.effects.reset()
-	game.effects.spawn_success(centre, 1.0, Color.WHITE, 1.0, 1.0, "", Vector2.ZERO, game._meteor_flash_scale("common"))
+	game.effects.spawn_success(centre, 1.0, Color.WHITE, 1.0, 1.0, "", Vector2.ZERO, game._meteor_flash_scale("common"), true)
 	_check(
 		is_equal_approx(game.effects.flash_strength, 0.26 * expected_screen_scale),
 		"common meteor success keeps its flash before the galaxy stage"
 	)
 	game.effects.reset()
-	game.effects.spawn_success(centre, 1.0, Color.WHITE, 1.0, 1.0, "", Vector2.ZERO, game._meteor_flash_scale("fireball"))
+	game.effects.spawn_success(centre, 1.0, Color.WHITE, 1.0, 1.0, "", Vector2.ZERO, game._meteor_flash_scale("fireball"), true)
 	_check(
 		is_equal_approx(game.effects.flash_strength, 0.26 * expected_screen_scale),
 		"special meteor success flash recedes with the zoomed-out drawing"
@@ -197,7 +197,7 @@ func _run() -> void:
 	game.sky_contacts.refresh_dishes()
 	await process_frame
 	game.effects.reset()
-	game.effects.spawn_success(centre, 1.0, Color.WHITE, 1.0, 1.0, "", Vector2.ZERO, game._meteor_flash_scale("common"))
+	game.effects.spawn_success(centre, 1.0, Color.WHITE, 1.0, 1.0, "", Vector2.ZERO, game._meteor_flash_scale("common"), true)
 	_check(
 		is_zero_approx(game.effects.flash_strength)
 		and is_zero_approx(game._meteor_flash_scale("fast"))

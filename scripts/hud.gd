@@ -142,6 +142,7 @@ var last_observation_data: float = -1.0
 var data_gain_tween: Tween
 var data_pulse_tween: Tween
 var ready_pulse_tween: Tween
+var installation_tween: Tween
 var paused_by_settings: bool = false
 var paused_by_startup: bool = false
 var active_save_slot: int = 0
@@ -253,6 +254,10 @@ func _refresh_phase_time_label() -> void:
 
 
 func show_banner(text: String, color: Color = Color.WHITE, duration: float = 2.5) -> void:
+	# A different announcement must not inherit a partially installed rule.
+	if installation_tween != null and installation_tween.is_valid():
+		installation_tween.kill()
+	banner_rule.scale = Vector2.ONE
 	# Callers still pass one string; a bullet separator splits title from subtitle.
 	var title := text
 	var subtitle := ""
@@ -270,6 +275,17 @@ func show_banner(text: String, color: Color = Color.WHITE, duration: float = 2.5
 	banner_root.visible = true
 	banner_timer = duration
 	_layout_banner()
+
+
+func pulse_installation_rule() -> void:
+	# Local instrument activation: extend the existing one-pixel rule, without
+	# moving the sky, flashing the viewport, or adding another meteor ring.
+	if installation_tween != null and installation_tween.is_valid():
+		installation_tween.kill()
+	banner_rule.pivot_offset = Vector2(banner_rule.size.x * 0.5, 0.0)
+	banner_rule.scale = Vector2(0.2, 1.0)
+	installation_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	installation_tween.tween_property(banner_rule, "scale:x", 1.0, 0.28).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 
 func _layout_banner() -> void:

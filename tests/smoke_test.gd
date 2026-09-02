@@ -2520,9 +2520,8 @@ func _run_feedback_regressions(packed: PackedScene, global_x2_ids: Array) -> voi
 	_check(is_equal_approx(feedback_game.progression.best_multiplier, 1.55), "automatic observations never update the best manual multiplier")
 	automatic_target.free()
 
-	# Shake and hitstop diverge on non-impact targets. View motion is allowed to
-	# be earned, because a player reads it as accumulation; a halt is not,
-	# because a chain of halts is the freeze the type gate exists to prevent.
+	# A high-grade manual observation is accented even on a non-impact target.
+	# That category permits view motion, while hitstop still requires a fireball.
 	feedback_game.effects.reset()
 	feedback_game.progression.reset_manual_combo()
 	var galaxy_target = feedback_game.spawner.spawn_meteor(
@@ -2531,11 +2530,11 @@ func _run_feedback_regressions(packed: PackedScene, global_x2_ids: Array) -> voi
 	galaxy_target.set_meta("gemini_echo", true)
 	feedback_game._on_meteor_observed(galaxy_target, 220.0, 1.0, true, "PERFECT")
 	_check(not feedback_game.hitstop_active, "non-impact targets never freeze the view even at maximum strength")
-	_check(feedback_game.effects.shake_trauma > 0.0, "a non-impact target that reaches the shake floor still moves the view")
+	_check(feedback_game.effects.shake_trauma > 0.0, "a high-grade non-impact observation that reaches the shake floor still moves the view")
 	galaxy_target.free()
 
-	# The chain is what a common earns its feedback with. One is quiet; an
-	# unbroken run of them crosses the shake floor without a Perfect grade.
+	# Routine observations remain directional particles plus a packet. Neither
+	# a lone completion nor a full combo promotes a GOOD common into an accent.
 	feedback_game.effects.reset()
 	feedback_game.progression.reset_manual_combo()
 	var lone_common = feedback_game.spawner.spawn_meteor(
@@ -2558,7 +2557,13 @@ func _run_feedback_regressions(packed: PackedScene, global_x2_ids: Array) -> voi
 	)
 	chained_common.set_meta("gemini_echo", true)
 	feedback_game._on_meteor_observed(chained_common, 24.0, 1.0, true, "GOOD")
-	_check(feedback_game.effects.shake_trauma > 0.0, "a full manual chain lets a common reach the shake floor")
+	_check(
+		is_zero_approx(feedback_game.effects.shake_trauma)
+		and is_zero_approx(feedback_game.effects.kick_amplitude)
+		and is_zero_approx(feedback_game.effects.flash_strength)
+		and feedback_game.effects.rings.is_empty(),
+		"a full manual chain cannot promote a routine common into an accented observation"
+	)
 	_check(not feedback_game.hitstop_active, "a full manual chain still never freezes the view on a common")
 	chained_common.free()
 	feedback_game.progression.reset_manual_combo()
