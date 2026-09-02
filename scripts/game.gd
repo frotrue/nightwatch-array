@@ -251,6 +251,7 @@ func _begin_observation_phase(advance_round: bool = false, remaining_override: f
 	spawner.set_phase_time_remaining(observation_phase_remaining)
 	observation_phase_active = true
 	progression.reset_manual_combo()
+	sound.reset_streak_audio()
 	phase_start_successes = progression.success_count
 	phase_start_manual_successes = progression.manual_successes
 	phase_start_automatic_successes = progression.automatic_successes
@@ -284,6 +285,7 @@ func _end_observation_phase() -> void:
 	host_stars.end_round()
 	galactic_phenomena.end_round()
 	progression.reset_manual_combo()
+	sound.reset_streak_audio()
 	var result := _build_round_result()
 	var previous_result := last_clean_round_result.duplicate(true)
 	var build_changed := bool(result.get("build_changed", false))
@@ -572,11 +574,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		KEY_R:
 			spawner.spawn_meteor("fireball")
 		KEY_S:
-			if events.trigger_shower():
-				sound.play_warning()
+			events.trigger_shower()
 		KEY_F:
-			if events.trigger_canis_major_warning():
-				sound.play_warning()
+			events.trigger_canis_major_warning()
 		KEY_E:
 			_show_catalogue_ending_debug_preview()
 		KEY_BACKSPACE:
@@ -844,13 +844,13 @@ func _on_rare_spawned(type_id: String) -> void:
 		return
 	var prefix_key := "BANNER_SECONDARY_ALERT" if progression.has_upgrade("rare_detection") and progression.has_upgrade("secondary_camera") else "BANNER_UNUSUAL_SIGNATURE"
 	hud.show_banner("%s  •  %s" % [tr(prefix_key), tr("METEOR_%s" % type_id.to_upper())], UITheme.ACCENT_TEXT, 2.0)
-	sound.play_warning()
+	sound.play_rare_target()
 
 
 func _on_event_banner(text_key: String, color: Color) -> void:
 	hud.show_banner(tr(text_key), color, 2.5)
-	if text_key in ["EVENT_SHOWER_INCOMING", "EVENT_ATMOSPHERIC_BLOOM"]:
-		sound.play_warning()
+	if text_key in ["EVENT_SHOWER_INCOMING", "EVENT_ATMOSPHERIC_BLOOM", "EVENT_PERSEID_OUTBURST_INCOMING"]:
+		sound.play_environment_change()
 
 
 func _on_sky_activity_changed(value: float) -> void:
@@ -883,7 +883,7 @@ func _on_save_slot_requested(slot: int) -> void:
 		autosave_elapsed = 0.0
 		hud.set_active_save_slot(slot)
 		hud.show_save_feedback(tr("SAVE_SUCCESS") % slot, UITheme.BANNER_TITLE)
-		sound.play_upgrade()
+		sound.play_slot_confirm()
 	else:
 		hud.show_save_feedback(tr("SAVE_FAILURE") % slot, UITheme.ALERT)
 
@@ -899,7 +899,7 @@ func _on_load_slot_requested(slot: int) -> void:
 	_apply_save_data(data)
 	hud.close_settings()
 	hud.show_banner(tr("BANNER_SLOT_LOADED") % slot, UITheme.BANNER_TITLE, 2.2)
-	sound.play_upgrade()
+	sound.play_slot_confirm()
 
 
 func _on_startup_slot_selected(slot: int) -> void:
@@ -1025,6 +1025,7 @@ func _build_save_data() -> Dictionary:
 
 
 func _apply_save_data(data: Dictionary) -> void:
+	sound.reset_streak_audio()
 	_close_upgrade_tree_without_transition()
 	observer.reset()
 	sky_contacts.reset()

@@ -35,6 +35,13 @@ Game (Node2D)                      scripts/game.gd
 `SoundSynth` (`scripts/sound_synth.gd`) is **not** in the scene. `game.gd`
 instantiates it in `_ready()` and adds it as a child at runtime.
 
+SoundSynth processes through UI pauses so research and slot confirmations remain
+audible. Research owns its original dyad; save/load share a quiet unpitched latch;
+rare-target notices use a sharp double note; shower/bloom notices use a slow swell.
+Automatic observations accumulate in a 160 ms window and emit one 70 ms pulse,
+with logarithmic batch weight capped at -12 dB. The queue is cleared on pauses,
+round boundaries, and loads; it never affects observation accounting or rewards.
+
 `scenes/probe_layer2.tscn` is a standalone Layer 2 testbed driven by
 `scripts/probe/probe_controller.gd` and `scripts/probe/probe_hud.gd`. It does
 not share the main scene's nodes and is kept as an experiment, not as shipped

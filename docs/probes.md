@@ -39,6 +39,55 @@ feel rather than correctness.
 
 ## Gates
 
+### Sound feedback gate
+
+`sound_feedback_test.gd` records production dispatch without playing it. It checks
+research/slot/rare/environment routing, distinct PCM attacks and durations,
+1,000 automatic events represented by 63 bounded-volume pulses, minimum 160 ms
+spacing, sparse-tail drain, reset/pause isolation, and hitstop-independent time.
+Its game fixture replaces slot storage with an in-memory controller before
+startup; no user save is written. These are mechanical contracts, not a listening
+verdict.
+
+```powershell
+& $godot --headless --path . --script res://tests/sound_feedback_test.gd
+```
+
+- Pass: `SOUND_FEEDBACK_PASS:`
+
+For a listening check, run the save-free live audition without `--headless`:
+
+```powershell
+& $godot --path . --script res://tests/sound_feedback_preview.gd
+```
+
+The minimized helper plays research, slot, rare-target, and environment cues in
+that order, then one isolated automatic completion and 1,000 automatic completions over ten seconds with four manual
+successes. It records only its own Master bus (no microphone or OS loopback) to
+`build/audio_feedback_audition.wav`, with cue timestamps and the SoundSynth source
+hash in `build/audio_feedback_audition.json`. It leaves bus gain/mute and user
+settings/saves untouched, removes its record effect, and quits. `SOUND_AUDITION_SAVED`
+confirms non-silent PCM and a complete schedule, not perceptual quality; listen
+for distinct event roles and gaps between automatic pulses.
+
+On this machine WASAPI uses four stereo pairs: live playback has nonzero Master
+peak, but `AudioEffectRecord` captures the last (silent) pair. Do not change OS
+speaker settings to work around it. An explicit software-mixer recording is available:
+
+```powershell
+$env:NIGHTWATCH_AUDITION_ALLOW_DUMMY = "1"
+try {
+    & $godot --headless --audio-driver Dummy --path . --script res://tests/sound_feedback_preview.gd
+} finally {
+    Remove-Item Env:NIGHTWATCH_AUDITION_ALLOW_DUMMY
+}
+```
+
+Its manifest explicitly marks `driver: Dummy` and `hardware_output: false`.
+This produces a listenable stereo artifact, not proof of hardware output or a
+perceptual verdict. The isolated completion deliberately retains the 160 ms
+aggregation latency; manual success remains immediate.
+
 ### Research contract test
 
 Checks 107 installable research definitions against the three-layer effect
