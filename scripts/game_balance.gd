@@ -913,7 +913,7 @@ static func meteor_spec(type_id: String) -> Dictionary:
 				"color": Color("d8c5ff"), "glow": Color("a26cff"),
 				"spectral_band": "amber",
 				"burn_terminal_ratio": 0.20, "burn_fade_start": 0.60, "burn_style": "split",
-				"burn_wobble": 11.0, "split_progress": 0.46, "burnout_linger": 0.24,
+				"burn_wobble": 4.5, "split_progress": 0.46, "burnout_linger": 0.24,
 			}
 		"fragment_piece":
 			return {
@@ -922,7 +922,7 @@ static func meteor_spec(type_id: String) -> Dictionary:
 				"color": Color("e8d9ff"), "glow": Color("bf8cff"),
 				"spectral_band": "violet",
 				"burn_terminal_ratio": 0.12, "burn_fade_start": 0.72, "burn_style": "spark",
-				"burn_wobble": 7.0, "burnout_linger": 0.16,
+				"burn_wobble": 3.2, "burnout_linger": 0.16,
 			}
 		"fireball":
 			return {

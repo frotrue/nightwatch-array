@@ -2,6 +2,16 @@ extends Node2D
 
 const UITheme = preload("res://scripts/ui_theme.gd")
 
+# The trail leaves the head at the head's own width and loses that extra width
+# fast, so the long train keeps the narrow size it was tuned to. A low exponent
+# here turns rare targets back into broad bars.
+const TRAIL_SHOULDER_EXPONENT := 7.5
+# Triangle arrays are not antialiased, so a band under ~2 px misses pixel
+# centres and rasterises as dashes - which is what broke up the common, fast
+# and fragment_piece tails. Alpha is already near zero wherever this floor
+# binds, so holding the geometry wide costs nothing visually.
+const MIN_RIBBON_HALF_WIDTH := 1.15
+
 signal observed(meteor, reward, multiplier, was_manual, quality_grade)
 signal expired(meteor, was_major)
 signal fragment_requested(origin, velocity, parent_type, parent_is_echo, parent_is_leonid, parent_is_perseid)
@@ -57,6 +67,8 @@ var trail_glow_ribbon := PackedVector2Array()
 var trail_glow_ribbon_colors := PackedColorArray()
 var trail_core_ribbon := PackedVector2Array()
 var trail_core_ribbon_colors := PackedColorArray()
+var trail_strip_indices := PackedInt32Array()
+var trail_strip_point_count: int = -1
 var prediction_draw_points := PackedVector2Array()
 var debris_draw_points := PackedVector2Array()
 var travel_direction := Vector2.ZERO
@@ -200,6 +212,16 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 
+func _wobble_frequency() -> float:
+	match type_id:
+		"fragment", "fragment_piece":
+			# Coming apart: fast and small. The amplitude in the spec carries how
+			# far it strays; this carries how unsettled it looks getting there.
+			return 22.0
+		_:
+			return 8.0
+
+
 func _update_burn_motion(delta: float) -> void:
 	var previous_position := position
 	var progress := get_burn_progress()
@@ -208,7 +230,16 @@ func _update_burn_motion(delta: float) -> void:
 	if burn_wobble > 0.0 and not path_direction.is_zero_approx():
 		var instability := smoothstep(0.12, split_progress, progress)
 		var endpoint_taper := sin(PI * progress)
-		var wobble := sin(age * 8.0 + wobble_phase) * burn_wobble * instability * endpoint_taper
+		# Two incommensurate sines instead of one. A single slow wave puts about
+		# one full period inside the visible trail, and a smooth curve on a
+		# narrow tail reads as something swimming rather than something coming
+		# apart.
+		var frequency := _wobble_frequency()
+		var oscillation := (
+			0.62 * sin(age * frequency + wobble_phase)
+			+ 0.38 * sin(age * frequency * 1.71 + wobble_phase * 1.7)
+		)
+		var wobble := oscillation * burn_wobble * instability * endpoint_taper
 		path_position += Vector2(-path_direction.y, path_direction.x) * wobble
 	position = path_position
 	lensed_active = lens_curve_enabled and global_position.distance_to(lens_center) <= lens_radius
@@ -481,45 +512,136 @@ func _draw() -> void:
 
 
 func _draw_tapered_trail(visibility: float, tail_scale: float, visual_scale: float) -> void:
-	# A pair of filled ribbons gives the trail a real width taper while keeping
-	# the whole tail to two Canvas draw commands, even for long fireballs.
+	# Two ribbons, each emitted as an explicit triangle strip. `draw_polygon`
+	# triangulates an arbitrary simple polygon, and a ribbon this thin with
+	# turbulence on its centre line self-intersects often enough that whole
+	# triangles were dropped: the common, fast and fragment_piece trails came
+	# out dashed. An index list has nothing to triangulate, so every segment
+	# survives however narrow it gets.
 	var point_count := mini(
 		trail_points.size(),
 		maxi(2, ceili(float(trail_points.size()) * maxf(0.16, tail_scale)))
 	)
+	if point_count < 2:
+		return
 	var widths := _trail_half_widths() * visual_scale
+	var shoulder := _trail_shoulder_widths(visual_scale)
 	trail_glow_ribbon.clear()
 	trail_glow_ribbon_colors.clear()
 	trail_core_ribbon.clear()
 	trail_core_ribbon_colors.clear()
 
+	# Three vertices per station - edge, centre line, edge - so each ribbon falls
+	# off across its width. A ribbon of one flat colour ends on two hard parallel
+	# edges, and on a saturated glow colour over a cool sky that slab reads as a
+	# dark chevron behind the head rather than as light.
+	var core_floor := MIN_RIBBON_HALF_WIDTH * 0.7
 	for index in range(point_count):
 		var t := float(index) / float(maxi(1, point_count - 1))
-		var taper := pow(maxf(0.0, 1.0 - t), 0.78)
+		var remaining := maxf(0.0, 1.0 - t)
+		var taper := pow(remaining, 0.78)
+		var flare := pow(remaining, TRAIL_SHOULDER_EXPONENT)
+		var glow_width := widths.x * taper + shoulder.x * flare
+		var core_width := widths.y * taper + shoulder.y * flare
 		var normal := _trail_normal(index, point_count)
 		var local_point := trail_points[index] - global_position
-		var alpha := pow(maxf(0.0, 1.0 - t), 1.28) * visibility
+		var alpha := pow(remaining, 1.28) * visibility
 		var turbulence := _trail_turbulence(t)
-		trail_glow_ribbon.append(local_point + normal * maxf(0.02, widths.x * taper * (1.0 + turbulence)))
-		trail_glow_ribbon_colors.append(Color(glow_color, alpha * 0.17))
-		trail_core_ribbon.append(local_point + normal * maxf(0.01, widths.y * taper * (1.0 + turbulence * 0.38)))
-		trail_core_ribbon_colors.append(Color(primary_color, alpha * 0.74))
+		var glow_centre := Color(glow_color, alpha * 0.34)
+		var glow_edge := Color(glow_color, 0.0)
+		var core_centre := Color(primary_color, alpha * 0.86)
+		var core_edge := Color(primary_color, alpha * 0.10)
+		trail_glow_ribbon.append(local_point + normal * maxf(MIN_RIBBON_HALF_WIDTH, glow_width * (1.0 + turbulence)))
+		trail_glow_ribbon.append(local_point)
+		trail_glow_ribbon.append(local_point - normal * maxf(MIN_RIBBON_HALF_WIDTH, glow_width * (1.0 - turbulence * 0.68)))
+		trail_glow_ribbon_colors.append(glow_edge)
+		trail_glow_ribbon_colors.append(glow_centre)
+		trail_glow_ribbon_colors.append(glow_edge)
+		trail_core_ribbon.append(local_point + normal * maxf(core_floor, core_width * (1.0 + turbulence * 0.38)))
+		trail_core_ribbon.append(local_point)
+		trail_core_ribbon.append(local_point - normal * maxf(core_floor, core_width * (1.0 - turbulence * 0.26)))
+		trail_core_ribbon_colors.append(core_edge)
+		trail_core_ribbon_colors.append(core_centre)
+		trail_core_ribbon_colors.append(core_edge)
 
-	for index in range(point_count - 1, -1, -1):
-		var t := float(index) / float(maxi(1, point_count - 1))
-		var taper := pow(maxf(0.0, 1.0 - t), 0.78)
-		var normal := _trail_normal(index, point_count)
-		var local_point := trail_points[index] - global_position
-		var alpha := pow(maxf(0.0, 1.0 - t), 1.28) * visibility
-		var turbulence := _trail_turbulence(t)
-		trail_glow_ribbon.append(local_point - normal * maxf(0.02, widths.x * taper * (1.0 - turbulence * 0.68)))
-		trail_glow_ribbon_colors.append(Color(glow_color, alpha * 0.17))
-		trail_core_ribbon.append(local_point - normal * maxf(0.01, widths.y * taper * (1.0 - turbulence * 0.26)))
-		trail_core_ribbon_colors.append(Color(primary_color, alpha * 0.74))
+	var indices := _ribbon_strip_indices(point_count)
+	var canvas := get_canvas_item()
+	RenderingServer.canvas_item_add_triangle_array(
+		canvas, indices, trail_glow_ribbon, trail_glow_ribbon_colors
+	)
+	RenderingServer.canvas_item_add_triangle_array(
+		canvas, indices, trail_core_ribbon, trail_core_ribbon_colors
+	)
 
-	if trail_glow_ribbon.size() >= 4:
-		draw_polygon(trail_glow_ribbon, trail_glow_ribbon_colors)
-		draw_polygon(trail_core_ribbon, trail_core_ribbon_colors)
+
+func _ribbon_strip_indices(point_count: int) -> PackedInt32Array:
+	# Vertices are appended in edge/centre/edge triples, so segment i spans
+	# 3i..3i+5 as two quads either side of the centre line. Rebuilt only when
+	# the visible point count changes.
+	if trail_strip_point_count == point_count:
+		return trail_strip_indices
+	trail_strip_indices.clear()
+	for segment in range(point_count - 1):
+		var base := segment * 3
+		for side: int in [0, 1]:
+			var near: int = base + side
+			var far: int = base + side + 1
+			trail_strip_indices.append(near)
+			trail_strip_indices.append(far)
+			trail_strip_indices.append(near + 3)
+			trail_strip_indices.append(far)
+			trail_strip_indices.append(far + 3)
+			trail_strip_indices.append(near + 3)
+	trail_strip_point_count = point_count
+	return trail_strip_indices
+
+
+func _trail_shoulder_widths(visual_scale: float) -> Vector2:
+	# Extra half width the ribbon carries where it leaves the head, so the trail
+	# starts as wide as the silhouette it trails instead of necking straight
+	# down to a thread. A head far wider than its own tail reads as a bulb on a
+	# string rather than one burning object.
+	var profile := _head_profile()
+	if profile.size() < 6:
+		return Vector2.ZERO
+	# The spread ribbon meets the head's solid core, not its outer bloom -
+	# matching the bloom turns a fireball into a hard-edged dart. The bright
+	# exposure line stays a line: it only has to clear the neck.
+	var head_radius := body_radius * visual_scale * _head_scale()
+	var widths := _trail_half_widths() * visual_scale
+	var head_core := head_radius * profile[2]
+	return Vector2(
+		maxf(0.0, head_core - widths.x),
+		maxf(0.0, head_core * 0.34 - widths.y)
+	)
+
+
+func _head_profile() -> PackedFloat32Array:
+	# forward, rear, half width, bloom forward, bloom rear, bloom half width -
+	# every entry a multiple of the drawn head radius. Rear extents stay close
+	# to the forward ones: reaching backwards is the trail's job, and a long
+	# rear ovoid over a narrow tail is what made the silhouette read as a bulb
+	# with a thread behind it. The two width entries are also where the trail's
+	# shoulder starts, so head and trail cannot drift apart.
+	match type_id:
+		"fast":
+			return PackedFloat32Array([1.10, 1.06, 0.34, 1.48, 1.57, 0.60])
+		"fragment":
+			return PackedFloat32Array([0.88, 0.85, 0.78, 1.18, 1.25, 1.08])
+		"fragment_piece":
+			return PackedFloat32Array([1.02, 0.98, 0.42, 1.42, 1.51, 0.66])
+		"fireball":
+			return PackedFloat32Array([0.96, 0.92, 0.72, 1.34, 1.42, 1.12])
+		"major":
+			return PackedFloat32Array([1.04, 1.00, 0.78, 1.50, 1.59, 1.20])
+		"comet":
+			return PackedFloat32Array([0.76, 0.73, 0.62, 1.05, 1.11, 0.98])
+		"satellite", "variable_star", "binary_star", "galaxy":
+			# Drawn by their own silhouettes; they have no directional head for
+			# a shoulder to match.
+			return PackedFloat32Array()
+		_:
+			return PackedFloat32Array([0.82, 0.79, 0.66, 1.12, 1.19, 1.06])
 
 
 func _trail_turbulence(t: float) -> float:
@@ -591,31 +713,32 @@ func _trail_half_widths() -> Vector2:
 
 func _draw_type_silhouette(radius: float, visibility: float, visual_scale: float) -> void:
 	match type_id:
-		"fast":
-			_draw_directional_head(radius, visibility, 1.10, 1.60, 0.34, 1.48, 2.70, 0.60)
-		"fragment":
-			_draw_directional_head(radius, visibility, 0.88, 1.02, 0.78, 1.18, 1.85, 1.08)
-			_draw_fragment_sparks(radius, visibility)
-		"fragment_piece":
-			_draw_directional_head(radius, visibility, 1.02, 1.24, 0.42, 1.42, 2.25, 0.66)
-		"fireball":
-			_draw_directional_head(radius, visibility, 0.96, 1.32, 0.72, 1.34, 2.45, 1.12)
-			_draw_irregular_debris(radius, visibility, 3)
-		"major":
-			_draw_directional_head(radius, visibility, 1.04, 1.58, 0.78, 1.50, 2.85, 1.20)
-			_draw_irregular_debris(radius, visibility, 5)
 		"satellite":
 			_draw_satellite_head(radius, visibility, visual_scale)
+			return
 		"variable_star":
 			_draw_variable_head(radius, visibility)
-		"comet":
-			_draw_directional_head(radius, visibility, 0.76, 1.08, 0.62, 1.05, 2.20, 0.98)
+			return
 		"binary_star":
 			_draw_binary_head(radius, visibility, visual_scale)
+			return
 		"galaxy":
 			_draw_galaxy_head(radius, visibility)
-		_:
-			_draw_directional_head(radius, visibility, 0.82, 1.08, 0.66, 1.12, 1.95, 1.06)
+			return
+
+	# Shape numbers live in `_head_profile` so the trail's shoulder reads the
+	# same widths this silhouette is drawn at.
+	var profile := _head_profile()
+	_draw_directional_head(
+		radius, visibility, profile[0], profile[1], profile[2], profile[3], profile[4], profile[5]
+	)
+	match type_id:
+		"fragment":
+			_draw_fragment_sparks(radius, visibility)
+		"fireball":
+			_draw_irregular_debris(radius, visibility, 3)
+		"major":
+			_draw_irregular_debris(radius, visibility, 5)
 
 
 func _draw_directional_head(
@@ -649,7 +772,13 @@ func _draw_directional_head(
 	for index in range(bloom_points.size()):
 		bloom_points[index] += sheath_shift
 	var optical_flicker := 0.94 + 0.06 * sin(phase * 1.71 + 0.8)
-	draw_colored_polygon(bloom_points, Color(glow_color, clampf(0.086 * visibility * optical_flicker, 0.0, 1.0)))
+	var bright_point := direction * radius * 0.12
+	_draw_graded_polygon(
+		bloom_points,
+		bright_point + sheath_shift,
+		Color(glow_color, clampf(0.26 * visibility * optical_flicker, 0.0, 1.0)),
+		Color(glow_color, 0.0)
+	)
 
 	var core_points := _organic_head_points(
 		direction,
@@ -661,9 +790,11 @@ func _draw_directional_head(
 		phase
 	)
 	var warm_primary := primary_color.lerp(Color.WHITE, 0.18)
-	draw_colored_polygon(
+	_draw_graded_polygon(
 		core_points,
-		Color(warm_primary, clampf(0.76 * visibility * optical_flicker, 0.0, 1.0))
+		bright_point,
+		Color(warm_primary, clampf(1.0 * visibility * optical_flicker, 0.0, 1.0)),
+		Color(warm_primary, clampf(0.16 * visibility * optical_flicker, 0.0, 1.0))
 	)
 
 	# A small overexposed patch wanders inside the leading half. It supplies life
@@ -688,6 +819,34 @@ func _draw_directional_head(
 			clampf((0.66 + 0.10 * sin(phase * 1.89)) * visibility, 0.0, 1.0)
 		)
 	)
+
+
+func _draw_graded_polygon(
+	points: PackedVector2Array,
+	bright_point: Vector2,
+	centre_color: Color,
+	rim_color: Color
+) -> void:
+	# A flat fill ends the head on a hard outline, and a hard outline over a
+	# narrow tail is what reads as a bulb tied to a thread. A fan from an
+	# interior point keeps the organic silhouette and lets its edge fall off,
+	# so the head dissolves into the trail instead of sitting on top of it.
+	var count := points.size()
+	if count < 3:
+		return
+	var vertices := PackedVector2Array()
+	var colors := PackedColorArray()
+	vertices.append(bright_point)
+	colors.append(centre_color)
+	for index in range(count):
+		vertices.append(points[index])
+		colors.append(rim_color)
+	var indices := PackedInt32Array()
+	for index in range(count):
+		indices.append(0)
+		indices.append(1 + index)
+		indices.append(1 + (index + 1) % count)
+	RenderingServer.canvas_item_add_triangle_array(get_canvas_item(), indices, vertices, colors)
 
 
 func _organic_head_points(
