@@ -27,8 +27,13 @@ Every commit created for this project must end with this co-author trailer,
 separated from the commit message body by a blank line:
 
 ```text
-Co-authored-by: claude-code-bot <claude-code-bot@users.noreply.github.com>
+Co-authored-by: Claude <81847+claude@users.noreply.github.com>
 ```
+
+That is the GitHub noreply address for the `claude` account, so the commit
+resolves to that profile instead of showing an unlinked name. The address
+must keep its numeric id prefix; the bare `name@users.noreply.github.com`
+form does not resolve for accounts created recently.
 
 Use this trailer and no other, whatever attribution an agent is otherwise
 configured to add. Exactly one co-author line per commit.
