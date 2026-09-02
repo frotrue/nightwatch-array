@@ -524,6 +524,20 @@ func _draw_tapered_trail(visibility: float, tail_scale: float, visual_scale: flo
 	)
 	if point_count < 2:
 		return
+	# Station 0 is the meteor itself, not the newest stored sample. Samples lag
+	# the head by up to one sampling interval, so anchoring the ribbon at
+	# trail_points[0] left the widest part of the trail standing off behind the
+	# silhouette with a wedge of unlit sky between them.
+	var stations := PackedVector2Array()
+	stations.append(Vector2.ZERO)
+	for index in range(point_count):
+		var offset := trail_points[index] - global_position
+		if index == 0 and offset.length_squared() < 0.25:
+			continue
+		stations.append(offset)
+	var station_count := stations.size()
+	if station_count < 2:
+		return
 	var widths := _trail_half_widths() * visual_scale
 	var shoulder := _trail_shoulder_widths(visual_scale)
 	trail_glow_ribbon.clear()
@@ -536,15 +550,15 @@ func _draw_tapered_trail(visibility: float, tail_scale: float, visual_scale: flo
 	# edges, and on a saturated glow colour over a cool sky that slab reads as a
 	# dark chevron behind the head rather than as light.
 	var core_floor := MIN_RIBBON_HALF_WIDTH * 0.7
-	for index in range(point_count):
-		var t := float(index) / float(maxi(1, point_count - 1))
+	for index in range(station_count):
+		var t := float(index) / float(maxi(1, station_count - 1))
 		var remaining := maxf(0.0, 1.0 - t)
 		var taper := pow(remaining, 0.78)
 		var flare := pow(remaining, TRAIL_SHOULDER_EXPONENT)
 		var glow_width := widths.x * taper + shoulder.x * flare
 		var core_width := widths.y * taper + shoulder.y * flare
-		var normal := _trail_normal(index, point_count)
-		var local_point := trail_points[index] - global_position
+		var normal := _station_normal(stations, index)
+		var local_point := stations[index]
 		var alpha := pow(remaining, 1.28) * visibility
 		var turbulence := _trail_turbulence(t)
 		var glow_centre := Color(glow_color, alpha * 0.34)
@@ -564,7 +578,7 @@ func _draw_tapered_trail(visibility: float, tail_scale: float, visual_scale: flo
 		trail_core_ribbon_colors.append(core_centre)
 		trail_core_ribbon_colors.append(core_edge)
 
-	var indices := _ribbon_strip_indices(point_count)
+	var indices := _ribbon_strip_indices(station_count)
 	var canvas := get_canvas_item()
 	RenderingServer.canvas_item_add_triangle_array(
 		canvas, indices, trail_glow_ribbon, trail_glow_ribbon_colors
@@ -667,14 +681,15 @@ func _trail_turbulence_profile() -> Vector2:
 			return Vector2(0.035, 7.6)
 
 
-func _trail_normal(index: int, point_count: int) -> Vector2:
+func _station_normal(stations: PackedVector2Array, index: int) -> Vector2:
+	var count := stations.size()
 	var tangent: Vector2
 	if index <= 0:
-		tangent = trail_points[0] - trail_points[1]
-	elif index >= point_count - 1:
-		tangent = trail_points[point_count - 2] - trail_points[point_count - 1]
+		tangent = stations[0] - stations[1]
+	elif index >= count - 1:
+		tangent = stations[count - 2] - stations[count - 1]
 	else:
-		tangent = trail_points[index - 1] - trail_points[index + 1]
+		tangent = stations[index - 1] - stations[index + 1]
 	if tangent.is_zero_approx():
 		tangent = _safe_travel_direction()
 	else:
@@ -928,9 +943,9 @@ func _draw_fragment_sparks(radius: float, visibility: float) -> void:
 		var spark_phase := wobble_phase + age * (8.5 + sequence) + sequence * 2.37
 		var center := (
 			-direction * radius * (0.72 + sequence * 0.48)
-			+ normal * radius * sin(spark_phase) * (0.34 + sequence * 0.16)
+			+ normal * _debris_envelope(radius) * sin(spark_phase) * (0.30 - sequence * 0.06)
 		)
-		var shard_direction := (direction + normal * 0.42 * sin(spark_phase + 0.8)).normalized()
+		var shard_direction := (direction + normal * 0.14 * sin(spark_phase + 0.8)).normalized()
 		var shard_length := radius * (0.16 + sequence * 0.035)
 		debris_draw_points.append(center - shard_direction * shard_length)
 		debris_draw_points.append(center + shard_direction * shard_length * 0.52)
@@ -942,19 +957,34 @@ func _draw_fragment_sparks(radius: float, visibility: float) -> void:
 	)
 
 
+func _debris_envelope(radius: float) -> float:
+	# The width shed material is allowed to wander across: the head's own core
+	# half width, which is also where the trail's shoulder starts. Anything
+	# outside that is outside the trail.
+	var profile := _head_profile()
+	if profile.size() < 6:
+		return radius * 0.66
+	return radius * profile[2]
+
+
 func _draw_irregular_debris(radius: float, visibility: float, count: int) -> void:
 	var direction := _safe_travel_direction()
 	var normal := Vector2(-direction.y, direction.x)
+	# Shed material keeps the path it was shed from: shards run along travel with
+	# only a slight yaw, and stay inside the trail they came out of. Steeper
+	# angles and a wider scatter put them across the tail, where they read as
+	# scratches on the lens rather than as burning debris.
+	var envelope := _debris_envelope(radius)
 	debris_draw_points.clear()
 	for index in range(count):
 		var sequence := float(index)
 		var shard_phase := wobble_phase + sequence * 2.17 + age * (2.4 + sequence * 0.08)
 		var distance := radius * (1.62 + sequence * 0.76 + 0.18 * sin(shard_phase * 0.72 + sequence * 0.63))
-		var spread := radius * (0.24 + sequence * 0.07)
+		var spread := envelope * maxf(0.10, 0.34 - sequence * 0.045)
 		var side_offset := sin(shard_phase) * spread
 		var center := -direction * distance + normal * side_offset
 		var shard_length := radius * (0.16 + 0.12 * (0.5 + 0.5 * sin(wobble_phase * 0.7 + sequence * 1.91)))
-		var shard_direction := (direction + normal * 0.48 * sin(shard_phase + 0.9)).normalized()
+		var shard_direction := (direction + normal * 0.12 * sin(shard_phase + 0.9)).normalized()
 		debris_draw_points.append(center - shard_direction * shard_length * 0.72)
 		debris_draw_points.append(center + shard_direction * shard_length)
 	if debris_draw_points.is_empty():
