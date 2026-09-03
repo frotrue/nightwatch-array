@@ -10,9 +10,8 @@ const COMBO_STRENGTH_STEP := 0.045
 const IMPACT_TARGET_TYPES := ["fireball", "major"]
 const FLASHLESS_METEOR_TYPES := ["common", "fast"]
 const FRAGMENT_PIECE_FEEDBACK_SCALE := 0.50
-# Every manual observation gets a directional kick; the rumble and the freeze
-# are reserved for rare fireballs and the Canis Major event so the game's repeated core
-# action never becomes a chain of camera motion and freezes.
+# Routine observations use particles and packets only. Accented manual hits
+# may move the view; only impact target types may halt simulation.
 const KICK_MIN_PIXELS := 1.3
 const KICK_MAX_PIXELS := 3.0
 const SHAKE_STRENGTH_FLOOR := 0.50
@@ -251,6 +250,7 @@ func _begin_observation_phase(advance_round: bool = false, remaining_override: f
 	spawner.set_phase_time_remaining(observation_phase_remaining)
 	observation_phase_active = true
 	progression.reset_manual_combo()
+	sound.reset_streak_audio()
 	phase_start_successes = progression.success_count
 	phase_start_manual_successes = progression.manual_successes
 	phase_start_automatic_successes = progression.automatic_successes
@@ -284,6 +284,7 @@ func _end_observation_phase() -> void:
 	host_stars.end_round()
 	galactic_phenomena.end_round()
 	progression.reset_manual_combo()
+	sound.reset_streak_audio()
 	var result := _build_round_result()
 	var previous_result := last_clean_round_result.duplicate(true)
 	var build_changed := bool(result.get("build_changed", false))
@@ -572,11 +573,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		KEY_R:
 			spawner.spawn_meteor("fireball")
 		KEY_S:
-			if events.trigger_shower():
-				sound.play_warning()
+			events.trigger_shower()
 		KEY_F:
-			if events.trigger_canis_major_warning():
-				sound.play_warning()
+			events.trigger_canis_major_warning()
 		KEY_E:
 			_show_catalogue_ending_debug_preview()
 		KEY_BACKSPACE:
@@ -638,6 +637,7 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 	# chain remain explicit feedback inputs inside _observation_strength.
 	var strength := _observation_strength(float(meteor.base_value), was_manual, quality_grade)
 	var meteor_type_id := String(meteor.type_id)
+	var accented := _is_accented_observation(meteor_type_id, was_manual, quality_grade)
 	var meteor_screen_scale: float = observation_view.meteor_screen_scale()
 	effects.spawn_success(
 		meteor.global_position,
@@ -647,7 +647,9 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 		strength,
 		quality_grade,
 		hud.get_data_anchor(),
-		_meteor_flash_scale(meteor_type_id)
+		_meteor_flash_scale(meteor_type_id),
+		accented,
+		meteor.velocity
 	)
 	if was_manual:
 		sound.play_success(intrinsic_multiplier, progression.manual_combo_count, strength)
@@ -660,12 +662,9 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 	# completion is the payoff of a research decision made minutes ago, not an
 	# action taken now, and once the array is built they fire continuously: a
 	# permanently moving screen would leave a real hit nothing to stand against.
-	# The audio channels split on the same line. Shake and hitstop part ways
-	# here: shake is view motion the player reads as accumulation, so a long
-	# manual chain is allowed to earn it on any target. Hitstop halts the game,
-	# and a chain of halts is the freeze this split was made to end, so it stays
-	# with punctuation targets.
-	if was_manual:
+	# A chain still raises particle/sound weight, but cannot promote a routine
+	# target to an accent by itself. High quality or rare identity is required.
+	if was_manual and accented:
 		effects.add_kick(
 			meteor.global_position,
 			lerpf(KICK_MIN_PIXELS, KICK_MAX_PIXELS, strength),
@@ -713,7 +712,9 @@ func _on_host_harvested(star, reward: float, multiplier: float, _was_manual: boo
 		multiplier * transit_multiplier,
 		1.0,
 		quality_grade,
-		hud.get_data_anchor()
+		hud.get_data_anchor(),
+		1.0,
+		true
 	)
 	if sound != null:
 		sound.play_success(multiplier, confirmation_count, minf(1.0, 0.55 + float(confirmation_count) * 0.15))
@@ -748,11 +749,15 @@ func _observation_strength(base_value: float, was_manual: bool, quality_grade: S
 			strength = minf(1.0, strength + 0.30)
 		"EXCELLENT":
 			strength = minf(1.0, strength + 0.15)
-	# A single common stays quiet; an unbroken chain is what earns the screen.
-	# A 14-point common starts at 0.10, so twelve links at 0.045 carry it to
-	# 0.64 and cross the shake floor on the ninth. Persistence reaches the
-	# screen on its own, and a Perfect grade gets there in about half as many.
+	# Chains strengthen particles and audio. Motion eligibility is a separate
+	# semantic gate, so a long chain of ordinary GOOD hits keeps the view still.
 	return minf(1.0, strength + minf(float(progression.manual_combo_count), 12.0) * COMBO_STRENGTH_STEP)
+
+
+func _is_accented_observation(type_id: String, was_manual: bool, quality_grade: String) -> bool:
+	# Keep rare membership identical to MeteorSpawner. Proc/echo/shower origin
+	# alone does not elevate each of its many routine completions to an event.
+	return type_id in IMPACT_TARGET_TYPES or (was_manual and quality_grade in ["EXCELLENT", "PERFECT"])
 
 
 func _meteor_flash_scale(type_id: String) -> float:
@@ -803,7 +808,8 @@ func _on_galactic_phenomenon_observed(target, reward: float, multiplier: float, 
 		0.72,
 		quality_grade,
 		hud.get_data_anchor(),
-		0.0
+		0.0,
+		true
 	)
 	sound.play_success(multiplier, progression.manual_combo_count, 0.72)
 	hud.show_banner(tr("BANNER_GALACTIC_OBSERVATION"), UITheme.BANNER_TITLE, 2.2)
@@ -818,7 +824,6 @@ func _on_upgrade_purchased(definition: Dictionary) -> void:
 	spawner.refresh_active_features()
 	if not observation_phase_active:
 		upgrade_tree.set_intermission_context(observation_round + 1, int(_observation_duration()))
-	effects.spawn_upgrade_pulse()
 	sound.play_upgrade()
 	_sync_galactic_systems()
 	if String(definition.id) == "galactic_reference_frame":
@@ -829,6 +834,10 @@ func _on_upgrade_purchased(definition: Dictionary) -> void:
 	starfield.set_activity(progression.get_progression_ratio() * 0.16)
 	starfield.set_galactic_mode(progression.galaxy_unlocked())
 	_refresh_catalogue_ending_requirement()
+	if upgrade_tree.is_open():
+		upgrade_tree.pulse_installation_rule()
+	else:
+		hud.pulse_installation_rule()
 	_autosave_active_slot()
 
 
@@ -844,13 +853,13 @@ func _on_rare_spawned(type_id: String) -> void:
 		return
 	var prefix_key := "BANNER_SECONDARY_ALERT" if progression.has_upgrade("rare_detection") and progression.has_upgrade("secondary_camera") else "BANNER_UNUSUAL_SIGNATURE"
 	hud.show_banner("%s  •  %s" % [tr(prefix_key), tr("METEOR_%s" % type_id.to_upper())], UITheme.ACCENT_TEXT, 2.0)
-	sound.play_warning()
+	sound.play_rare_target()
 
 
 func _on_event_banner(text_key: String, color: Color) -> void:
 	hud.show_banner(tr(text_key), color, 2.5)
-	if text_key in ["EVENT_SHOWER_INCOMING", "EVENT_ATMOSPHERIC_BLOOM"]:
-		sound.play_warning()
+	if text_key in ["EVENT_SHOWER_INCOMING", "EVENT_ATMOSPHERIC_BLOOM", "EVENT_PERSEID_OUTBURST_INCOMING"]:
+		sound.play_environment_change()
 
 
 func _on_sky_activity_changed(value: float) -> void:
@@ -883,7 +892,7 @@ func _on_save_slot_requested(slot: int) -> void:
 		autosave_elapsed = 0.0
 		hud.set_active_save_slot(slot)
 		hud.show_save_feedback(tr("SAVE_SUCCESS") % slot, UITheme.BANNER_TITLE)
-		sound.play_upgrade()
+		sound.play_slot_confirm()
 	else:
 		hud.show_save_feedback(tr("SAVE_FAILURE") % slot, UITheme.ALERT)
 
@@ -899,7 +908,7 @@ func _on_load_slot_requested(slot: int) -> void:
 	_apply_save_data(data)
 	hud.close_settings()
 	hud.show_banner(tr("BANNER_SLOT_LOADED") % slot, UITheme.BANNER_TITLE, 2.2)
-	sound.play_upgrade()
+	sound.play_slot_confirm()
 
 
 func _on_startup_slot_selected(slot: int) -> void:
@@ -1025,6 +1034,7 @@ func _build_save_data() -> Dictionary:
 
 
 func _apply_save_data(data: Dictionary) -> void:
+	sound.reset_streak_audio()
 	_close_upgrade_tree_without_transition()
 	observer.reset()
 	sky_contacts.reset()

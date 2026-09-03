@@ -1,9 +1,10 @@
 # Tests and Probes
 
-Every file in `tests/` is a `SceneTree` script run through `--script`, not a
-GUT/gdUnit suite. There is no test runner to install. Sixteen files: six
-pass/fail gates, seven measurement probes, two visual capture utilities, and
-one human-driven survey slice. The full-tree economy gate is documented with
+Top-level entry points in `tests/` are `SceneTree` scripts run through `--script`,
+not a GUT/gdUnit suite; `tests/support/` contains shared fixtures. There is no
+test runner to install. This directory contains
+pass/fail gates, seven measurement probes, visual/audio review utilities, and
+a human-driven survey slice. The full-tree economy gate is documented with
 the pacing probes below because it reports both acceptance and diagnostic data.
 
 Commands are PowerShell, matching the rest of the repo. `$godot` below is the
@@ -38,6 +39,111 @@ feel rather than correctness.
 ```
 
 ## Gates
+
+### Research visual gate
+
+`research_visual_test.gd` checks every live branch binding through the chart's
+production refresh route, all thirteen branch/state colour combinations,
+unchanged alpha and marker radii, and luminance ordering across branches.
+It also records actual `CanvasItem._draw` calls for star, cluster and galaxy
+markers, including hover/hold foreground ink. This detects a helper that exists
+but is not called by the renderer. Tutorial checks distinguish the obsolete
+three-branch claim from the valid three-manual-save-slot statement in both
+languages. Save/settings services are replaced before startup.
+
+```powershell
+& $godot --headless --path . --script res://tests/research_visual_test.gd
+```
+
+Passing prints `RESEARCH_VISUAL_PASS`. Mechanical RGB separation is not a claim
+that a player can name all thirteen branches from hue alone. Use the reference
+chart and synthetic palette plates for the visual hierarchy review.
+
+### Sound feedback gate
+
+`sound_feedback_test.gd` records production dispatch without playing it. It checks
+research/slot/rare/environment routing, distinct PCM attacks and durations,
+1,000 automatic events represented by 63 bounded-volume pulses, minimum 160 ms
+spacing, sparse-tail drain, reset/pause isolation, and hitstop-independent time.
+Its game fixture replaces slot storage with an in-memory controller before
+startup; no user save is written. These are mechanical contracts, not a listening
+verdict.
+
+```powershell
+& $godot --headless --path . --script res://tests/sound_feedback_test.gd
+```
+
+- Pass: `SOUND_FEEDBACK_PASS:`
+
+For a listening check, run the save-free live audition without `--headless`:
+
+```powershell
+& $godot --path . --script res://tests/sound_feedback_preview.gd
+```
+
+The minimized helper plays research, slot, rare-target, and environment cues in
+that order, then one isolated automatic completion and 1,000 automatic completions over ten seconds with four manual
+successes. It records only its own Master bus (no microphone or OS loopback) to
+`build/audio_feedback_audition.wav`, with cue timestamps and the SoundSynth source
+hash in `build/audio_feedback_audition.json`. It leaves bus gain/mute and user
+settings/saves untouched, removes its record effect, and quits. `SOUND_AUDITION_SAVED`
+confirms non-silent PCM and a complete schedule, not perceptual quality; listen
+for distinct event roles and gaps between automatic pulses.
+
+On this machine WASAPI uses four stereo pairs: live playback has nonzero Master
+peak, but `AudioEffectRecord` captures the last (silent) pair. Do not change OS
+speaker settings to work around it. An explicit software-mixer recording is available:
+
+```powershell
+$env:NIGHTWATCH_AUDITION_ALLOW_DUMMY = "1"
+try {
+    & $godot --headless --audio-driver Dummy --path . --script res://tests/sound_feedback_preview.gd
+} finally {
+    Remove-Item Env:NIGHTWATCH_AUDITION_ALLOW_DUMMY
+}
+```
+
+Its manifest explicitly marks `driver: Dummy` and `hardware_output: false`.
+This produces a listenable stereo artifact, not proof of hardware output or a
+perceptual verdict. The isolated completion deliberately retains the 160 ms
+aggregation latency; manual success remains immediate.
+
+### Effect feedback gate
+
+`effect_feedback_test.gd` checks the routine/accent matrix through the main-game
+completion handlers. Rare fireball/major identities and high manual grades keep
+their explicit accent eligibility; combo, economy and proc origin cannot promote
+a routine completion. It verifies directional particle cones, ring/flash/motion
+thresholds, shared capacity caps, distant-target events, galaxy-stage flash
+suppression and the pause-safe, replaceable installation-rule tween. The fixture
+uses actual chart-open purchases at both scales and checks that the visible
+inspector rule survives deferred container layout while paused. Selection,
+context, close and scale changes cancel stale tweens; Reference Frame keeps its
+pull-back without a hidden pulse. Save storage and settings are replaced before
+startup. A mechanical pass is not a visual verdict.
+
+```powershell
+& $godot --headless --path . --script res://tests/effect_feedback_test.gd
+```
+
+- Pass: `EFFECT_FEEDBACK_PASS:`
+
+For a narrow rendered stage-2 check, run without `--headless`:
+
+```powershell
+& $godot --path . --script res://tests/effect_feedback_preview.gd
+```
+
+This creates eight uniquely named PNG/JSON pairs in
+`build/effect_feedback_review`: routine/accented observation poses and both
+chart inspectors at installation-tween start, midpoint and end. The fixture
+uses real completion/purchase routes without reading or writing saves/settings,
+then freezes animation after deferred layout settles. Each sidecar records
+viewport, renderer, base HEAD, dirty status, relevant source hashes and measured
+state. A missing display, blank image, unexpected state/count or write failure
+exits nonzero. `EFFECT_PREVIEW_PASS` means the eight diagnostic images were
+written, not that animation feel was approved. This windowed diagnostic is not
+the stage-3 headless capture gate.
 
 ### Research contract test
 
@@ -500,3 +606,103 @@ $env:NIGHTWATCH_ENDING_PREVIEW_STEP = "8.1"
 Remove-Item Env:NIGHTWATCH_ENDING_PREVIEW -ErrorAction SilentlyContinue
 Remove-Item Env:NIGHTWATCH_ENDING_PREVIEW_STEP -ErrorAction SilentlyContinue
 ```
+
+## Reference capture gate (stage 3)
+
+`tests/capture_reference.gd` regenerates thirteen visual references in one run:
+eleven scene states from stage 3 and two diagnostic palette plates from stage 4.
+Each run gets a new `build/reference/<revision12>[_dirty]_<timestamp>/` directory;
+existing captures are never overwritten. Its manifest and every PNG's JSON
+sidecar identify the full Git HEAD, dirty flag, SHA-256 of every tracked and
+non-ignored untracked source file, source digest, Godot version, viewport,
+display driver, scenario contract, observed state and actual PNG hash.
+
+This replaces `build/claude_design_screenshots/`, a hand-made corpus whose
+files were named `*_current_*` with no generator in the repository. Five days
+and twenty-four script changes after it was made, three separate reviewers
+still read those files as current and misdiagnosed the shipped screens from
+them. A semantic filename is a claim nothing enforces, so the revision now
+travels with the pixels and the corpus is reproducible from one command.
+
+The old directory is retained, with a `STALE.md` notice, as historical evidence.
+Do not treat its `current` filenames as current screenshots.
+The rejected prototype's twelve loose files were also moved out of the reference
+root into `build/reference-legacy-unstamped-20260903/` with a stale notice.
+
+The verified Windows Godot 4.7.2 binary exposes only dummy rendering with the
+headless display driver. The generator explicitly rejects `--headless` with
+exit 1 before creating a run directory. This supported capture path uses a real
+Windows/OpenGL renderer and moves its window off-screen; it requires a logged-in
+desktop session, not a display-less CI worker. This is not a claim about every
+possible Godot platform/backend. See the official
+[RenderingServer documentation](https://docs.godotengine.org/en/stable/classes/class_renderingserver.html)
+and inspect the actual binary's `--help` for its supported driver combinations.
+
+```powershell
+& $godot --display-driver windows --rendering-driver opengl3 `
+    --rendering-method gl_compatibility --audio-driver Dummy `
+    --position '-4000,-4000' --resolution 1152x648 `
+    --path . --script res://tests/capture_reference.gd
+```
+
+Passing prints `REFERENCE_CAPTURE_PASS: <n>/<n> at <revision>`. A capture taken
+over uncommitted work additionally prints `REFERENCE_CAPTURE_DIRTY:` and sets
+`source.revision_dirty` in the manifest; that is useful while iterating, but
+must be described as that base revision plus the recorded working tree, never
+as the clean commit. Refresh the corpus after committing and verify the clean
+flag before using it as a revision baseline.
+
+The eleven scenarios cover an actively tracked observation HUD (67%), an
+eleven-object synthetic density plate with active tracking (42%),
+both meteor families, the sky sweep, the round summary, the research chart,
+the pulled-back galactic sky, the exoplanet transit, the Local Group map and
+the catalogue ending. `meteor_family_special` captures the five late
+silhouettes — comet, satellite, variable star, binary star and galaxy — which
+the old corpus never contained. These are controlled diagnostic states, not
+measurements of live spawn density, economy or pacing. The mid-run research
+chart installs 81 nodes through real purchase requests; the galactic scenarios
+install all 107. The transit is explicitly at 48% of its first window and the
+ending reveals all five recorded phenomena.
+
+`palette_active` and `palette_inactive` are explicitly synthetic, labelled
+plates, not gameplay charts. Each uses 117 real `StarNodeVisual` instances:
+thirteen branch columns, three marker kinds and three states per plate.
+Purchased/affordable/unaffordable are separated from locked/hidden/teaser.
+The manifest records every cell's rectangle, input colour, kind and state for
+pixel comparisons. Compare the active cells before/after the colour change;
+the complete inactive plate must remain byte-identical. Existing scene states
+remain the context for judging the actual screen, not just isolated marks.
+
+`tests/support/reference_capture_scenarios.gd` replaces save/settings services
+before `_ready`, disables hardware input, seeds RNGs and freezes processes,
+tweens and visual clocks. Synthetic positions, trail ages and a 30-second
+diagnostic target lifetime are declared fixture inputs. Supernova rendering
+uses `capture_time_override_msec = 0` only in this fixture; its production
+default of -1 preserves the live clock. Expected counts, research state,
+selection, tracking, overlays and isolation are checked before and after
+rendering. Empty state inspection is an error, including after a script error.
+
+The image gate requires the expected dimensions, visible light/dark pixels and
+two consecutive identical pixel hashes within twelve frames. The run checks
+unchanged source identity before publishing sidecars and a passed manifest;
+missing Git, changing source, a blank/unstable frame, a missing scenario or a
+failed write exits nonzero. A 90-second watchdog bounds stalled rendering.
+Consumers must require the run manifest's `status: passed`, matching sidecars
+and matching PNG hashes; a partial directory is not a valid corpus.
+
+The companion headless gate checks malformed image/manifest/Git rejection and
+all thirteen isolated scenario states across engine frames:
+
+```powershell
+& $godot --headless --path . --script res://tests/reference_capture_test.gd
+```
+
+Passing prints `REFERENCE_CAPTURE_TEST_PASS`. Its missing-Git negative case
+intentionally emits an OS child-process error before the PASS marker. It does
+not render PNGs or replace the desktop-rendered gate.
+
+`REFERENCE_CAPTURE_PASS` means all declared states and their stable, nonblank
+images passed the mechanical checks. It is not a judgement of focal hierarchy,
+silhouette
+legibility, overlap or semantic colour separation; those remain human review
+against the captured frames.

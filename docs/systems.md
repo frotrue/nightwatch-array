@@ -35,6 +35,13 @@ Game (Node2D)                      scripts/game.gd
 `SoundSynth` (`scripts/sound_synth.gd`) is **not** in the scene. `game.gd`
 instantiates it in `_ready()` and adds it as a child at runtime.
 
+SoundSynth processes through UI pauses so research and slot confirmations remain
+audible. Research owns its original dyad; save/load share a quiet unpitched latch;
+rare-target notices use a sharp double note; shower/bloom/Perseid notices use a slow swell.
+Automatic observations accumulate in a 160 ms window and emit one 70 ms pulse,
+with logarithmic batch weight capped at -12 dB. The queue is cleared on pauses,
+round boundaries, and loads; it never affects observation accounting or rewards.
+
 `scenes/probe_layer2.tscn` is a standalone Layer 2 testbed driven by
 `scripts/probe/probe_controller.gd` and `scripts/probe/probe_hud.gd`. It does
 not share the main scene's nodes and is kept as an experiment, not as shipped
@@ -107,11 +114,12 @@ zoom. `ObservationView` exposes the coordinate and scale routing methods:
 - `meteor_visual_scale()` applies square-root rather than full compensation, so
   meteor drawings recede while their interaction radii remain screen-fixed.
 - Once `galactic_reference_frame` makes `galaxy_unlocked()` true, common and
-  fast meteors stop dispatching a success flash. Before then they keep it.
+  fast meteors stop dispatching even high-grade success flashes. Before then,
+  only semantically accented completions are eligible for a flash.
   `meteor_screen_scale()` gives meteor-generated kick and all active success
   flashes the same `1 / sqrt(span)` on-screen reduction as the drawing.
 - `meteor_shake_scale()` attenuates repeated meteor shake more strongly at
-  `1 / span`; upgrade pulses and hitstop keep their own contracts.
+  `1 / span`; HUD installation rules and hitstop keep their own contracts.
 - `game.gd` applies one additional `0.5` feedback scale to `fragment_piece`
   success flashes and shake. Parent fragments, kick, audio, and reward keep
   their existing paths.
@@ -177,6 +185,17 @@ meteor.observed           → game._on_meteor_observed
 meteor.expired            → game._on_meteor_expired
 meteor.fragment_requested → spawner._on_fragment_requested
 ```
+
+## Research-node colour ownership
+
+`upgrade_tree._apply_node_visual` binds the definition's `Balance.BRANCHES`
+colour to `StarNodeVisual`. Its `state_ink` helper is read by the actual star,
+cluster and galaxy draw paths, not merely stored in an unused field. A small
+branch component is mixed into the existing warm state ink: 28% for an
+affordable frontier, 12% for an open but unaffordable node, 6% for an installed
+node, and none for hidden/locked/teaser states. Alpha, geometry, filling,
+halo sizes and pulse timing remain state-owned. The shared legend remains a
+neutral warm explanation of state, not a thirteen-colour branch key.
 
 ## Round lifecycle
 
@@ -325,9 +344,17 @@ These are load-bearing. Breaking them silently corrupts the Data/min series.
    `game._on_meteor_observed` computes one economy-independent `strength` from
    the target's base value, manual grade, and combo. It drives particle, audio,
    kick, shake, and hitstop amplitudes without reading the research value
-   multiplier. Shake and hitstop additionally require a `fireball` or `major`
-   target, and hitstop has a 400 ms real-time cooldown after release so burst
-   completions cannot chain freezes.
+   multiplier. The semantic accent gate is independent of that strength:
+   `fireball`/`major` or a manual `EXCELLENT`/`PERFECT` grade. Routine hits keep
+   directional particles and a packet even at maximum combo; only accents may
+   add rings (strength >= 0.22) and flashes. Manual accents may kick, and shake
+   additionally requires strength >= 0.50. Hitstop still requires a manual
+   `fireball`/`major` with strength >= 0.66 and has a 400 ms real-time cooldown
+   after release. Existing galaxy-stage common/fast flash suppression remains.
+
+Host harvests and galactic-phenomenon completions explicitly request accent
+particles/rings, but the latter retain their zero-flash contract. Proc origins
+(shower, echo, storm, survey) do not promote individual routine targets.
 
 The observation's intrinsic multiplier is likewise kept separate from the
 research economy multiplier. The actual Data packet reports the full awarded
@@ -368,7 +395,14 @@ only to live meteor tracking.
 
 `upgrade_tree.gd` → `progression.request_purchase(node_id)` validates state and
 cost, then emits `upgrade_purchased`. `game._on_upgrade_purchased` refreshes
-dishes and spawner features, plays feedback, and autosaves.
+dishes and spawner features, plays the research dyad, extends an existing rule
+from 20% to full width over 0.28 seconds, and autosaves. The open chart owns the
+visible constellation/galaxy inspector rule; the closed-chart path uses the HUD
+banner rule. A HUD-only pulse is occluded by the chart's opaque higher layer.
+Installation does not emit meteor particles, rings, flashes, kick, or shake.
+Replacement announcements, selection, context, close, resize, and scale changes
+cancel stale rule tweens and restore full width. The Reference Frame purchase
+keeps its existing pull-back transition without animating a hidden inspector.
 
 Galaxy Map is the presentation exception. If its purchase occurs
 while the chart is open, `game.gd` asks the chart to begin the pull-back before

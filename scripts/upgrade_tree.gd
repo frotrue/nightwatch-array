@@ -85,6 +85,9 @@ class StarNodeVisual:
 	extends Control
 	const PURCHASED_GLOW_SCALE := 2.35
 	const PURCHASED_ENDPOINT_GLOW_SCALE := 2.75
+	const BRANCH_MIX_INSTALLED := 0.06
+	const BRANCH_MIX_READY := 0.28
+	const BRANCH_MIX_SHORT := 0.12
 
 	var hold_ratio: float = 0.0
 	var branch_color := UITheme.STAR_LOCKED
@@ -133,6 +136,19 @@ class StarNodeVisual:
 		return PURCHASED_ENDPOINT_GLOW_SCALE if branch_endpoint else PURCHASED_GLOW_SCALE
 
 
+	func state_ink(base: Color) -> Color:
+		# Hue adds branch identity; the original warm ink, alpha and geometry
+		# still carry state. Locked/hidden research must not leak branch hue.
+		var weight := 0.0
+		if visual_state == "purchased":
+			weight = BRANCH_MIX_INSTALLED
+		elif visual_state == "available":
+			weight = BRANCH_MIX_READY if affordable else BRANCH_MIX_SHORT
+		if weight == 0.0:
+			return base
+		return base.lerp(Color(branch_color, base.a), weight)
+
+
 	func _draw_cluster_marker(center: Vector2, radius: float) -> void:
 		# A small asymmetric point group identifies a real cluster without
 		# borrowing the circular state language used by research nodes.
@@ -141,7 +157,7 @@ class StarNodeVisual:
 			draw_circle(
 				center + CLUSTER_MARKER_OFFSETS[index] * radius * 0.72,
 				point_radius,
-				Color(UITheme.STAR_BACKGROUND, 0.30)
+				state_ink(Color(UITheme.STAR_BACKGROUND, 0.30))
 			)
 
 
@@ -154,18 +170,18 @@ class StarNodeVisual:
 		draw_set_transform(center, galaxy_rotation)
 		match visual_state:
 			"purchased":
-				draw_ellipse(Vector2.ZERO, major * 2.5, major * 1.5, Color(UITheme.STAR_INSTALLED_GLOW, 0.20 if hovered else 0.075))
-				draw_ellipse(Vector2.ZERO, major, minor, UITheme.STAR_INSTALLED if hovered else Color(UITheme.STAR_INSTALLED_GLOW, 0.86))
+				draw_ellipse(Vector2.ZERO, major * 2.5, major * 1.5, state_ink(Color(UITheme.STAR_INSTALLED_GLOW, 0.20 if hovered else 0.075)))
+				draw_ellipse(Vector2.ZERO, major, minor, state_ink(UITheme.STAR_INSTALLED if hovered else Color(UITheme.STAR_INSTALLED_GLOW, 0.86)))
 			"available":
 				var pulse := 0.16 + (0.06 * sin(pulse_phase) if affordable else 0.0)
-				draw_ellipse(Vector2.ZERO, major * 2.5, major * 1.5, Color(UITheme.STAR_READY_RING, pulse))
-				draw_ellipse(Vector2.ZERO, major, minor, UITheme.STAR_READY_FILL if affordable else Color(UITheme.STAR_SHORT_BORDER, 0.74))
+				draw_ellipse(Vector2.ZERO, major * 2.5, major * 1.5, state_ink(Color(UITheme.STAR_READY_RING, pulse)))
+				draw_ellipse(Vector2.ZERO, major, minor, state_ink(UITheme.STAR_READY_FILL if affordable else Color(UITheme.STAR_SHORT_BORDER, 0.74)))
 			"locked", "teaser":
-				draw_ellipse(Vector2.ZERO, major, minor, Color(UITheme.STAR_LOCKED, 0.30))
+				draw_ellipse(Vector2.ZERO, major, minor, state_ink(Color(UITheme.STAR_LOCKED, 0.30)))
 			_:
-				draw_ellipse(Vector2.ZERO, major, minor, Color(UITheme.STAR_BACKGROUND, 0.26))
+				draw_ellipse(Vector2.ZERO, major, minor, state_ink(Color(UITheme.STAR_BACKGROUND, 0.26)))
 		if hold_ratio > 0.0:
-			draw_ellipse_arc(Vector2.ZERO, major * 1.34, minor * 2.4, -PI * 0.5, -PI * 0.5 + TAU * hold_ratio, 42, UITheme.STAR_READY_RING, UITheme.px(2.0), true)
+			draw_ellipse_arc(Vector2.ZERO, major * 1.34, minor * 2.4, -PI * 0.5, -PI * 0.5 + TAU * hold_ratio, 42, state_ink(UITheme.STAR_READY_RING), UITheme.px(2.0), true)
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
@@ -185,21 +201,21 @@ class StarNodeVisual:
 			_draw_cluster_marker(center, radius)
 		match visual_state:
 			"purchased":
-				draw_circle(center, radius * purchased_glow_scale(), Color(UITheme.STAR_INSTALLED_GLOW, 0.22 if hovered else 0.13))
-				draw_circle(center, radius, UITheme.STAR_INSTALLED)
+				draw_circle(center, radius * purchased_glow_scale(), state_ink(Color(UITheme.STAR_INSTALLED_GLOW, 0.22 if hovered else 0.13)))
+				draw_circle(center, radius, state_ink(UITheme.STAR_INSTALLED))
 			"available":
 				if affordable:
-					draw_circle(center, radius * 5.2 * pulse, Color(UITheme.STAR_READY_RING, 0.50), false, 1.0, true)
-					draw_circle(center, radius, UITheme.STAR_READY_FILL)
-					draw_circle(center, radius, UITheme.STAR_READY_BORDER, false, 1.0, true)
+					draw_circle(center, radius * 5.2 * pulse, state_ink(Color(UITheme.STAR_READY_RING, 0.50)), false, 1.0, true)
+					draw_circle(center, radius, state_ink(UITheme.STAR_READY_FILL))
+					draw_circle(center, radius, state_ink(UITheme.STAR_READY_BORDER), false, 1.0, true)
 				else:
-					draw_circle(center, radius, UITheme.STAR_SHORT_BORDER, false, 1.0, true)
+					draw_circle(center, radius, state_ink(UITheme.STAR_SHORT_BORDER), false, 1.0, true)
 			"locked", "teaser":
-				draw_circle(center, maxf(1.5, radius * 0.6), Color(UITheme.STAR_LOCKED, 0.24))
+				draw_circle(center, maxf(1.5, radius * 0.6), state_ink(Color(UITheme.STAR_LOCKED, 0.24)))
 			_:
-				draw_circle(center, maxf(1.25, radius * 0.5), Color(UITheme.STAR_BACKGROUND, 0.30))
+				draw_circle(center, maxf(1.25, radius * 0.5), state_ink(Color(UITheme.STAR_BACKGROUND, 0.30)))
 		if hovered and visual_state != "hidden":
-			draw_circle(center, radius * 2.6, Color(UITheme.STAR_READY_RING, 0.28), false, 1.0, true)
+			draw_circle(center, radius * 2.6, state_ink(Color(UITheme.STAR_READY_RING, 0.28)), false, 1.0, true)
 		if hold_ratio > 0.0:
 			# The gauge wraps the star so hand and eye watch the same place.
 			draw_arc(center, radius + UITheme.px(11.0), 0.0, TAU, 48, Color(UITheme.HORIZON_TICK, 0.40), 1.0, true)
@@ -209,7 +225,7 @@ class StarNodeVisual:
 				-PI * 0.5,
 				-PI * 0.5 + TAU * hold_ratio,
 				48,
-				UITheme.STAR_READY_RING,
+				state_ink(UITheme.STAR_READY_RING),
 				UITheme.px(2.6),
 				true
 			)
@@ -238,6 +254,12 @@ var installed_caption: Label
 var progress_track: ColorRect
 var progress_fill: ColorRect
 var close_underline: ColorRect
+var constellation_installation_rule: ColorRect
+var galactic_installation_rule: ColorRect
+var installation_rule: ColorRect
+var installation_tween: Tween
+var installation_node_id: String = ""
+var galactic_inspector_node_id: String = ""
 var north_label: Label
 var subtitle_label: Label
 var close_button: Button
@@ -354,6 +376,7 @@ func bind_settings(controller: Node) -> void:
 
 
 func configure_galactic_state(unlocked: bool, pullback_seen: bool) -> void:
+	_cancel_installation_rule()
 	galactic_unlocked = unlocked
 	galactic_pullback_seen = unlocked and pullback_seen
 	pullback_elapsed = 0.0
@@ -387,6 +410,7 @@ func begin_galactic_pullback() -> void:
 func open_tree() -> void:
 	if overlay.visible or progression == null:
 		return
+	_cancel_installation_rule()
 	_cancel_node_hold()
 	pending_rotation_delta = 0.0
 	overlay.visible = true
@@ -409,6 +433,7 @@ func open_tree() -> void:
 func close_tree() -> void:
 	if not overlay.visible:
 		return
+	_cancel_installation_rule()
 	_flush_pending_rotation()
 	if galactic_mode == GALACTIC_MODE_PULLBACK and not galactic_pullback_seen:
 		galactic_mode = GALACTIC_MODE_NORMAL
@@ -431,6 +456,36 @@ func is_open() -> bool:
 	return overlay != null and overlay.visible
 
 
+func pulse_installation_rule() -> void:
+	# The chart's opaque canvas covers the HUD banner. Animate its existing
+	# inspector divider instead, on the same canvas as the purchased research.
+	_cancel_installation_rule()
+	if not is_open():
+		return
+	if _galactic_panel_active() and galactic_panel.is_visible_in_tree():
+		installation_rule = galactic_installation_rule
+		installation_node_id = galactic_inspector_node_id
+	elif _constellation_panel_active() and tooltip_panel.is_visible_in_tree():
+		installation_rule = constellation_installation_rule
+		installation_node_id = selected_node_id
+	else:
+		# The Galactic Reference Frame has its own pull-back with no inspector.
+		return
+	installation_rule.pivot_offset = Vector2(installation_rule.size.x * 0.5, 0.0)
+	installation_rule.scale = Vector2(0.2, 1.0)
+	installation_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	installation_tween.tween_property(installation_rule, "scale:x", 1.0, 0.28).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+
+func _cancel_installation_rule() -> void:
+	if installation_tween != null and installation_tween.is_valid():
+		installation_tween.kill()
+	if is_instance_valid(installation_rule):
+		installation_rule.scale = Vector2.ONE
+	installation_rule = null
+	installation_node_id = ""
+
+
 func set_intermission_context(next_round: int, next_duration: int) -> void:
 	intermission_active = true
 	intermission_next_round = maxi(1, next_round)
@@ -444,6 +499,7 @@ func clear_intermission_context() -> void:
 
 
 func _refresh_phase_context() -> void:
+	_cancel_installation_rule()
 	if subtitle_label == null or close_button == null:
 		return
 	if catalogue_ending_ready:
@@ -823,6 +879,7 @@ func _frame_frontier() -> void:
 
 
 func _on_content_resized() -> void:
+	_cancel_installation_rule()
 	_layout_chart_header()
 	_layout_galactic_overlays()
 	if is_open() and content_clip.size.x > 1.0 and content_clip.size.y > 1.0:
@@ -1118,6 +1175,8 @@ func _refresh_galactic_overlays() -> void:
 	galactic_watermark.modulate.a = alpha
 	constellation_ledger.visible = constellation_active
 	tooltip_panel.visible = constellation_active and not selected_node_id.is_empty()
+	if installation_rule != null and not installation_rule.is_visible_in_tree():
+		_cancel_installation_rule()
 	systems_readout.visible = false
 	galactic_progress_installed.visible = true
 	galactic_progress_separator.visible = true
@@ -1264,6 +1323,9 @@ func _refresh_constellation_detail_line() -> void:
 func _refresh_galactic_panel(node_id: String) -> void:
 	if galactic_panel == null or progression == null or not node_buttons.has(node_id):
 		return
+	if installation_rule == galactic_installation_rule and installation_node_id != node_id:
+		_cancel_installation_rule()
+	galactic_inspector_node_id = node_id
 	var definition := Balance.upgrade_definition(node_id)
 	var star_record: Dictionary = node_star_records[node_id]
 	var star: Dictionary = star_record.star
@@ -1782,7 +1844,7 @@ func _apply_node_visual(definition: Dictionary, visual_state: String) -> void:
 	var star: Dictionary = star_record.star
 	star_visual.configure(
 		visual_state,
-		Color.WHITE,
+		Balance.BRANCHES[String(definition.branch)].color,
 		float(star.magnitude),
 		String(star.kind),
 		progression.can_purchase(node_id),
@@ -1824,6 +1886,8 @@ func _show_node_tooltip(node_id: String) -> void:
 func _refresh_constellation_inspector(node_id: String) -> void:
 	if progression == null or not node_buttons.has(node_id) or _is_local_group_node(node_id):
 		return
+	if installation_rule == constellation_installation_rule and installation_node_id != node_id:
+		_cancel_installation_rule()
 	var visual_state := String(node_buttons[node_id].get_meta("visual_state"))
 	var content_key := "%s:%s:%d:%d:%s" % [
 		node_id,
@@ -2159,11 +2223,19 @@ func _build_node_tooltip() -> void:
 	tooltip_star = _spec_label("", UITheme.mono(), 13.0, UITheme.TOOLTIP_VALUE)
 	tooltip_star.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(tooltip_star)
-	var divider := ColorRect.new()
-	divider.custom_minimum_size.y = 1.0
-	divider.color = UITheme.ACCENT_DEEP
-	divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	column.add_child(divider)
+	# The VBox owns the slot's geometry, not the animated rule's transform.
+	# Otherwise its deferred sort resets the in-flight scale after a purchase.
+	var divider_slot := Control.new()
+	divider_slot.name = "DividerSlot"
+	divider_slot.custom_minimum_size.y = 1.0
+	divider_slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(divider_slot)
+	constellation_installation_rule = ColorRect.new()
+	constellation_installation_rule.name = "Divider"
+	constellation_installation_rule.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	constellation_installation_rule.color = UITheme.ACCENT_DEEP
+	constellation_installation_rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	divider_slot.add_child(constellation_installation_rule)
 	var fields := GridContainer.new()
 	fields.columns = 2
 	fields.add_theme_constant_override("h_separation", UITheme.size_px(14.0))
@@ -2301,11 +2373,11 @@ func _build_galactic_overlays() -> void:
 	galactic_panel_order = _spec_label("", UITheme.mono(), 13.0, UITheme.TOOLTIP_LABEL)
 	galactic_panel_order.name = "Order"
 	galactic_panel.add_child(galactic_panel_order)
-	var panel_divider := ColorRect.new()
-	panel_divider.name = "Divider"
-	panel_divider.color = UITheme.ACCENT_DEEP
-	panel_divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	galactic_panel.add_child(panel_divider)
+	galactic_installation_rule = ColorRect.new()
+	galactic_installation_rule.name = "Divider"
+	galactic_installation_rule.color = UITheme.ACCENT_DEEP
+	galactic_installation_rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	galactic_panel.add_child(galactic_installation_rule)
 	for field_name in ["Status", "Cost", "Effect"]:
 		var field_label := _spec_label(tr("TREE_GALACTIC_FIELD_%s" % field_name.to_upper()), UITheme.mono(), 11.0, UITheme.TOOLTIP_LABEL, 0.18)
 		field_label.name = "Field%sLabel" % field_name

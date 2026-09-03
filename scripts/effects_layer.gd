@@ -83,7 +83,7 @@ func reset() -> void:
 	set_process(false)
 
 
-func spawn_success(world_position: Vector2, amount: float, color: Color, multiplier: float, strength: float = 0.0, grade: String = "", anchor: Vector2 = Vector2.ZERO, flash_scale: float = 1.0) -> void:
+func spawn_success(world_position: Vector2, amount: float, color: Color, multiplier: float, strength: float = 0.0, grade: String = "", anchor: Vector2 = Vector2.ZERO, flash_scale: float = 1.0, accented: bool = false, direction: Vector2 = Vector2.ZERO) -> void:
 	var power := clampf(strength, 0.0, 1.0)
 	var burst := int(round(lerpf(10.0, 34.0, power)))
 	var available_particle_slots := maxi(0, MAX_PARTICLES - particles.size())
@@ -91,7 +91,10 @@ func spawn_success(world_position: Vector2, amount: float, color: Color, multipl
 	var life_ceiling := lerpf(0.72, 1.05, power)
 	var size_ceiling := lerpf(3.0, 5.2, power)
 	for index in range(mini(burst, available_particle_slots)):
-		var angle := rng.randf_range(0.0, TAU)
+		# Routine completions continue the target's travel instead of making a
+		# radial explosion. Identity/quality, not accumulated power, owns accent.
+		var heading := direction.angle() if not direction.is_zero_approx() else -PI * 0.5
+		var angle := rng.randf_range(0.0, TAU) if accented else heading + rng.randf_range(-0.55, 0.55)
 		var speed := rng.randf_range(38.0, speed_ceiling)
 		var life := rng.randf_range(0.38, life_ceiling)
 		particles.append({
@@ -103,7 +106,7 @@ func spawn_success(world_position: Vector2, amount: float, color: Color, multipl
 			"size": rng.randf_range(1.0, size_ceiling)
 		})
 
-	if power >= 0.22 and rings.size() < MAX_RINGS:
+	if accented and power >= 0.22 and rings.size() < MAX_RINGS:
 		var ring_life := lerpf(0.28, 0.52, power)
 		rings.append({
 			"p": world_position,
@@ -144,7 +147,7 @@ func spawn_success(world_position: Vector2, amount: float, color: Color, multipl
 	})
 
 	var scaled_flash := lerpf(0.07, 0.26, power) * maxf(0.0, flash_scale)
-	if scaled_flash > 0.0:
+	if accented and scaled_flash > 0.0:
 		flash_color = color
 		flash_strength = maxf(flash_strength, scaled_flash)
 	set_process(true)
@@ -174,15 +177,6 @@ func add_kick(from_point: Vector2, amount: float, pixel_scale: float = 1.0) -> v
 	kick_amplitude = minf(scaled_amount, MAX_KICK_OFFSET)
 	kick_time = 0.0
 	set_process(true)
-
-
-func spawn_upgrade_pulse() -> void:
-	# A system coming online is an instrument event, not a meteor.
-	flash_color = UITheme.ACCENT_PIP
-	flash_strength = maxf(flash_strength, 0.07)
-	add_shake(0.18)
-	set_process(true)
-	queue_redraw()
 
 
 func spawn_incoming(start_position: Vector2, velocity: Vector2, color: Color) -> void:

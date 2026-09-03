@@ -68,6 +68,12 @@ Layer 2 프로브 테스트도 통과/실패 게이트다.
 & "C:\Users\user\AppData\Local\Temp\codex-godot-4.7.2\Godot_v4.7.2-stable_win64_console.exe" --headless --path . --script res://tests/probe_layer2_test.gd
 ```
 
+사운드 의미 분리·자동 집계는 `sound_feedback_test.gd`, 효과 등급·실제 성도
+구매 피드백은 `effect_feedback_test.gd`로 검사한다. 같은 명령에서 스크립트
+이름을 바꾸어 실행하며 각각 `SOUND_FEEDBACK_PASS:` / `EFFECT_FEEDBACK_PASS:`를
+확인한다. 청취 자료와 창 모드 효과 캡처의 재현법·검증 한계는
+[docs/probes.md](docs/probes.md)에 정리돼 있다.
+
 계측 프로브 7개와 현행 107노드 전체 경제 게이트는
 [docs/probes.md](docs/probes.md) 참고. 경제 결과 기준선은
 [docs/full-tree-economy-baseline.md](docs/full-tree-economy-baseline.md)에 보존한다.
@@ -119,7 +125,7 @@ Windows `.exe` 내보내기. `build/`는 `.gitignore`에 있으므로 산출물�
 ```
 scenes/          main.tscn (게임 본편), probe_layer2.tscn (2층 실험용 테스트베드)
 scripts/         게임 로직. scripts/probe/ 는 probe_layer2 전용
-tests/           통과/실패 6개 + 계측 7개 + 시각 캡처 2개 + 수동 슬라이스 1개, 총 16개 (모두 SceneTree 스크립트)
+tests/           통과/실패 게이트, 계측 프로브, 시각·청취 자료 생성기, 수동 슬라이스 (SceneTree 스크립트)
 localization/    ui.csv 에서 생성된 en/ko 번역
 docs/            설계와 계측 문서
 build/           내보낸 exe (gitignore)
