@@ -1,132 +1,48 @@
-# Agent Room AM-V3QP checkpoint — 2026-09-03
+# Agent Room AM-V3QP — 1~4단계 완료 기록
 
-## Current decision
+정리 기준: 2026-09-03. 사운드·효과·재현 가능한 캡처·연구 계열색의 네 단계가
+Fable 리뷰를 거쳐 완료됐고, `ef769ee`로 main에 병합됐다.
+이 파일은 완료 결과의 안내이며, 옛 WIP를 재개하거나 새 회의를 시작하라는 지시가 아니다.
 
-Fable approved stage 2 in room message #34 after the code/threshold review and
-seven gates plus eight rendered diagnostics, committed as `c114d42`.
-Live 280 ms animation feel remains a human judgement, not a claim made from
-frozen poses. Codex's stage-3 review rejected six false-pass/isolation/provenance
-gaps, accepted by Fable in #37. The rewritten generator separates isolated
-scenario fixtures from capture validation, hashes the full working tree and
-checks stable nonblank frames with exact state contracts. Two dirty runs at
-`c114d42` generated identical PNG hashes for all eleven scenarios, independently
-visually inspected; eight correctness gates passed. The off-screen Windows
-renderer alternative is agreed in #37, not display-less headless support.
-Fable approved stage 3 in #42, independently checking the clock's only writer,
-headless rejection and repeat PNG hashes. The twelve rejected prototype files
-were removed from the reference root into a separate, marked legacy archive
-(no deletion). Stage 3 is committed as `eb60697`. The clean corpus
-`build/reference/eb60697cc7e4_1788399040269` passed all eleven scenarios with
-`source.revision_dirty: false`; all PNGs match the visually reviewed dirty run.
-The stage-2 diagnostics were refreshed as `stage2_1788399046630`; all eight
-images also match the reviewed version. Stage 4 implements low-mix
-branch colour in actual star/cluster/galaxy draw paths plus tutorial copy,
-without changing state geometry, economy, research IDs or persistence.
-The implementation passes nine gates, including 107 live branch bindings and
-actual draw-callback routing. Baseline `eb60697cc7e4_dirty_1788399380830` and
-post-change `eb60697cc7e4_dirty_1788399607476` isolate all 117 active palette
-cells changing, the entire inactive palette remaining byte-identical, and the
-nine non-chart scene images remaining identical. Two post-change captures are
-byte-identical for all thirteen scenarios. The two real charts were visually
-reviewed for preserved warm hierarchy; compiled EN/KO translations and the
-Windows executable were refreshed. Fable approved stage 4 in #47 after direct
-code and pixel review. Its frontier hues read as three broad groups, not
-thirteen instantly identifiable colours; installed points retain their near-white
-state. All four implementation stages are approved. Generate the final clean
-thirteen-image corpus after this commit and check its passed manifest and hashes.
+## 완료 상태
 
-Follow-ups only, not part of this implementation: satellite/binary-star size,
-live 280 ms installation feel, and whether a human wants stronger branch tint.
-No economic, research-ID or save-format changes were made. No merge to main.
+| 단계 | 결과 | 커밋 | Fable 승인 |
+|---|---|---|---|
+| 1 | 사건별 소리 분리와 160ms 자동 관측 집계 | `13e7ad3` | #15 |
+| 2 | 일상/강조 효과 자격과 실제 정보창의 설치 피드백 | `c114d42` | #34 |
+| 3 | 상태·원시 소스·PNG 해시를 검증하는 결정적 캡처 | `eb60697` | #42 |
+| 4 | 실제 별/성단/은하 그리기의 제한된 계열색과 튜토리얼 문구 | `b4409eb` | #47 |
 
-The earlier checkpoint entries below are history, not the current approval state.
+병합 커밋 `ef769eec3b6ce84b1099d173350a0e203b341f07`의 두 번째 부모가
+`b4409eb4480f6af058ae1849de51b19c81a06552`다.
+표의 승인 번호·당시 검증·중간 보류는
+[원래 체크포인트 전체](history/agent-room-feedback-through-2026-09-03.md)에 보존한다.
+이 정리는 코드·경제·연구 ID·저장 형식을 바꾸지 않는다.
 
-## Earlier shutdown checkpoint — history
+## 검증이 뜻하는 것
 
-User requested commit/push/shutdown and continuation from stage 2 tomorrow.
-This is a checkpoint, not completion of all four stages. Do not merge to main.
+- 당시 단계별 기계적 게이트와 Windows export가 통과했다.
+  4단계 기록의 아홉 게이트는 그 시점의 결과이며 미래 전체 검증 수를 뜻하지 않는다.
+- 3단계의 열한 장면과 4단계의 두 합성 팔레트는 반복 실행에서 동일한 PNG를 냈다.
+  정지 포즈와 합성 밀도는 실제 조작감·생성 밀도·장시간 페이싱 판정이 아니다.
+- 창이 없는 headless 렌더링 성공을 주장하지 않는다. 이 Windows Godot의 캡처는
+  로그인된 데스크톱의 오프스크린 Windows/OpenGL 경로다.
+- Dummy 오디오 WAV는 Godot 소프트웨어 믹서의 청취 자료다. 하드웨어 출력 캡처나
+  지각 품질 합격을 뜻하지 않는다.
+- 이미지·오디오 파일 이름의 `current`나 과거 PASS만으로 최신 자료라 판단하지 않는다.
+  매번 manifest의 통과 상태·소스·실제 파일 해시를 대조한다. 로컬 `build/` 산출물은
+  저장소에 포함되지 않고 재생성이 필요할 수 있다.
 
-## Resumed review — 2026-09-03
+현행 재현 명령과 검증 범위는 [probes.md](probes.md),
+현재 표현 계약은 [design.md](design.md#화면소리피드백)에 있다.
 
-The user has resumed work through stage 4 with a Fable review at each gate.
-HEAD `162c61d` is the pushed stage-2 WIP, not an approved stage-2 commit.
-The working tree fixes the installation pulse being hidden behind the open
-chart: the active constellation/galaxy inspector now owns its existing 1 px
-rule, while the closed-chart path retains the HUD rule. A non-drawing container
-slot prevents deferred VBox layout from resetting the constellation pulse.
-Reference Frame keeps its existing pull-back instead of a hidden pulse.
+## 남겨 둔 후속 검토
 
-Independent reruns of research contract, smoke, Layer 2, sound feedback, effect
-feedback and observation span pass, and the Windows executable was refreshed.
-Smoke's two focus warnings and the probe's exit-leak warning remain pre-existing.
-Room message #27 requests Fable's code review; no stage-2 approval is recorded.
-The remaining visual check uses focused, windowed stage-2 diagnostics (#28),
-not the stage-3 headless/manifest generator. Stages 3 and 4 remain unstarted.
+위성/쌍성의 크기, 0.28초 설치 피드백의 라이브 체감, 더 강한 연구 계열색의
+필요 여부는 후속 검토 사항이다. 현행 계열색은 미세한 구분을 위한 것으로
+열세 계열을 색만 보고 즉시 식별한다는 주장이 아니다.
+경제·목표 시간·추적 품질 지속음은 이번 네 단계 밖의 미결이다.
 
-The additional galactic-slice regression passes. The windowed diagnostic
-`tests/effect_feedback_preview.gd` produced all eight PNG/JSON pairs in
-`build/effect_feedback_review` with run ID `stage2_1788395904457` at 1152x648.
-Codex inspected all eight fresh images: routine/accented effects are visibly
-distinct, and both inspector rules render above the chart. The constellation
-rule occupies 35/157/175 actual pixels at start/mid/end. Frozen poses do not
-establish perceived live pacing. Fable's review remains required before closing
-stage 2, committing it as approved, or starting stage 3.
-
-Room-state diagnosis after the report: Fable's `last_read_id` is still 22
-while the latest room message is 29. The room's active-agent count is a stored
-participant count, not a heartbeat. Thus the current-session review requests
-have not been consumed by Fable; the user needs to resume that agent's room
-listener. Do not waive its review or silently advance to stage 3.
-
-The user subsequently reported reconnecting Fable, and Codex resumed listening
-in room message #31. A separate diagnostic audit found the mutable fixture file
-missing from the capture source-hash list; it is now included. The replacement
-run `stage2_1788397194202` writes all eight PNG/JSON pairs, and all eight PNG
-hashes are identical to the visually reviewed run above. Its sidecars additionally
-identify `tests/effect_feedback_test.gd`. No production behavior changed.
-
-## Stage 1 — approved
-
-- Commit: `13e7ad3` (semantic audio + 160 ms automatic aggregation).
-- Fable approved in room message #15 after reviewing the debug-key duplicate
-  warning fix and the Perseid incoming route. Trailing aggregation is accepted;
-  a human may still request a leading-edge change after listening.
-- Research contract, smoke, Layer 2, and sound-feedback tests pass.
-- Live WASAPI playback reached a nonzero Master peak; its surround-device
-  recorder captured a silent final stereo pair. The separate stereo WAV is
-  explicitly a Dummy-driver software-mixer artifact, not hardware capture.
-- Local audition: `build/audio_feedback_audition.wav` and `.json`; reproducible
-  with `tests/sound_feedback_preview.gd` as documented in `docs/probes.md`.
-
-## Stage 2 — work in progress, NOT approved
-
-Started before the user's interruption. Production edits currently gate rings,
-flashes and manual camera motion on rare identity or high manual quality, keep
-routine particles directional, and replace sky-wide installation effects with
-the existing HUD banner rule's local extension. Existing smoke/span expectations
-were updated. These edits are kept in a separate WIP commit from stage 1.
-
-Checkpoint verification: research contract, smoke, Layer 2, sound-feedback,
-effect-feedback and observation-span gates all passed; Windows export succeeded. Smoke focus warnings
-and Layer 2 exit-leak warnings remain and are not represented as new fixes.
-`build/windows/NightwatchArray.exe` contains the WIP checkpoint;
-`build/windows/NightwatchArray.stage1-13e7ad3.exe` preserves the approved stage-1
-export separately. Both are local ignored build artifacts.
-
-Resume by reading room messages #16 onward, the working diff against `13e7ad3`,
-and the new stage-2 design section. Review the new focused effect regression gate,
-check all event call sites, review the documentation for stale descriptions,
-run the full required tests and span probe, refresh the Windows export, and
-obtain Fable's stage-2 review before starting stage 3. No visual quality verdict
-has been made for stage 2.
-
-## Remaining stages
-
-3. Deterministic capture generator: scenario manifest, IDs, viewport, source
-   revision, state/count checks and fresh PNGs. Investigate true headless render
-   feasibility; report constraints rather than silently passing without images.
-4. Branch-color rendering through actual star/galaxy/cluster draw paths and
-   truthful tutorial copy. Only after capture gate, then Fable review.
-
-Keep research IDs, economy, save format and the observational negative space.
-Every commit uses exactly the required Claude co-author trailer.
+과거 문서의 `Stage 2 — NOT approved`, `Stages 3 and 4 unstarted`,
+`No merge to main` 및 종료/재개 지시는 당시 상태로만 보존한다.
+[이전 기록](history/agent-room-feedback-through-2026-09-03.md)을 현재 승인 상태로 읽지 않는다.

@@ -1,5 +1,7 @@
 extends SceneTree
 
+const Fixtures = preload("res://tests/support/game_fixture.gd")
+
 # Captures the main HUD for design review. Run windowed, not --headless.
 func _initialize() -> void:
 	_run.call_deferred()
@@ -11,8 +13,7 @@ func _run() -> void:
 	var ending_preview := OS.get_environment("NIGHTWATCH_ENDING_PREVIEW") == "1"
 	var scene: PackedScene = load("res://scenes/main.tscn")
 	var game: Node = scene.instantiate()
-	game.startup_slot_prompt_enabled = false
-	game.get_node("Tutorial").auto_start_enabled = false
+	Fixtures.configure_before_ready(game)
 	root.add_child(game)
 	await process_frame
 	await process_frame

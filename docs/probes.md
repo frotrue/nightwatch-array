@@ -2,8 +2,8 @@
 
 Top-level entry points in `tests/` are `SceneTree` scripts run through `--script`,
 not a GUT/gdUnit suite; `tests/support/` contains shared fixtures. There is no
-test runner to install. This directory contains
-pass/fail gates, seven measurement probes, visual/audio review utilities, and
+test framework to install. This directory contains
+eleven fast pass/fail gates, seven measurement probes, visual/audio review utilities, and
 a human-driven survey slice. The full-tree economy gate is documented with
 the pacing probes below because it reports both acceptance and diagnostic data.
 
@@ -25,6 +25,61 @@ says so in its own header. Fun decisions are made by playing a build. See
 The correctness gates are different: they are mechanical checks, not feel
 measurements.
 
+## Routine validation
+
+From the repository root, run all eleven fast gates and refresh the Windows
+executable with the checked-in PowerShell runner:
+
+```powershell
+.\tools\validate.ps1 -GodotPath $godot -Build
+```
+
+Omit `-Build` for just the gates. Add `-FullEconomy` when a change can affect
+progression, rewards, spawning, or target logic. The economy driver inherits
+the seed/strategy environment described below; it does not silently become a
+three-strategy run. Individual `--script` commands remain useful while iterating.
+Default per-process limits are 180 seconds for a fast gate, 900 seconds for the
+economy gate, and 300 seconds for export. Larger seed/strategy matrices may need
+an explicit `-EconomyTimeoutSeconds` override.
+
+The runner requires both exit code zero and the expected PASS line, rejects
+script/parse failures and unexpected engine errors even when a PASS line also appears, and stops on the first
+failed or timed-out process. Each run retains stdout/stderr and `summary.json`
+under a unique `build/validation/` directory. A successful export is verified in
+that run directory before replacing `build/windows/NightwatchArray.exe`.
+On timeout, cleanup targets only that invocation's PID and its child process
+tree: the Windows console launcher starts a separate engine process. It never
+terminates other Godot instances by executable name.
+Warnings and the reference gate's exact intentional missing-Git OS error stay
+visible in the logs; only that gate-specific error line is exempt. Run `tools/validate_test.ps1`
+to check the runner's success, failure, and wrapper/worker timeout handling
+without Godot, including survival of an unrelated same-name process.
+
+| Change | Additional evidence beyond the fast gates |
+|---|---|
+| UI, marker rendering, shared fonts/palette | Desktop-rendered reference corpus; compare against a pre-change corpus |
+| Chart layout/animation performance | Windowed research UI probe; no parallel GPU measurements |
+| Spawn/reward/progression | Full-tree economy gate and the relevant paired-seed probes |
+| Sound | Audition recording and listening; dispatch tests alone do not judge audio |
+| Core interaction | Human-driven slice/playtest; automated timing is not a fun verdict |
+
+## Diagnostic isolation
+
+`tests/support/game_fixture.gd` owns reusable no-persistence settings/slot
+services and the silent sound fixture. `configure_before_ready(game)` replaces
+services before the main scene enters the tree. Turning off the startup slot
+prompt alone is insufficient: the ordinary settings node still reads disk and
+closing the chart can save its rotation. Fixture slots cannot save, load, reset,
+or create a directory; locale/tutorial/rotation setters remain in-memory.
+
+The effect and visual gates, reference scenarios, HUD/chart previews, both
+main-game frame probes, and survey slice use this helper. Preview defaults are
+English with onboarding disabled, independent of the player's saved settings;
+the ending preview still supports an explicit locale. The silent sound fixture
+is opt-in, not applied to listening tests. Stateful save/round tests retain their
+own dedicated storage fixtures. No test imports a whole effect gate merely to
+reuse these services; compatibility aliases remain for older local drivers.
+
 ### Blank-sky survey slice — `survey_slice.gd`
 
 Runs one save-free, human-driven 60-second window with only Sky Sweep added
@@ -39,6 +94,30 @@ feel rather than correctness.
 ```
 
 ## Gates
+
+### UI presentation gate
+
+`ui_presentation_test.gd` checks the shared spec-label/font/spacing contract and
+grouped integer formatting, including HUD/chart compatibility wrappers and the
+extracted marker alias. It does not replace pixel comparison.
+
+```powershell
+& $godot --headless --path . --script res://tests/ui_presentation_test.gd
+```
+
+- Pass: `UI_PRESENTATION_PASS`
+
+### Diagnostic fixture gate
+
+`game_fixture_test.gd` checks pre-ready replacement, deterministic in-memory
+settings, rejected save/load/reset operations, cache-miss isolation, no save
+directory creation, and silent dispatch through inactive pooled audio voices.
+
+```powershell
+& $godot --headless --path . --script res://tests/game_fixture_test.gd
+```
+
+- Pass: `GAME_FIXTURE_PASS`
 
 ### Research visual gate
 
@@ -276,11 +355,11 @@ the historical 21-node / denominator-20 result for before-and-after comparison.
 
 Header: `DURATION_LADDER_PROBE_ENV`. No environment variables.
 
-[duration-ladder-baseline.md](duration-ladder-baseline.md) records the accepted
-baseline. When pacing or spawn logic changes, **compare against that baseline
-first** and report the delta. Replace the document only when a new baseline has
-been approved — silently overwriting it destroys the before/after comparison it
-exists to provide.
+[duration-ladder-baseline.md](duration-ladder-baseline.md) preserves the formerly
+accepted 21-node baseline and is explicitly stale after the 2026-08-26 economy
+change. Use it for historical comparisons, not as a current price or completion
+target. Use the full-tree driver for the live 107-node graph. Keep both old and
+new evidence when comparing a change; do not overwrite historical measurements.
 
 ### Duration pricing — `duration_pricing_probe.gd`
 
@@ -302,8 +381,8 @@ Header: `DURATION_PRICING_ENV`.
 
 This is the current 107-functional-node economy driver. It runs deterministic,
 scripted-engaged watches at `0.05s` steps until all research and all five
-galactic phenomena are complete. One primary cursor handles phenomena, correct
-comparison stars, distant hosts, and uncovered meteors in that order;
+galactic phenomena are complete. One primary cursor handles phenomena, distant
+hosts, and uncovered meteors in that order;
 Multi-target Analysis can affect additional targets only from that same cursor
 point and inside the production tracking radius. Predictive dishes, survey
 summons, purchased Lyra calibration, Taurus combo speed, Gemini echoes, Leo
@@ -463,6 +542,13 @@ prints `FRAME_PROBE_READY` with instructions you are expected to follow: hold
 still during seconds 1–7 and 19–24, move rapidly during seconds 8–18. Run it
 windowed and actually do that, or the input-load half of the sample is empty.
 
+The isolated fixture extends only its synthetic observation window to at least
+the requested measurement duration plus one second. This keeps the final samples
+on the live sky instead of the ordinary 20-second opening round's paused summary.
+The ENV line reports `observation_window_seconds`; old 20–24-second samples
+that included the summary are not a comparable live-sky baseline. Production
+round duration and research are unchanged.
+
 ```powershell
 & $godot --path . --script res://tests/frame_pacing_probe.gd
 ```
@@ -498,18 +584,27 @@ Header: `LAYER2_FRAME_PROBE_ENV`.
 ### Research UI frame pacing — `research_ui_frame_probe.gd`
 
 Measures the research chart in five automated phases: open idle, an
-eight-wheel-event burst on every rendered frame, cursor motion over a tooltip,
+eight-wheel-event burst on every rendered frame, alternating fixed-inspector selections,
 the 3.6-second Galaxy Map pull-back, and the static final galaxy
 frame. It reports frame-time percentiles, the synchronous workload time, and
 the number of chart layout passes. The burst deliberately sends more wheel
 events than a frame should commit; `layout_passes` should stay at roughly one
 per rendered frame rather than eight. The candidate pull-back accepts only a
 windowed `galactic_transition` and `galactic_final` p95 below 16.7 ms. The ENV
-line records 12 rendered galactic research nodes plus 17 explicit muted
-placeholders, 74 faint non-interactive
+line separately records 12 galactic research nodes, 17 non-interactive
+decorative records, 74 faint non-interactive
 galactic background points, and pull-back duration. The final phase also includes
 the miniature 95-node decorative core, radial halos, dashed orbits, code labels,
 completion ledger, and fixed inspector introduced by the galaxy-map redesign.
+
+The probe uses the no-persistence fixture and scripted input with hardware
+events disabled. `inspector_selection` alternates two real node selections;
+the previous node receives an unhover before the next hover, and
+`inspector_refreshes` records the real content updates. The old `tooltip_motion`
+phase called a now-fixed positioning method and no
+longer represented moving UI. These two phase labels are not comparable
+performance samples. The other phase contracts are unchanged. A headless run
+remains a CPU-only comparison, not rendered frame-time evidence.
 
 Run it windowed so the draw-call and primitive counts represent the shipped
 renderer:
@@ -528,26 +623,24 @@ PowerShell has no inline variable prefix:
 $env:NIGHTWATCH_PRICING_SEEDS = "20"; & $godot --headless --path . --script res://tests/duration_pricing_probe.gd
 ```
 
-## 연구 성도 캡처
+## Research chart preview
 
-`tests/research_chart_preview.gd`는 설계 검토용으로 연구 화면을 캡처해
-`build/research_chart_preview.png`로 저장한다. 렌더된 프레임이 필요하므로
-`--headless` 없이 창 모드로 실행한다. 기본 캡처는 목업과 직접 비교할 수 있도록
-앞의 열 계열을 완료하고 큰개자리 세 노드를 설치한 81/107 상태, 데이터
-1,284,000, 5차 관측 80초 문맥을 재현한다.
+`tests/research_chart_preview.gd` writes `build/research_chart_preview.png` for
+design review. Run windowed, not `--headless`. Its synthetic reference state
+contains 81/107 installed research (ten complete constellations and three Canis
+nodes), 1,284,000 Data, and fifth-round/80-second context for mock-up comparison.
+This is a diagnostic pose, not a playable 80-second observation round.
 
 ```powershell
 & "C:\Users\user\AppData\Local\Temp\codex-godot-4.7.2\Godot_v4.7.2-stable_win64_console.exe" --path . --script res://tests/research_chart_preview.gd
 ```
 
-성공하면 `PREVIEW_SAVED:` 한 줄이 나온다. 이것은 통과/실패 게이트가 아니라
-그림을 보고 판단하기 위한 도구다.
+`PREVIEW_SAVED:` means an image was written, not that its design passed review.
 
-`NIGHTWATCH_GALACTIC_RESEARCH_PREVIEW=1`은 최종 은하 축척을
-`build/galactic_research_preview.png`로 저장한다. 여기에
-`NIGHTWATCH_GALACTIC_RESEARCH_PREVIEW_TIME=0.65`처럼 0~3.6초 값을 함께 주면
-해당 전환 프레임을 `build/galactic_research_transition_065.png` 형식으로
-저장해 네 박자의 중간 상태를 확인할 수 있다.
+`NIGHTWATCH_GALACTIC_RESEARCH_PREVIEW=1` selects the final galaxy scale and writes
+`build/galactic_research_preview.png`. Add a time between 0 and 3.6 seconds, such
+as `NIGHTWATCH_GALACTIC_RESEARCH_PREVIEW_TIME=0.65`, to inspect an intermediate
+pull-back pose in `build/galactic_research_transition_065.png`.
 
 ```powershell
 $env:NIGHTWATCH_GALACTIC_RESEARCH_PREVIEW = "1"
@@ -555,17 +648,17 @@ $env:NIGHTWATCH_GALACTIC_RESEARCH_PREVIEW = "1"
 Remove-Item Env:NIGHTWATCH_GALACTIC_RESEARCH_PREVIEW -ErrorAction SilentlyContinue
 ```
 
-## 메인 HUD 캡처
+## Main HUD preview
 
-`tests/hud_preview.gd`는 메인 HUD를 캡처해 `build/hud_preview.png`로 저장한다.
-연구 성도 캡처와 같이 창 모드로 실행한다.
+`tests/hud_preview.gd` writes `build/hud_preview.png`. Like the chart preview,
+it requires a windowed renderer.
 
 ```powershell
 & "C:\Users\user\AppData\Local\Temp\codex-godot-4.7.2\Godot_v4.7.2-stable_win64_console.exe" --path . --script res://tests/hud_preview.gd
 ```
 
-같은 스크립트에 `NIGHTWATCH_SURVEY_PREVIEW=1`을 설정하면 하늘 훑기를 구매하고
-부분 충전된 커서 호를 `build/survey_preview.png`에 저장한다.
+Set `NIGHTWATCH_SURVEY_PREVIEW=1` to install Sky Sweep and capture its partially
+charged cursor arc in `build/survey_preview.png`.
 
 ```powershell
 $env:NIGHTWATCH_SURVEY_PREVIEW = "1"
@@ -573,8 +666,8 @@ $env:NIGHTWATCH_SURVEY_PREVIEW = "1"
 Remove-Item Env:NIGHTWATCH_SURVEY_PREVIEW -ErrorAction SilentlyContinue
 ```
 
-`NIGHTWATCH_GALACTIC_PREVIEW=1`은 전체 연구를 설치하고 은하 지도가 열린 메인
-하늘을 `build/galactic_preview.png`에 저장한다.
+`NIGHTWATCH_GALACTIC_PREVIEW=1` installs all research and captures the galaxy-stage
+observation sky in `build/galactic_preview.png`.
 
 ```powershell
 $env:NIGHTWATCH_GALACTIC_PREVIEW = "1"
@@ -582,9 +675,10 @@ $env:NIGHTWATCH_GALACTIC_PREVIEW = "1"
 Remove-Item Env:NIGHTWATCH_GALACTIC_PREVIEW -ErrorAction SilentlyContinue
 ```
 
-`NIGHTWATCH_TRANSIT_PREVIEW=1`은 같은 완성 빌드에서 첫 확인을 마치고 두 번째
-통과를 절반쯤 진행시켜 기준별 반경, 확인 점, 광도 하락, 행성 점을
-`build/transit_preview.png`에 저장한다.
+`NIGHTWATCH_TRANSIT_PREVIEW=1` uses that completed build with the first host's
+first transit window at 48% and writes `build/transit_preview.png`. It does not
+perform a prior confirmation or a separate harvest; those interactions were
+removed in the approved Local Group simplification.
 
 ### Catalogue-ending capture
 

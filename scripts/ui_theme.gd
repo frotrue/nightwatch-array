@@ -94,6 +94,31 @@ static func tracking(font_size: int, em: float) -> int:
 	return int(round(float(font_size) * em))
 
 
+# Shared label construction keeps HUD and chart typography on the same spec units.
+static func spec_label(text: String, font: Font, spec_size: float, color: Color, em: float = 0.0) -> Label:
+	var label := Label.new()
+	label.text = text
+	var font_size := size_px(spec_size)
+	label.add_theme_font_override("font", font)
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", color)
+	if not is_zero_approx(em):
+		label.add_theme_constant_override("spacing_glyph", tracking(font_size, em))
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return label
+
+
+# Data readouts and research costs share the same locale-independent grouping.
+static func grouped_integer(value: int) -> String:
+	var digits := str(absi(value))
+	var grouped := ""
+	for index in range(digits.length()):
+		if index > 0 and (digits.length() - index) % 3 == 0:
+			grouped += ","
+		grouped += digits[index]
+	return ("-" if value < 0 else "") + grouped
+
+
 static func _font(path: String) -> FontFile:
 	if _cache.has(path):
 		return _cache[path]

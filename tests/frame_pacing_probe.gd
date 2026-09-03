@@ -1,5 +1,6 @@
 extends SceneTree
 
+const Fixtures = preload("res://tests/support/game_fixture.gd")
 const PROBE_SECONDS := 24.0
 const PROBE_SECONDS_ENV := "NIGHTWATCH_PROBE_SECONDS"
 const RENDER_STRESS_OBJECTS := 18
@@ -24,19 +25,25 @@ func _initialize() -> void:
 func _run() -> void:
 	var packed: PackedScene = load("res://scenes/main.tscn")
 	game = packed.instantiate()
-	game.startup_slot_prompt_enabled = false
-	game.get_node("Tutorial").auto_start_enabled = false
+	Fixtures.configure_before_ready(game)
 	root.add_child(game)
 	await process_frame
 	await process_frame
 	probe_seconds = _probe_seconds_from_environment()
 	render_stress_objects = _render_stress_objects_from_environment()
+	# Keep the synthetic sky live for the entire measurement. The ordinary
+	# opening round lasts 20 seconds and would otherwise turn the final samples
+	# of this 24-second probe into a paused summary screen.
+	game.observation_phase_duration = maxf(game.observation_phase_duration, probe_seconds + 1.0)
+	game.observation_phase_remaining = game.observation_phase_duration
+	game.spawner.set_phase_time_remaining(game.observation_phase_remaining)
+	game.hud.set_observation_phase(1, game.observation_phase_remaining, game.observation_phase_duration)
 	_prepare_render_stress()
 	previous_cursor_position = root.get_mouse_position()
 	probe_start_usec = Time.get_ticks_usec()
 	second_start_usec = probe_start_usec
 	last_frame_usec = probe_start_usec
-	print("FRAME_PROBE_ENV engine=%s viewport=%s window=%s refresh_hz=%.2f mode=%d vsync=%d renderer=%s duration_seconds=%.2f stress_objects=%d" % [
+	print("FRAME_PROBE_ENV engine=%s viewport=%s window=%s refresh_hz=%.2f mode=%d vsync=%d renderer=%s duration_seconds=%.2f stress_objects=%d observation_window_seconds=%.2f isolated=true" % [
 		Engine.get_version_info(),
 		root.get_visible_rect().size,
 		DisplayServer.window_get_size(),
@@ -46,6 +53,7 @@ func _run() -> void:
 		RenderingServer.get_current_rendering_method(),
 		probe_seconds,
 		render_stress_objects,
+		game.observation_phase_duration,
 	])
 	print("FRAME_PROBE_READY: keep still during seconds 1-7 and 19-24; move rapidly during seconds 8-18")
 	while float(Time.get_ticks_usec() - probe_start_usec) / 1000000.0 < probe_seconds:

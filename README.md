@@ -5,16 +5,25 @@
 
 프로젝트 이름 `Nightwatch Array`는 가칭이다.
 
+현재는 한 번의 플레이스루에서 성도 하나를 완성하는 구조다. 기존 별자리 연구
+95개와 국부은하군 기능 연구 12개, 총 107개가 있으며 장식 기록 17개는 연구에
+포함하지 않는다. 모든 연구와 정식 은하 현상 5개를 기록한 뒤 완성된 관측망으로
+마지막 회차를 마치면 카탈로그 엔딩으로 이어진다. 2시간 이상은 장기 목표이며,
+현행 완주 시간이나 경제 밸런스가 승인됐다는 뜻은 아니다.
+
 | 문서 | 내용 |
 |---|---|
-| [docs/design.md](docs/design.md) | 장르, 목표 길이, 3층 구조, 설계 원칙 — **코드를 바꾸기 전에 먼저 읽을 것** |
+| [docs/design.md](docs/design.md) | 현행 단일 성도 진행, 관측·엔딩·표현 계약, 미결 사항 — **코드를 바꾸기 전에 먼저 읽을 것** |
 | [docs/systems.md](docs/systems.md) | 씬 트리, 시그널 배선, 스크립트별 책임 |
 | [docs/probes.md](docs/probes.md) | 테스트와 계측 프로브 실행법 |
-| [docs/duration-ladder-baseline.md](docs/duration-ladder-baseline.md) | 관측 시간 사다리의 가격 근거 |
 | [docs/full-tree-economy-baseline.md](docs/full-tree-economy-baseline.md) | 현행 107노드 경제의 3전략 × 3시드 기준선 |
-| [docs/campaign-prototype.md](docs/campaign-prototype.md) | 제거된 캠페인 프로토타입 기록 (일부 낡음) |
-| [docs/legacy-density-be11e42.md](docs/legacy-density-be11e42.md) | 동결된 레거시 계측 (참조용) |
+| [docs/README.md](docs/README.md) | 문서 지도: 현행 참조, 계측 기준선, 완료 작업과 역사 기록 |
 | [AGENTS.md](AGENTS.md) | 에이전트 작업 규약 |
+
+폐기된 3층 계획과 이전 가격·노드 수·승인 근거는
+[설계 원문 아카이브](docs/history/design-through-2026-09-03.md)에 보존한다.
+옛 관측 시간 사다리·41노드 계측·캠페인 문서는 [문서 지도](docs/README.md)에서
+역사 자료로 구분한다. 그 수치를 현재 합격선으로 사용하지 않는다.
 
 ## 개발 환경
 
@@ -41,6 +50,34 @@ C:\Users\user\AppData\Local\Temp\codex-godot-4.7.2\Godot_v4.7.2-stable_win64_con
 ## 테스트
 
 명령은 PowerShell 기준이다. 저장소의 다른 문서도 PowerShell 호출 구문을 쓴다.
+
+### 한 명령으로 검증하고 빌드하기
+
+빠른 게이트 11개를 검사하고, 모두 통과하면 Windows 실행 파일을 갱신한다.
+
+```powershell
+$godot = "C:\Users\user\AppData\Local\Temp\codex-godot-4.7.2\Godot_v4.7.2-stable_win64_console.exe"
+.\tools\validate.ps1 -GodotPath $godot -Build
+```
+
+전체 경제 게이트까지 포함하려면 다음과 같이 실행한다.
+
+```powershell
+.\tools\validate.ps1 -GodotPath $godot -FullEconomy -Build
+```
+
+`-Build`를 빼면 검사만 한다. `-FullEconomy`는 경제 게이트를 하나 추가하며,
+기존 `NIGHTWATCH_ECONOMY_SEEDS` / `NIGHTWATCH_ECONOMY_STRATEGIES` 값이나
+경제 스크립트의 기본값을 사용한다. 세 전략 비교를 자동으로 강제하지 않는다.
+
+각 검사는 종료 코드 0·정확한 PASS 줄·스크립트/파싱 및 예상 밖 엔진 오류 없음이 모두 필요하다.
+첫 실패나 시간 초과에서 중단하며 이후 빌드를 실행하지 않는다.
+로그와 `summary.json`은 매번 새로운 `build/validation/<UTC+GUID>/`에 보존한다.
+최종 실행 파일은 `build/windows/NightwatchArray.exe`다.
+이미지 렌더링·직접 청취·사람의 플레이테스트를 이 명령이 대신하지는 않는다.
+검사별 범위와 추가 시각 검증은 [docs/probes.md](docs/probes.md)를 본다.
+
+### 개별 게이트 직접 실행
 
 연구 계약 테스트는 설치 가능한 107개 연구를 검사한다. 38개는 실행 계약으로
 독립 검증하고, 나머지 69개 ID는 exact-unverified 기준선으로 보존한다. 국부은하군의
@@ -126,8 +163,10 @@ Windows `.exe` 내보내기. `build/`는 `.gitignore`에 있으므로 산출물�
 scenes/          main.tscn (게임 본편), probe_layer2.tscn (2층 실험용 테스트베드)
 scripts/         게임 로직. scripts/probe/ 는 probe_layer2 전용
 tests/           통과/실패 게이트, 계측 프로브, 시각·청취 자료 생성기, 수동 슬라이스 (SceneTree 스크립트)
+tools/           PowerShell 통합 검증·빌드 러너
 localization/    ui.csv 에서 생성된 en/ko 번역
-docs/            설계와 계측 문서
+docs/            현행 설계·시스템·검증, 계측 기준선과 문서 지도
+docs/history/    정리 전 승인·회의 기록 원문 (현행 규칙과 구분)
 build/           내보낸 exe (gitignore)
 ```
 

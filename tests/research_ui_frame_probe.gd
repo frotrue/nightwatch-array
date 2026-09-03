@@ -1,13 +1,15 @@
 extends SceneTree
 
 # Windowed frame-time probe for the research chart. It covers normal idle,
-# coalesced wheel bursts, cursor-following tooltips, the Galactic Reference
+# coalesced wheel bursts, fixed-inspector selection, the Galactic Reference
 # Frame pull-back, and its static final frame. This remains a measurement probe,
 # not a pass/fail gate; the documented candidate acceptance is p95 < 16.7 ms.
 
 const PHASE_SECONDS := 3.0
 const PULLBACK_MEASURE_SECONDS := 3.8
 const WHEEL_EVENTS_PER_FRAME := 8
+const Fixtures = preload("res://tests/support/game_fixture.gd")
+const Balance = preload("res://scripts/game_balance.gd")
 
 var game
 var tree
@@ -15,8 +17,7 @@ var frame_times: Array[float] = []
 var workload_times: Array[float] = []
 var phase_start_usec: int = 0
 var last_frame_usec: int = 0
-var original_rotation: float = 0.0
-var tooltip_motion_step: int = 0
+var selection_step: int = 0
 
 
 func _initialize() -> void:
@@ -26,48 +27,52 @@ func _initialize() -> void:
 func _run() -> void:
 	var packed: PackedScene = load("res://scenes/main.tscn")
 	game = packed.instantiate()
-	game.startup_slot_prompt_enabled = false
-	game.get_node("Tutorial").auto_start_enabled = false
+	Fixtures.configure_before_ready(game)
 	root.add_child(game)
-	DisplayServer.window_move_to_foreground()
+	# This is a scripted workload; live mouse input must not alter the sample.
+	root.gui_disable_input = true
+	_disable_hardware_input(game)
 	await process_frame
 	await process_frame
 	tree = game.upgrade_tree
-	original_rotation = game.settings.get_research_chart_rotation()
 	tree._reset_view(false)
 	tree.open_tree()
 	await process_frame
 	await process_frame
 
-	print("RESEARCH_UI_PROBE_ENV engine=%s renderer=%s viewport=%s window=%s refresh_hz=%.2f vsync=%d wheel_events_per_frame=%d phase_seconds=%.1f galactic_research_nodes=%d decorative_galactic_points=%d pullback_seconds=%.1f target_p95_ms=16.7" % [
+	var galactic_research_nodes := 0
+	for definition in Balance.UPGRADE_NODES:
+		if String(definition.branch) == "local_group":
+			galactic_research_nodes += 1
+	print("RESEARCH_UI_PROBE_ENV engine=%s renderer=%s display=%s viewport=%s window=%s refresh_hz=%.2f vsync=%d wheel_events_per_frame=%d phase_seconds=%.1f galactic_research_nodes=%d galactic_decorations=%d background_points=%d pullback_seconds=%.1f target_p95_ms=16.7 isolated=true input=scripted" % [
 		Engine.get_version_info(),
 		RenderingServer.get_current_rendering_method(),
+		DisplayServer.get_name(),
 		root.get_visible_rect().size,
 		DisplayServer.window_get_size(),
 		DisplayServer.screen_get_refresh_rate(),
 		DisplayServer.window_get_vsync_mode(),
 		WHEEL_EVENTS_PER_FRAME,
 		PHASE_SECONDS,
-		int(tree.ChartData.LOCAL_GROUP_GALAXIES.size()),
+		galactic_research_nodes,
+		int(tree.ChartData.LOCAL_GROUP_GALAXIES.size()) - galactic_research_nodes,
 		int(tree.galactic_background_stars.size()),
 		float(tree.PULLBACK_DURATION),
 	])
 	await _measure_phase("idle", Callable())
 	await _measure_phase("wheel_burst", _inject_wheel_burst)
+	tree._reset_view(false)
 	tree.tooltip_suppressed_until_motion = false
-	tree._on_node_hovered("better_lens")
+	_select_probe_node("better_lens")
 	await process_frame
 	await process_frame
-	await _measure_phase("tooltip_motion", _inject_tooltip_motion)
+	await _measure_phase("inspector_selection", _inject_inspector_selection)
+	tree._on_node_unhovered(tree.hovered_node_id)
 	tree._hide_node_tooltip()
 	game.progression.debug_purchase_all()
 	await _measure_phase("galactic_transition", Callable(), PULLBACK_MEASURE_SECONDS)
 	await _measure_phase("galactic_final", Callable())
 
-	# Wheel input mutates the in-memory setting without writing it until close.
-	# Restore the player's value first so this measurement has no persistent side effect.
-	tree.pending_rotation_delta = 0.0
-	tree.rotation_offset = original_rotation
 	tree.close_tree()
 	game.queue_free()
 	await process_frame
@@ -79,6 +84,7 @@ func _measure_phase(label: String, workload: Callable, duration: float = PHASE_S
 	frame_times.clear()
 	workload_times.clear()
 	var layout_passes_before: int = tree.chart_layout_passes
+	var inspector_refreshes_before: int = tree.tooltip_content_refreshes
 	phase_start_usec = Time.get_ticks_usec()
 	last_frame_usec = phase_start_usec
 	while float(Time.get_ticks_usec() - phase_start_usec) / 1000000.0 < duration:
@@ -93,7 +99,7 @@ func _measure_phase(label: String, workload: Callable, duration: float = PHASE_S
 	# The process-frame signal resumes before node _process callbacks. Commit the
 	# final queued wheel burst here so it is attributed to this phase, not the next.
 	tree._flush_pending_rotation()
-	_print_stats(label, tree.chart_layout_passes - layout_passes_before)
+	_print_stats(label, tree.chart_layout_passes - layout_passes_before, tree.tooltip_content_refreshes - inspector_refreshes_before)
 
 
 func _inject_wheel_burst() -> void:
@@ -104,15 +110,29 @@ func _inject_wheel_burst() -> void:
 		tree._on_tree_viewport_gui_input(wheel)
 
 
-func _inject_tooltip_motion() -> void:
-	# Calling _input() alone would still read the host's stationary mouse. Alternate
-	# concrete overlay-local points so the measured Control actually moves.
-	tooltip_motion_step += 1
-	var direction := -1.0 if tooltip_motion_step % 2 == 0 else 1.0
-	tree._position_node_tooltip(Vector2(576.0 + direction * 96.0, 324.0 + direction * 48.0))
+func _inject_inspector_selection() -> void:
+	# The inspector is fixed now; moving a legacy tooltip position measures no
+	# meaningful UI work. Exercise the real selection/description refresh instead.
+	selection_step += 1
+	_select_probe_node("better_lens" if selection_step % 2 == 0 else "long_exposure")
 
 
-func _print_stats(label: String, layout_passes: int) -> void:
+func _select_probe_node(node_id: String) -> void:
+	# Mirror the old target's exit before the new target's enter, so two markers
+	# cannot remain highlighted during a one-cursor workload.
+	if not tree.hovered_node_id.is_empty():
+		tree._on_node_unhovered(tree.hovered_node_id)
+	tree._on_node_hovered(node_id)
+
+
+func _disable_hardware_input(node: Node) -> void:
+	node.set_process_input(false)
+	node.set_process_unhandled_input(false)
+	for child in node.get_children():
+		_disable_hardware_input(child)
+
+
+func _print_stats(label: String, layout_passes: int, inspector_refreshes: int) -> void:
 	var sorted_times: Array[float] = frame_times.duplicate()
 	sorted_times.sort()
 	var sorted_workload_times: Array[float] = workload_times.duplicate()
@@ -129,7 +149,7 @@ func _print_stats(label: String, layout_passes: int) -> void:
 		workload_total += milliseconds
 		workload_maximum = maxf(workload_maximum, milliseconds)
 	var workload_average := workload_total / maxf(1.0, float(workload_times.size()))
-	print("RESEARCH_UI_PROBE phase=%s avg_ms=%.2f p50=%.2f p95=%.2f p99=%.2f max_ms=%.2f work_avg_ms=%.3f work_p95_ms=%.3f work_max_ms=%.3f frames=%d layout_passes=%d draw_calls=%d primitives=%d" % [
+	print("RESEARCH_UI_PROBE phase=%s avg_ms=%.2f p50=%.2f p95=%.2f p99=%.2f max_ms=%.2f work_avg_ms=%.3f work_p95_ms=%.3f work_max_ms=%.3f frames=%d layout_passes=%d inspector_refreshes=%d draw_calls=%d primitives=%d" % [
 		label,
 		average,
 		_percentile(sorted_times, 0.50),
@@ -141,6 +161,7 @@ func _print_stats(label: String, layout_passes: int) -> void:
 		workload_maximum,
 		frame_times.size(),
 		layout_passes,
+		inspector_refreshes,
 		int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)),
 		int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)),
 	])
