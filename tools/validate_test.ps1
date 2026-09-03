@@ -61,6 +61,7 @@ public static class FakeGodot {
             case "research_visual_test": marker = "RESEARCH_VISUAL_PASS"; break;
             case "ui_presentation_test": marker = "UI_PRESENTATION_PASS"; break;
             case "game_fixture_test": marker = "GAME_FIXTURE_PASS"; break;
+            case "meteor_render_cache_test": marker = "METEOR_RENDER_CACHE_PASS"; break;
             case "full_tree_economy_test": marker = "FULL_TREE_ECONOMY_PASS"; break;
             default: Console.Error.WriteLine("Unknown script: " + script); return 19;
         }
@@ -142,7 +143,7 @@ $sentinel = $null
 try {
     $success = Invoke-RunnerCase 'success'
     Assert-Check ($success.exit_code -eq 0 -and $success.summary.status -eq 'passed') 'Success case failed.'
-    Assert-Check ($success.summary.results.Count -eq 11) 'The default suite must run exactly eleven gates.'
+    Assert-Check ($success.summary.results.Count -eq 12) 'The default suite must run exactly twelve gates.'
     Assert-Check ($success.summary.project_root -eq $projectRoot) 'Runner did not resolve the repository root.'
     foreach ($result in $success.summary.results) {
         Assert-Check ($result.pass_marker_found -and $result.exit_code -eq 0) ('Missing success evidence for ' + $result.name)
@@ -153,8 +154,8 @@ try {
     Assert-Check ((Get-Content -LiteralPath $referenceErrorLog -Raw).Contains('nonexistent-reference-capture-git.exe -C ')) 'Expected native-error fixture was not exercised.'
 
     $economy = Invoke-RunnerCase 'economy' -Economy
-    Assert-Check ($economy.exit_code -eq 0 -and $economy.summary.results.Count -eq 12) 'FullEconomy did not append the economy gate.'
-    Assert-Check ($economy.summary.results[11].name -eq 'full_tree_economy_test') 'Wrong economy gate order.'
+    Assert-Check ($economy.exit_code -eq 0 -and $economy.summary.results.Count -eq 13) 'FullEconomy did not append the economy gate.'
+    Assert-Check ($economy.summary.results[12].name -eq 'full_tree_economy_test') 'Wrong economy gate order.'
     Assert-Check ($economy.path -ne $success.path) 'Separate invocations reused a summary path.'
 
     foreach ($mode in @('no_marker', 'nonzero', 'script_error', 'parse_error', 'native_error', 'git_error_wrong_gate')) {

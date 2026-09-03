@@ -10,6 +10,46 @@ const PULLBACK_MEASURE_SECONDS := 3.8
 const WHEEL_EVENTS_PER_FRAME := 8
 const Fixtures = preload("res://tests/support/game_fixture.gd")
 const Balance = preload("res://scripts/game_balance.gd")
+const SOURCE_FILES := [
+	"scenes/main.tscn", "tests/research_ui_frame_probe.gd", "tests/support/game_fixture.gd",
+	"scripts/upgrade_tree.gd", "scripts/research_star_visual.gd", "scripts/research_chart_data.gd",
+	"scripts/game_balance.gd", "scripts/progression_controller.gd", "scripts/ui_theme.gd",
+	"scripts/game.gd", "scripts/hud.gd",
+]
+
+# The same small timing wrapper is used on both sides of a comparison. It
+# changes no production behavior and separates CPU work from VSync-limited
+# frame intervals. Nested measurements are inclusive, not additive.
+class ProfiledChart:
+
+	extends "res://scripts/upgrade_tree.gd"
+
+	var cpu_usec: Dictionary = {}
+	var cpu_calls: Dictionary = {}
+
+	func _layout_chart() -> void:
+		var started := Time.get_ticks_usec()
+		super._layout_chart()
+		_record_cpu("layout", started)
+
+	func _refresh_constellation_overlays() -> void:
+		var started := Time.get_ticks_usec()
+		super._refresh_constellation_overlays()
+		_record_cpu("ledger", started)
+
+	func _refresh_constellation_inspector(node_id: String) -> void:
+		var started := Time.get_ticks_usec()
+		super._refresh_constellation_inspector(node_id)
+		_record_cpu("inspector", started)
+
+	func _draw_tree() -> void:
+		var started := Time.get_ticks_usec()
+		super._draw_tree()
+		_record_cpu("draw", started)
+
+	func _record_cpu(label: String, started: int) -> void:
+		cpu_usec[label] = int(cpu_usec.get(label, 0)) + Time.get_ticks_usec() - started
+		cpu_calls[label] = int(cpu_calls.get(label, 0)) + 1
 
 var game
 var tree
@@ -25,10 +65,20 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	var source_hashes := _source_hashes()
 	var packed: PackedScene = load("res://scenes/main.tscn")
 	game = packed.instantiate()
 	Fixtures.configure_before_ready(game)
+	var chart_layer: int = game.get_node("UpgradeTree").layer
+	var profiled_chart := ProfiledChart.new()
+	profiled_chart.layer = chart_layer
+	Fixtures.replace_child(game, "UpgradeTree", profiled_chart)
 	root.add_child(game)
+	if game.upgrade_tree.layer != chart_layer or chart_layer <= game.hud.layer:
+		push_error("RESEARCH_UI_PROBE_INVALID: chart replacement changed the scene draw order")
+		game.queue_free()
+		quit(1)
+		return
 	# This is a scripted workload; live mouse input must not alter the sample.
 	root.gui_disable_input = true
 	_disable_hardware_input(game)
@@ -44,7 +94,7 @@ func _run() -> void:
 	for definition in Balance.UPGRADE_NODES:
 		if String(definition.branch) == "local_group":
 			galactic_research_nodes += 1
-	print("RESEARCH_UI_PROBE_ENV engine=%s renderer=%s display=%s viewport=%s window=%s refresh_hz=%.2f vsync=%d wheel_events_per_frame=%d phase_seconds=%.1f galactic_research_nodes=%d galactic_decorations=%d background_points=%d pullback_seconds=%.1f target_p95_ms=16.7 isolated=true input=scripted" % [
+	print("RESEARCH_UI_PROBE_ENV engine=%s renderer=%s display=%s viewport=%s window=%s refresh_hz=%.2f vsync=%d wheel_events_per_frame=%d phase_seconds=%.1f galactic_research_nodes=%d galactic_decorations=%d background_points=%d pullback_seconds=%.1f target_p95_ms=16.7 isolated=true input=scripted cpu_timing=inclusive_subclass chart_layer=%d hud_layer=%d" % [
 		Engine.get_version_info(),
 		RenderingServer.get_current_rendering_method(),
 		DisplayServer.get_name(),
@@ -58,7 +108,10 @@ func _run() -> void:
 		int(tree.ChartData.LOCAL_GROUP_GALAXIES.size()) - galactic_research_nodes,
 		int(tree.galactic_background_stars.size()),
 		float(tree.PULLBACK_DURATION),
+		tree.layer,
+		game.hud.layer,
 	])
+	print("RESEARCH_UI_PROBE_SOURCES " + JSON.stringify(source_hashes))
 	await _measure_phase("idle", Callable())
 	await _measure_phase("wheel_burst", _inject_wheel_burst)
 	tree._reset_view(false)
@@ -76,8 +129,19 @@ func _run() -> void:
 	tree.close_tree()
 	game.queue_free()
 	await process_frame
+	if source_hashes != _source_hashes():
+		push_error("RESEARCH_UI_PROBE_INVALID: measured source changed during the run")
+		quit(1)
+		return
 	print("RESEARCH_UI_PROBE_COMPLETE")
 	quit(0)
+
+
+func _source_hashes() -> Dictionary:
+	var hashes: Dictionary = {}
+	for path in SOURCE_FILES:
+		hashes[path] = FileAccess.get_sha256("res://" + path)
+	return hashes
 
 
 func _measure_phase(label: String, workload: Callable, duration: float = PHASE_SECONDS) -> void:
@@ -85,6 +149,8 @@ func _measure_phase(label: String, workload: Callable, duration: float = PHASE_S
 	workload_times.clear()
 	var layout_passes_before: int = tree.chart_layout_passes
 	var inspector_refreshes_before: int = tree.tooltip_content_refreshes
+	var cpu_usec_before: Dictionary = tree.cpu_usec.duplicate()
+	var cpu_calls_before: Dictionary = tree.cpu_calls.duplicate()
 	phase_start_usec = Time.get_ticks_usec()
 	last_frame_usec = phase_start_usec
 	while float(Time.get_ticks_usec() - phase_start_usec) / 1000000.0 < duration:
@@ -100,6 +166,12 @@ func _measure_phase(label: String, workload: Callable, duration: float = PHASE_S
 	# final queued wheel burst here so it is attributed to this phase, not the next.
 	tree._flush_pending_rotation()
 	_print_stats(label, tree.chart_layout_passes - layout_passes_before, tree.tooltip_content_refreshes - inspector_refreshes_before)
+	for metric in ["layout", "ledger", "inspector", "draw"]:
+		var calls := int(tree.cpu_calls.get(metric, 0)) - int(cpu_calls_before.get(metric, 0))
+		var usec := int(tree.cpu_usec.get(metric, 0)) - int(cpu_usec_before.get(metric, 0))
+		print("RESEARCH_UI_CPU phase=%s metric=%s calls=%d total_ms=%.3f avg_call_ms=%.4f" % [
+			label, metric, calls, float(usec) / 1000.0, float(usec) / 1000.0 / maxi(1, calls),
+		])
 
 
 func _inject_wheel_burst() -> void:
