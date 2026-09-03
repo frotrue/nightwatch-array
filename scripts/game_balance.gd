@@ -877,10 +877,26 @@ const UPGRADE_NODES: Array[Dictionary] = [
 ]
 
 
-static func upgrade_definition(id: String) -> Dictionary:
+static var _upgrade_definitions_by_id: Dictionary = _build_upgrade_definition_index()
+
+
+static func _build_upgrade_definition_index() -> Dictionary:
+	# Definitions are constant, so this index never needs progression/locale/save
+	# invalidation. Keep the ordered array as the source of truth for all consumers
+	# that enumerate research; only ID lookup avoids scanning all 107 definitions.
+	var definitions: Dictionary = {}
 	for definition in UPGRADE_NODES:
-		if String(definition.id) == id:
-			return definition
+		var node_id := String(definition.id)
+		if not definitions.has(node_id):
+			definitions[node_id] = definition
+	definitions.make_read_only()
+	return definitions
+
+
+static func upgrade_definition(id: String) -> Dictionary:
+	if _upgrade_definitions_by_id.has(id):
+		return _upgrade_definitions_by_id[id]
+	# Preserve the old fresh mutable result on a miss; do not share a fallback.
 	return {}
 
 

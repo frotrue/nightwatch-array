@@ -184,7 +184,8 @@ $gates = @(
     @('reference_capture_test', 'REFERENCE_CAPTURE_TEST_PASS'),
     @('research_visual_test', 'RESEARCH_VISUAL_PASS'),
     @('ui_presentation_test', 'UI_PRESENTATION_PASS'),
-    @('game_fixture_test', 'GAME_FIXTURE_PASS')
+    @('game_fixture_test', 'GAME_FIXTURE_PASS'),
+    @('meteor_render_cache_test', 'METEOR_RENDER_CACHE_PASS')
 )
 if ($FullEconomy) { $gates += ,@('full_tree_economy_test', 'FULL_TREE_ECONOMY_PASS') }
 

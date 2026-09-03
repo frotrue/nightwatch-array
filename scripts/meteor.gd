@@ -69,6 +69,8 @@ var trail_core_ribbon := PackedVector2Array()
 var trail_core_ribbon_colors := PackedColorArray()
 var trail_strip_indices := PackedInt32Array()
 var trail_strip_point_count: int = -1
+var trail_station_weights := PackedFloat64Array()
+var trail_weight_point_count: int = -1
 var prediction_draw_points := PackedVector2Array()
 var debris_draw_points := PackedVector2Array()
 var travel_direction := Vector2.ZERO
@@ -540,6 +542,9 @@ func _draw_tapered_trail(visibility: float, tail_scale: float, visual_scale: flo
 		return
 	var widths := _trail_half_widths() * visual_scale
 	var shoulder := _trail_shoulder_widths(visual_scale)
+	_ensure_trail_station_weights(station_count)
+	var turbulence_profile := _trail_turbulence_profile()
+	var turbulence_phase := wobble_phase + age * turbulence_profile.y
 	trail_glow_ribbon.clear()
 	trail_glow_ribbon_colors.clear()
 	trail_core_ribbon.clear()
@@ -551,16 +556,16 @@ func _draw_tapered_trail(visibility: float, tail_scale: float, visual_scale: flo
 	# dark chevron behind the head rather than as light.
 	var core_floor := MIN_RIBBON_HALF_WIDTH * 0.7
 	for index in range(station_count):
-		var t := float(index) / float(maxi(1, station_count - 1))
-		var remaining := maxf(0.0, 1.0 - t)
-		var taper := pow(remaining, 0.78)
-		var flare := pow(remaining, TRAIL_SHOULDER_EXPONENT)
+		var weight_base := index * 5
+		var t := trail_station_weights[weight_base]
+		var taper := trail_station_weights[weight_base + 1]
+		var flare := trail_station_weights[weight_base + 2]
 		var glow_width := widths.x * taper + shoulder.x * flare
 		var core_width := widths.y * taper + shoulder.y * flare
 		var normal := _station_normal(stations, index)
 		var local_point := stations[index]
-		var alpha := pow(remaining, 1.28) * visibility
-		var turbulence := _trail_turbulence(t)
+		var alpha := trail_station_weights[weight_base + 3] * visibility
+		var turbulence := sin(turbulence_phase - t * 8.7) * turbulence_profile.x * trail_station_weights[weight_base + 4]
 		var glow_centre := Color(glow_color, alpha * 0.34)
 		var glow_edge := Color(glow_color, 0.0)
 		var core_centre := Color(primary_color, alpha * 0.86)
@@ -586,6 +591,25 @@ func _draw_tapered_trail(visibility: float, tail_scale: float, visual_scale: flo
 	RenderingServer.canvas_item_add_triangle_array(
 		canvas, indices, trail_core_ribbon, trail_core_ribbon_colors
 	)
+
+
+func _ensure_trail_station_weights(point_count: int) -> void:
+	if trail_weight_point_count == point_count:
+		return
+	# Only count/index-dependent terms are cached. Float64 keeps the original
+	# GDScript arithmetic precision; age, type, geometry and visibility stay live.
+	# Five consecutive values per station: t, taper, shoulder, alpha, turbulence.
+	trail_station_weights.resize(point_count * 5)
+	for index in range(point_count):
+		var t := float(index) / float(maxi(1, point_count - 1))
+		var remaining := maxf(0.0, 1.0 - t)
+		var weight_base := index * 5
+		trail_station_weights[weight_base] = t
+		trail_station_weights[weight_base + 1] = pow(remaining, 0.78)
+		trail_station_weights[weight_base + 2] = pow(remaining, TRAIL_SHOULDER_EXPONENT)
+		trail_station_weights[weight_base + 3] = pow(remaining, 1.28)
+		trail_station_weights[weight_base + 4] = smoothstep(0.0, 0.24, t)
+	trail_weight_point_count = point_count
 
 
 func _ribbon_strip_indices(point_count: int) -> PackedInt32Array:
@@ -656,11 +680,6 @@ func _head_profile() -> PackedFloat32Array:
 			return PackedFloat32Array()
 		_:
 			return PackedFloat32Array([0.82, 0.79, 0.66, 1.12, 1.19, 1.06])
-
-
-func _trail_turbulence(t: float) -> float:
-	var profile := _trail_turbulence_profile()
-	return sin(wobble_phase + age * profile.y - t * 8.7) * profile.x * smoothstep(0.0, 0.24, t)
 
 
 func _trail_turbulence_profile() -> Vector2:
@@ -937,13 +956,14 @@ func _draw_fragment_sparks(radius: float, visibility: float) -> void:
 	var direction := _safe_travel_direction()
 	var normal := Vector2(-direction.y, direction.x)
 	var spark_flicker := 0.18 + 0.82 * pow(maxf(0.0, sin(age * 17.0 + wobble_phase)), 4.0)
+	var envelope := _debris_envelope(radius)
 	debris_draw_points.clear()
 	for index in range(3):
 		var sequence := float(index)
 		var spark_phase := wobble_phase + age * (8.5 + sequence) + sequence * 2.37
 		var center := (
 			-direction * radius * (0.72 + sequence * 0.48)
-			+ normal * _debris_envelope(radius) * sin(spark_phase) * (0.30 - sequence * 0.06)
+			+ normal * envelope * sin(spark_phase) * (0.30 - sequence * 0.06)
 		)
 		var shard_direction := (direction + normal * 0.14 * sin(spark_phase + 0.8)).normalized()
 		var shard_length := radius * (0.16 + sequence * 0.035)

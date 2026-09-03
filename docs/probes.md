@@ -3,7 +3,7 @@
 Top-level entry points in `tests/` are `SceneTree` scripts run through `--script`,
 not a GUT/gdUnit suite; `tests/support/` contains shared fixtures. There is no
 test framework to install. This directory contains
-eleven fast pass/fail gates, seven measurement probes, visual/audio review utilities, and
+twelve fast pass/fail gates, eight measurement probes, visual/audio review utilities, and
 a human-driven survey slice. The full-tree economy gate is documented with
 the pacing probes below because it reports both acceptance and diagnostic data.
 
@@ -16,7 +16,7 @@ $godot = "C:\Users\user\AppData\Local\Temp\codex-godot-4.7.2\Godot_v4.7.2-stable
 
 See the [README](../README.md) for why that path is fragile.
 
-**What the measurement probes measure.** The seven probes measure *productivity
+**What the measurement probes measure.** The eight probes measure *productivity
 and performance* — density, price, pacing, frame time. None of them measures
 whether the game is fun, and none of them can. `tests/probe_layer2_test.gd`
 says so in its own header. Fun decisions are made by playing a build. See
@@ -27,7 +27,7 @@ measurements.
 
 ## Routine validation
 
-From the repository root, run all eleven fast gates and refresh the Windows
+From the repository root, run all twelve fast gates and refresh the Windows
 executable with the checked-in PowerShell runner:
 
 ```powershell
@@ -72,7 +72,7 @@ prompt alone is insufficient: the ordinary settings node still reads disk and
 closing the chart can save its rotation. Fixture slots cannot save, load, reset,
 or create a directory; locale/tutorial/rotation setters remain in-memory.
 
-The effect and visual gates, reference scenarios, HUD/chart previews, both
+The effect and visual gates, reference scenarios, HUD/chart previews, all three
 main-game frame probes, and survey slice use this helper. Preview defaults are
 English with onboarding disabled, independent of the player's saved settings;
 the ending preview still supports an explicit locale. The silent sound fixture
@@ -118,6 +118,25 @@ directory creation, and silent dispatch through inactive pooled audio voices.
 ```
 
 - Pass: `GAME_FIXTURE_PASS`
+
+### Meteor render arithmetic gate
+
+`meteor_render_cache_test.gd` compares production ribbon coordinates, colors,
+triangle indices and fragment-spark coordinates bit for bit with independent
+arithmetic frozen from `347dcf0`. It exercises all eleven types, growing and
+shrinking trails, curved/stationary paths, both sides of the head-sample skip
+threshold, split/fade/linger poses, and direct type/age/lifetime mutations. The
+same meteor instance is reused so stale caches are observable. Native drawing
+runs inside its actual `_draw` callback, whose completion is required for PASS.
+
+```powershell
+& $godot --headless --path . --script res://tests/meteor_render_cache_test.gd
+```
+
+- Pass: `METEOR_RENDER_CACHE_PASS`
+
+This is an arithmetic/call-path gate, not a GPU performance or pixel-quality
+verdict. Keep the desktop reference corpus comparison for visual changes.
 
 ### Research visual gate
 
@@ -240,6 +259,11 @@ The other 69 functional ids are held as an exact
 unverified baseline that may shrink but cannot silently grow or exchange ids.
 The 17 decorative galaxies are separately required to remain chart records
 rather than upgrade definitions.
+
+Every ID lookup must preserve all definition fields and their read-only
+contract. Unknown and empty IDs remain misses; each miss returns a fresh mutable
+empty dictionary, and ID matching remains case-sensitive. These checks protect
+the immutable ID index without changing the ordered research data or saves.
 
 For each executable contract, the test compares independent expected behavior
 against a public runtime accessor. It also checks English and Korean player
@@ -565,6 +589,48 @@ Use headless for regression comparison between two headless runs only.
 
 Header: `FRAME_PROBE_ENV`.
 
+### Synthetic observation A/B workload — `observation_performance_probe.gd`
+
+Runs still, unpressed cursor sweep, and held tracking at exactly 18 or 32 live
+meteors, including one Major at 32. Each rendered frame advances one fixed
+1/60-second simulation step: 60 warm-up frames, then 360 measured frames per
+phase by default. Six simulated seconds are not six seconds of wall time.
+The replacement cursor sampler preserves the scene's `z_index = 50`; hardware
+input is disabled and no OS cursor movement is injected.
+
+Bounded ages, disabled splitting and immediate in-place replenishment keep the
+workload constant, intentionally excluding normal spawning, expiry and
+completion linger. The isolated `multi_target_analysis` feature exercises
+additional-target scanning but is not a legal completed research build. Real
+observation, meteor, completion feedback, HUD and twinkle code still execute.
+Automation, Sky Sweep summons, distant targets, phenomena and audio playback
+are excluded. In particular, `sweep` means moving hover selection, not the
+game's held-button Sky Sweep mechanic or a human input-feel test.
+
+```powershell
+& $godot --display-driver windows --rendering-driver opengl3 `
+    --rendering-method gl_compatibility --audio-driver Dummy `
+    --position '-4000,-4000' --resolution 1152x648 `
+    --path . --script res://tests/observation_performance_probe.gd
+```
+
+`NIGHTWATCH_OBSERVATION_PERF_FRAMES` accepts 180..1800 measured frames per phase;
+compare identical frame counts and environments. `OBSERVATION_PERF_ENV` records
+the workload, source hashes and limitations; six `OBSERVATION_PERF_RESULT` JSON
+rows report frame percentiles, synchronous work, render monitors and actual
+counts. `OBSERVATION_PERF_PASS` validates workload integrity, not a speed target:
+source hashes must stay unchanged, every declared meteor must remain live with
+its head inside the viewport and more than one trail sample, sweep must move
+and find targets, and hold must track, complete and
+land packets. A 180-second watchdog bounds the run.
+
+Windowed OpenGL provides rendering evidence. `--headless` is explicitly
+CPU-only and useful for mechanical validation. `sync_work_ms` excludes draw
+submission and probe bookkeeping; wall-frame intervals include bookkeeping.
+`TIME_PROCESS` is a coarse end-of-phase monitor, not per-frame timings. The
+production hover ring uses real time, so its pulse phase is not a deterministic
+pixel oracle. Use the reference capture tool for fixed-pose pixel comparisons.
+
 ### Layer 2 frame pacing — `probe_frame_pacing_probe.gd`
 
 Same measurement for `scenes/probe_layer2.tscn`, with the same windowed-versus-
@@ -605,6 +671,15 @@ phase called a now-fixed positioning method and no
 longer represented moving UI. These two phase labels are not comparable
 performance samples. The other phase contracts are unchanged. A headless run
 remains a CPU-only comparison, not rendered frame-time evidence.
+
+The profiling subclass preserves the scene's chart layer (100, above HUD 80)
+and reports `RESEARCH_UI_CPU` totals/calls/average-call milliseconds for layout,
+ledger, inspector and `_draw_tree()`. These timings are inclusive and overlap;
+do not add them. Draw timing excludes child star-marker `_draw()` calls and GPU
+work. Compare average-call time rather than totals when frame counts differ.
+The last deferred draw can fall outside its input phase, so draw calls need not
+equal layout passes. `RESEARCH_UI_PROBE_SOURCES` records the relevant hashes;
+source changes during a run invalidate it.
 
 Run it windowed so the draw-call and primitive counts represent the shipped
 renderer:

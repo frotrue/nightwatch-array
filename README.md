@@ -53,7 +53,7 @@ C:\Users\user\AppData\Local\Temp\codex-godot-4.7.2\Godot_v4.7.2-stable_win64_con
 
 ### 한 명령으로 검증하고 빌드하기
 
-빠른 게이트 11개를 검사하고, 모두 통과하면 Windows 실행 파일을 갱신한다.
+빠른 게이트 12개를 검사하고, 모두 통과하면 Windows 실행 파일을 갱신한다.
 
 ```powershell
 $godot = "C:\Users\user\AppData\Local\Temp\codex-godot-4.7.2\Godot_v4.7.2-stable_win64_console.exe"
@@ -111,7 +111,7 @@ Layer 2 프로브 테스트도 통과/실패 게이트다.
 확인한다. 청취 자료와 창 모드 효과 캡처의 재현법·검증 한계는
 [docs/probes.md](docs/probes.md)에 정리돼 있다.
 
-계측 프로브 7개와 현행 107노드 전체 경제 게이트는
+계측 프로브 8개와 현행 107노드 전체 경제 게이트는
 [docs/probes.md](docs/probes.md) 참고. 경제 결과 기준선은
 [docs/full-tree-economy-baseline.md](docs/full-tree-economy-baseline.md)에 보존한다.
 

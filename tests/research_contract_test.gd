@@ -135,6 +135,9 @@ func _run() -> void:
 		_check(not node_id.is_empty(), "every research definition has an id")
 		_check(not definitions_by_id.has(node_id), "research id is unique: " + node_id)
 		definitions_by_id[node_id] = definition
+		var looked_up := Balance.upgrade_definition(node_id)
+		_check(looked_up == definition, node_id + " lookup preserves every definition field")
+		_check(looked_up.is_read_only(), node_id + " lookup preserves the read-only definition")
 		_check(not definition.has("effect_parameters"), node_id + " does not use the retired ambiguous effect_parameters field")
 
 		var runtime_parameters: Dictionary = definition.get("runtime_parameters", {})
@@ -175,6 +178,7 @@ func _run() -> void:
 			_:
 				_check(false, node_id + " uses an unknown implementation_connection: " + connection)
 
+	_verify_definition_lookup_misses()
 	_verify_exact_string_set(actual_unverified_ids, EXPECTED_UNVERIFIED_IDS, "unverified contract id baseline")
 	_verify_exact_string_set(runtime_keys.keys(), EXPECTED_RUNTIME_PARAMETER_KEYS, "runtime parameter key registry")
 	_verify_exact_string_set(dynamic_connection_ids, EXPECTED_DYNAMIC_CONNECTION_IDS, "dynamic implementation declarations")
@@ -230,6 +234,19 @@ func _run() -> void:
 	else:
 		push_error("RESEARCH_CONTRACT_FAIL: %d failure(s)" % failures.size())
 		quit(1)
+
+
+func _verify_definition_lookup_misses() -> void:
+	# Misses are fresh mutable dictionaries, not shared state that a caller can
+	# accidentally populate for the next lookup. IDs remain case-sensitive.
+	var missing := Balance.upgrade_definition("__missing_research__")
+	_check(missing.is_empty(), "unknown research returns an empty definition")
+	_check(not missing.is_read_only(), "unknown research keeps its mutable empty result")
+	missing["probe_only"] = true
+	_check(Balance.upgrade_definition("__missing_research__").is_empty(), "unknown research results are not shared")
+	_check(Balance.upgrade_definition("").is_empty(), "empty research id does not resolve")
+	for definition in Balance.UPGRADE_NODES:
+		_check(Balance.upgrade_definition(String(definition.id).to_upper()).is_empty(), "research id lookup is case-sensitive: " + String(definition.id))
 
 
 func _verify_contract_behavior(progression, definition: Dictionary) -> void:

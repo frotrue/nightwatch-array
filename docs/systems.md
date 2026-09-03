@@ -59,7 +59,7 @@ content.
 | `game.gd` | Round lifecycle, catalogue-ending eligibility and final-watch routing, save/load orchestration, economy-independent feedback dispatch (kick/shake/hitstop), debug keys. The only node that knows about all the others. |
 | `observation_view.gd` | The fixed atmospheric playfield, laterally expanding meteor-activity rectangle, dynamic camera-visible world rectangle, screen/world point conversion, interaction-length conversion, partial meteor visual scaling, and the Camera2D feedback offset. Four Local Group chapter milestones expand its span from 1.0 to the 1.4774554 ceiling. |
 | `progression_controller.gd` | Data balance, purchased nodes, discovery gates, transient Taurus manual combo, persistent Leo storm charge, and systemic derived upgrade effects. Single source of truth: consumers ask it, not `game_balance.gd`. |
-| `game_balance.gd` | Static data only: 107 installable research definitions, four simple Local Group observation profiles, the meteor/long-watch-target spec table, and the final galactic observation-span ceiling. `RefCounted`, no state. |
+| `game_balance.gd` | Static data: 107 installable research definitions, their immutable ID index, four simple Local Group observation profiles, the meteor/long-watch-target spec table, and the final galactic observation-span ceiling. `RefCounted`, no mutable progression state. |
 | `meteor_spawner.gd` | Spawn cadence, type rolls (including same-round satellites, variable stars, comets, binary stars, and distant galaxies), delayed/forecast Gemini observation echoes, paced Leo meteor-storm queues, sky-wide burnout endpoint planning, forecast contact announcements, fragment spawning, survey-requested custom-start spawns, shower and round-guarded Canis Major spawns, support-lane assignment. |
 | `meteor.gd` | One object's burn-progress motion, optional fixed-endpoint quadratic lens curve, explicit in-zone lensed state, trail and terminal fade, observation progress, quality grading, split behaviour, and passive spectral calibration result. |
 | `galactic_phenomena_controller.gd` | Persistent supernova and black-hole target lifecycle, semantic five-record completion queries, active-observation-time phase advancement, save/load, lens-zone rendering, and lensed-meteor curve assignment. |
@@ -399,6 +399,18 @@ lost on release; `sustained_sweep` preserves it only inside the current round.
 The charge/cooldown arc stays red and cursor-local; neutral white still belongs
 only to live meteor tracking.
 
+### Meteor rendering cache
+
+Each meteor keeps Float64 ribbon weights for its current station count: the
+normalized index, taper, shoulder, opacity falloff and turbulence envelope.
+Only a count change rebuilds these values. Position/normal, type profile, age
+phase, burn visibility and width are still evaluated live; direct age/lifetime
+changes do not require invalidation or a process tick. Fragment sparks share
+one same-draw debris-envelope calculation. The two triangle ribbons, all
+vertices/colors, additive material, object caps and gameplay getters retain
+their previous behavior. `meteor_render_cache_test.gd` compares the packed
+geometry against the pre-optimization arithmetic.
+
 ## Purchase flow
 
 `upgrade_tree.gd` → `progression.request_purchase(node_id)` validates state and
@@ -506,6 +518,14 @@ same-round long-watch targets are long-dwell catalog work, so neither suppresses
 regular arrival stream. Atmospheric objects created by events, echoes, storms,
 and fragments do count once live; every source still shares the separate global
 `MAX_TOTAL_METEORS = 32` cap.
+
+`game_balance.gd::upgrade_definition()` uses a read-only ID index built once
+from the constant `UPGRADE_NODES` array. Ordered enumeration still uses that
+array, and no research fields are copied into a separate editable source. The
+index caches definitions only, never purchased/revealed/affordable state, so
+progression resets, save loads and locale changes need no invalidation. Unknown
+IDs keep the previous fresh mutable empty result. Meteor specs remain fresh
+dictionaries because their callers customize them.
 
 Research metadata has three deliberately separate layers in `game_balance.gd`:
 
