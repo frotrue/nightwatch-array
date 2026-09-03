@@ -15,10 +15,33 @@ renderer alternative is agreed in #37, not display-less headless support.
 Fable approved stage 3 in #42, independently checking the clock's only writer,
 headless rejection and repeat PNG hashes. The twelve rejected prototype files
 were removed from the reference root into a separate, marked legacy archive
-(no deletion). Commit this gate, then generate and verify a clean-revision
-corpus before stage 4. Stage 4 has not started.
-The earlier checkpoint entries below are history,
-not the current approval state.
+(no deletion). Stage 3 is committed as `eb60697`. The clean corpus
+`build/reference/eb60697cc7e4_1788399040269` passed all eleven scenarios with
+`source.revision_dirty: false`; all PNGs match the visually reviewed dirty run.
+The stage-2 diagnostics were refreshed as `stage2_1788399046630`; all eight
+images also match the reviewed version. Stage 4 implements low-mix
+branch colour in actual star/cluster/galaxy draw paths plus tutorial copy,
+without changing state geometry, economy, research IDs or persistence.
+The implementation passes nine gates, including 107 live branch bindings and
+actual draw-callback routing. Baseline `eb60697cc7e4_dirty_1788399380830` and
+post-change `eb60697cc7e4_dirty_1788399607476` isolate all 117 active palette
+cells changing, the entire inactive palette remaining byte-identical, and the
+nine non-chart scene images remaining identical. Two post-change captures are
+byte-identical for all thirteen scenarios. The two real charts were visually
+reviewed for preserved warm hierarchy; compiled EN/KO translations and the
+Windows executable were refreshed. Fable approved stage 4 in #47 after direct
+code and pixel review. Its frontier hues read as three broad groups, not
+thirteen instantly identifiable colours; installed points retain their near-white
+state. All four implementation stages are approved. Generate the final clean
+thirteen-image corpus after this commit and check its passed manifest and hashes.
+
+Follow-ups only, not part of this implementation: satellite/binary-star size,
+live 280 ms installation feel, and whether a human wants stronger branch tint.
+No economic, research-ID or save-format changes were made. No merge to main.
+
+The earlier checkpoint entries below are history, not the current approval state.
+
+## Earlier shutdown checkpoint — history
 
 User requested commit/push/shutdown and continuation from stage 2 tomorrow.
 This is a checkpoint, not completion of all four stages. Do not merge to main.

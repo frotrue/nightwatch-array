@@ -85,6 +85,9 @@ class StarNodeVisual:
 	extends Control
 	const PURCHASED_GLOW_SCALE := 2.35
 	const PURCHASED_ENDPOINT_GLOW_SCALE := 2.75
+	const BRANCH_MIX_INSTALLED := 0.06
+	const BRANCH_MIX_READY := 0.28
+	const BRANCH_MIX_SHORT := 0.12
 
 	var hold_ratio: float = 0.0
 	var branch_color := UITheme.STAR_LOCKED
@@ -133,6 +136,19 @@ class StarNodeVisual:
 		return PURCHASED_ENDPOINT_GLOW_SCALE if branch_endpoint else PURCHASED_GLOW_SCALE
 
 
+	func state_ink(base: Color) -> Color:
+		# Hue adds branch identity; the original warm ink, alpha and geometry
+		# still carry state. Locked/hidden research must not leak branch hue.
+		var weight := 0.0
+		if visual_state == "purchased":
+			weight = BRANCH_MIX_INSTALLED
+		elif visual_state == "available":
+			weight = BRANCH_MIX_READY if affordable else BRANCH_MIX_SHORT
+		if weight == 0.0:
+			return base
+		return base.lerp(Color(branch_color, base.a), weight)
+
+
 	func _draw_cluster_marker(center: Vector2, radius: float) -> void:
 		# A small asymmetric point group identifies a real cluster without
 		# borrowing the circular state language used by research nodes.
@@ -141,7 +157,7 @@ class StarNodeVisual:
 			draw_circle(
 				center + CLUSTER_MARKER_OFFSETS[index] * radius * 0.72,
 				point_radius,
-				Color(UITheme.STAR_BACKGROUND, 0.30)
+				state_ink(Color(UITheme.STAR_BACKGROUND, 0.30))
 			)
 
 
@@ -154,18 +170,18 @@ class StarNodeVisual:
 		draw_set_transform(center, galaxy_rotation)
 		match visual_state:
 			"purchased":
-				draw_ellipse(Vector2.ZERO, major * 2.5, major * 1.5, Color(UITheme.STAR_INSTALLED_GLOW, 0.20 if hovered else 0.075))
-				draw_ellipse(Vector2.ZERO, major, minor, UITheme.STAR_INSTALLED if hovered else Color(UITheme.STAR_INSTALLED_GLOW, 0.86))
+				draw_ellipse(Vector2.ZERO, major * 2.5, major * 1.5, state_ink(Color(UITheme.STAR_INSTALLED_GLOW, 0.20 if hovered else 0.075)))
+				draw_ellipse(Vector2.ZERO, major, minor, state_ink(UITheme.STAR_INSTALLED if hovered else Color(UITheme.STAR_INSTALLED_GLOW, 0.86)))
 			"available":
 				var pulse := 0.16 + (0.06 * sin(pulse_phase) if affordable else 0.0)
-				draw_ellipse(Vector2.ZERO, major * 2.5, major * 1.5, Color(UITheme.STAR_READY_RING, pulse))
-				draw_ellipse(Vector2.ZERO, major, minor, UITheme.STAR_READY_FILL if affordable else Color(UITheme.STAR_SHORT_BORDER, 0.74))
+				draw_ellipse(Vector2.ZERO, major * 2.5, major * 1.5, state_ink(Color(UITheme.STAR_READY_RING, pulse)))
+				draw_ellipse(Vector2.ZERO, major, minor, state_ink(UITheme.STAR_READY_FILL if affordable else Color(UITheme.STAR_SHORT_BORDER, 0.74)))
 			"locked", "teaser":
-				draw_ellipse(Vector2.ZERO, major, minor, Color(UITheme.STAR_LOCKED, 0.30))
+				draw_ellipse(Vector2.ZERO, major, minor, state_ink(Color(UITheme.STAR_LOCKED, 0.30)))
 			_:
-				draw_ellipse(Vector2.ZERO, major, minor, Color(UITheme.STAR_BACKGROUND, 0.26))
+				draw_ellipse(Vector2.ZERO, major, minor, state_ink(Color(UITheme.STAR_BACKGROUND, 0.26)))
 		if hold_ratio > 0.0:
-			draw_ellipse_arc(Vector2.ZERO, major * 1.34, minor * 2.4, -PI * 0.5, -PI * 0.5 + TAU * hold_ratio, 42, UITheme.STAR_READY_RING, UITheme.px(2.0), true)
+			draw_ellipse_arc(Vector2.ZERO, major * 1.34, minor * 2.4, -PI * 0.5, -PI * 0.5 + TAU * hold_ratio, 42, state_ink(UITheme.STAR_READY_RING), UITheme.px(2.0), true)
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
@@ -185,21 +201,21 @@ class StarNodeVisual:
 			_draw_cluster_marker(center, radius)
 		match visual_state:
 			"purchased":
-				draw_circle(center, radius * purchased_glow_scale(), Color(UITheme.STAR_INSTALLED_GLOW, 0.22 if hovered else 0.13))
-				draw_circle(center, radius, UITheme.STAR_INSTALLED)
+				draw_circle(center, radius * purchased_glow_scale(), state_ink(Color(UITheme.STAR_INSTALLED_GLOW, 0.22 if hovered else 0.13)))
+				draw_circle(center, radius, state_ink(UITheme.STAR_INSTALLED))
 			"available":
 				if affordable:
-					draw_circle(center, radius * 5.2 * pulse, Color(UITheme.STAR_READY_RING, 0.50), false, 1.0, true)
-					draw_circle(center, radius, UITheme.STAR_READY_FILL)
-					draw_circle(center, radius, UITheme.STAR_READY_BORDER, false, 1.0, true)
+					draw_circle(center, radius * 5.2 * pulse, state_ink(Color(UITheme.STAR_READY_RING, 0.50)), false, 1.0, true)
+					draw_circle(center, radius, state_ink(UITheme.STAR_READY_FILL))
+					draw_circle(center, radius, state_ink(UITheme.STAR_READY_BORDER), false, 1.0, true)
 				else:
-					draw_circle(center, radius, UITheme.STAR_SHORT_BORDER, false, 1.0, true)
+					draw_circle(center, radius, state_ink(UITheme.STAR_SHORT_BORDER), false, 1.0, true)
 			"locked", "teaser":
-				draw_circle(center, maxf(1.5, radius * 0.6), Color(UITheme.STAR_LOCKED, 0.24))
+				draw_circle(center, maxf(1.5, radius * 0.6), state_ink(Color(UITheme.STAR_LOCKED, 0.24)))
 			_:
-				draw_circle(center, maxf(1.25, radius * 0.5), Color(UITheme.STAR_BACKGROUND, 0.30))
+				draw_circle(center, maxf(1.25, radius * 0.5), state_ink(Color(UITheme.STAR_BACKGROUND, 0.30)))
 		if hovered and visual_state != "hidden":
-			draw_circle(center, radius * 2.6, Color(UITheme.STAR_READY_RING, 0.28), false, 1.0, true)
+			draw_circle(center, radius * 2.6, state_ink(Color(UITheme.STAR_READY_RING, 0.28)), false, 1.0, true)
 		if hold_ratio > 0.0:
 			# The gauge wraps the star so hand and eye watch the same place.
 			draw_arc(center, radius + UITheme.px(11.0), 0.0, TAU, 48, Color(UITheme.HORIZON_TICK, 0.40), 1.0, true)
@@ -209,7 +225,7 @@ class StarNodeVisual:
 				-PI * 0.5,
 				-PI * 0.5 + TAU * hold_ratio,
 				48,
-				UITheme.STAR_READY_RING,
+				state_ink(UITheme.STAR_READY_RING),
 				UITheme.px(2.6),
 				true
 			)
@@ -1828,7 +1844,7 @@ func _apply_node_visual(definition: Dictionary, visual_state: String) -> void:
 	var star: Dictionary = star_record.star
 	star_visual.configure(
 		visual_state,
-		Color.WHITE,
+		Balance.BRANCHES[String(definition.branch)].color,
 		float(star.magnitude),
 		String(star.kind),
 		progression.can_purchase(node_id),

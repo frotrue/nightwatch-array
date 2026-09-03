@@ -40,6 +40,25 @@ feel rather than correctness.
 
 ## Gates
 
+### Research visual gate
+
+`research_visual_test.gd` checks every live branch binding through the chart's
+production refresh route, all thirteen branch/state colour combinations,
+unchanged alpha and marker radii, and luminance ordering across branches.
+It also records actual `CanvasItem._draw` calls for star, cluster and galaxy
+markers, including hover/hold foreground ink. This detects a helper that exists
+but is not called by the renderer. Tutorial checks distinguish the obsolete
+three-branch claim from the valid three-manual-save-slot statement in both
+languages. Save/settings services are replaced before startup.
+
+```powershell
+& $godot --headless --path . --script res://tests/research_visual_test.gd
+```
+
+Passing prints `RESEARCH_VISUAL_PASS`. Mechanical RGB separation is not a claim
+that a player can name all thirteen branches from hue alone. Use the reference
+chart and synthetic palette plates for the visual hierarchy review.
+
 ### Sound feedback gate
 
 `sound_feedback_test.gd` records production dispatch without playing it. It checks
@@ -590,7 +609,8 @@ Remove-Item Env:NIGHTWATCH_ENDING_PREVIEW_STEP -ErrorAction SilentlyContinue
 
 ## Reference capture gate (stage 3)
 
-`tests/capture_reference.gd` regenerates eleven visual references in one run.
+`tests/capture_reference.gd` regenerates thirteen visual references in one run:
+eleven scene states from stage 3 and two diagnostic palette plates from stage 4.
 Each run gets a new `build/reference/<revision12>[_dirty]_<timestamp>/` directory;
 existing captures are never overwritten. Its manifest and every PNG's JSON
 sidecar identify the full Git HEAD, dirty flag, SHA-256 of every tracked and
@@ -644,6 +664,15 @@ chart installs 81 nodes through real purchase requests; the galactic scenarios
 install all 107. The transit is explicitly at 48% of its first window and the
 ending reveals all five recorded phenomena.
 
+`palette_active` and `palette_inactive` are explicitly synthetic, labelled
+plates, not gameplay charts. Each uses 117 real `StarNodeVisual` instances:
+thirteen branch columns, three marker kinds and three states per plate.
+Purchased/affordable/unaffordable are separated from locked/hidden/teaser.
+The manifest records every cell's rectangle, input colour, kind and state for
+pixel comparisons. Compare the active cells before/after the colour change;
+the complete inactive plate must remain byte-identical. Existing scene states
+remain the context for judging the actual screen, not just isolated marks.
+
 `tests/support/reference_capture_scenarios.gd` replaces save/settings services
 before `_ready`, disables hardware input, seeds RNGs and freezes processes,
 tweens and visual clocks. Synthetic positions, trail ages and a 30-second
@@ -662,7 +691,7 @@ Consumers must require the run manifest's `status: passed`, matching sidecars
 and matching PNG hashes; a partial directory is not a valid corpus.
 
 The companion headless gate checks malformed image/manifest/Git rejection and
-all eleven isolated scenario states across engine frames:
+all thirteen isolated scenario states across engine frames:
 
 ```powershell
 & $godot --headless --path . --script res://tests/reference_capture_test.gd

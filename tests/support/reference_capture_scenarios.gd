@@ -6,10 +6,27 @@ const MainScene = preload("res://scenes/main.tscn")
 const Fixtures = preload("res://tests/effect_feedback_test.gd")
 const Balance = preload("res://scripts/game_balance.gd")
 const ChartData = preload("res://scripts/research_chart_data.gd")
+const ResearchChart = preload("res://scripts/upgrade_tree.gd")
+const UITheme = preload("res://scripts/ui_theme.gd")
 const VIEWPORT := Vector2(1152.0, 648.0)
 const SEED := 7331
 const METEOR_STEP := 1.0 / 60.0
 const METEOR_STEPS := 30
+const PALETTE_KINDS := ["star", "cluster", "galaxy"]
+const PALETTE_ACTIVE_ROWS := [
+	{"state": "purchased", "affordable": false, "label": "Purchased"},
+	{"state": "available", "affordable": true, "label": "Available / affordable"},
+	{"state": "available", "affordable": false, "label": "Available / short"},
+]
+const PALETTE_INACTIVE_ROWS := [
+	{"state": "locked", "affordable": false, "label": "Locked"},
+	{"state": "hidden", "affordable": false, "label": "Hidden"},
+	{"state": "teaser", "affordable": false, "label": "Teaser"},
+]
+const PALETTE_BRANCH_LABELS := [
+	"OPTICS", "DETECT", "NETWORK", "URSA\nMINOR", "PERSEUS", "GEMINI", "TAURUS",
+	"LYRA", "ANDRO-\nMEDA", "LEO", "CANIS\nMAJOR", "DRACO", "LOCAL\nGROUP",
+]
 const REFERENCE_COMPLETED_CONSTELLATIONS := [
 	"cassiopeia", "big_dipper", "orion", "andromeda", "perseus", "lyra",
 	"gemini", "taurus", "leo", "ursa_minor",
@@ -41,6 +58,8 @@ const SCENARIOS := [
 	{"id": "exoplanet_transit", "stage": "galactic", "density": "two_hosts_two_phenomena", "overlays": [], "note": "Full research; first host's first transit window at exactly 48%, without a simulated completion.", "expected": {"meteors": 0, "installed": 107, "tracking": false, "span": 1.477455443789063}},
 	{"id": "local_group_chart", "stage": "galactic_chart", "density": "107_of_107_research", "overlays": ["chart", "galactic_inspector"], "note": "Completed research, finished production pull-back, LMC inspector selected; decorations remain non-research.", "expected": {"meteors": 0, "installed": 107, "tracking": false, "span": 1.477455443789063}},
 	{"id": "catalogue_ending", "stage": "ending_preview", "density": "completed_catalogue", "overlays": ["ending"], "note": "Synthetic completed-run statistics through the non-persistent production debug reveal, stepped 8.1 seconds.", "expected": {"meteors": 0, "installed": 107, "tracking": false, "span": 1.477455443789063}},
+	{"id": "palette_active", "stage": "synthetic_palette", "density": "117_visuals_13_branches", "overlays": ["palette_diagnostic"], "note": "Synthetic13-branch input matrix using real StarNodeVisual draws: star/cluster/galaxy in purchased, affordable and unaffordable available states. Not a gameplay chart.", "expected": {"meteors": 0, "installed": 0, "tracking": false, "span": 1.0}},
+	{"id": "palette_inactive", "stage": "synthetic_palette", "density": "117_visuals_13_branches", "overlays": ["palette_diagnostic"], "note": "Synthetic13-branch input matrix using real StarNodeVisual draws: star/cluster/galaxy in locked, hidden and teaser states. Inactive silhouettes are intentionally shown as test specimens.", "expected": {"meteors": 0, "installed": 0, "tracking": false, "span": 1.0}},
 ]
 
 class NoPersistence:
@@ -126,6 +145,8 @@ func prepare(tree: SceneTree, id: String) -> Node:
 			_buy_nodes(game, _reference_research())
 			game.upgrade_tree.set_intermission_context(5, 80)
 			game.upgrade_tree.open_tree()
+		"palette_active", "palette_inactive":
+			_build_palette_plate(game, id)
 		"galactic_sky", "exoplanet_transit", "local_group_chart", "catalogue_ending":
 			var all_nodes: Array[String] = []
 			for definition in Balance.UPGRADE_NODES:
@@ -213,6 +234,7 @@ func inspect(game: Node, id: String) -> Dictionary:
 	if game.hud.settings_overlay.is_visible_in_tree(): overlays.append("settings")
 	if game.hud.startup_overlay.is_visible_in_tree(): overlays.append("startup")
 	if game.hud.banner_root.is_visible_in_tree(): overlays.append("banner")
+	if game.has_node("ReferencePalette"): overlays.append("palette_diagnostic")
 	var hosts: Array[Dictionary] = []
 	for star in game.host_stars.host_stars:
 		hosts.append({"id": star.stable_star_id, "profile": star.profile_id, "state": star.state, "position": _point(star.position), "visual_age": star.visual_age, "transit_phase": star.transit_phase_ratio})
@@ -241,6 +263,8 @@ func inspect(game: Node, id: String) -> Dictionary:
 		"paused": game.get_tree().paused, "isolated": game.save_games is NoPersistence and game.settings is Fixtures.NoSettings,
 		"twinkle_time": game.get_node("TwinkleStars").time,
 	}
+	if id in ["palette_active", "palette_inactive"]:
+		state["palette_cells"] = _inspect_palette_plate(game, id)
 	_check(game.get_viewport_rect().size.is_equal_approx(VIEWPORT), id, "viewport must be 1152x648")
 	_check(state.locale == "en" and state.isolated and game.active_save_slot == 0, id, "isolated English slot-zero fixture")
 	_check(state.installed == int(expected.installed), id, "research count differs from contract")
@@ -377,6 +401,99 @@ func _definition(id: String) -> Dictionary:
 
 func _point(point: Vector2) -> Array:
 	return [point.x, point.y]
+
+
+func _build_palette_plate(game: Node, id: String) -> void:
+	# This layer exists only in reference fixtures. Every mark below is a real
+	# production StarNodeVisual; labels and the plate are diagnostic furniture.
+	game.hud.visible = false
+	var layer := CanvasLayer.new()
+	layer.name = "ReferencePalette"
+	layer.layer = 200
+	game.add_child(layer)
+	var plate := ColorRect.new()
+	plate.name = "Plate"
+	plate.size = VIEWPORT
+	plate.color = Color("04070d")
+	layer.add_child(plate)
+	var heading := "ACTIVE STATES" if id == "palette_active" else "INACTIVE STATES"
+	_palette_label(plate, "SYNTHETIC PALETTE CHECK / " + heading, Vector2(24, 16), Vector2(1100, 28), 20)
+	_palette_label(plate, "13 BRANCH INPUTS  /  REAL StarNodeVisual  /  NOT A GAMEPLAY CHART", Vector2(24, 48), Vector2(1100, 24), 12)
+	var branches: Array = Balance.BRANCHES.keys()
+	var rows: Array = PALETTE_ACTIVE_ROWS if id == "palette_active" else PALETTE_INACTIVE_ROWS
+	for column in range(branches.size()):
+		_palette_label(plate, PALETTE_BRANCH_LABELS[column], Vector2(202 + column * 72, 82), Vector2(70, 32), 10, HORIZONTAL_ALIGNMENT_CENTER)
+	for state_index in range(rows.size()):
+		var row: Dictionary = rows[state_index]
+		for kind_index in range(PALETTE_KINDS.size()):
+			var row_index := state_index * PALETTE_KINDS.size() + kind_index
+			var top := 120.0 + row_index * 53.0
+			var kind := String(PALETTE_KINDS[kind_index])
+			_palette_label(plate, String(row.label) + "\n" + kind.to_upper(), Vector2(24, top + 6), Vector2(174, 38), 11)
+			for column in range(branches.size()):
+				var branch := String(branches[column])
+				var cell := Rect2(202 + column * 72, top, 70, 50)
+				var visual := ResearchChart.StarNodeVisual.new()
+				visual.name = "Cell_%02d_%02d" % [row_index, column]
+				visual.size = Vector2(44, 44)
+				visual.scale = Vector2.ONE * 0.64
+				visual.position = cell.get_center() - visual.size * visual.scale * 0.5
+				visual.galaxy_rotation = -0.32
+				visual.set_meta("palette_branch", branch)
+				visual.set_meta("palette_row", row_index)
+				visual.set_meta("palette_cell", cell)
+				plate.add_child(visual)
+				visual.configure(String(row.state), Balance.BRANCHES[branch].color, 3.0, kind, bool(row.affordable), false)
+				visual.pulse_phase = 0.0
+				_freeze_node(visual)
+	_palette_label(plate, "SAME MAGNITUDE 3.0 / SCALE 0.64 / PULSE 0 / NO HOVER OR HOLD  -  COMPARE HUE WITHIN EACH ROW", Vector2(24, 612), Vector2(1100, 20), 11)
+
+
+func _palette_label(parent: Control, text: String, position: Vector2, size: Vector2, font_size: int, alignment: HorizontalAlignment = HORIZONTAL_ALIGNMENT_LEFT) -> void:
+	var label := Label.new()
+	label.text = text
+	label.position = position
+	label.size = size
+	label.horizontal_alignment = alignment
+	label.add_theme_font_override("font", UITheme.mono())
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", UITheme.INK_MID)
+	parent.add_child(label)
+
+
+func _inspect_palette_plate(game: Node, id: String) -> Array[Dictionary]:
+	var cells: Array[Dictionary] = []
+	if not game.has_node("ReferencePalette/Plate"):
+		failures.append(id + ": diagnostic plate is missing")
+		return cells
+	var rows: Array = PALETTE_ACTIVE_ROWS if id == "palette_active" else PALETTE_INACTIVE_ROWS
+	var branch_counts := {}
+	for child in game.get_node("ReferencePalette/Plate").get_children():
+		if not child is ResearchChart.StarNodeVisual: continue
+		var branch := String(child.get_meta("palette_branch", ""))
+		var row_index := int(child.get_meta("palette_row", -1))
+		var cell: Rect2 = child.get_meta("palette_cell", Rect2())
+		if not Balance.BRANCHES.has(branch) or row_index < 0 or row_index >= 9:
+			failures.append(id + ": malformed palette cell")
+			continue
+		var expected: Dictionary = rows[row_index / 3]
+		var expected_kind := String(PALETTE_KINDS[row_index % 3])
+		_check(child.visual_state == expected.state and child.affordable == expected.affordable and child.star_kind == expected_kind, id, "palette state/kind differs for " + branch)
+		_check(child.branch_color.is_equal_approx(Balance.BRANCHES[branch].color), id, "branch input color differs for " + branch)
+		_check(child.is_visible_in_tree() and game.get_viewport_rect().encloses(cell) and cell.encloses(child.get_global_rect()), id, "palette visual/cell is hidden or off screen")
+		_check(is_zero_approx(child.pulse_phase) and is_zero_approx(child.hold_ratio) and not child.hovered, id, "palette animation state differs")
+		branch_counts[branch] = int(branch_counts.get(branch, 0)) + 1
+		cells.append({
+			"branch": branch, "row": row_index, "kind": child.star_kind,
+			"state": child.visual_state, "affordable": child.affordable,
+			"branch_color": child.branch_color.to_html(true),
+			"cell": [cell.position.x, cell.position.y, cell.size.x, cell.size.y],
+			"center": _point(cell.get_center()), "scale": _point(child.scale),
+		})
+	_check(cells.size() == 117 and branch_counts.size() == 13, id, "palette must contain 13 branches x 9 rows")
+	for branch in branch_counts:
+		_check(branch_counts[branch] == 9, id, "palette branch must contain every state/kind: " + String(branch))
+	return cells
 
 
 func _find_active_processes(node: Node, result: Array[String]) -> void:

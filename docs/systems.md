@@ -186,6 +186,17 @@ meteor.expired            → game._on_meteor_expired
 meteor.fragment_requested → spawner._on_fragment_requested
 ```
 
+## Research-node colour ownership
+
+`upgrade_tree._apply_node_visual` binds the definition's `Balance.BRANCHES`
+colour to `StarNodeVisual`. Its `state_ink` helper is read by the actual star,
+cluster and galaxy draw paths, not merely stored in an unused field. A small
+branch component is mixed into the existing warm state ink: 28% for an
+affordable frontier, 12% for an open but unaffordable node, 6% for an installed
+node, and none for hidden/locked/teaser states. Alpha, geometry, filling,
+halo sizes and pulse timing remain state-owned. The shared legend remains a
+neutral warm explanation of state, not a thirteen-colour branch key.
+
 ## Round lifecycle
 
 A run is a sequence of observation rounds separated by a paused research
