@@ -1,9 +1,9 @@
 # Tests and Probes
 
 Every file in `tests/` is a `SceneTree` script run through `--script`, not a
-GUT/gdUnit suite. There is no test runner to install. Sixteen files: six
-pass/fail gates, seven measurement probes, two visual capture utilities, and
-one human-driven survey slice. The full-tree economy gate is documented with
+GUT/gdUnit suite. There is no test runner to install. This directory contains
+pass/fail gates, seven measurement probes, visual/audio review utilities, and
+a human-driven survey slice. The full-tree economy gate is documented with
 the pacing probes below because it reports both acceptance and diagnostic data.
 
 Commands are PowerShell, matching the rest of the repo. `$godot` below is the
@@ -87,6 +87,43 @@ Its manifest explicitly marks `driver: Dummy` and `hardware_output: false`.
 This produces a listenable stereo artifact, not proof of hardware output or a
 perceptual verdict. The isolated completion deliberately retains the 160 ms
 aggregation latency; manual success remains immediate.
+
+### Effect feedback gate
+
+`effect_feedback_test.gd` checks the routine/accent matrix through the main-game
+completion handlers. Rare fireball/major identities and high manual grades keep
+their explicit accent eligibility; combo, economy and proc origin cannot promote
+a routine completion. It verifies directional particle cones, ring/flash/motion
+thresholds, shared capacity caps, distant-target events, galaxy-stage flash
+suppression and the pause-safe, replaceable installation-rule tween. The fixture
+uses actual chart-open purchases at both scales and checks that the visible
+inspector rule survives deferred container layout while paused. Selection,
+context, close and scale changes cancel stale tweens; Reference Frame keeps its
+pull-back without a hidden pulse. Save storage and settings are replaced before
+startup. A mechanical pass is not a visual verdict.
+
+```powershell
+& $godot --headless --path . --script res://tests/effect_feedback_test.gd
+```
+
+- Pass: `EFFECT_FEEDBACK_PASS:`
+
+For a narrow rendered stage-2 check, run without `--headless`:
+
+```powershell
+& $godot --path . --script res://tests/effect_feedback_preview.gd
+```
+
+This creates eight uniquely named PNG/JSON pairs in
+`build/effect_feedback_review`: routine/accented observation poses and both
+chart inspectors at installation-tween start, midpoint and end. The fixture
+uses real completion/purchase routes without reading or writing saves/settings,
+then freezes animation after deferred layout settles. Each sidecar records
+viewport, renderer, base HEAD, dirty status, relevant source hashes and measured
+state. A missing display, blank image, unexpected state/count or write failure
+exits nonzero. `EFFECT_PREVIEW_PASS` means the eight diagnostic images were
+written, not that animation feel was approved. This windowed diagnostic is not
+the stage-3 headless capture gate.
 
 ### Research contract test
 

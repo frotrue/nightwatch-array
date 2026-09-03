@@ -238,6 +238,12 @@ var installed_caption: Label
 var progress_track: ColorRect
 var progress_fill: ColorRect
 var close_underline: ColorRect
+var constellation_installation_rule: ColorRect
+var galactic_installation_rule: ColorRect
+var installation_rule: ColorRect
+var installation_tween: Tween
+var installation_node_id: String = ""
+var galactic_inspector_node_id: String = ""
 var north_label: Label
 var subtitle_label: Label
 var close_button: Button
@@ -354,6 +360,7 @@ func bind_settings(controller: Node) -> void:
 
 
 func configure_galactic_state(unlocked: bool, pullback_seen: bool) -> void:
+	_cancel_installation_rule()
 	galactic_unlocked = unlocked
 	galactic_pullback_seen = unlocked and pullback_seen
 	pullback_elapsed = 0.0
@@ -387,6 +394,7 @@ func begin_galactic_pullback() -> void:
 func open_tree() -> void:
 	if overlay.visible or progression == null:
 		return
+	_cancel_installation_rule()
 	_cancel_node_hold()
 	pending_rotation_delta = 0.0
 	overlay.visible = true
@@ -409,6 +417,7 @@ func open_tree() -> void:
 func close_tree() -> void:
 	if not overlay.visible:
 		return
+	_cancel_installation_rule()
 	_flush_pending_rotation()
 	if galactic_mode == GALACTIC_MODE_PULLBACK and not galactic_pullback_seen:
 		galactic_mode = GALACTIC_MODE_NORMAL
@@ -431,6 +440,36 @@ func is_open() -> bool:
 	return overlay != null and overlay.visible
 
 
+func pulse_installation_rule() -> void:
+	# The chart's opaque canvas covers the HUD banner. Animate its existing
+	# inspector divider instead, on the same canvas as the purchased research.
+	_cancel_installation_rule()
+	if not is_open():
+		return
+	if _galactic_panel_active() and galactic_panel.is_visible_in_tree():
+		installation_rule = galactic_installation_rule
+		installation_node_id = galactic_inspector_node_id
+	elif _constellation_panel_active() and tooltip_panel.is_visible_in_tree():
+		installation_rule = constellation_installation_rule
+		installation_node_id = selected_node_id
+	else:
+		# The Galactic Reference Frame has its own pull-back with no inspector.
+		return
+	installation_rule.pivot_offset = Vector2(installation_rule.size.x * 0.5, 0.0)
+	installation_rule.scale = Vector2(0.2, 1.0)
+	installation_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	installation_tween.tween_property(installation_rule, "scale:x", 1.0, 0.28).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+
+func _cancel_installation_rule() -> void:
+	if installation_tween != null and installation_tween.is_valid():
+		installation_tween.kill()
+	if is_instance_valid(installation_rule):
+		installation_rule.scale = Vector2.ONE
+	installation_rule = null
+	installation_node_id = ""
+
+
 func set_intermission_context(next_round: int, next_duration: int) -> void:
 	intermission_active = true
 	intermission_next_round = maxi(1, next_round)
@@ -444,6 +483,7 @@ func clear_intermission_context() -> void:
 
 
 func _refresh_phase_context() -> void:
+	_cancel_installation_rule()
 	if subtitle_label == null or close_button == null:
 		return
 	if catalogue_ending_ready:
@@ -823,6 +863,7 @@ func _frame_frontier() -> void:
 
 
 func _on_content_resized() -> void:
+	_cancel_installation_rule()
 	_layout_chart_header()
 	_layout_galactic_overlays()
 	if is_open() and content_clip.size.x > 1.0 and content_clip.size.y > 1.0:
@@ -1118,6 +1159,8 @@ func _refresh_galactic_overlays() -> void:
 	galactic_watermark.modulate.a = alpha
 	constellation_ledger.visible = constellation_active
 	tooltip_panel.visible = constellation_active and not selected_node_id.is_empty()
+	if installation_rule != null and not installation_rule.is_visible_in_tree():
+		_cancel_installation_rule()
 	systems_readout.visible = false
 	galactic_progress_installed.visible = true
 	galactic_progress_separator.visible = true
@@ -1264,6 +1307,9 @@ func _refresh_constellation_detail_line() -> void:
 func _refresh_galactic_panel(node_id: String) -> void:
 	if galactic_panel == null or progression == null or not node_buttons.has(node_id):
 		return
+	if installation_rule == galactic_installation_rule and installation_node_id != node_id:
+		_cancel_installation_rule()
+	galactic_inspector_node_id = node_id
 	var definition := Balance.upgrade_definition(node_id)
 	var star_record: Dictionary = node_star_records[node_id]
 	var star: Dictionary = star_record.star
@@ -1824,6 +1870,8 @@ func _show_node_tooltip(node_id: String) -> void:
 func _refresh_constellation_inspector(node_id: String) -> void:
 	if progression == null or not node_buttons.has(node_id) or _is_local_group_node(node_id):
 		return
+	if installation_rule == constellation_installation_rule and installation_node_id != node_id:
+		_cancel_installation_rule()
 	var visual_state := String(node_buttons[node_id].get_meta("visual_state"))
 	var content_key := "%s:%s:%d:%d:%s" % [
 		node_id,
@@ -2159,11 +2207,19 @@ func _build_node_tooltip() -> void:
 	tooltip_star = _spec_label("", UITheme.mono(), 13.0, UITheme.TOOLTIP_VALUE)
 	tooltip_star.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(tooltip_star)
-	var divider := ColorRect.new()
-	divider.custom_minimum_size.y = 1.0
-	divider.color = UITheme.ACCENT_DEEP
-	divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	column.add_child(divider)
+	# The VBox owns the slot's geometry, not the animated rule's transform.
+	# Otherwise its deferred sort resets the in-flight scale after a purchase.
+	var divider_slot := Control.new()
+	divider_slot.name = "DividerSlot"
+	divider_slot.custom_minimum_size.y = 1.0
+	divider_slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(divider_slot)
+	constellation_installation_rule = ColorRect.new()
+	constellation_installation_rule.name = "Divider"
+	constellation_installation_rule.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	constellation_installation_rule.color = UITheme.ACCENT_DEEP
+	constellation_installation_rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	divider_slot.add_child(constellation_installation_rule)
 	var fields := GridContainer.new()
 	fields.columns = 2
 	fields.add_theme_constant_override("h_separation", UITheme.size_px(14.0))
@@ -2301,11 +2357,11 @@ func _build_galactic_overlays() -> void:
 	galactic_panel_order = _spec_label("", UITheme.mono(), 13.0, UITheme.TOOLTIP_LABEL)
 	galactic_panel_order.name = "Order"
 	galactic_panel.add_child(galactic_panel_order)
-	var panel_divider := ColorRect.new()
-	panel_divider.name = "Divider"
-	panel_divider.color = UITheme.ACCENT_DEEP
-	panel_divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	galactic_panel.add_child(panel_divider)
+	galactic_installation_rule = ColorRect.new()
+	galactic_installation_rule.name = "Divider"
+	galactic_installation_rule.color = UITheme.ACCENT_DEEP
+	galactic_installation_rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	galactic_panel.add_child(galactic_installation_rule)
 	for field_name in ["Status", "Cost", "Effect"]:
 		var field_label := _spec_label(tr("TREE_GALACTIC_FIELD_%s" % field_name.to_upper()), UITheme.mono(), 11.0, UITheme.TOOLTIP_LABEL, 0.18)
 		field_label.name = "Field%sLabel" % field_name

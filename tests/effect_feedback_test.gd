@@ -36,6 +36,24 @@ class DistantFixture:
 	func get_visual_color() -> Color:
 		return Color.WHITE
 
+class NoSettings:
+
+	extends "res://scripts/game_settings.gd"
+
+	func _ready() -> void:
+		locale = "en"
+		tutorial_completed = true
+		TranslationServer.set_locale(locale)
+
+	func set_research_chart_rotation(value: float, _persist: bool = true) -> void:
+		research_chart_rotation = wrapf(value, -PI, PI)
+
+	func set_tutorial_completed(completed: bool) -> void:
+		tutorial_completed = completed
+
+	func _save_locale() -> void:
+		pass
+
 var failures: Array[String] = []
 
 
@@ -61,6 +79,12 @@ func _run() -> void:
 	var slots := NoSaveSlots.new()
 	slots.name = "SaveGameController"
 	game.add_child(slots)
+	var original_settings := game.get_node("GameSettings")
+	game.remove_child(original_settings)
+	original_settings.free()
+	var settings := NoSettings.new()
+	settings.name = "GameSettings"
+	game.add_child(settings)
 	root.add_child(game)
 	game.sound.free()
 	var sound := SilentSound.new()
@@ -74,11 +98,12 @@ func _run() -> void:
 	_test_distant_and_event_paths(game)
 	_test_caps(game.effects)
 	await _test_installation_rule(game)
+	await _test_chart_installation_rule(game)
 	paused = false
 	game._release_hitstop()
 	game.free()
 	if failures.is_empty():
-		print("EFFECT_FEEDBACK_PASS: routine/accent routing, directional cones, event/cap preservation and paused installation rule")
+		print("EFFECT_FEEDBACK_PASS: routine/accent routing, directional cones, event/cap preservation and visible paused HUD/chart installation rules")
 		quit(0)
 	else:
 		print("EFFECT_FEEDBACK_FAIL: %d failure(s)" % failures.size())
@@ -214,6 +239,99 @@ func _test_installation_rule(game) -> void:
 	_check(not interrupted.is_valid() and game.hud.banner_rule.scale.is_equal_approx(Vector2.ONE), "a new banner cancels installation motion and restores full width")
 	_check_no_accent(game.effects, "paused installation and replacement leave sky feedback unchanged")
 	paused = false
+
+
+func _test_chart_installation_rule(game) -> void:
+	var chart = game.upgrade_tree
+	game.progression.reset()
+	game.progression.observation_data = 1000000000000.0
+	game.effects.reset()
+	var old_hud_tween: Tween = game.hud.installation_tween
+	chart.open_tree()
+	await process_frame
+	await process_frame
+	chart._on_node_hovered("better_lens")
+	_check(game.progression.request_purchase("better_lens"), "open-chart integration buys a real available research node")
+	var rule: ColorRect = chart.constellation_installation_rule
+	_check_chart_rule(chart, rule, "constellation purchase")
+	_check(chart.installation_node_id == "better_lens", "constellation pulse belongs to the selected research")
+	_check(game.hud.installation_tween == old_hud_tween, "open-chart purchase does not start a hidden HUD pulse")
+	var first_tween: Tween = chart.installation_tween
+	first_tween.pause()
+	first_tween.custom_step(0.14)
+	_check(is_equal_approx(rule.scale.x, 0.9), "chart pulse uses the same 140 ms cubic-out midpoint")
+	chart.pulse_installation_rule()
+	var replacement: Tween = chart.installation_tween
+	_check(replacement != first_tween and not first_tween.is_valid(), "chart repeat replaces its previous pulse")
+	await create_timer(0.05, true, false, true).timeout
+	_check(rule.scale.x > 0.2 and rule.scale.x < 1.0 and replacement.is_running(), "chart pulse survives deferred layout and progression refresh while paused (scale %.4f, valid %s, context %s)" % [rule.scale.x, replacement.is_valid(), chart.installation_node_id])
+	chart._on_node_hovered("long_exposure")
+	_check(not replacement.is_valid() and rule.scale.is_equal_approx(Vector2.ONE), "constellation selection cancels the prior research pulse")
+	_check(game.progression.request_purchase("long_exposure"), "a second chart research purchase succeeds")
+	_check_chart_rule(chart, rule, "second constellation purchase")
+	var second_tween: Tween = chart.installation_tween
+	await process_frame
+	await process_frame
+	_check(second_tween.is_running() and rule.scale.x > 0.2 and rule.scale.x < 1.0, "actual repeated purchase pulse survives the following state_changed and layout frames")
+	chart._refresh_phase_context()
+	_check(not second_tween.is_valid() and rule.scale.is_equal_approx(Vector2.ONE), "phase context refresh cancels stale installation feedback")
+	chart.pulse_installation_rule()
+	var close_tween: Tween = chart.installation_tween
+	chart.close_tree()
+	_check(not close_tween.is_valid() and rule.scale.is_equal_approx(Vector2.ONE), "closing the chart cancels and resets its inspector rule")
+
+	# Configure a completed first sky without purchasing it through persistence.
+	for definition in Balance.UPGRADE_NODES:
+		if String(definition.branch) != "local_group":
+			game.progression.purchased_nodes[String(definition.id)] = true
+	game.galactic_pullback_seen = true
+	chart.configure_galactic_state(true, true)
+	chart.open_tree()
+	await process_frame
+	await process_frame
+	chart._on_node_hovered("lmc_transit_watch")
+	_check(game.progression.request_purchase("lmc_transit_watch"), "galaxy-scale integration buys real available LMC research")
+	var galaxy_rule: ColorRect = chart.galactic_installation_rule
+	_check_chart_rule(chart, galaxy_rule, "galaxy purchase")
+	_check(chart.installation_node_id == "lmc_transit_watch", "galaxy pulse belongs to its selected research")
+	_check(game.hud.installation_tween == old_hud_tween, "galaxy purchase also avoids the obscured HUD pulse")
+	var galaxy_tween: Tween = chart.installation_tween
+	await process_frame
+	await process_frame
+	_check(galaxy_tween.is_running() and galaxy_rule.scale.x > 0.2 and galaxy_rule.scale.x < 1.0, "galaxy pulse survives real purchase state refresh and paused frames")
+	chart._on_node_hovered("smc_reference_baseline")
+	_check(not galaxy_tween.is_valid() and galaxy_rule.scale.is_equal_approx(Vector2.ONE), "galaxy selection cancels and resets the previous pulse")
+	_check(game.progression.request_purchase("smc_reference_baseline"), "a second galaxy purchase succeeds")
+	_check_chart_rule(chart, galaxy_rule, "second galaxy purchase")
+	var scale_tween: Tween = chart.installation_tween
+	chart.galactic_chart_detail = 1.0
+	chart._update_galactic_presentation()
+	_check(not scale_tween.is_valid() and galaxy_rule.scale.is_equal_approx(Vector2.ONE), "switching inspector scale cancels the hidden rule")
+	chart.close_tree()
+
+	# Galactic Reference Frame owns the existing pull-back, where neither
+	# inspector is visible; do not replace it with another hidden animation.
+	game.progression.purchased_nodes.erase("galactic_reference_frame")
+	game.galactic_pullback_seen = false
+	chart.configure_galactic_state(false, false)
+	chart.open_tree()
+	await process_frame
+	chart._on_node_hovered("galactic_reference_frame")
+	_check(game.progression.request_purchase("galactic_reference_frame"), "reference-frame purchase starts its real presentation transition")
+	_check(chart.galactic_mode == chart.GALACTIC_MODE_PULLBACK, "reference-frame installation retains its own visible pull-back")
+	_check(chart.installation_rule == null and not chart.tooltip_panel.visible and not chart.galactic_panel.visible, "pull-back does not start a pulse under either hidden inspector")
+	_check(game.hud.installation_tween == old_hud_tween, "pull-back never starts an obscured HUD pulse")
+	chart.close_tree()
+	_check_no_accent(game.effects, "chart installation never adds meteor feedback")
+	paused = false
+
+
+func _check_chart_rule(chart, rule: ColorRect, context: String) -> void:
+	_check(chart.is_open() and paused, context + " uses the actually opened, paused chart")
+	_check(chart.installation_rule == rule and rule.is_visible_in_tree(), context + " animates the active inspector rule")
+	_check(rule.get_canvas_layer_node() == chart, context + " draws above the opaque chart background on its own canvas")
+	_check(rule.size.x > 1.0 and root.get_visible_rect().encloses(rule.get_global_rect()), context + " has an on-screen, nonempty rule")
+	_check(is_equal_approx(rule.scale.x, 0.2) and is_equal_approx(rule.scale.y, 1.0) and is_equal_approx(rule.size.y, 1.0), context + " keeps the one-pixel rule with the 20 percent starting width")
 
 
 func _observe(game, type_id: String, was_manual: bool, grade: String, origin: String = "gemini_echo") -> void:

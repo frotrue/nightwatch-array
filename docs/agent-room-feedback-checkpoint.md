@@ -1,7 +1,56 @@
 # Agent Room AM-V3QP checkpoint — 2026-09-03
 
+## Current decision
+
+Fable approved stage 2 in room message #34 after the code/threshold review and
+seven gates plus eight rendered diagnostics. Commit the stage-2 changes before
+continuing. Live 280 ms animation feel remains a human judgement, not a claim
+made from frozen poses. Stage 3 is now open for Codex's independent review of
+Fable's separate `tests/capture_reference.gd` implementation; it is not approved
+yet. Stage 4 has not started. The earlier checkpoint entries below are history,
+not the current approval state.
+
 User requested commit/push/shutdown and continuation from stage 2 tomorrow.
 This is a checkpoint, not completion of all four stages. Do not merge to main.
+
+## Resumed review — 2026-09-03
+
+The user has resumed work through stage 4 with a Fable review at each gate.
+HEAD `162c61d` is the pushed stage-2 WIP, not an approved stage-2 commit.
+The working tree fixes the installation pulse being hidden behind the open
+chart: the active constellation/galaxy inspector now owns its existing 1 px
+rule, while the closed-chart path retains the HUD rule. A non-drawing container
+slot prevents deferred VBox layout from resetting the constellation pulse.
+Reference Frame keeps its existing pull-back instead of a hidden pulse.
+
+Independent reruns of research contract, smoke, Layer 2, sound feedback, effect
+feedback and observation span pass, and the Windows executable was refreshed.
+Smoke's two focus warnings and the probe's exit-leak warning remain pre-existing.
+Room message #27 requests Fable's code review; no stage-2 approval is recorded.
+The remaining visual check uses focused, windowed stage-2 diagnostics (#28),
+not the stage-3 headless/manifest generator. Stages 3 and 4 remain unstarted.
+
+The additional galactic-slice regression passes. The windowed diagnostic
+`tests/effect_feedback_preview.gd` produced all eight PNG/JSON pairs in
+`build/effect_feedback_review` with run ID `stage2_1788395904457` at 1152x648.
+Codex inspected all eight fresh images: routine/accented effects are visibly
+distinct, and both inspector rules render above the chart. The constellation
+rule occupies 35/157/175 actual pixels at start/mid/end. Frozen poses do not
+establish perceived live pacing. Fable's review remains required before closing
+stage 2, committing it as approved, or starting stage 3.
+
+Room-state diagnosis after the report: Fable's `last_read_id` is still 22
+while the latest room message is 29. The room's active-agent count is a stored
+participant count, not a heartbeat. Thus the current-session review requests
+have not been consumed by Fable; the user needs to resume that agent's room
+listener. Do not waive its review or silently advance to stage 3.
+
+The user subsequently reported reconnecting Fable, and Codex resumed listening
+in room message #31. A separate diagnostic audit found the mutable fixture file
+missing from the capture source-hash list; it is now included. The replacement
+run `stage2_1788397194202` writes all eight PNG/JSON pairs, and all eight PNG
+hashes are identical to the visually reviewed run above. Its sidecars additionally
+identify `tests/effect_feedback_test.gd`. No production behavior changed.
 
 ## Stage 1 — approved
 

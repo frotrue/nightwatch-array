@@ -831,10 +831,13 @@ func _on_upgrade_purchased(definition: Dictionary) -> void:
 		upgrade_tree.begin_galactic_pullback()
 	else:
 		hud.show_banner(tr("BANNER_SYSTEM_ONLINE") % _upgrade_name(definition), UITheme.BANNER_TITLE, 2.4)
-	hud.pulse_installation_rule()
 	starfield.set_activity(progression.get_progression_ratio() * 0.16)
 	starfield.set_galactic_mode(progression.galaxy_unlocked())
 	_refresh_catalogue_ending_requirement()
+	if upgrade_tree.is_open():
+		upgrade_tree.pulse_installation_rule()
+	else:
+		hud.pulse_installation_rule()
 	_autosave_active_slot()
 
 

@@ -37,7 +37,7 @@ instantiates it in `_ready()` and adds it as a child at runtime.
 
 SoundSynth processes through UI pauses so research and slot confirmations remain
 audible. Research owns its original dyad; save/load share a quiet unpitched latch;
-rare-target notices use a sharp double note; shower/bloom notices use a slow swell.
+rare-target notices use a sharp double note; shower/bloom/Perseid notices use a slow swell.
 Automatic observations accumulate in a 160 ms window and emit one 70 ms pulse,
 with logarithmic batch weight capped at -12 dB. The queue is cleared on pauses,
 round boundaries, and loads; it never affects observation accounting or rewards.
@@ -333,9 +333,17 @@ These are load-bearing. Breaking them silently corrupts the Data/min series.
    `game._on_meteor_observed` computes one economy-independent `strength` from
    the target's base value, manual grade, and combo. It drives particle, audio,
    kick, shake, and hitstop amplitudes without reading the research value
-   multiplier. Shake and hitstop additionally require a `fireball` or `major`
-   target, and hitstop has a 400 ms real-time cooldown after release so burst
-   completions cannot chain freezes.
+   multiplier. The semantic accent gate is independent of that strength:
+   `fireball`/`major` or a manual `EXCELLENT`/`PERFECT` grade. Routine hits keep
+   directional particles and a packet even at maximum combo; only accents may
+   add rings (strength >= 0.22) and flashes. Manual accents may kick, and shake
+   additionally requires strength >= 0.50. Hitstop still requires a manual
+   `fireball`/`major` with strength >= 0.66 and has a 400 ms real-time cooldown
+   after release. Existing galaxy-stage common/fast flash suppression remains.
+
+Host harvests and galactic-phenomenon completions explicitly request accent
+particles/rings, but the latter retain their zero-flash contract. Proc origins
+(shower, echo, storm, survey) do not promote individual routine targets.
 
 The observation's intrinsic multiplier is likewise kept separate from the
 research economy multiplier. The actual Data packet reports the full awarded
@@ -376,7 +384,14 @@ only to live meteor tracking.
 
 `upgrade_tree.gd` → `progression.request_purchase(node_id)` validates state and
 cost, then emits `upgrade_purchased`. `game._on_upgrade_purchased` refreshes
-dishes and spawner features, plays feedback, and autosaves.
+dishes and spawner features, plays the research dyad, extends an existing rule
+from 20% to full width over 0.28 seconds, and autosaves. The open chart owns the
+visible constellation/galaxy inspector rule; the closed-chart path uses the HUD
+banner rule. A HUD-only pulse is occluded by the chart's opaque higher layer.
+Installation does not emit meteor particles, rings, flashes, kick, or shake.
+Replacement announcements, selection, context, close, resize, and scale changes
+cancel stale rule tweens and restore full width. The Reference Frame purchase
+keeps its existing pull-back transition without animating a hidden inspector.
 
 Galaxy Map is the presentation exception. If its purchase occurs
 while the chart is open, `game.gd` asks the chart to begin the pull-back before
