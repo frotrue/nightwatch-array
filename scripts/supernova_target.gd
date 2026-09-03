@@ -19,6 +19,7 @@ var last_quality := 0.0
 var active := true
 var forecast_visible := false
 var observation_view: Camera2D
+var capture_time_override_msec: float = -1.0 # Capture-only clock; negative retains the live clock.
 
 
 func configure(id: String, world_position: Vector2, phase_offset: float, show_forecast: bool, view: Camera2D = null) -> void:
@@ -138,7 +139,8 @@ func _draw() -> void:
 	if not active:
 		return
 	var scale := _world_px(1.0)
-	var pulse := 1.0 + sin(Time.get_ticks_msec() * 0.007 + float(target_id.hash() & 31)) * 0.08
+	var visual_time := capture_time_override_msec if capture_time_override_msec >= 0.0 else float(Time.get_ticks_msec())
+	var pulse := 1.0 + sin(visual_time * 0.007 + float(target_id.hash() & 31)) * 0.08
 	var radius := 7.0 * scale * pulse
 	var color := Color("ff8f68")
 	match get_stage():

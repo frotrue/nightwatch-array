@@ -1,7 +1,8 @@
 # Tests and Probes
 
-Every file in `tests/` is a `SceneTree` script run through `--script`, not a
-GUT/gdUnit suite. There is no test runner to install. This directory contains
+Top-level entry points in `tests/` are `SceneTree` scripts run through `--script`,
+not a GUT/gdUnit suite; `tests/support/` contains shared fixtures. There is no
+test runner to install. This directory contains
 pass/fail gates, seven measurement probes, visual/audio review utilities, and
 a human-driven survey slice. The full-tree economy gate is documented with
 the pacing probes below because it reports both acceptance and diagnostic data.
@@ -586,3 +587,93 @@ $env:NIGHTWATCH_ENDING_PREVIEW_STEP = "8.1"
 Remove-Item Env:NIGHTWATCH_ENDING_PREVIEW -ErrorAction SilentlyContinue
 Remove-Item Env:NIGHTWATCH_ENDING_PREVIEW_STEP -ErrorAction SilentlyContinue
 ```
+
+## Reference capture gate (stage 3)
+
+`tests/capture_reference.gd` regenerates eleven visual references in one run.
+Each run gets a new `build/reference/<revision12>[_dirty]_<timestamp>/` directory;
+existing captures are never overwritten. Its manifest and every PNG's JSON
+sidecar identify the full Git HEAD, dirty flag, SHA-256 of every tracked and
+non-ignored untracked source file, source digest, Godot version, viewport,
+display driver, scenario contract, observed state and actual PNG hash.
+
+This replaces `build/claude_design_screenshots/`, a hand-made corpus whose
+files were named `*_current_*` with no generator in the repository. Five days
+and twenty-four script changes after it was made, three separate reviewers
+still read those files as current and misdiagnosed the shipped screens from
+them. A semantic filename is a claim nothing enforces, so the revision now
+travels with the pixels and the corpus is reproducible from one command.
+
+The old directory is retained, with a `STALE.md` notice, as historical evidence.
+Do not treat its `current` filenames as current screenshots.
+The rejected prototype's twelve loose files were also moved out of the reference
+root into `build/reference-legacy-unstamped-20260903/` with a stale notice.
+
+The verified Windows Godot 4.7.2 binary exposes only dummy rendering with the
+headless display driver. The generator explicitly rejects `--headless` with
+exit 1 before creating a run directory. This supported capture path uses a real
+Windows/OpenGL renderer and moves its window off-screen; it requires a logged-in
+desktop session, not a display-less CI worker. This is not a claim about every
+possible Godot platform/backend. See the official
+[RenderingServer documentation](https://docs.godotengine.org/en/stable/classes/class_renderingserver.html)
+and inspect the actual binary's `--help` for its supported driver combinations.
+
+```powershell
+& $godot --display-driver windows --rendering-driver opengl3 `
+    --rendering-method gl_compatibility --audio-driver Dummy `
+    --position '-4000,-4000' --resolution 1152x648 `
+    --path . --script res://tests/capture_reference.gd
+```
+
+Passing prints `REFERENCE_CAPTURE_PASS: <n>/<n> at <revision>`. A capture taken
+over uncommitted work additionally prints `REFERENCE_CAPTURE_DIRTY:` and sets
+`source.revision_dirty` in the manifest; that is useful while iterating, but
+must be described as that base revision plus the recorded working tree, never
+as the clean commit. Refresh the corpus after committing and verify the clean
+flag before using it as a revision baseline.
+
+The eleven scenarios cover an actively tracked observation HUD (67%), an
+eleven-object synthetic density plate with active tracking (42%),
+both meteor families, the sky sweep, the round summary, the research chart,
+the pulled-back galactic sky, the exoplanet transit, the Local Group map and
+the catalogue ending. `meteor_family_special` captures the five late
+silhouettes — comet, satellite, variable star, binary star and galaxy — which
+the old corpus never contained. These are controlled diagnostic states, not
+measurements of live spawn density, economy or pacing. The mid-run research
+chart installs 81 nodes through real purchase requests; the galactic scenarios
+install all 107. The transit is explicitly at 48% of its first window and the
+ending reveals all five recorded phenomena.
+
+`tests/support/reference_capture_scenarios.gd` replaces save/settings services
+before `_ready`, disables hardware input, seeds RNGs and freezes processes,
+tweens and visual clocks. Synthetic positions, trail ages and a 30-second
+diagnostic target lifetime are declared fixture inputs. Supernova rendering
+uses `capture_time_override_msec = 0` only in this fixture; its production
+default of -1 preserves the live clock. Expected counts, research state,
+selection, tracking, overlays and isolation are checked before and after
+rendering. Empty state inspection is an error, including after a script error.
+
+The image gate requires the expected dimensions, visible light/dark pixels and
+two consecutive identical pixel hashes within twelve frames. The run checks
+unchanged source identity before publishing sidecars and a passed manifest;
+missing Git, changing source, a blank/unstable frame, a missing scenario or a
+failed write exits nonzero. A 90-second watchdog bounds stalled rendering.
+Consumers must require the run manifest's `status: passed`, matching sidecars
+and matching PNG hashes; a partial directory is not a valid corpus.
+
+The companion headless gate checks malformed image/manifest/Git rejection and
+all eleven isolated scenario states across engine frames:
+
+```powershell
+& $godot --headless --path . --script res://tests/reference_capture_test.gd
+```
+
+Passing prints `REFERENCE_CAPTURE_TEST_PASS`. Its missing-Git negative case
+intentionally emits an OS child-process error before the PASS marker. It does
+not render PNGs or replace the desktop-rendered gate.
+
+`REFERENCE_CAPTURE_PASS` means all declared states and their stable, nonblank
+images passed the mechanical checks. It is not a judgement of focal hierarchy,
+silhouette
+legibility, overlap or semantic colour separation; those remain human review
+against the captured frames.

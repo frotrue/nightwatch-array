@@ -3,11 +3,21 @@
 ## Current decision
 
 Fable approved stage 2 in room message #34 after the code/threshold review and
-seven gates plus eight rendered diagnostics. Commit the stage-2 changes before
-continuing. Live 280 ms animation feel remains a human judgement, not a claim
-made from frozen poses. Stage 3 is now open for Codex's independent review of
-Fable's separate `tests/capture_reference.gd` implementation; it is not approved
-yet. Stage 4 has not started. The earlier checkpoint entries below are history,
+seven gates plus eight rendered diagnostics, committed as `c114d42`.
+Live 280 ms animation feel remains a human judgement, not a claim made from
+frozen poses. Codex's stage-3 review rejected six false-pass/isolation/provenance
+gaps, accepted by Fable in #37. The rewritten generator separates isolated
+scenario fixtures from capture validation, hashes the full working tree and
+checks stable nonblank frames with exact state contracts. Two dirty runs at
+`c114d42` generated identical PNG hashes for all eleven scenarios, independently
+visually inspected; eight correctness gates passed. The off-screen Windows
+renderer alternative is agreed in #37, not display-less headless support.
+Fable approved stage 3 in #42, independently checking the clock's only writer,
+headless rejection and repeat PNG hashes. The twelve rejected prototype files
+were removed from the reference root into a separate, marked legacy archive
+(no deletion). Commit this gate, then generate and verify a clean-revision
+corpus before stage 4. Stage 4 has not started.
+The earlier checkpoint entries below are history,
 not the current approval state.
 
 User requested commit/push/shutdown and continuation from stage 2 tomorrow.
