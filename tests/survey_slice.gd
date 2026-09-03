@@ -5,6 +5,7 @@ extends SceneTree
 # sweeps, then judge whether cursor-local summoning reads without extra HUD.
 
 const SLICE_SECONDS := 60.0
+const Fixtures = preload("res://tests/support/game_fixture.gd")
 
 var summoned_meteors: int = 0
 
@@ -16,8 +17,7 @@ func _initialize() -> void:
 func _run() -> void:
 	var packed: PackedScene = load("res://scenes/main.tscn")
 	var game = packed.instantiate()
-	game.startup_slot_prompt_enabled = false
-	game.get_node("Tutorial").auto_start_enabled = false
+	Fixtures.configure_before_ready(game)
 	root.add_child(game)
 	await process_frame
 	await process_frame

@@ -3,7 +3,7 @@ extends RefCounted
 # Scenario construction only. The driver owns files, rendering and provenance.
 # Synthetic inputs use production nodes/routes, but do not measure game pacing.
 const MainScene = preload("res://scenes/main.tscn")
-const Fixtures = preload("res://tests/effect_feedback_test.gd")
+const Fixtures = preload("res://tests/support/game_fixture.gd")
 const Balance = preload("res://scripts/game_balance.gd")
 const ChartData = preload("res://scripts/research_chart_data.gd")
 const ResearchChart = preload("res://scripts/upgrade_tree.gd")
@@ -62,18 +62,6 @@ const SCENARIOS := [
 	{"id": "palette_inactive", "stage": "synthetic_palette", "density": "117_visuals_13_branches", "overlays": ["palette_diagnostic"], "note": "Synthetic13-branch input matrix using real StarNodeVisual draws: star/cluster/galaxy in locked, hidden and teaser states. Inactive silhouettes are intentionally shown as test specimens.", "expected": {"meteors": 0, "installed": 0, "tracking": false, "span": 1.0}},
 ]
 
-class NoPersistence:
-	extends Fixtures.NoSaveSlots
-
-	func load_slot(_slot: int) -> Dictionary:
-		return {}
-
-	func reset_slot(_slot: int) -> Error:
-		return ERR_UNAVAILABLE
-
-	func set_save_directory(_path: String) -> void:
-		pass
-
 var failures: Array[String] = []
 
 
@@ -84,10 +72,7 @@ func prepare(tree: SceneTree, id: String) -> Node:
 	tree.paused = false
 	tree.root.gui_disable_input = true
 	var game: Node = MainScene.instantiate()
-	game.startup_slot_prompt_enabled = false
-	game.get_node("Tutorial").auto_start_enabled = false
-	_replace_child(game, "SaveGameController", NoPersistence.new())
-	_replace_child(game, "GameSettings", Fixtures.NoSettings.new())
+	Fixtures.configure_before_ready(game)
 	tree.root.add_child(game)
 	# No process/input frame may run between _ready and this first freeze.
 	freeze(game)
@@ -260,7 +245,7 @@ func inspect(game: Node, id: String) -> Dictionary:
 		"ending_complete": game.hud.end_reveal_complete, "ending_debug_preview": game.catalogue_ending_debug_preview,
 		"ending_map_progress": [game.hud.end_coda.constellation_progress, game.hud.end_coda.pullback_progress, game.hud.end_coda.route_progress, game.hud.end_coda.illumination_progress, game.hud.end_coda.settle_progress],
 		"active_processes": active_processes, "running_tweens": running_tweens,
-		"paused": game.get_tree().paused, "isolated": game.save_games is NoPersistence and game.settings is Fixtures.NoSettings,
+		"paused": game.get_tree().paused, "isolated": game.save_games is Fixtures.NoSaveSlots and game.settings is Fixtures.NoSettings,
 		"twinkle_time": game.get_node("TwinkleStars").time,
 	}
 	if id in ["palette_active", "palette_inactive"]:
@@ -383,14 +368,6 @@ func _meteor_of_type(game: Node, type_id: String):
 	for meteor in game.meteor_layer.get_children():
 		if String(meteor.type_id) == type_id: return meteor
 	return null
-
-
-func _replace_child(game: Node, child_name: String, replacement: Node) -> void:
-	var original: Node = game.get_node(child_name)
-	game.remove_child(original)
-	original.free()
-	replacement.name = child_name
-	game.add_child(replacement)
 
 
 func _definition(id: String) -> Dictionary:

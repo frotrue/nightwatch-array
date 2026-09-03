@@ -6,6 +6,11 @@ needs to know what talks to what. For *why* the game is shaped this way, read
 
 Engine: Godot 4.7.2-stable, `gl_compatibility` renderer, 1152x648 viewport.
 
+This is the current implementation reference, not the chronological design log.
+The [documentation map](README.md) separates current contracts from historical
+baselines and superseded decisions. Start with the responsibility table for code
+ownership, then the relevant flow and save contract below.
+
 ## Scene tree
 
 `scenes/main.tscn`:
@@ -59,7 +64,7 @@ content.
 | `meteor.gd` | One object's burn-progress motion, optional fixed-endpoint quadratic lens curve, explicit in-zone lensed state, trail and terminal fade, observation progress, quality grading, split behaviour, and passive spectral calibration result. |
 | `galactic_phenomena_controller.gd` | Persistent supernova and black-hole target lifecycle, semantic five-record completion queries, active-observation-time phase advancement, save/load, lens-zone rendering, and lensed-meteor curve assignment. |
 | `supernova_target.gd` | Peak/fade/remnant timing choice. A missed light-curve phase always ends in a trackable remnant. |
-| `black_hole_target.gd` | Full-ring and partial-arc cursor-path hit testing. Angular progress accumulates and never decays on release or exit. The coda target also carries the supernova phase state. |
+| `black_hole_target.gd` | Full-ring and partial-arc contact distance with ordinary aim-and-hold progress, not angular travel. Releasing does not erase progress. The coda target also carries the supernova phase state. |
 | `observation_controller.gd` | Cursor sampling, the tracking-versus-survey input latch, manual tracking across meteor/host/phenomena layers, point or annulus swept-path hit detection, tracking and hover rings, and the software cursor. |
 | `sky_contacts.gd` | Low-chrome forecast contact rendering and steerable dishes. Right-click moves the nearest dish; Predictive Dish Control automatically pre-positions an idle dish. Forecast Log narrows the expected-position ring instead of adding value/time text. After galaxy entry, common/fast contacts remain in the simulation and automatic assignment but omit their ring, label, countdown, hover target, and automatic-assignment tether. |
 | `survey_controller.gd` | Round-local blank-sky sweep charge, the 150 px live-meteor guard, isolated deterministic summon rolls, custom-start spawner calls, cooldown, and the cursor-local red-light arc. |
@@ -69,6 +74,8 @@ content.
 | `catalogue_ending_coda.gd` | Presentation-only ending plate: the chart's actual 95 stars and twelve constellation shapes light, collapse into the Milky Way, and reveal a connected 30-marker galaxy map. Owns no research, eligibility, or save state. |
 | `research_chart_data.gd` | Shared constellation records, shape edges, Local Group records, and galaxy-disc projection used by both the interactive research chart and the ending plate. |
 | `upgrade_tree.gd` | Research Chart rendering and purchase interaction, including the final-watch-pending and ending-ready completion detail shown at galaxy scale. |
+| `research_star_visual.gd` | One star, cluster, or galaxy research marker: state/branch ink, pulse, hover and hold drawing. The chart retains `StarNodeVisual` as a compatibility alias. |
+| `ui_theme.gd` | Shared palette, embedded font selection, 1920-spec coordinate conversion, spec-label construction, and grouped integer formatting for the HUD and chart. |
 | `tutorial_controller.gd` | Four-step first-run guidance. |
 | `save_game_controller.gd` | Three save slots under `user://saves`, versioned at `SAVE_VERSION = 1`. |
 | `game_settings.gd` | Locale and tutorial-completed flag in `user://settings.cfg`. |
@@ -189,7 +196,8 @@ meteor.fragment_requested → spawner._on_fragment_requested
 ## Research-node colour ownership
 
 `upgrade_tree._apply_node_visual` binds the definition's `Balance.BRANCHES`
-colour to `StarNodeVisual`. Its `state_ink` helper is read by the actual star,
+colour to `StarNodeVisual` (implemented in `research_star_visual.gd`). Its
+`state_ink` helper is read by the actual star,
 cluster and galaxy draw paths, not merely stored in an unused field. A small
 branch component is mixed into the existing warm state ink: 28% for an
 affordable frontier, 12% for an open but unaffordable node, 6% for an installed
@@ -289,8 +297,8 @@ radial halo textures, edge-on rotated galaxy markers, and permanent code labels.
 Seventy-four deterministic, non-interactive blue-grey background points occupy
 the area outside the route ellipse. Both scales use fixed information columns:
 constellation scale owns a 13-row install ledger and a selected-star inspector
-with state legend, while galaxy scale swaps in its completion record and transit
-rule inspector. Hover changes the persistent selection instead of moving a
+with state legend, while galaxy scale swaps in its completion record and
+galaxy-profile inspector. Hover changes the persistent selection instead of moving a
 cursor tooltip; the constellation sky itself stays free of node-name text, and
 the fixed right inspector alone identifies the selection. The Local Group disc
 contains 12 functional research nodes and 17 non-interactive astronomical

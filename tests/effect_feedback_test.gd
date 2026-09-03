@@ -4,6 +4,11 @@ extends SceneTree
 # Listening/visual review still determines feel; this gate protects semantics.
 const MainScene = preload("res://scenes/main.tscn")
 const Balance = preload("res://scripts/game_balance.gd")
+const Fixtures = preload("res://tests/support/game_fixture.gd")
+# Preserve the fixture names used by older local review drivers.
+const SilentSound = Fixtures.SilentSound
+const NoSaveSlots = Fixtures.NoSaveSlots
+const NoSettings = Fixtures.NoSettings
 const ROUTINE_TYPES := [
 	"common", "fast", "fragment", "fragment_piece", "satellite",
 	"variable_star", "comet", "binary_star", "galaxy",
@@ -11,48 +16,12 @@ const ROUTINE_TYPES := [
 const IMPACT_TYPES := ["fireball", "major"]
 const CENTRE := Vector2(420.0, 240.0)
 
-class SilentSound:
-
-	extends "res://scripts/sound_synth.gd"
-
-	func _play_stream(_stream: AudioStreamWAV, _pitch: float = 1.0, _delay: float = 0.0, _volume: float = 0.0) -> void:
-		pass
-
-class NoSaveSlots:
-
-	extends "res://scripts/save_game_controller.gd"
-
-	func _ready() -> void:
-		for slot in range(1, 4):
-			slot_summaries[slot] = {"exists": false, "valid": true}
-
-	func save_slot(_slot: int, _run_data: Dictionary) -> Error:
-		return ERR_UNAVAILABLE
-
 class DistantFixture:
 
 	extends Node2D
 
 	func get_visual_color() -> Color:
 		return Color.WHITE
-
-class NoSettings:
-
-	extends "res://scripts/game_settings.gd"
-
-	func _ready() -> void:
-		locale = "en"
-		tutorial_completed = true
-		TranslationServer.set_locale(locale)
-
-	func set_research_chart_rotation(value: float, _persist: bool = true) -> void:
-		research_chart_rotation = wrapf(value, -PI, PI)
-
-	func set_tutorial_completed(completed: bool) -> void:
-		tutorial_completed = completed
-
-	func _save_locale() -> void:
-		pass
 
 var failures: Array[String] = []
 
@@ -70,21 +39,7 @@ func _check(condition: bool, message: String) -> void:
 
 func _run() -> void:
 	var game = MainScene.instantiate()
-	game.startup_slot_prompt_enabled = false
-	game.get_node("Tutorial").auto_start_enabled = false
-	# Replace persistence before _ready so this fixture cannot read/write slots.
-	var original_slots := game.get_node("SaveGameController")
-	game.remove_child(original_slots)
-	original_slots.free()
-	var slots := NoSaveSlots.new()
-	slots.name = "SaveGameController"
-	game.add_child(slots)
-	var original_settings := game.get_node("GameSettings")
-	game.remove_child(original_settings)
-	original_settings.free()
-	var settings := NoSettings.new()
-	settings.name = "GameSettings"
-	game.add_child(settings)
+	Fixtures.configure_before_ready(game)
 	root.add_child(game)
 	game.sound.free()
 	var sound := SilentSound.new()

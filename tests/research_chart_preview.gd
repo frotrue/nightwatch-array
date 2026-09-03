@@ -1,6 +1,7 @@
 extends SceneTree
 
 const ChartData = preload("res://scripts/research_chart_data.gd")
+const Fixtures = preload("res://tests/support/game_fixture.gd")
 const REFERENCE_COMPLETED_CONSTELLATIONS := [
 	"cassiopeia", "big_dipper", "orion", "andromeda", "perseus", "lyra",
 	"gemini", "taurus", "leo", "ursa_minor",
@@ -19,8 +20,7 @@ func _initialize() -> void:
 func _run() -> void:
 	var scene: PackedScene = load("res://scenes/main.tscn")
 	var game: Node = scene.instantiate()
-	game.startup_slot_prompt_enabled = false
-	game.get_node("Tutorial").auto_start_enabled = false
+	Fixtures.configure_before_ready(game)
 	root.add_child(game)
 	await process_frame
 	await process_frame

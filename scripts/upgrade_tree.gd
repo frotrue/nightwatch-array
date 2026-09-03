@@ -7,6 +7,7 @@ signal galactic_pullback_finished
 const Balance = preload("res://scripts/game_balance.gd")
 const ChartData = preload("res://scripts/research_chart_data.gd")
 const UITheme = preload("res://scripts/ui_theme.gd")
+const StarNodeVisual = preload("res://scripts/research_star_visual.gd")
 
 const TREE_SIZE := Vector2(1460, 780)
 const MIN_ZOOM := 0.55
@@ -19,7 +20,7 @@ const GALACTIC_ZOOM_COMPLETE := 0.12
 const GALACTIC_DETAIL_ZOOM_START := 0.26
 const GALACTIC_DETAIL_ZOOM_END := 0.55
 const GALACTIC_CHART_SCALE := 0.0
-const GALACTIC_NODE_SCREEN_SCALE := 0.72
+const GALACTIC_NODE_SCREEN_SCALE := StarNodeVisual.GALACTIC_NODE_SCREEN_SCALE
 const GALACTIC_DISK_TILT := 0.52
 const GALACTIC_MAP_CENTER_SPEC := Vector2(910.0, 590.0)
 const GALACTIC_ROUTE_INNER_RADIUS_SPEC := 124.0
@@ -71,164 +72,8 @@ const GALACTIC_LEDGER_ORDER := [
 	"cassiopeia", "big_dipper", "orion", "andromeda", "perseus", "lyra",
 	"gemini", "taurus", "leo", "ursa_minor", "canis_major", "draco",
 ]
-const CLUSTER_MARKER_OFFSETS := [
-	Vector2(-1.45, -0.42),
-	Vector2(-0.62, 0.88),
-	Vector2(0.20, -1.08),
-	Vector2(0.92, -0.22),
-	Vector2(1.35, 0.72),
-	Vector2(0.28, 1.36),
-]
+const CLUSTER_MARKER_OFFSETS := StarNodeVisual.CLUSTER_MARKER_OFFSETS
 
-
-class StarNodeVisual:
-	extends Control
-	const PURCHASED_GLOW_SCALE := 2.35
-	const PURCHASED_ENDPOINT_GLOW_SCALE := 2.75
-	const BRANCH_MIX_INSTALLED := 0.06
-	const BRANCH_MIX_READY := 0.28
-	const BRANCH_MIX_SHORT := 0.12
-
-	var hold_ratio: float = 0.0
-	var branch_color := UITheme.STAR_LOCKED
-	var visual_state := "hidden"
-	var magnitude: float = 3.0
-	var star_kind := "star"
-	var affordable := false
-	var hovered := false
-	var pulse_phase := 0.0
-	var branch_endpoint := false
-	var galaxy_rotation := 0.0
-
-
-	func set_fill_progress(ratio: float, elapsed: float) -> void:
-		hold_ratio = clampf(ratio, 0.0, 1.0)
-		pulse_phase = elapsed * 8.0
-		queue_redraw()
-
-
-	func clear_fill() -> void:
-		hold_ratio = 0.0
-		queue_redraw()
-
-
-	func configure(state: String, color: Color, apparent_magnitude: float, kind: String, can_afford: bool, is_branch_endpoint: bool) -> void:
-		visual_state = state
-		branch_color = color
-		magnitude = apparent_magnitude
-		star_kind = kind
-		affordable = can_afford
-		branch_endpoint = is_branch_endpoint
-		set_process(visual_state == "available" and affordable)
-		queue_redraw()
-
-
-	func set_hovered(value: bool) -> void:
-		hovered = value
-		queue_redraw()
-
-
-	func visual_radius() -> float:
-		return clampf(7.4 - magnitude * 0.82, 3.4, 7.4)
-
-
-	func purchased_glow_scale() -> float:
-		return PURCHASED_ENDPOINT_GLOW_SCALE if branch_endpoint else PURCHASED_GLOW_SCALE
-
-
-	func state_ink(base: Color) -> Color:
-		# Hue adds branch identity; the original warm ink, alpha and geometry
-		# still carry state. Locked/hidden research must not leak branch hue.
-		var weight := 0.0
-		if visual_state == "purchased":
-			weight = BRANCH_MIX_INSTALLED
-		elif visual_state == "available":
-			weight = BRANCH_MIX_READY if affordable else BRANCH_MIX_SHORT
-		if weight == 0.0:
-			return base
-		return base.lerp(Color(branch_color, base.a), weight)
-
-
-	func _draw_cluster_marker(center: Vector2, radius: float) -> void:
-		# A small asymmetric point group identifies a real cluster without
-		# borrowing the circular state language used by research nodes.
-		for index in range(CLUSTER_MARKER_OFFSETS.size()):
-			var point_radius := maxf(0.72, radius * (0.28 if index % 2 == 0 else 0.20))
-			draw_circle(
-				center + CLUSTER_MARKER_OFFSETS[index] * radius * 0.72,
-				point_radius,
-				state_ink(Color(UITheme.STAR_BACKGROUND, 0.30))
-			)
-
-
-	func _draw_galaxy_marker(center: Vector2, _radius: float) -> void:
-		# Local Group research uses the mock-up's edge-on galactic discs. Keep the
-		# transform contained here so labels and later nodes never inherit rotation.
-		var spec_radius := clampf(12.6 - magnitude * 0.52, 4.6, 13.0)
-		var major := UITheme.px(spec_radius) / GALACTIC_NODE_SCREEN_SCALE
-		var minor := major * 0.33
-		draw_set_transform(center, galaxy_rotation)
-		match visual_state:
-			"purchased":
-				draw_ellipse(Vector2.ZERO, major * 2.5, major * 1.5, state_ink(Color(UITheme.STAR_INSTALLED_GLOW, 0.20 if hovered else 0.075)))
-				draw_ellipse(Vector2.ZERO, major, minor, state_ink(UITheme.STAR_INSTALLED if hovered else Color(UITheme.STAR_INSTALLED_GLOW, 0.86)))
-			"available":
-				var pulse := 0.16 + (0.06 * sin(pulse_phase) if affordable else 0.0)
-				draw_ellipse(Vector2.ZERO, major * 2.5, major * 1.5, state_ink(Color(UITheme.STAR_READY_RING, pulse)))
-				draw_ellipse(Vector2.ZERO, major, minor, state_ink(UITheme.STAR_READY_FILL if affordable else Color(UITheme.STAR_SHORT_BORDER, 0.74)))
-			"locked", "teaser":
-				draw_ellipse(Vector2.ZERO, major, minor, state_ink(Color(UITheme.STAR_LOCKED, 0.30)))
-			_:
-				draw_ellipse(Vector2.ZERO, major, minor, state_ink(Color(UITheme.STAR_BACKGROUND, 0.26)))
-		if hold_ratio > 0.0:
-			draw_ellipse_arc(Vector2.ZERO, major * 1.34, minor * 2.4, -PI * 0.5, -PI * 0.5 + TAU * hold_ratio, 42, state_ink(UITheme.STAR_READY_RING), UITheme.px(2.0), true)
-		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-
-
-	func _process(delta: float) -> void:
-		pulse_phase = fmod(pulse_phase + delta * 3.2, TAU)
-		queue_redraw()
-
-
-	func _draw() -> void:
-		var center := size * 0.5
-		var radius := visual_radius()
-		var pulse := 1.0 + (sin(pulse_phase) * 0.12 if visual_state == "available" and affordable else 0.0)
-		if star_kind == "galaxy":
-			_draw_galaxy_marker(center, radius)
-			return
-		if star_kind == "cluster" and visual_state != "hidden":
-			_draw_cluster_marker(center, radius)
-		match visual_state:
-			"purchased":
-				draw_circle(center, radius * purchased_glow_scale(), state_ink(Color(UITheme.STAR_INSTALLED_GLOW, 0.22 if hovered else 0.13)))
-				draw_circle(center, radius, state_ink(UITheme.STAR_INSTALLED))
-			"available":
-				if affordable:
-					draw_circle(center, radius * 5.2 * pulse, state_ink(Color(UITheme.STAR_READY_RING, 0.50)), false, 1.0, true)
-					draw_circle(center, radius, state_ink(UITheme.STAR_READY_FILL))
-					draw_circle(center, radius, state_ink(UITheme.STAR_READY_BORDER), false, 1.0, true)
-				else:
-					draw_circle(center, radius, state_ink(UITheme.STAR_SHORT_BORDER), false, 1.0, true)
-			"locked", "teaser":
-				draw_circle(center, maxf(1.5, radius * 0.6), state_ink(Color(UITheme.STAR_LOCKED, 0.24)))
-			_:
-				draw_circle(center, maxf(1.25, radius * 0.5), state_ink(Color(UITheme.STAR_BACKGROUND, 0.30)))
-		if hovered and visual_state != "hidden":
-			draw_circle(center, radius * 2.6, state_ink(Color(UITheme.STAR_READY_RING, 0.28)), false, 1.0, true)
-		if hold_ratio > 0.0:
-			# The gauge wraps the star so hand and eye watch the same place.
-			draw_arc(center, radius + UITheme.px(11.0), 0.0, TAU, 48, Color(UITheme.HORIZON_TICK, 0.40), 1.0, true)
-			draw_arc(
-				center,
-				radius + UITheme.px(11.0),
-				-PI * 0.5,
-				-PI * 0.5 + TAU * hold_ratio,
-				48,
-				state_ink(UITheme.STAR_READY_RING),
-				UITheme.px(2.6),
-				true
-			)
 
 
 var progression: Node
@@ -914,13 +759,7 @@ func _flush_pending_rotation() -> void:
 
 
 func _grouped(value: int) -> String:
-	var digits := str(absi(value))
-	var grouped := ""
-	for index in range(digits.length()):
-		if index > 0 and (digits.length() - index) % 3 == 0:
-			grouped += ","
-		grouped += digits[index]
-	return ("-" if value < 0 else "") + grouped
+	return UITheme.grouped_integer(value)
 
 
 func _layout_chart_header() -> void:
@@ -2945,16 +2784,7 @@ func _style_header_button(button: Button) -> void:
 	button.add_theme_stylebox_override("hover", hover)
 
 func _spec_label(text: String, font: Font, spec_size: float, color: Color, em: float = 0.0) -> Label:
-	var label := Label.new()
-	label.text = text
-	var font_size := UITheme.size_px(spec_size)
-	label.add_theme_font_override("font", font)
-	label.add_theme_font_size_override("font_size", font_size)
-	label.add_theme_color_override("font_color", color)
-	if not is_zero_approx(em):
-		label.add_theme_constant_override("spacing_glyph", UITheme.tracking(font_size, em))
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return label
+	return UITheme.spec_label(text, font, spec_size, color, em)
 
 
 func _make_label(text: String, font_size: int, color: Color) -> Label:

@@ -6,8 +6,9 @@ Read before changing anything:
 
 - [README.md](README.md) — how to run, test, export, and where the Godot binary
   actually lives. The commands this file requires are written out there.
-- [docs/design.md](docs/design.md) — genre, target length, the three-layer
-  structure, and the principles a change has to satisfy. If a proposal
+- [docs/design.md](docs/design.md) — current genre, target length, single-chart
+  progression, and the principles a change has to satisfy. Superseded decisions
+  are preserved under `docs/history/`, not additional implementation requirements. If a proposal
   conflicts with this document, raise the conflict with the user and get a
   decision. Record the approved decision in the document before or alongside
   the code. Never edit the design document on your own authority to make a

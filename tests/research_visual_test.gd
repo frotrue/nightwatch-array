@@ -7,7 +7,7 @@ const MainScene = preload("res://scenes/main.tscn")
 const Chart = preload("res://scripts/upgrade_tree.gd")
 const Balance = preload("res://scripts/game_balance.gd")
 const UITheme = preload("res://scripts/ui_theme.gd")
-const Fixtures = preload("res://tests/effect_feedback_test.gd")
+const Fixtures = preload("res://tests/support/game_fixture.gd")
 const STATES := ["purchased", "available", "locked", "teaser", "hidden"]
 
 class InkRecorder:
@@ -33,10 +33,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var game = MainScene.instantiate()
-	game.startup_slot_prompt_enabled = false
-	game.get_node("Tutorial").auto_start_enabled = false
-	_replace_child(game, "SaveGameController", Fixtures.NoSaveSlots.new())
-	_replace_child(game, "GameSettings", Fixtures.NoSettings.new())
+	Fixtures.configure_before_ready(game)
 	root.add_child(game)
 	_freeze(game)
 	var sample: Control = game.upgrade_tree.node_hold_bars["better_lens"]
@@ -53,14 +50,6 @@ func _run() -> void:
 	else:
 		print("RESEARCH_VISUAL_FAIL: %d failure(s)" % failures.size())
 		quit(1)
-
-
-func _replace_child(game: Node, child_name: String, replacement: Node) -> void:
-	var original := game.get_node(child_name)
-	game.remove_child(original)
-	original.free()
-	replacement.name = child_name
-	game.add_child(replacement)
 
 
 func _freeze(node: Node) -> void:

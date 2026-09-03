@@ -805,13 +805,7 @@ func _refresh_progression() -> void:
 
 
 func _grouped(value: int) -> String:
-	var digits := str(absi(value))
-	var grouped := ""
-	for index in range(digits.length()):
-		if index > 0 and (digits.length() - index) % 3 == 0:
-			grouped += ","
-		grouped += digits[index]
-	return ("-" if value < 0 else "") + grouped
+	return UITheme.grouped_integer(value)
 
 
 func _refresh_ready_notice() -> void:
@@ -1231,16 +1225,7 @@ func _build_sky_gradients() -> void:
 
 
 func _spec_label(text: String, font: Font, spec_size: float, color: Color, em: float = 0.0) -> Label:
-	var label := Label.new()
-	label.text = text
-	var font_size := UITheme.size_px(spec_size)
-	label.add_theme_font_override("font", font)
-	label.add_theme_font_size_override("font_size", font_size)
-	label.add_theme_color_override("font_color", color)
-	if not is_zero_approx(em):
-		label.add_theme_constant_override("spacing_glyph", UITheme.tracking(font_size, em))
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return label
+	return UITheme.spec_label(text, font, spec_size, color, em)
 
 
 func _build_data_readout() -> void:

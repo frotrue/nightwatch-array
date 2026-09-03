@@ -5,7 +5,7 @@ extends SceneTree
 # Eight frozen PNGs and per-image JSON notes go to build/effect_feedback_review.
 # This is not the stage-3 capture pipeline or a verdict on live animation feel.
 const MainScene = preload("res://scenes/main.tscn")
-const Fixtures = preload("res://tests/effect_feedback_test.gd")
+const Fixtures = preload("res://tests/support/game_fixture.gd")
 const Balance = preload("res://scripts/game_balance.gd")
 const OUTPUT_DIR := "res://build/effect_feedback_review"
 const EFFECT_SEED := 7331
@@ -13,7 +13,8 @@ const EFFECT_AGE := 0.12
 const SOURCE_FILES := [
 	"scripts/game.gd", "scripts/effects_layer.gd", "scripts/hud.gd",
 	"scripts/upgrade_tree.gd", "tests/effect_feedback_preview.gd",
-	"tests/effect_feedback_test.gd",
+	"tests/support/game_fixture.gd", "scripts/research_star_visual.gd",
+	"scripts/ui_theme.gd",
 ]
 
 var game: Node
@@ -42,10 +43,7 @@ func _run() -> void:
 		return
 	root.gui_disable_input = true
 	game = MainScene.instantiate()
-	game.startup_slot_prompt_enabled = false
-	game.get_node("Tutorial").auto_start_enabled = false
-	_replace_child("SaveGameController", Fixtures.NoSaveSlots.new())
-	_replace_child("GameSettings", Fixtures.NoSettings.new())
+	Fixtures.configure_before_ready(game)
 	root.add_child(game)
 	game.sound.free()
 	game.sound = Fixtures.SilentSound.new()
@@ -87,14 +85,6 @@ func _run() -> void:
 	print("EFFECT_PREVIEW_PASS: 8 windowed stage-2 diagnostic PNGs; frozen poses, not live animation approval; run %s" % run_id)
 	game.free()
 	quit(0)
-
-
-func _replace_child(child_name: String, replacement: Node) -> void:
-	var original := game.get_node(child_name)
-	game.remove_child(original)
-	original.free()
-	replacement.name = child_name
-	game.add_child(replacement)
 
 
 func _freeze_node(node: Node) -> void:
