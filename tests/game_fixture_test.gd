@@ -93,6 +93,8 @@ func _check_settings_persistence() -> void:
 	var master_bus := AudioServer.get_bus_index("Master")
 	var original_volume_db := AudioServer.get_bus_volume_db(master_bus) if master_bus >= 0 else 0.0
 	var original_muted := AudioServer.is_bus_mute(master_bus) if master_bus >= 0 else false
+	var original_max_fps := Engine.max_fps
+	var original_vsync := DisplayServer.window_get_vsync_mode()
 	var sentinel_action := &"fixture_foreign_action"
 	if InputMap.has_action(sentinel_action):
 		InputMap.erase_action(sentinel_action)
@@ -104,7 +106,16 @@ func _check_settings_persistence() -> void:
 	root.add_child(first)
 	await process_frame
 	_check(first.settings_path == temp_path, "settings accept an injected test-only path before ready")
-	_check(is_equal_approx(first.get_master_volume_linear(), 1.0) and not first.is_muted(), "missing settings use validated audio defaults")
+	_check(
+		is_equal_approx(first.get_master_volume_linear(), 1.0)
+		and not first.is_muted()
+		and not first.should_mute_when_unfocused()
+		and first.is_vsync_enabled()
+		and first.get_fps_limit() == 0
+		and is_equal_approx(first.get_motion_intensity(), 1.0)
+		and first.are_screen_flashes_enabled(),
+		"missing settings use validated audio, display, performance, and accessibility defaults"
+	)
 	_check(not bool(first.validate_binding_conflict(&"nw_chart", _key_event(KEY_F9)).get("ok", true)), "raw F9 cannot be saved as an inert editable binding")
 	var debug_chord := _key_event(KEY_D)
 	debug_chord.ctrl_pressed = true
@@ -121,32 +132,72 @@ func _check_settings_persistence() -> void:
 	var conflict: Dictionary = first.set_editable_binding(&"nw_fullscreen", chart_k)
 	_check(not bool(conflict.get("ok", true)) and String(conflict.get("conflict_action", "")) == "nw_chart", "a global fullscreen key cannot collide with a contextual binding")
 	first.set_master_volume_linear(0.37)
+	first.set_muted(false)
+	first.set_mute_when_unfocused(true)
+	first._notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
+	_check(not first.is_muted() and AudioServer.is_bus_mute(master_bus), "focus muting overlays the user mute without changing it")
+	first._notification(Node.NOTIFICATION_APPLICATION_FOCUS_IN)
+	_check(not AudioServer.is_bus_mute(master_bus), "returning focus restores the user's unmuted state")
 	first.set_muted(true)
+	first.set_vsync_enabled(false)
+	first.set_fps_limit(60)
+	first._notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
+	_check(first.get_fps_limit() == 60, "focus loss leaves the configured frame cap unchanged")
+	first._notification(Node.NOTIFICATION_APPLICATION_FOCUS_IN)
+	_check(first.get_fps_limit() == 60, "focus return leaves the configured frame cap unchanged")
+	first.set_motion_intensity(0.4)
+	first.set_screen_flashes_enabled(false)
 	var fullscreen_f10 := _key_event(KEY_F10)
 	_check(bool(first.set_editable_binding(&"nw_fullscreen", fullscreen_f10).get("ok", false)), "fullscreen has an editable primary key")
 	var config := ConfigFile.new()
 	_check(config.load(temp_path) == OK, "settings save to the injected path")
 	_check(int(config.get_value("settings", "version", 0)) == first.SETTINGS_VERSION, "settings persistence carries a schema version")
 	_check(config.get_value("input", "nw_chart", null) is Array, "bindings persist as a per-action descriptor array")
+	config.set_value("performance", "background_throttle", true)
+	_check(config.save(temp_path) == OK, "fixture can seed the retired background throttle key")
 	first.queue_free()
 	await process_frame
 
 	var second := GameSettings.new(temp_path)
 	root.add_child(second)
 	await process_frame
-	_check(is_equal_approx(second.get_master_volume_linear(), 0.37) and second.is_muted(), "audio values round-trip through the injected file")
+	_check(
+		is_equal_approx(second.get_master_volume_linear(), 0.37)
+		and second.is_muted()
+		and second.should_mute_when_unfocused(),
+		"audio values and the unfocused policy round-trip through the injected file"
+	)
+	_check(
+		not second.is_vsync_enabled()
+		and second.get_fps_limit() == 60
+		and is_equal_approx(second.get_motion_intensity(), 0.4)
+		and not second.are_screen_flashes_enabled(),
+		"display, performance, and accessibility values round-trip through the injected file"
+	)
 	_check(_key_event(KEY_K).is_action(&"nw_chart") and _key_event(KEY_F10).is_action(&"nw_fullscreen"), "valid editable bindings round-trip")
+	_check(second.save_settings() == OK, "current settings can rewrite a legacy settings file")
+	config = ConfigFile.new()
+	_check(config.load(temp_path) == OK and not config.has_section_key("performance", "background_throttle"), "saving schema v3 removes the retired background throttle key")
 	second.queue_free()
 	await process_frame
 
 	# Corrupt one action only; a valid action beside it must still load.
 	config.set_value("input", "nw_chart", [{"kind": "key", "logical": -1, "modifiers": {"shift": false, "alt": false, "ctrl": false, "meta": false}}])
+	config.set_value("performance", "fps_limit", 45)
+	config.set_value("accessibility", "motion_intensity", "too much")
+	config.set_value("accessibility", "screen_flashes_enabled", 1)
 	_check(config.save(temp_path) == OK, "fixture can prepare one invalid action payload")
 	var third := GameSettings.new(temp_path)
 	root.add_child(third)
 	await process_frame
 	_check(_key_event(KEY_U).is_action(&"nw_chart"), "an invalid action falls back to its own project default")
 	_check(_key_event(KEY_F10).is_action(&"nw_fullscreen"), "one invalid action does not discard another valid override")
+	_check(
+		third.get_fps_limit() == third.DEFAULT_FPS_LIMIT
+		and is_equal_approx(third.get_motion_intensity(), third.DEFAULT_MOTION_INTENSITY)
+		and third.are_screen_flashes_enabled() == third.DEFAULT_SCREEN_FLASHES_ENABLED,
+		"invalid convenience values fall back independently to safe defaults"
+	)
 	third.reset_nightwatch_bindings(false)
 	_check(InputMap.has_action(sentinel_action) and sentinel_event.is_action(sentinel_action), "resetting Nightwatch keys leaves unrelated InputMap actions intact")
 	third.queue_free()
@@ -158,6 +209,9 @@ func _check_settings_persistence() -> void:
 	if master_bus >= 0:
 		AudioServer.set_bus_volume_db(master_bus, original_volume_db)
 		AudioServer.set_bus_mute(master_bus, original_muted)
+	Engine.max_fps = original_max_fps
+	if DisplayServer.get_name().to_lower() != "headless":
+		DisplayServer.window_set_vsync_mode(original_vsync)
 	var absolute_path := ProjectSettings.globalize_path(temp_path)
 	if FileAccess.file_exists(temp_path):
 		DirAccess.remove_absolute(absolute_path)

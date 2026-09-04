@@ -33,6 +33,8 @@ var shake_pixel_scale: float = 1.0
 var shake_offset := Vector2.ZERO
 var shake_time: float = 0.0
 var shake_enabled: bool = true
+var motion_intensity: float = 1.0
+var screen_flashes_enabled: bool = true
 var kick_direction := Vector2.ZERO
 var kick_amplitude: float = 0.0
 var kick_time: float = 0.0
@@ -54,6 +56,30 @@ func _ready() -> void:
 func setup(view: Camera2D) -> void:
 	observation_view = view
 	_apply_view_transform()
+
+
+func set_accessibility_effects(requested_motion_intensity: float, flashes_enabled: bool) -> void:
+	var previous_motion_intensity := motion_intensity
+	var next_motion_intensity := clampf(requested_motion_intensity, 0.0, 1.0)
+	if next_motion_intensity < previous_motion_intensity and previous_motion_intensity > 0.0:
+		var reduction := next_motion_intensity / previous_motion_intensity
+		shake_trauma *= reduction
+		kick_amplitude *= reduction
+		_update_shake(0.0)
+		_update_kick(0.0)
+		_update_view_offset()
+	motion_intensity = next_motion_intensity
+	screen_flashes_enabled = flashes_enabled
+	if not screen_flashes_enabled:
+		flash_strength = 0.0
+	if is_zero_approx(motion_intensity):
+		shake_trauma = 0.0
+		shake_offset = Vector2.ZERO
+		kick_amplitude = 0.0
+		kick_offset = Vector2.ZERO
+		view_offset = Vector2.ZERO
+		_apply_view_transform()
+	queue_redraw()
 
 
 func _exit_tree() -> void:
@@ -147,7 +173,7 @@ func spawn_success(world_position: Vector2, amount: float, color: Color, multipl
 	})
 
 	var scaled_flash := lerpf(0.07, 0.26, power) * maxf(0.0, flash_scale)
-	if accented and scaled_flash > 0.0:
+	if screen_flashes_enabled and accented and scaled_flash > 0.0:
 		flash_color = color
 		flash_strength = maxf(flash_strength, scaled_flash)
 	set_process(true)
@@ -155,7 +181,7 @@ func spawn_success(world_position: Vector2, amount: float, color: Color, multipl
 
 
 func add_shake(amount: float, pixel_scale: float = 1.0) -> void:
-	var addition := maxf(amount, 0.0)
+	var addition := maxf(amount, 0.0) * motion_intensity
 	if addition <= 0.0:
 		return
 	shake_trauma = minf(1.0, shake_trauma + addition)
@@ -164,7 +190,7 @@ func add_shake(amount: float, pixel_scale: float = 1.0) -> void:
 
 
 func add_kick(from_point: Vector2, amount: float, pixel_scale: float = 1.0) -> void:
-	var scaled_amount := amount * maxf(0.0, pixel_scale)
+	var scaled_amount := amount * maxf(0.0, pixel_scale) * motion_intensity
 	if scaled_amount <= 0.0:
 		return
 	# Overwrite instead of accumulating. A manual chain lands several

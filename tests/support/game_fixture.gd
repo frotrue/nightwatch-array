@@ -41,6 +41,11 @@ class NoSettings:
 		master_linear = DEFAULT_MASTER_LINEAR
 		muted = DEFAULT_MUTED
 		fullscreen = DEFAULT_FULLSCREEN
+		mute_when_unfocused = DEFAULT_MUTE_WHEN_UNFOCUSED
+		vsync_enabled = DEFAULT_VSYNC_ENABLED
+		fps_limit = DEFAULT_FPS_LIMIT
+		motion_intensity = DEFAULT_MOTION_INTENSITY
+		screen_flashes_enabled = DEFAULT_SCREEN_FLASHES_ENABLED
 		_editable_bindings.clear()
 		InputBindings.apply_editable_overrides(_editable_bindings)
 		TranslationServer.set_locale(locale)
