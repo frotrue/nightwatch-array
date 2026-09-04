@@ -332,11 +332,12 @@ func _abandon_dish_work(dish: Dictionary) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not dish_active():
 		return
-	if not (event is InputEventMouseButton) or not event.pressed:
+	if not InputMap.has_action(&"nw_dish") or not event.is_action_pressed(&"nw_dish"):
 		return
-	if event.button_index != MOUSE_BUTTON_RIGHT:
-		return
-	var point := _screen_to_world(Vector2(event.position))
+	var screen_position := get_viewport().get_mouse_position()
+	if event is InputEventMouseButton:
+		screen_position = event.position
+	var point := _screen_to_world(screen_position)
 	cursor_position = point
 	move_dish_to(point)
 	get_viewport().set_input_as_handled()

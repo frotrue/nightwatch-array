@@ -90,7 +90,7 @@ func _process(delta: float) -> void:
 	else:
 		previous_cursor_position = cursor_position
 		cursor_position = sampled_cursor
-	var holding: bool = Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+	var holding: bool = Input.is_action_pressed(&"nw_observe")
 	var cursor_on_ui := _cursor_is_on_ui()
 	_set_native_cursor_visible(cursor_on_ui)
 	if holding and not cursor_on_ui:

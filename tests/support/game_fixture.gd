@@ -37,12 +37,21 @@ class NoSettings:
 		process_mode = Node.PROCESS_MODE_ALWAYS
 		locale = "en"
 		tutorial_completed = true
+		research_chart_rotation = 0.0
+		master_linear = DEFAULT_MASTER_LINEAR
+		muted = DEFAULT_MUTED
+		fullscreen = DEFAULT_FULLSCREEN
+		_editable_bindings.clear()
+		InputBindings.apply_editable_overrides(_editable_bindings)
 		TranslationServer.set_locale(locale)
+
+	func save_settings() -> Error:
+		return ERR_UNAVAILABLE
 
 	func set_research_chart_rotation(value: float, _persist: bool = true) -> void:
 		research_chart_rotation = wrapf(value, -PI, PI)
 
-	func set_tutorial_completed(completed: bool) -> void:
+	func set_tutorial_completed(completed: bool, _persist: bool = true) -> void:
 		tutorial_completed = completed
 
 	func _save_locale() -> void:

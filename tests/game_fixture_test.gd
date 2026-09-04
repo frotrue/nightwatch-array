@@ -2,6 +2,8 @@ extends SceneTree
 
 const Fixtures = preload("res://tests/support/game_fixture.gd")
 const MainScene = preload("res://scenes/main.tscn")
+const GameSettings = preload("res://scripts/game_settings.gd")
+const InputBindings = preload("res://scripts/game_input_bindings.gd")
 var failures: Array[String] = []
 
 class GuardedSettings:
@@ -63,6 +65,7 @@ func _run() -> void:
 	settings.set_tutorial_completed(false)
 	_check(not settings.is_tutorial_completed(), "tutorial state can be varied in memory")
 	settings.set_language("en")
+	await _check_settings_persistence()
 	var silent := Fixtures.SilentSound.new()
 	root.add_child(silent)
 	var voice_count := silent.get_child_count()
@@ -81,6 +84,110 @@ func _run() -> void:
 	else:
 		print("GAME_FIXTURE_FAIL: %d failure(s)" % failures.size())
 		quit(1)
+
+
+func _check_settings_persistence() -> void:
+	var temp_path := "user://nightwatch_settings_fixture_%d_%d.cfg" % [OS.get_process_id(), Time.get_ticks_usec()]
+	var input_snapshot := _snapshot_nightwatch_input()
+	var original_locale := TranslationServer.get_locale()
+	var master_bus := AudioServer.get_bus_index("Master")
+	var original_volume_db := AudioServer.get_bus_volume_db(master_bus) if master_bus >= 0 else 0.0
+	var original_muted := AudioServer.is_bus_mute(master_bus) if master_bus >= 0 else false
+	var sentinel_action := &"fixture_foreign_action"
+	if InputMap.has_action(sentinel_action):
+		InputMap.erase_action(sentinel_action)
+	InputMap.add_action(sentinel_action)
+	var sentinel_event := _key_event(KEY_Q)
+	InputMap.action_add_event(sentinel_action, sentinel_event)
+
+	var first := GameSettings.new(temp_path)
+	root.add_child(first)
+	await process_frame
+	_check(first.settings_path == temp_path, "settings accept an injected test-only path before ready")
+	_check(is_equal_approx(first.get_master_volume_linear(), 1.0) and not first.is_muted(), "missing settings use validated audio defaults")
+	_check(not bool(first.validate_binding_conflict(&"nw_chart", _key_event(KEY_F9)).get("ok", true)), "raw F9 cannot be saved as an inert editable binding")
+	var debug_chord := _key_event(KEY_D)
+	debug_chord.ctrl_pressed = true
+	debug_chord.shift_pressed = true
+	_check(not bool(first.validate_binding_conflict(&"nw_chart", debug_chord).get("ok", true)), "raw Ctrl+Shift debug chords are reserved")
+	_check(not bool(first.validate_binding_conflict(&"nw_chart", _key_event(KEY_TAB)).get("ok", true)), "GUI focus-navigation keys are reserved")
+	_check(not bool(first.validate_binding_conflict(&"nw_fullscreen", _key_event(KEY_ENTER)).get("ok", true)), "global fullscreen rejects GUI activation keys")
+	_check(bool(first.validate_binding_conflict(&"nw_chart", _key_event(KEY_ENTER)).get("ok", false)), "chart may use Enter because its active gameplay context has no competing focused GUI")
+	var chart_k := _key_event(KEY_K)
+	var chart_result: Dictionary = first.set_editable_binding(&"nw_chart", chart_k)
+	_check(bool(chart_result.get("ok", false)), "an editable chart binding can be replaced")
+	_check(chart_k.is_action(&"nw_chart") and not _key_event(KEY_U).is_action(&"nw_chart"), "replacing chart U removes the old gameplay binding")
+	_check(_key_event(KEY_U).is_action(&"nw_continue"), "the context-separated summary U fallback remains valid")
+	var conflict: Dictionary = first.set_editable_binding(&"nw_fullscreen", chart_k)
+	_check(not bool(conflict.get("ok", true)) and String(conflict.get("conflict_action", "")) == "nw_chart", "a global fullscreen key cannot collide with a contextual binding")
+	first.set_master_volume_linear(0.37)
+	first.set_muted(true)
+	var fullscreen_f10 := _key_event(KEY_F10)
+	_check(bool(first.set_editable_binding(&"nw_fullscreen", fullscreen_f10).get("ok", false)), "fullscreen has an editable primary key")
+	var config := ConfigFile.new()
+	_check(config.load(temp_path) == OK, "settings save to the injected path")
+	_check(int(config.get_value("settings", "version", 0)) == first.SETTINGS_VERSION, "settings persistence carries a schema version")
+	_check(config.get_value("input", "nw_chart", null) is Array, "bindings persist as a per-action descriptor array")
+	first.queue_free()
+	await process_frame
+
+	var second := GameSettings.new(temp_path)
+	root.add_child(second)
+	await process_frame
+	_check(is_equal_approx(second.get_master_volume_linear(), 0.37) and second.is_muted(), "audio values round-trip through the injected file")
+	_check(_key_event(KEY_K).is_action(&"nw_chart") and _key_event(KEY_F10).is_action(&"nw_fullscreen"), "valid editable bindings round-trip")
+	second.queue_free()
+	await process_frame
+
+	# Corrupt one action only; a valid action beside it must still load.
+	config.set_value("input", "nw_chart", [{"kind": "key", "logical": -1, "modifiers": {"shift": false, "alt": false, "ctrl": false, "meta": false}}])
+	_check(config.save(temp_path) == OK, "fixture can prepare one invalid action payload")
+	var third := GameSettings.new(temp_path)
+	root.add_child(third)
+	await process_frame
+	_check(_key_event(KEY_U).is_action(&"nw_chart"), "an invalid action falls back to its own project default")
+	_check(_key_event(KEY_F10).is_action(&"nw_fullscreen"), "one invalid action does not discard another valid override")
+	third.reset_nightwatch_bindings(false)
+	_check(InputMap.has_action(sentinel_action) and sentinel_event.is_action(sentinel_action), "resetting Nightwatch keys leaves unrelated InputMap actions intact")
+	third.queue_free()
+	await process_frame
+
+	_restore_nightwatch_input(input_snapshot)
+	TranslationServer.set_locale(original_locale)
+	InputMap.erase_action(sentinel_action)
+	if master_bus >= 0:
+		AudioServer.set_bus_volume_db(master_bus, original_volume_db)
+		AudioServer.set_bus_mute(master_bus, original_muted)
+	var absolute_path := ProjectSettings.globalize_path(temp_path)
+	if FileAccess.file_exists(temp_path):
+		DirAccess.remove_absolute(absolute_path)
+
+
+func _key_event(code: Key) -> InputEventKey:
+	var event := InputEventKey.new()
+	event.keycode = code
+	return event
+
+
+func _snapshot_nightwatch_input() -> Dictionary:
+	var snapshot := {}
+	for action_value in InputBindings.action_names():
+		var action := StringName(action_value)
+		var events: Array[InputEvent] = []
+		for event in InputMap.action_get_events(action):
+			events.append(event.duplicate())
+		snapshot[action] = events
+	return snapshot
+
+
+func _restore_nightwatch_input(snapshot: Dictionary) -> void:
+	for action_value in InputBindings.action_names():
+		var action := StringName(action_value)
+		if not InputMap.has_action(action):
+			InputMap.add_action(action)
+		InputMap.action_erase_events(action)
+		for event in snapshot.get(action, []):
+			InputMap.action_add_event(action, event)
 
 
 func _check(condition: bool, message: String) -> void:

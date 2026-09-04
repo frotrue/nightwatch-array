@@ -68,9 +68,11 @@ without Godot, including survival of an unrelated same-name process.
 `tests/support/game_fixture.gd` owns reusable no-persistence settings/slot
 services and the silent sound fixture. `configure_before_ready(game)` replaces
 services before the main scene enters the tree. Turning off the startup slot
-prompt alone is insufficient: the ordinary settings node still reads disk and
-closing the chart can save its rotation. Fixture slots cannot save, load, reset,
-or create a directory; locale/tutorial/rotation setters remain in-memory.
+prompt alone is insufficient: the ordinary settings node still reads disk,
+applies audio/display/input state, and can save chart rotation. Fixture slots
+cannot save, load, reset, or create a directory. Fixture settings initialize
+locale, tutorial, rotation, audio, display, and binding defaults in memory while
+rejecting persistence.
 
 The effect and visual gates, reference scenarios, HUD/chart previews, all three
 main-game frame probes, and survey slice use this helper. Preview defaults are
@@ -112,6 +114,12 @@ extracted marker alias. It does not replace pixel comparison.
 `game_fixture_test.gd` checks pre-ready replacement, deterministic in-memory
 settings, rejected save/load/reset operations, cache-miss isolation, no save
 directory creation, and silent dispatch through inactive pooled audio voices.
+Its dedicated temporary settings path also checks schema versioning, missing-file
+defaults, audio and editable-binding round trips, active-context conflict
+rejection, one-action fallback for corrupt input, preservation of locked
+defaults, and a reset that leaves unrelated `InputMap` actions untouched. The
+injected file is removed before the gate exits; the player's production settings
+path is never used.
 
 ```powershell
 & $godot --headless --path . --script res://tests/game_fixture_test.gd
@@ -300,6 +308,21 @@ presentation-only inclusion of 17 decorative galaxies, the two-second skip
 boundary and identical natural/skip final frame, keyboard focus, save-failure
 retry, active-final-watch resume/signature validation, corrupt-slot recovery, the non-destructive
 ending-preview debug chord, performance caps, stale references, and reset.
+
+The no-persistence input-routing fixture additionally snapshots and restores
+the process-global `InputMap`, audio, display, locale, pause, and cursor state.
+It verifies the always-processing router; deferred keyboard focus for tutorial,
+Settings, and Controls; mutually exclusive Settings accordions; the audio
+slider/mute model; one-layer Controls/Settings back navigation; and rebind
+capture consuming both the candidate press and release before updating the live
+`InputMap`. It also adds and removes the optional menu/back alternate without
+losing locked `Esc` or another custom binding. It then exercises the replaced and reset chart keys through the real
+viewport, paused-summary continuation on `U`/`Enter`/`Space`, Settings layered
+over a summary without stealing its pause, chart first refusal on `Esc`, and
+fullscreen while Settings has paused the tree. Exact modifier matching is
+covered with `Shift+F11`, and ending, startup recovery, and both tutorial modal
+steps must block chart/back without disturbing their covered surface or pause
+owner. Tutorial replay is also rejected while a phase summary is active.
 
 - Pass: a single `SMOKE_TEST_PASS:` line
 - Fail: `SMOKE:` error lines, then `SMOKE_TEST_FAIL: N failure(s)`
@@ -754,6 +777,32 @@ Remove-Item Env:NIGHTWATCH_GALACTIC_PREVIEW -ErrorAction SilentlyContinue
 first transit window at 48% and writes `build/transit_preview.png`. It does not
 perform a prior confirmation or a separate harvest; those interactions were
 removed in the approved Local Group simplification.
+
+### Settings and Controls preview
+
+`tests/settings_preview.gd` captures the new Settings surfaces at the shipped
+1152x648 viewport. It installs the no-persistence fixture before `_ready()`, so
+the capture does not read or rewrite the player's audio, display, binding, or
+onboarding settings. Run it with a real windowed renderer; headless output is not
+representative.
+
+The default expands Audio & Display and writes `build/settings_preview.png`.
+Set `NIGHTWATCH_SETTINGS_PREVIEW=controls` to open the Controls overlay and write
+`build/controls_preview.png`. `NIGHTWATCH_SETTINGS_LOCALE=ko` selects Korean and
+adds `_ko` to either filename.
+
+```powershell
+$env:NIGHTWATCH_SETTINGS_PREVIEW = "controls"
+$env:NIGHTWATCH_SETTINGS_LOCALE = "ko"
+& $godot --path . --script res://tests/settings_preview.gd
+Remove-Item Env:NIGHTWATCH_SETTINGS_PREVIEW -ErrorAction SilentlyContinue
+Remove-Item Env:NIGHTWATCH_SETTINGS_LOCALE -ErrorAction SilentlyContinue
+```
+
+`SETTINGS_PREVIEW_SAVED` means a non-empty frame was written, not that wrapping,
+focus order, contrast, or 1152x648 fit passed human review. Inspect both English
+and Korean Settings/Controls frames after changing copy, scale, spacing, or
+focusable controls.
 
 ### Catalogue-ending capture
 

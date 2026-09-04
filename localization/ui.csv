@@ -1,15 +1,58 @@
 key,en,ko
 SETTINGS_BUTTON,SETTINGS,설정
 SETTINGS_TITLE,GAME SETTINGS,게임 설정
-SETTINGS_SUBTITLE,ACCESSIBILITY / DISPLAY,접근성 / 화면
+SETTINGS_SUBTITLE,AUDIO / DISPLAY / CONTROLS,소리 / 화면 / 조작
 SETTINGS_LANGUAGE,LANGUAGE,언어
 SETTINGS_LANGUAGE_HINT,Changes are applied immediately and saved automatically.,선택한 언어는 즉시 적용되고 자동으로 저장됩니다.
 SETTINGS_CLOSE,CLOSE  [ESC],닫기  [ESC]
 SETTINGS_ENGLISH,English,English
 SETTINGS_KOREAN,한국어,한국어
 TUTORIAL_REPLAY,REPLAY TUTORIAL,튜토리얼 다시 보기
+TUTORIAL_REPLAY_UNAVAILABLE_SUMMARY,Finish the phase summary before replaying the tutorial.,단계 정산을 마친 뒤 튜토리얼을 다시 볼 수 있습니다.
 SETTINGS_SAVE_MANAGEMENT,SAVE MANAGEMENT,저장 관리
 SETTINGS_SAVE_HIDE,HIDE SAVE MANAGEMENT,저장 관리 접기
+SETTINGS_AUDIO_DISPLAY,AUDIO & DISPLAY,소리 및 화면
+SETTINGS_AUDIO_DISPLAY_HIDE,HIDE AUDIO & DISPLAY,소리 및 화면 접기
+SETTINGS_MASTER_VOLUME,MASTER VOLUME,전체 음량
+SETTINGS_MUTE_ON,MUTE  ON,음소거  켬
+SETTINGS_MUTE_OFF,MUTE  OFF,음소거  끔
+SETTINGS_FULLSCREEN_ON,FULLSCREEN  ON,전체 화면  켬
+SETTINGS_FULLSCREEN_OFF,FULLSCREEN  OFF,전체 화면  끔
+SETTINGS_CONTROLS,VIEW / CHANGE CONTROLS,조작키 보기 / 변경
+CONTROLS_TITLE,CONTROLS,조작키
+CONTROLS_SUBTITLE,KEYBOARD / MOUSE,키보드 / 마우스
+CONTROLS_HINT,Select an editable key and press its replacement. Esc cancels capture.,변경 가능한 키를 선택한 뒤 새 키를 누르세요. Esc는 입력 대기를 취소합니다.
+CONTROLS_BACK,BACK TO SETTINGS  [ESC],설정으로 돌아가기  [ESC]
+CONTROLS_RESET,RESTORE DEFAULT KEYS,기본 조작키 복원
+CONTROLS_RESET_TITLE,RESTORE DEFAULT KEYS,기본 조작키 복원
+CONTROLS_RESET_PROMPT,Restore every editable Nightwatch key to its default?,변경 가능한 나이트워치 조작키를 모두 기본값으로 되돌릴까요?
+CONTROLS_RESET_CONFIRM,RESTORE,복원
+CONTROLS_CAPTURE,PRESS A KEY  •  ESC TO CANCEL,키를 누르세요  •  ESC 취소
+CONTROLS_REBOUND,%s is now bound to [%s].,%s 키가 [%s](으)로 변경되었습니다.
+CONTROLS_CAPTURE_CANCELLED,Key change cancelled.,키 변경을 취소했습니다.
+CONTROLS_CONFLICT,[%s] is already used by %s.,[%s] 키는 이미 %s에 사용 중입니다.
+CONTROLS_INVALID,That key cannot be used here.,이 키는 여기에서 사용할 수 없습니다.
+CONTROLS_RESTORED,Default Nightwatch keys restored.,나이트워치 기본 조작키를 복원했습니다.
+CONTROLS_FIXED,FIXED,고정
+CONTROLS_ADD_KEY,ADD KEY,키 추가
+CONTROLS_REMOVE,REMOVE,키 제거
+CONTROLS_REMOVED,Optional key removed from %s.,%s의 보조키를 제거했습니다.
+CONTROLS_REQUIRES,REQUIRES %s,%s 필요
+CONTROL_OBSERVE,OBSERVE / TRACK,관측 / 추적
+CONTROL_DISH,MOVE DISH,접시 이동
+CONTROL_CHART,RESEARCH CHART,연구 성도
+CONTROL_MENU_BACK,MENU / BACK,메뉴 / 뒤로
+CONTROL_CONTINUE,CONTINUE SUMMARY,정산 계속
+CONTROL_FULLSCREEN,FULLSCREEN,전체 화면
+CONTROL_ROTATE,ROTATE CHART,성도 회전
+CONTROL_ZOOM,ZOOM CHART,성도 확대 / 축소
+CONTROL_INSTALL,INSTALL SYSTEM,시스템 설치
+CONTROL_SKY_SWEEP,SKY SWEEP,하늘 훑기
+CONTROL_LMB_HOLD,LMB / HOLD,왼쪽 버튼 / 길게 누르기
+CONTROL_RMB,RMB,오른쪽 버튼
+CONTROL_WHEEL,WHEEL,휠
+CONTROL_CTRL_WHEEL,CTRL + WHEEL,Ctrl + 휠
+CONTROL_POINTER_HOLD,POINTER / HOLD,포인터 / 길게 누르기
 TUTORIAL_STEP,STEP %d / %d,단계 %d / %d
 TUTORIAL_STEP_WELCOME,QUICK START,빠른 시작
 TUTORIAL_STEP_COMPLETE,TUTORIAL COMPLETE,튜토리얼 완료
@@ -23,14 +66,14 @@ TUTORIAL_OBSERVE_TITLE,TRACK A METEOR,유성을 추적하세요
 TUTORIAL_OBSERVE_BODY,Hold the left mouse button and keep the cursor close to a meteor until the observation ring fills.,마우스 왼쪽 버튼을 누른 채 커서를 유성 가까이에 유지해 관측 게이지를 채우세요.
 TUTORIAL_OBSERVE_HINT,Complete one observation to continue.,관측을 한 번 완료하면 계속됩니다.
 TUTORIAL_TREE_TITLE,OPEN THE RESEARCH CHART,연구 성도를 여세요
-TUTORIAL_TREE_BODY,Your first observation awarded enough Data for an opening system. Press [U] to open the Research Chart.,첫 관측으로 첫 시스템을 설치할 만큼 데이터가 모였습니다. [U]를 눌러 연구 성도를 여세요.
+TUTORIAL_TREE_BODY,Your first observation awarded enough Data for an opening system. Press [%s] to open the Research Chart.,첫 관측으로 첫 시스템을 설치할 만큼 데이터가 모였습니다. [%s]를 눌러 연구 성도를 여세요.
 TUTORIAL_TREE_HINT,Open the chart to continue.,성도를 열면 계속됩니다.
 TUTORIAL_INSTALL_TITLE,INSTALL YOUR FIRST SYSTEM,첫 시스템을 설치하세요
 TUTORIAL_INSTALL_BODY,Available nodes glow in their branch color. Hold an affordable node until its install meter fills.,설치 가능한 노드는 계열 색으로 빛납니다. 설치할 노드를 길게 눌러 게이지를 끝까지 채우세요.
 TUTORIAL_INSTALL_HINT,Hold one available system to install it and continue.,설치 가능한 시스템 하나를 길게 눌러 설치하면 계속됩니다.
 TUTORIAL_COMPLETE_TITLE,THE ARRAY IS YOURS,이제 관측망은 당신의 것입니다
 TUTORIAL_COMPLETE_BODY,Keep observing to unlock every research branch. The Settings menu also contains three manual save slots.,관측을 계속해 모든 연구 계열을 해금하세요. 설정 메뉴에서는 수동 저장 슬롯 3개도 사용할 수 있습니다.
-TUTORIAL_COMPLETE_HINT,Press [U] to close the chart. You can replay this guide from Settings.,[U]로 성도를 닫을 수 있습니다. 이 안내는 설정에서 다시 볼 수 있습니다.
+TUTORIAL_COMPLETE_HINT,Press [%s] to close the chart. You can replay this guide from Settings.,[%s]로 성도를 닫을 수 있습니다. 이 안내는 설정에서 다시 볼 수 있습니다.
 TUTORIAL_FINISH,BEGIN NIGHTWATCH,나이트워치 시작
 STARTUP_SAVE_TITLE,SELECT SAVE SLOT,저장 슬롯 선택
 STARTUP_SAVE_SUBTITLE,NIGHTWATCH RECORDS,나이트워치 관측 기록
@@ -87,8 +130,8 @@ PHASE_SUMMARY_BADGE_BEST,NEW BEST DATA RATE,최고 분당 데이터
 PHASE_SUMMARY_CONTINUE,OPEN RESEARCH CHART,연구 성도로
 HUD_AUTOSAVED,AUTOSAVED,자동 저장됨
 HUD_TUTORIAL_START,Hold LMB and follow the meteor,마우스 왼쪽 버튼을 누른 채 유성을 따라가세요
-HUD_TUTORIAL_DONE,Observation logged. Open the Research Chart [U] to expand the array.,관측이 기록되었습니다. 연구 성도 [U]에서 관측망을 확장하세요.
-HUD_UPGRADE_BUTTON,RESEARCH  [U]    %d/%d,연구 성도  [U]    %d/%d
+HUD_TUTORIAL_DONE,Observation logged. Open the Research Chart [%s] to expand the array.,관측이 기록되었습니다. 연구 성도 [%s]에서 관측망을 확장하세요.
+HUD_UPGRADE_BUTTON,RESEARCH  [%s]    %d/%d,연구 성도  [%s]    %d/%d
 HUD_UPGRADE_AVAILABLE,◆  SYSTEM READY,◆  시스템 설치 가능
 HUD_NEXT_DISCOVERY,NEXT DISCOVERY AWAITS,다음 발견 대기 중
 HUD_NEXT_SYSTEM,NEXT SYSTEM,다음 시스템
@@ -118,9 +161,9 @@ TREE_TITLE,RESEARCH CHART,연구 성도
 TREE_INTERMISSION_SUBTITLE,RESEARCH BREAK  /  OBSERVATION %d STARTS AT %d SECONDS,연구 시간  /  %d차 관측은 %d초
 TREE_DATA,DATA  %d,데이터  %d
 TREE_CENTER,RESET NORTH,정북 복귀
-TREE_CLOSE,CLOSE  [U],닫기  [U]
-TREE_START_OBSERVATION,START OBSERVATION  [U],관측 시작  [U]
-TREE_CATALOGUE_SEAL_RECORD,SEAL RECORD  [U],기록 마치기  [U]
+TREE_CLOSE,CLOSE  [%s],닫기  [%s]
+TREE_START_OBSERVATION,START OBSERVATION  [%s],관측 시작  [%s]
+TREE_CATALOGUE_SEAL_RECORD,SEAL RECORD  [%s],기록 마치기  [%s]
 TREE_CONTROLS,WHEEL ROTATE  /  CTRL+WHEEL ZOOM,휠 회전  /  Ctrl+휠 확대·축소
 TREE_STATUS_READY,%d UPGRADE READY,시스템 설치 가능 %d개
 TREE_STATUS_PATHS,%d OPEN PATHS  /  GATHER OBSERVATION DATA,열린 경로 %d개  /  관측 데이터 필요
@@ -581,7 +624,7 @@ END_MANUAL_AUTO,MANUAL / AUTO   %d / %d,수동 / 자동   %d / %d
 END_TOTAL_DATA,TOTAL DATA EARNED   %d,총 획득 데이터   %d
 END_RESEARCH,RESEARCH   %d / %d,연구   %d / %d
 END_PHENOMENA,GALACTIC PHENOMENA   %d / %d,은하 현상   %d / %d
-HUD_READY_SYSTEMS,%d SYSTEMS READY  [U],설치 가능한 시스템 %d  [U]
+HUD_READY_SYSTEMS,%d SYSTEMS READY  [%s],설치 가능한 시스템 %d  [%s]
 HUD_TRACK_MULTIPLIER,×%.2f,×%.2f
 HUD_PHASE_ROUND,OBSERVATION %d,%d차 관측
 HUD_PHASE_CLOCK,%02d:%02d,%02d:%02d
@@ -605,9 +648,9 @@ TREE_CONSTELLATION_BELOW_HORIZON,BELOW HORIZON,지평선 아래
 TREE_CONSTELLATION_IN_PROGRESS,IN PROGRESS,진행 중
 TREE_CONSTELLATION_LOCKED,LOCKED,잠김
 TREE_CONSTELLATION_HORIZON_HINT,%d CONSTELLATIONS BELOW THE HORIZON · USE THE WHEEL TO RAISE THEM,지평선 아래 별자리 %d개는 휠로 올라옵니다
-TREE_BOTTOM_START_OBSERVATION,[U] START OBSERVATION,[U] 관측 시작
-TREE_BOTTOM_CLOSE,[U] CLOSE CHART,[U] 성도 닫기
-TREE_BOTTOM_CATALOGUE_SEAL_RECORD,[U] SEAL RECORD,[U] 기록 마치기
+TREE_BOTTOM_START_OBSERVATION,[%s] START OBSERVATION,[%s] 관측 시작
+TREE_BOTTOM_CLOSE,[%s] CLOSE CHART,[%s] 성도 닫기
+TREE_BOTTOM_CATALOGUE_SEAL_RECORD,[%s] SEAL RECORD,[%s] 기록 마치기
 TREE_CONSTELLATION_FIELD_STATUS,STATUS,상태
 TREE_CONSTELLATION_FIELD_COST,COST,비용
 TREE_CONSTELLATION_FIELD_EFFECT,EFFECT,효과
@@ -638,7 +681,7 @@ TREE_GALACTIC_FIELD_STATUS,STATUS,상태
 TREE_GALACTIC_FIELD_COST,COST,비용
 TREE_GALACTIC_FIELD_EFFECT,EFFECT,효과
 TREE_GALACTIC_INNER_HINT,INNER MILKY WAY · LATER RESEARCH OUTWARD,안쪽 우리 은하 · 바깥으로 갈수록 나중 연구
-TREE_GALACTIC_RETURN,[U] RETURN TO OBSERVATION,[U] 관측으로 돌아가기
+TREE_GALACTIC_RETURN,[%s] RETURN TO OBSERVATION,[%s] 관측으로 돌아가기
 TREE_GALACTIC_WATERMARK,LOCAL GROUP,LOCAL GROUP
 BANNER_GALACTIC_OBSERVATION,GALACTIC RECORD UPDATED,은하 관측 기록 갱신
 METEOR_SUPERNOVA,SUPERNOVA,초신성

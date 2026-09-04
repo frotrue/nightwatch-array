@@ -5,6 +5,8 @@ const ChartData = preload("res://scripts/research_chart_data.gd")
 const UITheme = preload("res://scripts/ui_theme.gd")
 const StarfieldScript = preload("res://scripts/starfield.gd")
 const StarTwinkleScript = preload("res://scripts/star_twinkle.gd")
+const InputBindings = preload("res://scripts/game_input_bindings.gd")
+const Fixtures = preload("res://tests/support/game_fixture.gd")
 
 var failures: Array[String] = []
 
@@ -137,6 +139,7 @@ func _run() -> void:
 	if packed == null:
 		quit(1)
 		return
+	await _run_input_routing_regressions(packed)
 	var game = packed.instantiate()
 	game.startup_slot_prompt_enabled = false
 	game.get_node("Tutorial").auto_start_enabled = false
@@ -414,21 +417,57 @@ func _run() -> void:
 	_check(not game.upgrade_tree.is_open(), "upgrade tree begins closed")
 	_check(not game.tutorial.is_active(), "tutorial auto-start can be disabled for deterministic tests")
 	game.tutorial.start_tutorial(false)
+	await process_frame
+	await process_frame
 	_check(game.tutorial.current_step == 0 and paused, "tutorial starts with a paused welcome step")
+	_check(
+		game.tutorial.primary_button.focus_mode == Control.FOCUS_ALL
+		and game.get_viewport().gui_get_focus_owner() == game.tutorial.primary_button,
+		"the welcome modal makes its primary action the keyboard focus owner"
+	)
 	var welcome_locale: String = game.settings.locale
 	game.settings.set_language("en" if welcome_locale == "ko" else "ko", false)
 	_check(paused, "changing language does not release the tutorial pause")
 	game.settings.set_language(welcome_locale, false)
 	game.tutorial._on_primary_pressed()
-	_check(game.tutorial.current_step == 1 and not paused, "tutorial enters the live observation step")
+	_check(
+		game.tutorial.current_step == 1
+		and not paused
+		and game.tutorial.primary_button.focus_mode == Control.FOCUS_NONE
+		and game.tutorial.skip_button.focus_mode == Control.FOCUS_NONE,
+		"tutorial enters the live observation step without leaving modal focus targets"
+	)
+	var tutorial_focus_probe := Button.new()
+	tutorial_focus_probe.focus_mode = Control.FOCUS_ALL
+	tutorial_focus_probe.text = "focus probe"
+	game.hud.root_control.add_child(tutorial_focus_probe)
+	tutorial_focus_probe.grab_focus()
 	game.tutorial.notify_observation_completed()
-	_check(game.tutorial.current_step == 2, "an observation advances the tutorial")
+	_check(
+		game.tutorial.current_step == 2
+		and game.tutorial.primary_button.focus_mode == Control.FOCUS_NONE
+		and game.get_viewport().gui_get_focus_owner() == tutorial_focus_probe,
+		"an observation advances the tutorial without stealing live-game focus"
+	)
 	game.tutorial.notify_upgrade_tree_opened()
-	_check(game.tutorial.current_step == 3, "opening the tree advances the tutorial")
+	_check(
+		game.tutorial.current_step == 3
+		and game.tutorial.primary_button.focus_mode == Control.FOCUS_NONE
+		and game.get_viewport().gui_get_focus_owner() == tutorial_focus_probe,
+		"opening the tree advances the tutorial without stealing existing focus"
+	)
 	game.tutorial.notify_upgrade_purchased()
-	_check(game.tutorial.current_step == 4, "purchasing an upgrade completes the guided steps")
+	await process_frame
+	await process_frame
+	_check(
+		game.tutorial.current_step == 4
+		and game.tutorial.primary_button.focus_mode == Control.FOCUS_ALL
+		and game.get_viewport().gui_get_focus_owner() == game.tutorial.primary_button,
+		"purchasing an upgrade opens a keyboard-focused completion modal"
+	)
 	game.tutorial._on_primary_pressed()
 	_check(not game.tutorial.is_active(), "finishing hides the tutorial")
+	tutorial_focus_probe.queue_free()
 	var starting_locale: String = game.settings.locale
 	var balance = load("res://scripts/game_balance.gd")
 	var secondary_camera_definition: Dictionary = balance.upgrade_definition("secondary_camera")
@@ -1901,7 +1940,11 @@ func _run() -> void:
 	_check(game.upgrade_tree.intermission_next_round == 2 and game.upgrade_tree.intermission_next_duration == 20, "upgrade break identifies the next round and duration")
 	game.hud._on_phase_summary_continue_pressed()
 	_check(not game.hud.is_phase_summary_open() and game.upgrade_tree.is_open() and paused, "one summary action opens the research phase")
-	_check(game.upgrade_tree.close_button.text == TranslationServer.translate("TREE_START_OBSERVATION"), "upgrade break close action is labeled as starting observation")
+	_check(
+		game.upgrade_tree.close_button.text
+		== TranslationServer.translate("TREE_START_OBSERVATION") % game.settings.binding_label(&"nw_chart"),
+		"upgrade break close action is labeled as starting observation"
+	)
 	_check(game.progression.debug_purchase_node("array_planning"), "research intermission can open Observation Scheduling")
 	_check(game.progression.debug_purchase_node("observation_scheduling"), "research intermission can buy the mandatory first duration node")
 	_check(game.upgrade_tree.intermission_next_duration == 30, "research subtitle updates the next round duration immediately")
@@ -2190,11 +2233,12 @@ func _run() -> void:
 	open_night_game.upgrade_tree.open_tree()
 	await process_frame
 	await process_frame
+	var open_night_chart_binding: String = open_night_game.settings.binding_label(&"nw_chart")
 	_check(
 		open_night_game.upgrade_tree.completion_detail_label.text != TranslationServer.translate("TREE_CATALOGUE_FINAL_WATCH_DETAIL")
-		and open_night_game.upgrade_tree.close_button.text == TranslationServer.translate("TREE_CLOSE")
-		and open_night_game.upgrade_tree.constellation_bottom_action.text == TranslationServer.translate("TREE_BOTTOM_CLOSE")
-		and open_night_game.upgrade_tree.galactic_return_hint.text == TranslationServer.translate("TREE_GALACTIC_RETURN")
+		and open_night_game.upgrade_tree.close_button.text == TranslationServer.translate("TREE_CLOSE") % open_night_chart_binding
+		and open_night_game.upgrade_tree.constellation_bottom_action.text == TranslationServer.translate("TREE_BOTTOM_CLOSE") % open_night_chart_binding
+		and open_night_game.upgrade_tree.galactic_return_hint.text == TranslationServer.translate("TREE_GALACTIC_RETURN") % open_night_chart_binding
 		and not open_night_game.upgrade_tree.data_context_label.visible,
 		"an active final watch hides pending-watch copy and keeps ordinary chart-close actions"
 	)
@@ -2259,9 +2303,9 @@ func _run() -> void:
 	_check(
 		open_night_game.upgrade_tree.is_open()
 		and open_night_game.upgrade_tree.completion_detail_label.text == TranslationServer.translate("TREE_CATALOGUE_ENDING_READY_DETAIL")
-		and open_night_game.upgrade_tree.close_button.text == TranslationServer.translate("TREE_CATALOGUE_SEAL_RECORD")
-		and open_night_game.upgrade_tree.constellation_bottom_action.text == TranslationServer.translate("TREE_BOTTOM_CATALOGUE_SEAL_RECORD")
-		and open_night_game.upgrade_tree.galactic_return_hint.text == TranslationServer.translate("TREE_BOTTOM_CATALOGUE_SEAL_RECORD")
+		and open_night_game.upgrade_tree.close_button.text == TranslationServer.translate("TREE_CATALOGUE_SEAL_RECORD") % open_night_chart_binding
+		and open_night_game.upgrade_tree.constellation_bottom_action.text == TranslationServer.translate("TREE_BOTTOM_CATALOGUE_SEAL_RECORD") % open_night_chart_binding
+		and open_night_game.upgrade_tree.galactic_return_hint.text == TranslationServer.translate("TREE_BOTTOM_CATALOGUE_SEAL_RECORD") % open_night_chart_binding
 		and not open_night_game.upgrade_tree.data_context_label.visible,
 		"the completed chart labels both exits as sealing the record instead of advertising another observation"
 	)
@@ -2443,6 +2487,397 @@ func _run() -> void:
 		for failure in failures:
 			print(" - " + failure)
 		quit(1)
+
+
+func _run_input_routing_regressions(packed: PackedScene) -> void:
+	# This fixture owns no persistence. Snapshot every process-global surface that
+	# the production settings service normally controls so the smoke test cannot
+	# alter the player's profile, bindings, audio, display, locale, or cursor.
+	var input_snapshot := _snapshot_nightwatch_input()
+	var original_locale := TranslationServer.get_locale()
+	var original_mouse_mode: int = Input.mouse_mode
+	var original_pause := paused
+	var original_window_mode := DisplayServer.window_get_mode()
+	var master_bus := AudioServer.get_bus_index("Master")
+	var original_volume_db := AudioServer.get_bus_volume_db(master_bus) if master_bus >= 0 else 0.0
+	var original_bus_mute := AudioServer.is_bus_mute(master_bus) if master_bus >= 0 else false
+
+	var routing_game = packed.instantiate()
+	Fixtures.configure_before_ready(routing_game)
+	root.add_child(routing_game)
+	await process_frame
+	await process_frame
+	var settings = routing_game.settings
+	var hud = routing_game.hud
+	settings.reset_nightwatch_bindings(false)
+	_check(
+		routing_game.input_router != null
+		and routing_game.input_router.process_mode == Node.PROCESS_MODE_ALWAYS,
+		"the game owns one always-processing global input router"
+	)
+
+	# Settings keyboard focus, disclosure groups, and in-memory audio model.
+	hud.open_settings()
+	await process_frame
+	await process_frame
+	_check(
+		hud.language_selector.focus_mode == Control.FOCUS_ALL
+		and routing_game.get_viewport().gui_get_focus_owner() == hud.language_selector,
+		"settings opens with the language selector keyboard-focused"
+	)
+	_check(
+		not hud.audio_display_container.visible and not hud.save_management_container.visible,
+		"settings disclosure groups begin collapsed"
+	)
+	hud._on_audio_display_pressed()
+	_check(
+		hud.audio_display_container.visible and not hud.save_management_container.visible,
+		"audio and display expands without opening save management"
+	)
+	hud._on_save_management_pressed()
+	_check(
+		hud.save_management_container.visible and not hud.audio_display_container.visible,
+		"opening save management collapses audio and display"
+	)
+	hud._on_audio_display_pressed()
+	_check(
+		hud.audio_display_container.visible and not hud.save_management_container.visible,
+		"reopening audio and display collapses save management"
+	)
+	var original_master: float = settings.get_master_volume_linear()
+	var original_muted: bool = settings.is_muted()
+	hud.master_volume_slider.value = 37.0
+	_check(
+		is_equal_approx(settings.get_master_volume_linear(), 0.37)
+		and hud.master_volume_value.text == "37",
+		"the master slider updates both its numeric readout and settings model"
+	)
+	hud._on_mute_pressed()
+	_check(
+		settings.is_muted() != original_muted
+		and hud.mute_button.text
+		== TranslationServer.translate("SETTINGS_MUTE_ON" if settings.is_muted() else "SETTINGS_MUTE_OFF"),
+		"the mute action updates both its label and settings model"
+	)
+	settings.set_master_volume_linear(original_master, false)
+	settings.set_muted(original_muted, false)
+
+	# Controls is one settings layer. Escape returns to settings, while capture
+	# consumes both edges of a candidate and updates the live InputMap.
+	hud.open_controls()
+	await process_frame
+	await process_frame
+	var chart_widget: Control = hud.controls_action_widgets.get("nw_chart") as Control
+	_check(
+		hud.is_controls_open()
+		and chart_widget != null
+		and routing_game.get_viewport().gui_get_focus_owner() == chart_widget,
+		"controls opens with the first editable chart binding focused"
+	)
+	await _push_key_event(routing_game.get_viewport(), KEY_ESCAPE)
+	_check(
+		not hud.is_controls_open() and hud.is_settings_open() and paused,
+		"Escape closes only the controls layer and returns to settings"
+	)
+	hud.open_controls()
+	await process_frame
+	await process_frame
+	hud._begin_rebind(&"nw_chart")
+	_check(hud.is_rebind_capture_active(), "activating an editable binding starts capture")
+	var capture_fullscreen_before: bool = settings.is_fullscreen()
+	await _push_key_event(routing_game.get_viewport(), KEY_F11)
+	_check(
+		hud.is_rebind_capture_active()
+		and hud.rebind_release_keycode == 0
+		and settings.is_fullscreen() == capture_fullscreen_before
+		and hud.is_controls_open(),
+		"a conflicting F11 candidate stays in capture and never leaks into fullscreen"
+	)
+	await _push_key_event(routing_game.get_viewport(), KEY_ESCAPE)
+	_check(
+		not hud.is_rebind_capture_active()
+		and hud.rebind_release_keycode == 0
+		and hud.is_controls_open()
+		and hud.is_settings_open(),
+		"Escape cancels only rebind capture and consumes its matching release"
+	)
+	hud._begin_rebind(&"nw_chart")
+	await _push_key_event(routing_game.get_viewport(), KEY_K)
+	var old_chart_event := _key_event(KEY_U)
+	var new_chart_event := _key_event(KEY_K)
+	_check(
+		not hud.is_rebind_capture_active()
+		and hud.rebind_release_keycode == 0
+		and hud.is_controls_open()
+		and hud.is_settings_open(),
+		"rebind capture consumes the candidate press and its matching release without leaving settings"
+	)
+	_check(
+		not old_chart_event.is_action(&"nw_chart", true)
+		and new_chart_event.is_action(&"nw_chart", true),
+		"replacing the chart binding removes U and activates the new key"
+	)
+	hud._begin_rebind(&"nw_menu_back")
+	await _push_key_event(routing_game.get_viewport(), KEY_V)
+	var optional_back_event := _key_event(KEY_V)
+	var clear_back_widget: Button = hud.controls_clear_widgets.get("nw_menu_back") as Button
+	_check(
+		optional_back_event.is_action(&"nw_menu_back", true)
+		and clear_back_widget != null
+		and clear_back_widget.visible,
+		"an optional menu-back alternate exposes its individual remove action"
+	)
+	clear_back_widget.pressed.emit()
+	_check(
+		not optional_back_event.is_action(&"nw_menu_back", true)
+		and _key_event(KEY_ESCAPE).is_action(&"nw_menu_back", true)
+		and not clear_back_widget.visible
+		and new_chart_event.is_action(&"nw_chart", true),
+		"removing the optional alternate keeps locked Escape and other custom bindings"
+	)
+	await _push_key_event(routing_game.get_viewport(), KEY_ESCAPE)
+	await _push_key_event(routing_game.get_viewport(), KEY_ESCAPE)
+	_check(not hud.is_controls_open() and not hud.is_settings_open() and not paused, "two back actions close controls and then settings")
+	await _push_key_event(routing_game.get_viewport(), KEY_U)
+	_check(not routing_game.upgrade_tree.is_open(), "the old chart key no longer opens the chart after rebinding")
+	await _push_key_event(routing_game.get_viewport(), KEY_K)
+	_check(routing_game.upgrade_tree.is_open() and paused, "the new chart key opens the chart through the real viewport route")
+	await _push_key_event(routing_game.get_viewport(), KEY_K)
+	_check(not routing_game.upgrade_tree.is_open() and not paused, "the new chart key also closes the live chart")
+	settings.reset_nightwatch_bindings(false)
+	_check(_key_event(KEY_U).is_action(&"nw_chart", true), "reset restores the default chart binding in memory")
+
+	# A phase summary owns pause, but menu-back may place Settings over it. Every
+	# shipped continue key must still reach the router while SceneTree is paused.
+	routing_game._end_observation_phase()
+	_check(hud.is_phase_summary_open() and paused, "input routing fixture reaches a paused phase summary")
+	await _push_key_event(routing_game.get_viewport(), KEY_ESCAPE)
+	_check(
+		hud.is_phase_summary_open()
+		and hud.is_settings_open()
+		and hud.tutorial_replay_button.disabled
+		and paused,
+		"menu-back opens settings over a summary and disables tutorial replay"
+	)
+	routing_game._on_tutorial_replay_requested()
+	_check(
+		hud.is_phase_summary_open()
+		and hud.is_settings_open()
+		and not routing_game.tutorial.is_active(),
+		"the game guard rejects tutorial replay while a summary owns the intermission"
+	)
+	await _push_key_event(routing_game.get_viewport(), KEY_ESCAPE)
+	_check(hud.is_phase_summary_open() and not hud.is_settings_open() and paused, "back closes summary settings without releasing the summary pause")
+	var continue_keys: Array[int] = [KEY_U, KEY_ENTER, KEY_SPACE]
+	for continue_index in range(continue_keys.size()):
+		if continue_index > 0:
+			hud.show_phase_summary({"round": 1, "duration": 20.0}, {}, "first_baseline", false)
+		var focus_owner := routing_game.get_viewport().gui_get_focus_owner()
+		if focus_owner != null:
+			focus_owner.release_focus()
+		await _push_key_event(routing_game.get_viewport(), continue_keys[continue_index])
+		_check(
+			not hud.is_phase_summary_open()
+			and routing_game.upgrade_tree.is_open()
+			and paused,
+			"paused phase summary continues through %s" % OS.get_keycode_string(continue_keys[continue_index])
+		)
+		routing_game._close_upgrade_tree_without_transition()
+		_check(not routing_game.upgrade_tree.is_open() and paused, "isolated summary continuation keeps intermission pause ownership")
+
+	# UpgradeTree gets first refusal on Escape. The same next Escape then reaches
+	# the global pause route, and fullscreen stays global while paused.
+	paused = false
+	routing_game.observation_phase_active = true
+	routing_game.observation_phase_remaining = 20.0
+	routing_game.upgrade_tree.open_tree()
+	await process_frame
+	await _push_key_event(routing_game.get_viewport(), KEY_ESCAPE)
+	_check(
+		not routing_game.upgrade_tree.is_open()
+		and not hud.is_settings_open()
+		and not paused,
+		"the chart consumes the first Escape without also opening settings"
+	)
+	await _push_key_event(routing_game.get_viewport(), KEY_ESCAPE)
+	_check(hud.is_settings_open() and paused, "the next Escape opens gameplay settings")
+	var fullscreen_before: bool = settings.is_fullscreen()
+	await _push_key_event(routing_game.get_viewport(), KEY_F11)
+	_check(
+		settings.is_fullscreen() != fullscreen_before and hud.is_settings_open() and paused,
+		"the fullscreen action routes globally while settings has paused the game"
+	)
+	settings.set_fullscreen(fullscreen_before, false)
+	await _push_key_event(routing_game.get_viewport(), KEY_ESCAPE)
+
+	# Modifier-aware exact matching prevents a legal Shift+F11 chart binding from
+	# being stolen by the plain global F11 action.
+	var shifted_f11 := _key_event(KEY_F11, true, true)
+	var shifted_result: Dictionary = settings.set_editable_binding(&"nw_chart", shifted_f11, 0, false)
+	fullscreen_before = settings.is_fullscreen()
+	await _push_key_event(routing_game.get_viewport(), KEY_F11, true)
+	_check(
+		bool(shifted_result.get("ok", false))
+		and routing_game.upgrade_tree.is_open()
+		and settings.is_fullscreen() == fullscreen_before,
+		"an exact Shift+F11 chart binding does not also toggle plain-F11 fullscreen"
+	)
+	await _push_key_event(routing_game.get_viewport(), KEY_F11, true)
+	settings.reset_nightwatch_bindings(false)
+
+	# Ending, startup recovery, and both tutorial modal steps block chart/back.
+	routing_game.hud.show_catalogue_ending("", false)
+	paused = true
+	for blocked_key in [KEY_ESCAPE, KEY_U]:
+		routing_game.hud.end_reveal_started_msec = Time.get_ticks_msec()
+		await _push_key_event(routing_game.get_viewport(), blocked_key)
+	_check(
+		routing_game.hud.is_end_open()
+		and not routing_game.upgrade_tree.is_open()
+		and not routing_game.hud.is_settings_open()
+		and paused,
+		"the ending consumes back and chart actions without exposing a covered surface"
+	)
+	routing_game.hud.hide_end()
+	paused = false
+	routing_game.hud.open_startup_slots()
+	await process_frame
+	for blocked_key in [KEY_ESCAPE, KEY_U]:
+		await _push_key_event(routing_game.get_viewport(), blocked_key)
+	_check(
+		routing_game.hud.is_startup_slots_open()
+		and not routing_game.upgrade_tree.is_open()
+		and not routing_game.hud.is_settings_open()
+		and paused,
+		"startup recovery blocks back and chart actions"
+	)
+	routing_game.hud.close_startup_slots()
+	routing_game.tutorial.start_tutorial(false)
+	await process_frame
+	for blocked_key in [KEY_ESCAPE, KEY_U]:
+		await _push_key_event(routing_game.get_viewport(), blocked_key)
+	_check(
+		routing_game.tutorial.is_modal_step()
+		and routing_game.tutorial.current_step == routing_game.tutorial.STEP_WELCOME
+		and not routing_game.upgrade_tree.is_open()
+		and not routing_game.hud.is_settings_open()
+		and paused,
+		"the welcome tutorial modal blocks back and chart actions"
+	)
+	routing_game.tutorial._on_primary_pressed()
+	routing_game.tutorial.notify_observation_completed()
+	routing_game.upgrade_tree.open_tree()
+	routing_game.tutorial.notify_upgrade_purchased()
+	await process_frame
+	for blocked_key in [KEY_ESCAPE, KEY_U]:
+		await _push_key_event(routing_game.get_viewport(), blocked_key)
+	_check(
+		routing_game.tutorial.current_step == routing_game.tutorial.STEP_COMPLETE
+		and routing_game.tutorial.is_modal_step()
+		and routing_game.upgrade_tree.is_open()
+		and paused,
+		"the completion tutorial modal keeps its underlying chart and pause ownership intact"
+	)
+	routing_game.tutorial._on_primary_pressed()
+	routing_game._close_upgrade_tree_without_transition()
+
+	# Defensive cleanup and restoration even when an assertion above failed.
+	if routing_game.hud.is_end_open():
+		routing_game.hud.hide_end()
+	if routing_game.hud.is_startup_slots_open():
+		routing_game.hud.close_startup_slots()
+	if routing_game.hud.is_controls_open():
+		routing_game.hud._close_controls(false)
+	if routing_game.hud.is_settings_open():
+		routing_game.hud.close_settings()
+	if routing_game.tutorial.is_active():
+		routing_game.tutorial.skip_tutorial()
+	if routing_game.upgrade_tree.is_open():
+		routing_game._close_upgrade_tree_without_transition()
+	settings.set_master_volume_linear(original_master, false)
+	settings.set_muted(original_muted, false)
+	settings.set_fullscreen(false, false)
+	routing_game.queue_free()
+	paused = original_pause
+	await process_frame
+	await process_frame
+	_restore_nightwatch_input(input_snapshot)
+	TranslationServer.set_locale(original_locale)
+	Input.mouse_mode = original_mouse_mode
+	if master_bus >= 0:
+		AudioServer.set_bus_volume_db(master_bus, original_volume_db)
+		AudioServer.set_bus_mute(master_bus, original_bus_mute)
+	if DisplayServer.get_name().to_lower() != "headless" and DisplayServer.window_get_mode() != original_window_mode:
+		DisplayServer.window_set_mode(original_window_mode)
+
+
+func _key_event(
+	keycode: int,
+	pressed: bool = true,
+	shift_pressed: bool = false,
+	ctrl_pressed: bool = false,
+	alt_pressed: bool = false
+) -> InputEventKey:
+	var event := InputEventKey.new()
+	event.keycode = keycode
+	event.pressed = pressed
+	event.shift_pressed = shift_pressed
+	event.ctrl_pressed = ctrl_pressed
+	event.alt_pressed = alt_pressed
+	if keycode == KEY_SPACE:
+		event.unicode = 32
+	elif keycode >= KEY_A and keycode <= KEY_Z:
+		event.unicode = keycode if shift_pressed else keycode + 32
+	return event
+
+
+func _push_key_event(
+	viewport: Viewport,
+	keycode: int,
+	shift_pressed: bool = false,
+	ctrl_pressed: bool = false,
+	alt_pressed: bool = false
+) -> void:
+	viewport.push_input(_key_event(keycode, true, shift_pressed, ctrl_pressed, alt_pressed))
+	await process_frame
+	viewport.push_input(_key_event(keycode, false, shift_pressed, ctrl_pressed, alt_pressed))
+	await process_frame
+
+
+func _snapshot_nightwatch_input() -> Dictionary:
+	var snapshot := {}
+	for action_value in InputBindings.action_names():
+		var action := StringName(action_value)
+		if not InputMap.has_action(action):
+			snapshot[action] = {"exists": false}
+			continue
+		var events: Array[InputEvent] = []
+		for event in InputMap.action_get_events(action):
+			events.append(event.duplicate())
+		snapshot[action] = {
+			"exists": true,
+			"deadzone": InputMap.action_get_deadzone(action),
+			"events": events,
+		}
+	return snapshot
+
+
+func _restore_nightwatch_input(snapshot: Dictionary) -> void:
+	for action_value in InputBindings.action_names():
+		var action := StringName(action_value)
+		var action_snapshot: Dictionary = snapshot.get(action, {"exists": false})
+		if not bool(action_snapshot.get("exists", false)):
+			if InputMap.has_action(action):
+				InputMap.erase_action(action)
+			continue
+		if not InputMap.has_action(action):
+			InputMap.add_action(action)
+		InputMap.action_set_deadzone(action, float(action_snapshot.get("deadzone", 0.5)))
+		InputMap.action_erase_events(action)
+		for event_value in action_snapshot.get("events", []):
+			var event := event_value as InputEvent
+			if event != null:
+				InputMap.action_add_event(action, event.duplicate())
 
 
 func _decorative_controls_ignore_mouse(node: Node) -> bool:

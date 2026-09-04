@@ -37,8 +37,11 @@ Game (Node2D)                      scripts/game.gd
 └── Tutorial (CanvasLayer)         scripts/tutorial_controller.gd
 ```
 
-`SoundSynth` (`scripts/sound_synth.gd`) is **not** in the scene. `game.gd`
-instantiates it in `_ready()` and adds it as a child at runtime.
+`SoundSynth` (`scripts/sound_synth.gd`) and `GameInputRouter`
+(`scripts/game_input_router.gd`) are **not** in the scene. `game.gd` instantiates
+both in `_ready()` and adds them as children at runtime. The router receives the
+game, HUD, settings, tutorial, and chart references through `setup()` and uses
+`PROCESS_MODE_ALWAYS`, so pause-owned UI does not lose its global actions.
 
 SoundSynth processes through UI pauses so research and slot confirmations remain
 audible. Research owns its original dyad; save/load share a quiet unpitched latch;
@@ -57,6 +60,8 @@ content.
 | Script | Owns |
 |---|---|
 | `game.gd` | Round lifecycle, catalogue-ending eligibility and final-watch routing, save/load orchestration, economy-independent feedback dispatch (kick/shake/hitstop), debug keys. The only node that knows about all the others. |
+| `game_input_router.gd` | Pause-safe global input dispatch, HUD rebind capture before GUI handling, modal navigation precedence, summary/chart transitions, and fullscreen routing. Raw debug chords remain owned by `game.gd`. |
+| `game_input_bindings.gd` | The six `nw_*` action definitions, fixed/editable slot metadata, active conflict contexts, descriptor validation/labels, project-default restoration, and editable override application. |
 | `observation_view.gd` | The fixed atmospheric playfield, laterally expanding meteor-activity rectangle, dynamic camera-visible world rectangle, screen/world point conversion, interaction-length conversion, partial meteor visual scaling, and the Camera2D feedback offset. Four Local Group chapter milestones expand its span from 1.0 to the 1.4774554 ceiling. |
 | `progression_controller.gd` | Data balance, purchased nodes, discovery gates, transient Taurus manual combo, persistent Leo storm charge, and systemic derived upgrade effects. Single source of truth: consumers ask it, not `game_balance.gd`. |
 | `game_balance.gd` | Static data: 107 installable research definitions, their immutable ID index, four simple Local Group observation profiles, the meteor/long-watch-target spec table, and the final galactic observation-span ceiling. `RefCounted`, no mutable progression state. |
@@ -70,15 +75,15 @@ content.
 | `survey_controller.gd` | Round-local blank-sky sweep charge, the 150 px live-meteor guard, isolated deterministic summon rolls, custom-start spawner calls, cooldown, and the cursor-local red-light arc. |
 | `event_controller.gd` | Meteor showers, Perseid outbursts, and the randomized warned Canis Major event schedule. |
 | `effects_layer.gd` | Success bursts, data packets, incoming markers, forecast markers, screen kick and shake. |
-| `hud.gd` | All in-round UI, round summary, neutral catalogue-completion record and its finish/continue actions, settings, save-slot dialogs, banners. |
+| `hud.gd` | All in-round UI, round summary, neutral catalogue-completion record and its finish/continue actions, settings and Controls surfaces, keyboard-rebind capture, save-slot dialogs, focus restoration, and banners. |
 | `catalogue_ending_coda.gd` | Presentation-only ending plate: the chart's actual 95 stars and twelve constellation shapes light, collapse into the Milky Way, and reveal a connected 30-marker galaxy map. Owns no research, eligibility, or save state. |
 | `research_chart_data.gd` | Shared constellation records, shape edges, Local Group records, and galaxy-disc projection used by both the interactive research chart and the ending plate. |
-| `upgrade_tree.gd` | Research Chart rendering and purchase interaction, including the final-watch-pending and ending-ready completion detail shown at galaxy scale. |
+| `upgrade_tree.gd` | Research Chart rendering and purchase interaction, chart/back first-refusal input, binding-labelled close actions, and the final-watch-pending and ending-ready completion detail shown at galaxy scale. |
 | `research_star_visual.gd` | One star, cluster, or galaxy research marker: state/branch ink, pulse, hover and hold drawing. The chart retains `StarNodeVisual` as a compatibility alias. |
 | `ui_theme.gd` | Shared palette, embedded font selection, 1920-spec coordinate conversion, spec-label construction, and grouped integer formatting for the HUD and chart. |
-| `tutorial_controller.gd` | Four-step first-run guidance. |
+| `tutorial_controller.gd` | Four-step first-run guidance, including the public modal-step query and focus-owned welcome/completion cards. |
 | `save_game_controller.gd` | Three save slots under `user://saves`, versioned at `SAVE_VERSION = 1`. |
-| `game_settings.gd` | Locale and tutorial-completed flag in `user://settings.cfg`. |
+| `game_settings.gd` | Validated locale, tutorial, chart rotation, audio, display, and editable input settings in versioned `user://settings.cfg`; applies settings and emits UI synchronization signals. |
 
 ## Setup calls
 
@@ -86,6 +91,9 @@ content.
 autoloads.
 
 ```
+input_router.setup(game, hud, settings, tutorial, upgrade_tree)
+upgrade_tree.bind_tutorial(tutorial)
+
 hud.bind_progression(progression)      upgrade_tree.bind_progression(progression)
 hud.bind_settings(settings)            upgrade_tree.bind_settings(settings)
 hud.bind_save_games(save_games)        tutorial.setup(settings, progression)
@@ -106,6 +114,90 @@ events.setup(spawner, progression, observation_view)
 The main scene also injects `ObservationView` into the star layers, effects,
 contacts, spawner, survey, observer, and events. Optional view arguments keep
 standalone probes on their original identity coordinate system.
+
+## Input routing, pause, and settings
+
+`project.godot` declares the six shipped actions before any scene runs.
+`game_input_bindings.gd` repeats the same defaults as canonical metadata so a
+settings reload can first rebuild a known baseline and then apply only editable
+overrides. Fixed slots are never removed by a reset or a malformed settings
+entry.
+
+| Action | Shipped slots | Declared active contexts |
+|---|---|---|
+| `nw_observe` | locked left mouse button | observation |
+| `nw_dish` | locked right mouse button | observation |
+| `nw_chart` | editable `U` | observation, Research Chart |
+| `nw_menu_back` | locked `Esc`, plus one optional editable alternate | observation, Research Chart, settings, dialog, phase summary, catalogue |
+| `nw_continue` | locked `Enter` and `Space`, plus editable `U` | phase summary |
+| `nw_fullscreen` | editable `F11` | global |
+
+The shared `U` defaults are intentional: `nw_chart` and `nw_continue` have
+separate conflict contexts, and the router accepts either action as the same
+continue transition while a phase summary is open. Observation polls
+`Input.is_action_pressed("nw_observe")`; dish placement handles the
+`nw_dish` event without exact modifier matching so `Shift+RMB` remains the same
+manual placement gesture. The four editable slots are keyboard-only in this
+version. There are no controller defaults or controller-rebinding UI.
+
+Input is split by Godot propagation stage:
+
+- `GameInputRouter._input()` gives an active HUD rebind capture the event before
+  a focused `Control` can consume it. Outside capture it does not take
+  pre-GUI ownership.
+- `UpgradeTree._input()` owns chart close and the one-time pull-back's
+  skip-plus-close behavior. `HUD._input()` retains first refusal for the
+  catalogue reveal and its debug-preview close chord.
+- After GUI handling, `GameInputRouter._unhandled_input()` routes exact editable
+  key chords. An active capture blocks navigation; raw `F9` and `Ctrl+Shift`
+  debug chords are left to `game.gd`; fullscreen precedes menu/back, then phase
+  summary continue, then ordinary chart open.
+
+The router, HUD, tutorial, and settings process while paused; the chart processes
+while paused. A component records whether it introduced a pause and only releases
+that pause on close. This preserves an existing summary or chart pause when a
+second surface is layered above it.
+
+Menu/back has state-dependent ownership. An open chart gets first refusal. HUD
+then closes one level in this order: active capture, confirmation dialog,
+Controls, or Settings. The catalogue ending, startup slots, and modal tutorial
+welcome/completion steps block global navigation. A phase summary deliberately
+does not: menu/back opens Settings over the still-paused summary, while
+`nw_continue` or `nw_chart` advances into the chart. Ordinary gameplay
+menu/back opens Settings. Chart actions are blocked behind ending, startup,
+Settings/Controls, and modal tutorial surfaces.
+Tutorial replay is unavailable while a phase summary owns the intermission;
+both the HUD control and the game transition guard enforce that boundary.
+
+`HUD.open_settings()` remembers the prior focus, pauses only when necessary,
+makes the mouse visible, synchronizes persisted values, collapses both
+accordions, and defers focus to the language selector. Save management and
+Audio & Display are mutually exclusive accordions; collapsing one while it
+contains focus returns focus to its heading. Controls is a full overlay above
+Settings. It remembers its opener, focuses the first editable binding, closes
+back to Settings, and restores a still-valid prior control. Closing Settings
+cancels nested capture/dialog state and restores both pause ownership and the
+previous valid focus target.
+
+Rebinding is an explicit capture state. `Esc` cancels; modifier-only, pointer,
+and controller input is swallowed without completing the keyboard-only capture.
+A successful key press or cancel records its keycode until the matching release
+is also consumed, preventing that release from activating the newly bound
+action or the focused button. Conflict checks compare fixed and editable slots
+only where their declared contexts overlap. GUI-navigation keys and the raw
+debug chords are reserved because they would be consumed before or instead of
+the configurable route. `Enter`, keypad `Enter`, and `Space` are additionally
+reserved for the editable menu/back and fullscreen slots so a focused GUI
+control cannot activate itself before those global routes run. Locked
+mouse/`Esc`/`Enter`/`Space` fallbacks survive rebinding, per-action load
+fallback, and reset; unrelated project `InputMap` actions are never erased.
+The optional menu/back alternate has its own Remove action, which clears only
+that slot and leaves locked `Esc` plus every other customized action intact.
+
+Binding changes have two notification levels. `binding_changed(action)` updates
+the chart's action labels selectively. `input_bindings_changed` refreshes HUD
+controls/readouts and the tutorial's current binding-labelled step. Audio and
+fullscreen signals likewise resynchronize the Settings controls.
 
 ## Observation coordinates
 
@@ -615,3 +707,28 @@ former open-night build has none of these fields, so load deliberately marks
 the final watch pending instead of opening an ending over the load screen. A
 pending, unseen ending is resumed through the ordinary intermission/chart
 boundary; it is never injected mid-round.
+
+Settings are separate from the run-save payload. `game_settings.gd` reads and
+writes `user://settings.cfg` with `SETTINGS_VERSION = 1`:
+
+| Section | Keys |
+|---|---|
+| `settings` | `version` |
+| `accessibility` | `language` |
+| `onboarding` | `tutorial_completed` |
+| `research_chart` | `rotation` |
+| `audio` | `master_linear`, `muted` |
+| `display` | `fullscreen` |
+| `input` | one editable-descriptor array for each of the six `nw_*` actions |
+
+Only editable slots are serialized. Loading starts from validated scalar
+defaults and the canonical fixed input slots. A malformed or conflicting input
+entry falls back only for that action, leaving other valid overrides intact;
+missing optional slots remain empty. Applying or resetting Nightwatch bindings
+rebuilds those six actions without touching unrelated `InputMap` actions.
+
+Tests can inject a path before `_ready()` with `GameSettings.new(path)` or
+`set_settings_path(path)`. The production scene uses the default path. This is
+the settings equivalent of replacing save services before startup: a fixture
+that changes the path after `_ready()` has already allowed the real player file
+to be read.

@@ -16,6 +16,7 @@
 | [docs/design.md](docs/design.md) | 현행 단일 성도 진행, 관측·엔딩·표현 계약, 미결 사항 — **코드를 바꾸기 전에 먼저 읽을 것** |
 | [docs/systems.md](docs/systems.md) | 씬 트리, 시그널 배선, 스크립트별 책임 |
 | [docs/probes.md](docs/probes.md) | 테스트와 계측 프로브 실행법 |
+| [docs/settings-accessibility-plan.md](docs/settings-accessibility-plan.md) | Agent Room에서 확정한 설정·조작·접근성 v1.3 범위와 안전장치 |
 | [docs/full-tree-economy-baseline.md](docs/full-tree-economy-baseline.md) | 현행 107노드 경제의 3전략 × 3시드 기준선 |
 | [docs/README.md](docs/README.md) | 문서 지도: 현행 참조, 계측 기준선, 완료 작업과 역사 기록 |
 | [AGENTS.md](AGENTS.md) | 에이전트 작업 규약 |
@@ -131,9 +132,16 @@ Windows `.exe` 내보내기. `build/`는 `.gitignore`에 있으므로 산출물�
 | 좌클릭 홀드 | 유성과 후반 은하 표적 관측. 커서 중심에 가깝게 유지할수록 빨리 채워지고 등급이 오른다 |
 | 빈 하늘 좌클릭 드래그 | `polar_survey` 이후 주변 150px가 비었을 때 훑기 거리를 충전해 커서 위치에 유성을 부른다. 한 번 훑기로 들어가면 버튼을 놓을 때까지 유성 추적으로 바뀌지 않는다 |
 | 우클릭 | 가장 가까운 접시를 그 지점으로 이동 (`secondary_camera` 필요) |
-| `U` | 연구 성도 열기 / 관측 정산에서 계속하기 |
+| `U` (변경 가능) | 연구 성도 열기 / 관측 정산에서 계속하기 |
 | `Enter`, `Space` | 라운드 정산에서 계속하기 |
+| `Esc` | 설정 열기 / 현재 설정·조작 화면 또는 연구 성도 닫기 |
+| `F11` (변경 가능) | 창 모드와 전체 화면 전환 |
 | `F9` | 디버그 HUD 토글 |
+
+설정의 **조작키 보기 / 변경**에서 성도, 메뉴 보조키, 정산 보조키, 전체 화면 키를
+바꿀 수 있다. `Esc`와 정산의 `Enter`/`Space`는 복구 가능한 진입·진행 경로로
+항상 남는다. 관측 LMB와 접시 RMB는 현재 고정이다. 같은 설정 화면에서 전체
+음량, 음소거, 전체 화면, 언어, 튜토리얼 재생, 저장 슬롯을 관리한다.
 
 ### 디버그 단축키
 

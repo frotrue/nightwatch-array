@@ -41,6 +41,11 @@ func setup(settings: Node, progression_controller: Node) -> void:
 	progression = progression_controller
 	if not settings_controller.language_changed.is_connected(_on_language_changed):
 		settings_controller.language_changed.connect(_on_language_changed)
+	if (
+		settings_controller.has_signal("input_bindings_changed")
+		and not settings_controller.is_connected("input_bindings_changed", _on_input_bindings_changed)
+	):
+		settings_controller.connect("input_bindings_changed", _on_input_bindings_changed)
 	if auto_start_enabled and not settings_controller.is_tutorial_completed():
 		call_deferred("start_tutorial")
 
@@ -74,13 +79,17 @@ func is_active() -> bool:
 	return active
 
 
+func is_modal_step() -> bool:
+	return active and current_step in [STEP_WELCOME, STEP_COMPLETE]
+
+
 func skip_tutorial() -> void:
 	_finish_tutorial()
 
 
 func _set_step(step: int) -> void:
 	current_step = step
-	var modal := step == STEP_WELCOME or step == STEP_COMPLETE
+	var modal := is_modal_step()
 	dim.visible = modal
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP if modal else Control.MOUSE_FILTER_IGNORE
 	_position_card(modal)
@@ -103,7 +112,7 @@ func _set_step(step: int) -> void:
 		STEP_UPGRADE_TREE:
 			step_label.text = tr("TUTORIAL_STEP") % [2, 3]
 			title_label.text = tr("TUTORIAL_TREE_TITLE")
-			body_label.text = tr("TUTORIAL_TREE_BODY")
+			body_label.text = _binding_text("TUTORIAL_TREE_BODY", "nw_chart")
 			hint_label.text = tr("TUTORIAL_TREE_HINT")
 		STEP_INSTALL:
 			step_label.text = tr("TUTORIAL_STEP") % [3, 3]
@@ -117,9 +126,34 @@ func _set_step(step: int) -> void:
 			step_label.text = tr("TUTORIAL_STEP_COMPLETE")
 			title_label.text = tr("TUTORIAL_COMPLETE_TITLE")
 			body_label.text = tr("TUTORIAL_COMPLETE_BODY")
-			hint_label.text = tr("TUTORIAL_COMPLETE_HINT")
+			hint_label.text = _binding_text("TUTORIAL_COMPLETE_HINT", "nw_chart")
 			primary_button.text = tr("TUTORIAL_FINISH")
 	skip_button.text = tr("TUTORIAL_SKIP")
+	primary_button.focus_mode = Control.FOCUS_ALL if modal else Control.FOCUS_NONE
+	skip_button.focus_mode = Control.FOCUS_ALL if modal and skip_button.visible else Control.FOCUS_NONE
+	if modal:
+		call_deferred("_focus_modal_primary", step)
+	else:
+		primary_button.release_focus()
+		skip_button.release_focus()
+
+
+func _focus_modal_primary(expected_step: int) -> void:
+	if not active or current_step != expected_step or not is_modal_step():
+		return
+	if primary_button == null or not primary_button.is_visible_in_tree():
+		return
+	primary_button.grab_focus()
+
+
+func _binding_text(text_key: String, action: String) -> String:
+	var template := tr(text_key)
+	if "%s" not in template:
+		return template
+	var label := "U"
+	if settings_controller != null and settings_controller.has_method("binding_label"):
+		label = String(settings_controller.binding_label(action))
+	return template % label
 
 
 func _on_primary_pressed() -> void:
@@ -135,6 +169,10 @@ func _on_primary_pressed() -> void:
 func _finish_tutorial() -> void:
 	active = false
 	current_step = -1
+	primary_button.release_focus()
+	skip_button.release_focus()
+	primary_button.focus_mode = Control.FOCUS_NONE
+	skip_button.focus_mode = Control.FOCUS_NONE
 	overlay.visible = false
 	_resume_from_tutorial_pause()
 	if persist_current_run:
@@ -178,6 +216,11 @@ func _position_card(modal: bool) -> void:
 
 
 func _on_language_changed(_locale: String) -> void:
+	if active:
+		_set_step(current_step)
+
+
+func _on_input_bindings_changed() -> void:
 	if active:
 		_set_step(current_step)
 

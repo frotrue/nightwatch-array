@@ -3,6 +3,7 @@ extends Node2D
 const UITheme = preload("res://scripts/ui_theme.gd")
 const Balance = preload("res://scripts/game_balance.gd")
 const SoundSynth = preload("res://scripts/sound_synth.gd")
+const GameInputRouter = preload("res://scripts/game_input_router.gd")
 const AUTOSAVE_INTERVAL_SECONDS := 60.0
 const HITSTOP_TIME_SCALE := 0.06
 const HITSTOP_COOLDOWN_MSEC := 400
@@ -42,6 +43,7 @@ const SHAKE_TRAUMA_CEILING := 0.88
 @onready var observation_view: Camera2D = $ObservationView
 
 var sound: Node
+var input_router: Node
 var elapsed_time: float = 0.0
 var completed: bool = false
 var catalogue_ending_seen: bool = false
@@ -78,12 +80,17 @@ func _ready() -> void:
 	sound = SoundSynth.new()
 	sound.name = "SoundSynth"
 	add_child(sound)
+	input_router = GameInputRouter.new()
+	input_router.name = "GameInputRouter"
+	input_router.setup(self, hud, settings, tutorial, upgrade_tree)
+	add_child(input_router)
 
 	hud.bind_progression(progression)
 	hud.bind_settings(settings)
 	hud.bind_save_games(save_games)
 	upgrade_tree.bind_progression(progression)
 	upgrade_tree.bind_settings(settings)
+	upgrade_tree.bind_tutorial(tutorial)
 	tutorial_auto_start_after_slot = startup_slot_prompt_enabled and tutorial.auto_start_enabled
 	if startup_slot_prompt_enabled:
 		tutorial.auto_start_enabled = false
@@ -543,17 +550,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			_close_catalogue_ending_debug_preview()
 		get_viewport().set_input_as_handled()
 		return
-	if hud.is_phase_summary_open():
-		if event.keycode in [KEY_U, KEY_ENTER, KEY_SPACE]:
-			_on_phase_summary_continue_requested()
-			get_viewport().set_input_as_handled()
-		return
 	if event.keycode == KEY_F9:
 		hud.toggle_debug()
-		get_viewport().set_input_as_handled()
-		return
-	if event.keycode == KEY_U:
-		upgrade_tree.open_tree()
 		get_viewport().set_input_as_handled()
 		return
 	if not (event.ctrl_pressed and event.shift_pressed):
@@ -1002,6 +1000,11 @@ func _autosave_active_slot() -> bool:
 
 
 func _on_tutorial_replay_requested() -> void:
+	# The round summary already owns the intermission pause. Starting a modal
+	# tutorial on top would leave that pause owner behind when the tutorial moves
+	# into its live observation step.
+	if hud.is_phase_summary_open():
+		return
 	hud.close_settings()
 	tutorial.start_tutorial()
 

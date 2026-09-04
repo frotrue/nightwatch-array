@@ -8,6 +8,19 @@ const Balance = preload("res://scripts/game_balance.gd")
 const ChartData = preload("res://scripts/research_chart_data.gd")
 const UITheme = preload("res://scripts/ui_theme.gd")
 const StarNodeVisual = preload("res://scripts/research_star_visual.gd")
+const ACTION_CHART := &"nw_chart"
+const ACTION_MENU_BACK := &"nw_menu_back"
+const RAW_DEBUG_KEYS := [
+	KEY_D,
+	KEY_N,
+	KEY_A,
+	KEY_M,
+	KEY_R,
+	KEY_S,
+	KEY_F,
+	KEY_E,
+	KEY_BACKSPACE,
+]
 
 const TREE_SIZE := Vector2(1460, 780)
 const MIN_ZOOM := 0.55
@@ -78,6 +91,7 @@ const CLUSTER_MARKER_OFFSETS := StarNodeVisual.CLUSTER_MARKER_OFFSETS
 
 var progression: Node
 var settings_controller: Node
+var tutorial_controller: Node
 var overlay: Control
 var content_clip: Control
 var tree_canvas: Control
@@ -215,9 +229,17 @@ func bind_settings(controller: Node) -> void:
 	settings_controller = controller
 	if not settings_controller.language_changed.is_connected(_on_language_changed):
 		settings_controller.language_changed.connect(_on_language_changed)
+	if settings_controller.has_signal("binding_changed"):
+		var binding_callback := Callable(self, "_on_binding_changed")
+		if not settings_controller.is_connected("binding_changed", binding_callback):
+			settings_controller.connect("binding_changed", binding_callback)
 	rotation_offset = settings_controller.get_research_chart_rotation()
 	_layout_chart()
 	_apply_locale()
+
+
+func bind_tutorial(controller: Node) -> void:
+	tutorial_controller = controller
 
 
 func configure_galactic_state(unlocked: bool, pullback_seen: bool) -> void:
@@ -349,13 +371,13 @@ func _refresh_phase_context() -> void:
 		return
 	if catalogue_ending_ready:
 		subtitle_label.text = tr("TREE_SUBTITLE")
-		close_button.text = tr("TREE_CATALOGUE_SEAL_RECORD")
+		close_button.text = _chart_action_text("TREE_CATALOGUE_SEAL_RECORD")
 	elif intermission_active:
 		subtitle_label.text = tr("TREE_NEXT_OBSERVATION") % [intermission_next_round, intermission_next_duration]
-		close_button.text = tr("TREE_START_OBSERVATION")
+		close_button.text = _chart_action_text("TREE_START_OBSERVATION")
 	else:
 		subtitle_label.text = tr("TREE_SUBTITLE")
-		close_button.text = tr("TREE_CLOSE")
+		close_button.text = _chart_action_text("TREE_CLOSE")
 	if data_context_label != null:
 		data_context_label.text = tr("TREE_DATA_CONTEXT") % [intermission_next_round, intermission_next_duration]
 		# A ready ending owns this close, while an already-running final watch has
@@ -371,34 +393,74 @@ func _refresh_phase_context() -> void:
 
 func _phase_bottom_action_text() -> String:
 	if catalogue_ending_ready:
-		return tr("TREE_BOTTOM_CATALOGUE_SEAL_RECORD")
-	return tr("TREE_BOTTOM_START_OBSERVATION") if intermission_active else tr("TREE_BOTTOM_CLOSE")
+		return _chart_action_text("TREE_BOTTOM_CATALOGUE_SEAL_RECORD")
+	return _chart_action_text("TREE_BOTTOM_START_OBSERVATION") if intermission_active else _chart_action_text("TREE_BOTTOM_CLOSE")
 
 
 func _phase_galactic_return_text() -> String:
 	if catalogue_ending_ready:
-		return tr("TREE_BOTTOM_CATALOGUE_SEAL_RECORD")
-	return tr("TREE_GALACTIC_RETURN")
+		return _chart_action_text("TREE_BOTTOM_CATALOGUE_SEAL_RECORD")
+	return _chart_action_text("TREE_GALACTIC_RETURN")
+
+
+func _chart_action_text(key: String) -> String:
+	var localized := tr(key)
+	if "%s" not in localized:
+		return localized
+	var binding := "U"
+	if settings_controller != null and settings_controller.has_method("binding_label"):
+		binding = String(settings_controller.call("binding_label", ACTION_CHART))
+	return localized % binding
 
 
 func _input(event: InputEvent) -> void:
 	if not is_open():
 		return
+	var raw_debug_input := _is_raw_debug_input(event)
+	var close_requested := (
+		not raw_debug_input
+		and (_action_pressed(event, ACTION_CHART) or _action_pressed(event, ACTION_MENU_BACK))
+	)
+	# The tutorial completion card can appear above an already-open chart. Keep
+	# its modal pause intact instead of allowing the chart's first-refusal close
+	# path to unpause the simulation behind that card.
+	if close_requested and _tutorial_is_modal():
+		get_viewport().set_input_as_handled()
+		return
 	if galactic_mode == GALACTIC_MODE_PULLBACK and _is_deliberate_pullback_skip(event):
 		_finish_galactic_pullback()
-		if event is InputEventKey and event.keycode in [KEY_ESCAPE, KEY_U]:
+		if close_requested:
 			close_tree()
 		# Let an ordinary mouse press continue through the GUI so a press on the
 		# close action both skips and closes. Wheel presses are consumed here so the
 		# same event cannot immediately zoom away from the final galaxy frame.
-		if not (event is InputEventMouseButton and event.button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT, MOUSE_BUTTON_MIDDLE]):
+		if close_requested or not (event is InputEventMouseButton and event.button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT, MOUSE_BUTTON_MIDDLE]):
 			get_viewport().set_input_as_handled()
 		return
-	if event is InputEventKey and event.pressed and not event.echo:
-		if event.keycode == KEY_ESCAPE or event.keycode == KEY_U:
-			close_tree()
-			get_viewport().set_input_as_handled()
-			return
+	if close_requested:
+		close_tree()
+		get_viewport().set_input_as_handled()
+		return
+
+
+func _action_pressed(event: InputEvent, action: StringName) -> bool:
+	return InputMap.has_action(action) and event.is_action_pressed(action, false, true)
+
+
+func _is_raw_debug_input(event: InputEvent) -> bool:
+	if not (event is InputEventKey) or not event.pressed or event.echo:
+		return false
+	if event.keycode == KEY_F9:
+		return true
+	return event.ctrl_pressed and event.shift_pressed and event.keycode in RAW_DEBUG_KEYS
+
+
+func _tutorial_is_modal() -> bool:
+	return (
+		tutorial_controller != null
+		and tutorial_controller.has_method("is_modal_step")
+		and bool(tutorial_controller.call("is_modal_step"))
+	)
 
 
 func _process(delta: float) -> void:
@@ -1793,6 +1855,11 @@ func _on_language_changed(_locale: String) -> void:
 	_apply_locale()
 
 
+func _on_binding_changed(action: StringName) -> void:
+	if action == ACTION_CHART:
+		_refresh_phase_context()
+
+
 func _apply_locale() -> void:
 	if overlay == null:
 		return
@@ -1894,7 +1961,7 @@ func _build_interface() -> void:
 	header.add_child(progress_fill)
 
 	close_button = Button.new()
-	close_button.text = tr("TREE_CLOSE")
+	close_button.text = _chart_action_text("TREE_CLOSE")
 	close_button.flat = true
 	close_button.focus_mode = Control.FOCUS_NONE
 	close_button.alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -1935,7 +2002,7 @@ func _build_interface() -> void:
 	header.add_child(constellation_bottom_action)
 	galactic_inner_hint = _spec_label(tr("TREE_GALACTIC_INNER_HINT"), UITheme.mono(), 12.0, UITheme.TOOLTIP_LABEL, 0.10)
 	header.add_child(galactic_inner_hint)
-	galactic_return_hint = _spec_label(tr("TREE_GALACTIC_RETURN"), UITheme.mono(), 12.0, UITheme.INK_HIGH, 0.10)
+	galactic_return_hint = _spec_label(_chart_action_text("TREE_GALACTIC_RETURN"), UITheme.mono(), 12.0, UITheme.INK_HIGH, 0.10)
 	galactic_return_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	header.add_child(galactic_return_hint)
 	galactic_watermark = _spec_label(tr("TREE_GALACTIC_WATERMARK"), UITheme.mono(), 12.0, UITheme.INK_LOW, 2.6 / 12.0)

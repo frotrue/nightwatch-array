@@ -94,8 +94,28 @@ var settings_hint: Label
 var language_selector: OptionButton
 var tutorial_replay_button: Button
 var settings_close_button: Button
+var audio_display_button: Button
+var audio_display_container: VBoxContainer
+var master_volume_label: Label
+var master_volume_slider: HSlider
+var master_volume_value: Label
+var mute_button: Button
+var fullscreen_button: Button
+var controls_button: Button
 var save_management_button: Button
 var save_management_container: VBoxContainer
+var controls_overlay: Control
+var controls_panel: Control
+var controls_title: Label
+var controls_subtitle: Label
+var controls_hint: Label
+var controls_status: Label
+var controls_back_button: Button
+var controls_reset_button: Button
+var controls_action_widgets: Dictionary = {}
+var controls_clear_widgets: Dictionary = {}
+var controls_localized_text: Array[Dictionary] = []
+var reset_bindings_dialog: ConfirmationDialog
 var startup_overlay: Control
 var startup_title: Label
 var startup_subtitle: Label
@@ -148,6 +168,12 @@ var paused_by_startup: bool = false
 var active_save_slot: int = 0
 var autosave_status_timer: float = 0.0
 var save_management_expanded: bool = false
+var audio_display_expanded: bool = false
+var syncing_settings_controls: bool = false
+var settings_previous_focus: Control
+var controls_previous_focus: Control
+var rebind_action: StringName = &""
+var rebind_release_keycode: int = 0
 
 
 func _ready() -> void:
@@ -167,7 +193,14 @@ func bind_settings(controller: Node) -> void:
 	settings_controller = controller
 	if not settings_controller.language_changed.is_connected(_on_language_changed):
 		settings_controller.language_changed.connect(_on_language_changed)
+	if settings_controller.has_signal("audio_changed") and not settings_controller.audio_changed.is_connected(_on_audio_changed):
+		settings_controller.audio_changed.connect(_on_audio_changed)
+	if settings_controller.has_signal("fullscreen_changed") and not settings_controller.fullscreen_changed.is_connected(_on_fullscreen_changed):
+		settings_controller.fullscreen_changed.connect(_on_fullscreen_changed)
+	if settings_controller.has_signal("input_bindings_changed") and not settings_controller.input_bindings_changed.is_connected(_on_input_bindings_changed):
+		settings_controller.input_bindings_changed.connect(_on_input_bindings_changed)
 	_sync_language_selector()
+	_sync_settings_controls()
 	_apply_locale()
 
 
@@ -383,7 +416,7 @@ func mark_first_success() -> void:
 	if tutorial_complete:
 		return
 	tutorial_complete = true
-	tutorial_label.text = tr("HUD_TUTORIAL_DONE")
+	tutorial_label.text = tr("HUD_TUTORIAL_DONE") % _chart_binding_label()
 	var timer := get_tree().create_timer(4.0)
 	timer.timeout.connect(func():
 		if is_instance_valid(tutorial_label):
@@ -399,7 +432,7 @@ func reset_tutorial() -> void:
 
 func restore_tutorial(already_observed: bool) -> void:
 	tutorial_complete = already_observed
-	tutorial_label.text = tr("HUD_TUTORIAL_DONE") if already_observed else tr("HUD_TUTORIAL_START")
+	tutorial_label.text = tr("HUD_TUTORIAL_DONE") % _chart_binding_label() if already_observed else tr("HUD_TUTORIAL_START")
 	tutorial_label.visible = not already_observed
 
 
@@ -443,6 +476,7 @@ func show_catalogue_ending(stats_text: String, debug_preview: bool = false) -> v
 	end_overlay.move_to_front()
 	_refresh_in_round_readouts()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	phase_summary_button.call_deferred("grab_focus")
 	# Replay the actual completed constellations, pull them into the Milky Way,
 	# then illuminate every Local Group marker. Choices wait for the map to settle.
 	end_reveal_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_parallel(true)
@@ -530,6 +564,7 @@ func _refresh_in_round_readouts() -> void:
 	var covered := is_phase_summary_open()
 	covered = covered or (end_overlay != null and end_overlay.visible)
 	covered = covered or (settings_overlay != null and settings_overlay.visible)
+	covered = covered or is_controls_open()
 	covered = covered or (startup_overlay != null and startup_overlay.visible)
 	if covered:
 		_stash_in_round_readouts()
@@ -632,6 +667,7 @@ func _signed_rate_value(value: float) -> String:
 
 func hide_phase_summary() -> void:
 	if phase_summary_overlay != null:
+		phase_summary_button.release_focus()
 		phase_summary_overlay.visible = false
 	_refresh_in_round_readouts()
 
@@ -643,6 +679,7 @@ func is_phase_summary_open() -> bool:
 func open_settings() -> void:
 	if settings_overlay.visible:
 		return
+	settings_previous_focus = get_viewport().gui_get_focus_owner()
 	settings_overlay.visible = true
 	settings_overlay.move_to_front()
 	_refresh_in_round_readouts()
@@ -650,14 +687,21 @@ func open_settings() -> void:
 	get_tree().paused = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_sync_language_selector()
+	_sync_settings_controls()
 	_refresh_save_slots()
 	save_feedback.visible = false
+	tutorial_replay_button.disabled = is_phase_summary_open()
+	tutorial_replay_button.tooltip_text = tr("TUTORIAL_REPLAY_UNAVAILABLE_SUMMARY") if tutorial_replay_button.disabled else ""
 	_set_save_management_expanded(false)
+	_set_audio_display_expanded(false)
+	language_selector.call_deferred("grab_focus")
 
 
 func close_settings() -> void:
 	if not settings_overlay.visible:
 		return
+	if is_controls_open():
+		_close_controls(false)
 	settings_overlay.visible = false
 	_refresh_in_round_readouts()
 	if overwrite_dialog != null and overwrite_dialog.visible:
@@ -665,14 +709,27 @@ func close_settings() -> void:
 	if reset_dialog != null and reset_dialog.visible:
 		reset_dialog.hide()
 		pending_reset_slot = 0
+	if reset_bindings_dialog != null and reset_bindings_dialog.visible:
+		reset_bindings_dialog.hide()
+	_cancel_rebind(false)
 	if paused_by_settings:
 		get_tree().paused = false
 	paused_by_settings = false
-	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if get_tree().paused else Input.MOUSE_MODE_HIDDEN
+	_restore_focus(settings_previous_focus)
+	settings_previous_focus = null
 
 
 func is_settings_open() -> bool:
 	return settings_overlay != null and settings_overlay.visible
+
+
+func is_controls_open() -> bool:
+	return controls_overlay != null and controls_overlay.visible
+
+
+func is_rebind_capture_active() -> bool:
+	return not rebind_action.is_empty()
 
 
 func open_startup_slots() -> void:
@@ -687,6 +744,7 @@ func open_startup_slots() -> void:
 	startup_hint.text = tr("STARTUP_SAVE_HINT")
 	startup_hint.add_theme_color_override("font_color", UITheme.HINT)
 	_refresh_startup_slots()
+	_focus_first_startup_action.call_deferred()
 
 
 func close_startup_slots() -> void:
@@ -705,6 +763,43 @@ func close_startup_slots() -> void:
 
 func is_startup_slots_open() -> bool:
 	return startup_overlay != null and startup_overlay.visible
+
+
+func _focus_first_startup_action() -> void:
+	if not is_startup_slots_open():
+		return
+	for button in startup_slot_buttons:
+		if is_instance_valid(button) and button.visible and not button.disabled:
+			button.grab_focus()
+			return
+	for button in startup_reset_buttons:
+		if is_instance_valid(button) and button.visible and not button.disabled:
+			button.grab_focus()
+			return
+
+
+func consume_menu_back() -> bool:
+	if is_rebind_capture_active():
+		_cancel_rebind(true)
+		return true
+	if reset_bindings_dialog != null and reset_bindings_dialog.visible:
+		reset_bindings_dialog.hide()
+		return true
+	if reset_dialog != null and reset_dialog.visible:
+		reset_dialog.hide()
+		pending_reset_slot = 0
+		return true
+	if overwrite_dialog != null and overwrite_dialog.visible:
+		overwrite_dialog.hide()
+		pending_overwrite_slot = 0
+		return true
+	if is_controls_open():
+		_close_controls(true)
+		return true
+	if is_settings_open():
+		close_settings()
+		return true
+	return false
 
 
 func set_active_save_slot(slot: int) -> void:
@@ -777,19 +872,11 @@ func _is_catalogue_reveal_skip_input(event: InputEvent) -> bool:
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
+	# The always-processing GameInputRouter owns this path in the live game. This
+	# remains as a safe fallback for isolated HUD fixtures.
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
-		if reset_dialog != null and reset_dialog.visible:
-			reset_dialog.hide()
-			pending_reset_slot = 0
+		if consume_menu_back():
 			get_viewport().set_input_as_handled()
-			return
-	if is_settings_open() and event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
-		if overwrite_dialog != null and overwrite_dialog.visible:
-			overwrite_dialog.hide()
-			get_viewport().set_input_as_handled()
-			return
-		close_settings()
-		get_viewport().set_input_as_handled()
 
 
 func _refresh_progression() -> void:
@@ -820,7 +907,7 @@ func _refresh_ready_notice() -> void:
 	last_ready_count = ready
 	ready_notice.visible = ready > 0
 	if ready_notice.visible:
-		ready_label.text = tr("HUD_READY_SYSTEMS") % ready
+		ready_label.text = tr("HUD_READY_SYSTEMS") % [ready, _chart_binding_label()]
 		_layout_ready_notice()
 		_ensure_ready_pulse()
 	elif ready_pulse_tween != null and ready_pulse_tween.is_valid():
@@ -1048,21 +1135,96 @@ func _on_language_changed(_locale: String) -> void:
 	_apply_locale()
 
 
+func _on_audio_changed(_master_linear: float, _muted: bool) -> void:
+	_sync_settings_controls()
+
+
+func _on_fullscreen_changed(_fullscreen: bool) -> void:
+	_sync_settings_controls()
+
+
+func _on_input_bindings_changed() -> void:
+	_apply_dynamic_binding_labels()
+	_refresh_controls_rows()
+
+
+func _on_master_volume_changed(value: float) -> void:
+	if syncing_settings_controls or settings_controller == null:
+		return
+	settings_controller.set_master_volume_linear(value / 100.0)
+
+
+func _on_mute_pressed() -> void:
+	if settings_controller != null:
+		settings_controller.toggle_muted()
+
+
+func _on_fullscreen_pressed() -> void:
+	if settings_controller != null:
+		settings_controller.toggle_fullscreen()
+
+
+func _sync_settings_controls() -> void:
+	if settings_controller == null:
+		return
+	syncing_settings_controls = true
+	if master_volume_slider != null:
+		master_volume_slider.value = float(settings_controller.get_master_volume_linear()) * 100.0
+	if master_volume_value != null:
+		master_volume_value.text = "%d" % int(round(float(settings_controller.get_master_volume_linear()) * 100.0))
+	if mute_button != null:
+		mute_button.text = tr("SETTINGS_MUTE_ON") if settings_controller.is_muted() else tr("SETTINGS_MUTE_OFF")
+	if fullscreen_button != null:
+		fullscreen_button.text = tr("SETTINGS_FULLSCREEN_ON") if settings_controller.is_fullscreen() else tr("SETTINGS_FULLSCREEN_OFF")
+	syncing_settings_controls = false
+
+
+func _on_audio_display_pressed() -> void:
+	_set_audio_display_expanded(not audio_display_expanded)
+
+
 func _on_save_management_pressed() -> void:
 	_set_save_management_expanded(not save_management_expanded)
 
 
 func _set_save_management_expanded(expanded: bool) -> void:
+	if expanded and audio_display_expanded:
+		_set_audio_display_expanded(false)
+	if not expanded and save_management_container != null and _contains_keyboard_focus(save_management_container):
+		save_management_button.grab_focus()
 	save_management_expanded = expanded
 	if save_management_container == null or settings_panel == null:
 		return
 	save_management_container.visible = expanded
 	save_management_button.text = tr("SETTINGS_SAVE_HIDE") if expanded else tr("SETTINGS_SAVE_MANAGEMENT")
-	# The column centres itself, so the frame only has to be tall enough for the
-	# expanded state. Growing it on toggle made the whole block jump.
+	_refresh_settings_panel_height()
+
+
+func _set_audio_display_expanded(expanded: bool) -> void:
+	if expanded and save_management_expanded:
+		_set_save_management_expanded(false)
+	if not expanded and audio_display_container != null and _contains_keyboard_focus(audio_display_container):
+		audio_display_button.grab_focus()
+	audio_display_expanded = expanded
+	if audio_display_container == null or settings_panel == null:
+		return
+	audio_display_container.visible = expanded
+	audio_display_button.text = tr("SETTINGS_AUDIO_DISPLAY_HIDE") if expanded else tr("SETTINGS_AUDIO_DISPLAY")
+	_refresh_settings_panel_height()
+
+
+func _refresh_settings_panel_height() -> void:
+	if settings_panel == null:
+		return
+	var expanded := save_management_expanded or audio_display_expanded
 	var half_height := UITheme.px(470.0) if expanded else UITheme.px(350.0)
 	settings_panel.offset_top = -half_height
 	settings_panel.offset_bottom = half_height
+
+
+func _contains_keyboard_focus(control: Control) -> bool:
+	var focus := get_viewport().gui_get_focus_owner()
+	return focus != null and (focus == control or control.is_ancestor_of(focus))
 
 
 func _sync_language_selector() -> void:
@@ -1071,6 +1233,21 @@ func _sync_language_selector() -> void:
 	var index: int = settings_controller.get_language_index()
 	if index >= 0 and index < language_selector.item_count:
 		language_selector.select(index)
+
+
+func _chart_binding_label() -> String:
+	if settings_controller != null and settings_controller.has_method("binding_label"):
+		return String(settings_controller.binding_label(&"nw_chart"))
+	return "U"
+
+
+func _apply_dynamic_binding_labels() -> void:
+	if root_control == null:
+		return
+	if tutorial_label != null:
+		tutorial_label.text = tr("HUD_TUTORIAL_DONE") % _chart_binding_label() if tutorial_complete else tr("HUD_TUTORIAL_START")
+	last_ready_count = -1
+	_refresh_ready_notice()
 
 
 func _apply_locale() -> void:
@@ -1087,6 +1264,24 @@ func _apply_locale() -> void:
 	settings_language_label.text = tr("SETTINGS_LANGUAGE")
 	settings_hint.text = tr("SETTINGS_LANGUAGE_HINT")
 	tutorial_replay_button.text = tr("TUTORIAL_REPLAY")
+	if tutorial_replay_button.disabled:
+		tutorial_replay_button.tooltip_text = tr("TUTORIAL_REPLAY_UNAVAILABLE_SUMMARY")
+	if audio_display_button != null:
+		audio_display_button.text = tr("SETTINGS_AUDIO_DISPLAY_HIDE") if audio_display_expanded else tr("SETTINGS_AUDIO_DISPLAY")
+	if controls_button != null:
+		controls_button.text = tr("SETTINGS_CONTROLS")
+	if master_volume_label != null:
+		master_volume_label.text = tr("SETTINGS_MASTER_VOLUME")
+	if controls_title != null:
+		controls_title.text = tr("CONTROLS_TITLE")
+	if controls_subtitle != null:
+		controls_subtitle.text = tr("CONTROLS_SUBTITLE")
+	if controls_hint != null:
+		controls_hint.text = tr("CONTROLS_HINT")
+	if controls_back_button != null:
+		controls_back_button.text = tr("CONTROLS_BACK")
+	if controls_reset_button != null:
+		controls_reset_button.text = tr("CONTROLS_RESET")
 	startup_title.text = tr("STARTUP_SAVE_TITLE")
 	startup_subtitle.text = tr("STARTUP_SAVE_SUBTITLE")
 	startup_hint.text = tr("STARTUP_SAVE_HINT")
@@ -1103,7 +1298,9 @@ func _apply_locale() -> void:
 	reset_dialog.cancel_button_text = tr("SAVE_CANCEL")
 	language_selector.set_item_text(0, tr("SETTINGS_ENGLISH"))
 	language_selector.set_item_text(1, tr("SETTINGS_KOREAN"))
-	tutorial_label.text = tr("HUD_TUTORIAL_DONE") if tutorial_complete else tr("HUD_TUTORIAL_START")
+	tutorial_label.text = tr("HUD_TUTORIAL_DONE") % _chart_binding_label() if tutorial_complete else tr("HUD_TUTORIAL_START")
+	_sync_settings_controls()
+	_refresh_controls_rows()
 	refresh_catalogue_ending_text()
 	debug_label.text = "\n\n".join([
 		tr("HUD_DEBUG_TITLE"),
@@ -1526,6 +1723,11 @@ func _build_reset_dialog() -> void:
 	reset_dialog.title = tr("SAVE_RESET_TITLE")
 	reset_dialog.ok_button_text = tr("SAVE_RESET_CONFIRM")
 	reset_dialog.cancel_button_text = tr("SAVE_CANCEL")
+	if reset_bindings_dialog != null:
+		reset_bindings_dialog.title = tr("CONTROLS_RESET_TITLE")
+		reset_bindings_dialog.dialog_text = tr("CONTROLS_RESET_PROMPT")
+		reset_bindings_dialog.ok_button_text = tr("CONTROLS_RESET_CONFIRM")
+		reset_bindings_dialog.cancel_button_text = tr("SAVE_CANCEL")
 	reset_dialog.confirmed.connect(_on_reset_confirmed)
 	reset_dialog.canceled.connect(_on_reset_canceled)
 	root_control.add_child(reset_dialog)
@@ -1744,7 +1946,7 @@ func _style_text_action(button: Button, spec_size: float, color: Color) -> void:
 	# the shape the observatory redesign removed.
 	var font_size := UITheme.size_px(spec_size)
 	button.flat = true
-	button.focus_mode = Control.FOCUS_NONE
+	button.focus_mode = Control.FOCUS_ALL
 	button.add_theme_font_override("font", UITheme.sans())
 	button.add_theme_font_size_override("font_size", font_size)
 	button.add_theme_constant_override("spacing_glyph", UITheme.tracking(font_size, 0.06))
@@ -1765,6 +1967,22 @@ func _action_underline_style(bright: bool) -> StyleBoxFlat:
 	style.content_margin_top = UITheme.px(12.0)
 	style.content_margin_bottom = UITheme.px(9.0)
 	return style
+
+
+func _style_red_slider(slider: HSlider) -> void:
+	var track := StyleBoxFlat.new()
+	track.bg_color = Color(UITheme.ACCENT_DEEP, 0.72)
+	track.content_margin_top = UITheme.px(2.0)
+	track.content_margin_bottom = UITheme.px(2.0)
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = UITheme.BANNER_TITLE
+	fill.content_margin_top = UITheme.px(3.0)
+	fill.content_margin_bottom = UITheme.px(3.0)
+	var fill_focus := fill.duplicate()
+	fill_focus.bg_color = UITheme.ACCENT_TEXT
+	slider.add_theme_stylebox_override("slider", track)
+	slider.add_theme_stylebox_override("grabber_area", fill)
+	slider.add_theme_stylebox_override("grabber_area_highlight", fill_focus)
 
 
 func _build_settings_ui() -> void:
@@ -1829,6 +2047,61 @@ func _build_settings_ui() -> void:
 	_style_text_action(tutorial_replay_button, 18.0, UITheme.INK_HIGH)
 	tutorial_replay_button.pressed.connect(func(): tutorial_replay_requested.emit())
 	column.add_child(tutorial_replay_button)
+
+	audio_display_button = Button.new()
+	audio_display_button.text = tr("SETTINGS_AUDIO_DISPLAY")
+	audio_display_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_style_text_action(audio_display_button, 18.0, UITheme.INK_HIGH)
+	audio_display_button.pressed.connect(_on_audio_display_pressed)
+	column.add_child(audio_display_button)
+	audio_display_container = VBoxContainer.new()
+	audio_display_container.add_theme_constant_override("separation", int(UITheme.px(12.0)))
+	audio_display_container.visible = false
+	column.add_child(audio_display_container)
+	audio_display_container.add_child(_hairline(840.0))
+	var volume_row := HBoxContainer.new()
+	volume_row.add_theme_constant_override("separation", int(UITheme.px(18.0)))
+	audio_display_container.add_child(volume_row)
+	master_volume_label = _spec_label(tr("SETTINGS_MASTER_VOLUME"), UITheme.mono(), 12.0, UITheme.INK_MID, 0.18)
+	master_volume_label.custom_minimum_size.x = UITheme.px(220.0)
+	master_volume_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	volume_row.add_child(master_volume_label)
+	master_volume_slider = HSlider.new()
+	master_volume_slider.name = "MasterVolume"
+	master_volume_slider.min_value = 0.0
+	master_volume_slider.max_value = 100.0
+	master_volume_slider.step = 1.0
+	master_volume_slider.custom_minimum_size = Vector2(UITheme.px(430.0), UITheme.px(34.0))
+	master_volume_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	master_volume_slider.focus_mode = Control.FOCUS_ALL
+	_style_red_slider(master_volume_slider)
+	master_volume_slider.value_changed.connect(_on_master_volume_changed)
+	volume_row.add_child(master_volume_slider)
+	master_volume_value = _spec_label("100", UITheme.mono(), 13.0, UITheme.BANNER_TITLE, 0.10)
+	master_volume_value.custom_minimum_size.x = UITheme.px(52.0)
+	master_volume_value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	master_volume_value.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	volume_row.add_child(master_volume_value)
+	var audio_actions := HBoxContainer.new()
+	audio_actions.alignment = BoxContainer.ALIGNMENT_CENTER
+	audio_actions.add_theme_constant_override("separation", int(UITheme.px(28.0)))
+	audio_display_container.add_child(audio_actions)
+	mute_button = Button.new()
+	_style_text_action(mute_button, 16.0, UITheme.INK_HIGH)
+	mute_button.pressed.connect(_on_mute_pressed)
+	audio_actions.add_child(mute_button)
+	fullscreen_button = Button.new()
+	_style_text_action(fullscreen_button, 16.0, UITheme.INK_HIGH)
+	fullscreen_button.pressed.connect(_on_fullscreen_pressed)
+	audio_actions.add_child(fullscreen_button)
+
+	controls_button = Button.new()
+	controls_button.text = tr("SETTINGS_CONTROLS")
+	controls_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_style_text_action(controls_button, 18.0, UITheme.INK_HIGH)
+	controls_button.pressed.connect(open_controls)
+	column.add_child(controls_button)
+
 	save_management_button = Button.new()
 	save_management_button.text = tr("SETTINGS_SAVE_MANAGEMENT")
 	save_management_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -1864,6 +2137,418 @@ func _build_settings_ui() -> void:
 	overwrite_dialog.confirmed.connect(_on_overwrite_confirmed)
 	settings_overlay.add_child(overwrite_dialog)
 	_style_confirm_dialog(overwrite_dialog)
+	_build_controls_ui()
+
+
+func _build_controls_ui() -> void:
+	controls_overlay = Control.new()
+	controls_overlay.name = "ControlsOverlay"
+	controls_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	controls_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	controls_overlay.visible = false
+	settings_overlay.add_child(controls_overlay)
+	var dim := ColorRect.new()
+	dim.color = Color(0.016, 0.008, 0.006, 0.94)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	controls_overlay.add_child(dim)
+	controls_panel = Control.new()
+	controls_panel.name = "ControlsColumn"
+	controls_panel.set_anchors_preset(Control.PRESET_CENTER)
+	controls_panel.offset_left = -UITheme.px(520.0)
+	controls_panel.offset_right = UITheme.px(520.0)
+	controls_panel.offset_top = -UITheme.px(465.0)
+	controls_panel.offset_bottom = UITheme.px(465.0)
+	controls_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	controls_overlay.add_child(controls_panel)
+	var column := VBoxContainer.new()
+	column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.add_theme_constant_override("separation", int(UITheme.px(9.0)))
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	controls_panel.add_child(column)
+	controls_title = _spec_label(tr("CONTROLS_TITLE"), UITheme.sans("medium"), 34.0, UITheme.INK_MAX, -0.01)
+	controls_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(controls_title)
+	controls_subtitle = _spec_label(tr("CONTROLS_SUBTITLE"), UITheme.mono(), 13.0, UITheme.INK_MID, 0.30)
+	controls_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(controls_subtitle)
+	column.add_child(_hairline(1040.0))
+	controls_hint = _spec_label(tr("CONTROLS_HINT"), UITheme.sans("light"), 14.0, UITheme.INK_LOW)
+	controls_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	controls_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(controls_hint)
+	var scroll := ScrollContainer.new()
+	scroll.name = "ControlsScroll"
+	scroll.custom_minimum_size.y = UITheme.px(570.0)
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.focus_mode = Control.FOCUS_NONE
+	column.add_child(scroll)
+	var rows := VBoxContainer.new()
+	rows.name = "ControlRows"
+	rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rows.add_theme_constant_override("separation", int(UITheme.px(5.0)))
+	scroll.add_child(rows)
+	_build_control_row(rows, "CONTROL_OBSERVE", &"nw_observe")
+	_build_control_row(rows, "CONTROL_DISH", &"nw_dish", false, "UPGRADE_SECONDARY_CAMERA_NAME")
+	_build_control_row(rows, "CONTROL_CHART", &"nw_chart", true)
+	_build_control_row(rows, "CONTROL_MENU_BACK", &"nw_menu_back", true)
+	_build_control_row(rows, "CONTROL_CONTINUE", &"nw_continue", true)
+	_build_control_row(rows, "CONTROL_FULLSCREEN", &"nw_fullscreen", true)
+	_build_static_control_row(rows, "CONTROL_ROTATE", "CONTROL_WHEEL")
+	_build_static_control_row(rows, "CONTROL_ZOOM", "CONTROL_CTRL_WHEEL")
+	_build_static_control_row(rows, "CONTROL_INSTALL", "CONTROL_POINTER_HOLD")
+	_build_static_control_row(rows, "CONTROL_SKY_SWEEP", "CONTROL_POINTER_HOLD", "UPGRADE_POLAR_SURVEY_NAME")
+	controls_status = _spec_label("", UITheme.sans("light"), 13.0, UITheme.INK_MID)
+	controls_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	controls_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	controls_status.visible = false
+	column.add_child(controls_status)
+	var actions := HBoxContainer.new()
+	actions.alignment = BoxContainer.ALIGNMENT_CENTER
+	actions.add_theme_constant_override("separation", int(UITheme.px(28.0)))
+	column.add_child(actions)
+	controls_reset_button = Button.new()
+	controls_reset_button.text = tr("CONTROLS_RESET")
+	_style_text_action(controls_reset_button, 16.0, UITheme.INK_MID)
+	controls_reset_button.pressed.connect(_on_controls_reset_pressed)
+	actions.add_child(controls_reset_button)
+	controls_back_button = Button.new()
+	controls_back_button.text = tr("CONTROLS_BACK")
+	_style_text_action(controls_back_button, 18.0, UITheme.BANNER_TITLE)
+	controls_back_button.pressed.connect(_close_controls)
+	actions.add_child(controls_back_button)
+	reset_bindings_dialog = ConfirmationDialog.new()
+	reset_bindings_dialog.title = tr("CONTROLS_RESET_TITLE")
+	reset_bindings_dialog.dialog_text = tr("CONTROLS_RESET_PROMPT")
+	reset_bindings_dialog.ok_button_text = tr("CONTROLS_RESET_CONFIRM")
+	reset_bindings_dialog.cancel_button_text = tr("SAVE_CANCEL")
+	reset_bindings_dialog.confirmed.connect(_on_controls_reset_confirmed)
+	controls_overlay.add_child(reset_bindings_dialog)
+	_style_confirm_dialog(reset_bindings_dialog)
+
+
+func _build_control_row(
+	parent: VBoxContainer,
+	title_key: String,
+	action: StringName,
+	editable: bool = false,
+	requirement_key: String = ""
+) -> void:
+	var row := HBoxContainer.new()
+	row.custom_minimum_size.y = UITheme.px(46.0)
+	row.add_theme_constant_override("separation", int(UITheme.px(18.0)))
+	parent.add_child(row)
+	var text_column := VBoxContainer.new()
+	text_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	text_column.add_theme_constant_override("separation", 0)
+	row.add_child(text_column)
+	var title := _spec_label(tr(title_key), UITheme.sans(), 16.0, UITheme.INK_HIGH)
+	text_column.add_child(title)
+	controls_localized_text.append({"label": title, "key": title_key})
+	if not requirement_key.is_empty():
+		var requirement := _spec_label(tr("CONTROLS_REQUIRES") % tr(requirement_key), UITheme.mono(), 10.0, UITheme.INK_LOW, 0.10)
+		text_column.add_child(requirement)
+		controls_localized_text.append({"label": requirement, "key": "CONTROLS_REQUIRES", "argument_key": requirement_key})
+	var value: Control
+	if editable:
+		var button := Button.new()
+		button.name = "Binding_%s" % String(action)
+		button.custom_minimum_size.x = UITheme.px(300.0)
+		button.alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		_style_text_action(button, 15.0, UITheme.BANNER_TITLE)
+		button.pressed.connect(_begin_rebind.bind(action))
+		row.add_child(button)
+		value = button
+		if action == &"nw_menu_back":
+			var clear_button := Button.new()
+			clear_button.name = "Clear_%s" % String(action)
+			clear_button.text = tr("CONTROLS_REMOVE")
+			clear_button.tooltip_text = tr("CONTROLS_REMOVE")
+			_style_text_action(clear_button, 12.0, UITheme.INK_LOW)
+			clear_button.pressed.connect(_clear_optional_binding.bind(action))
+			row.add_child(clear_button)
+			controls_clear_widgets[String(action)] = clear_button
+	else:
+		var label := _spec_label("", UITheme.mono(), 13.0, UITheme.INK_MID, 0.08)
+		label.custom_minimum_size.x = UITheme.px(300.0)
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		row.add_child(label)
+		value = label
+	controls_action_widgets[String(action)] = value
+	parent.add_child(_hairline(1040.0))
+
+
+func _build_static_control_row(
+	parent: VBoxContainer,
+	title_key: String,
+	value_key: String,
+	requirement_key: String = ""
+) -> void:
+	var row := HBoxContainer.new()
+	row.custom_minimum_size.y = UITheme.px(46.0)
+	row.add_theme_constant_override("separation", int(UITheme.px(18.0)))
+	parent.add_child(row)
+	var text_column := VBoxContainer.new()
+	text_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	text_column.add_theme_constant_override("separation", 0)
+	row.add_child(text_column)
+	var title := _spec_label(tr(title_key), UITheme.sans(), 16.0, UITheme.INK_HIGH)
+	text_column.add_child(title)
+	controls_localized_text.append({"label": title, "key": title_key})
+	if not requirement_key.is_empty():
+		var requirement := _spec_label(tr("CONTROLS_REQUIRES") % tr(requirement_key), UITheme.mono(), 10.0, UITheme.INK_LOW, 0.10)
+		text_column.add_child(requirement)
+		controls_localized_text.append({"label": requirement, "key": "CONTROLS_REQUIRES", "argument_key": requirement_key})
+	var value := _spec_label(tr(value_key), UITheme.mono(), 13.0, UITheme.INK_MID, 0.08)
+	value.custom_minimum_size.x = UITheme.px(300.0)
+	value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	value.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(value)
+	controls_localized_text.append({"label": value, "key": value_key})
+	parent.add_child(_hairline(1040.0))
+
+
+func open_controls() -> void:
+	if not is_settings_open():
+		open_settings()
+	if is_controls_open():
+		return
+	controls_previous_focus = get_viewport().gui_get_focus_owner()
+	settings_panel.visible = false
+	controls_overlay.visible = true
+	controls_overlay.move_to_front()
+	controls_status.visible = false
+	_cancel_rebind(false)
+	_refresh_controls_rows()
+	var first: Control = controls_action_widgets.get("nw_chart")
+	if first != null:
+		first.call_deferred("grab_focus")
+
+
+func _close_controls(restore_focus: bool = true) -> void:
+	if not is_controls_open():
+		return
+	if reset_bindings_dialog != null and reset_bindings_dialog.visible:
+		reset_bindings_dialog.hide()
+	_cancel_rebind(false)
+	controls_overlay.visible = false
+	settings_panel.visible = true
+	if restore_focus:
+		if not _restore_focus(controls_previous_focus) and controls_button != null:
+			controls_button.grab_focus()
+	controls_previous_focus = null
+
+
+func _restore_focus(target: Control) -> bool:
+	if is_instance_valid(target) and target.is_inside_tree() and target.is_visible_in_tree() and target.focus_mode != Control.FOCUS_NONE:
+		if not (target is BaseButton) or not target.disabled:
+			target.grab_focus()
+			return true
+	get_viewport().gui_release_focus()
+	return false
+
+
+func _control_action_title(action: StringName) -> String:
+	var keys := {
+		&"nw_observe": "CONTROL_OBSERVE",
+		&"nw_dish": "CONTROL_DISH",
+		&"nw_chart": "CONTROL_CHART",
+		&"nw_menu_back": "CONTROL_MENU_BACK",
+		&"nw_continue": "CONTROL_CONTINUE",
+		&"nw_fullscreen": "CONTROL_FULLSCREEN",
+	}
+	return tr(String(keys.get(action, String(action))))
+
+
+func _fallback_binding_label(action: StringName) -> String:
+	match action:
+		&"nw_observe":
+			return tr("CONTROL_LMB_HOLD")
+		&"nw_dish":
+			return tr("CONTROL_RMB")
+		&"nw_chart":
+			return "U"
+		&"nw_menu_back":
+			return "Esc"
+		&"nw_continue":
+			return "Enter / Space / U"
+		&"nw_fullscreen":
+			return "F11"
+	return "—"
+
+
+func _binding_label(action: StringName) -> String:
+	if settings_controller != null and settings_controller.has_method("binding_label"):
+		return String(settings_controller.binding_label(action))
+	return _fallback_binding_label(action)
+
+
+func _binding_slot_label(action: StringName, slot: int) -> String:
+	if settings_controller != null and settings_controller.has_method("binding_label"):
+		return String(settings_controller.binding_label(action, slot))
+	var pieces := _fallback_binding_label(action).split(" / ")
+	return pieces[slot] if slot >= 0 and slot < pieces.size() else ""
+
+
+func _binding_button_text(action: StringName) -> String:
+	match action:
+		&"nw_menu_back":
+			var alternate := _binding_slot_label(action, 1)
+			if alternate.is_empty():
+				alternate = tr("CONTROLS_ADD_KEY")
+			return "%s  %s  •  [%s]" % [_binding_slot_label(action, 0), tr("CONTROLS_FIXED"), alternate]
+		&"nw_continue":
+			return "%s / %s  %s  •  [%s]" % [
+				_binding_slot_label(action, 0),
+				_binding_slot_label(action, 1),
+				tr("CONTROLS_FIXED"),
+				_binding_slot_label(action, 2),
+			]
+	return "[%s]" % _binding_label(action)
+
+
+func _refresh_controls_rows() -> void:
+	for localized in controls_localized_text:
+		var label: Label = localized["label"]
+		var key := String(localized["key"])
+		if localized.has("argument_key"):
+			label.text = tr(key) % tr(String(localized["argument_key"]))
+		else:
+			label.text = tr(key)
+	for action_text in controls_action_widgets:
+		var action := StringName(action_text)
+		var widget: Control = controls_action_widgets[action_text]
+		if widget is Button and action == rebind_action:
+			widget.text = tr("CONTROLS_CAPTURE")
+		elif widget is Button:
+			widget.text = _binding_button_text(action)
+		elif widget is Label:
+			widget.text = "%s  •  %s" % [_binding_label(action), tr("CONTROLS_FIXED")]
+	for action_text in controls_clear_widgets:
+		var clear_button: Button = controls_clear_widgets[action_text]
+		clear_button.text = tr("CONTROLS_REMOVE")
+		clear_button.tooltip_text = tr("CONTROLS_REMOVE")
+		clear_button.visible = not _binding_slot_label(StringName(action_text), 1).is_empty()
+
+
+func _begin_rebind(action: StringName) -> void:
+	if settings_controller == null or not is_controls_open():
+		return
+	rebind_action = action
+	rebind_release_keycode = 0
+	controls_status.text = tr("CONTROLS_CAPTURE")
+	controls_status.add_theme_color_override("font_color", UITheme.BANNER_TITLE)
+	controls_status.visible = true
+	_refresh_controls_rows()
+	var widget: Control = controls_action_widgets.get(String(action))
+	if widget != null:
+		widget.grab_focus()
+
+
+func _cancel_rebind(show_feedback: bool = true) -> void:
+	rebind_action = &""
+	rebind_release_keycode = 0
+	_refresh_controls_rows()
+	if controls_status == null:
+		return
+	if show_feedback:
+		controls_status.text = tr("CONTROLS_CAPTURE_CANCELLED")
+		controls_status.add_theme_color_override("font_color", UITheme.INK_MID)
+		controls_status.visible = true
+	else:
+		controls_status.visible = false
+
+
+func handle_rebind_capture_input(event: InputEvent) -> bool:
+	if event is InputEventKey and not event.pressed and rebind_release_keycode != 0:
+		if _event_keycode(event) == rebind_release_keycode:
+			rebind_release_keycode = 0
+			return true
+	if not is_rebind_capture_active():
+		return false
+	if not (event is InputEventKey):
+		# Capture is deliberately keyboard-only this pass, but pointer/gamepad input
+		# is swallowed so it cannot operate a covered gameplay surface.
+		return true
+	if event.echo:
+		return true
+	if not event.pressed:
+		return true
+	var code := _event_keycode(event)
+	if code == KEY_ESCAPE:
+		rebind_release_keycode = code
+		rebind_action = &""
+		_refresh_controls_rows()
+		controls_status.text = tr("CONTROLS_CAPTURE_CANCELLED")
+		controls_status.add_theme_color_override("font_color", UITheme.INK_MID)
+		controls_status.visible = true
+		return true
+	if code in [KEY_CTRL, KEY_SHIFT, KEY_ALT, KEY_META] or code == 0:
+		return true
+	var captured_action := rebind_action
+	var use_physical: bool = event.keycode == 0 and event.physical_keycode != 0
+	var result: Dictionary = settings_controller.set_editable_binding(captured_action, event, 0, true, use_physical)
+	if bool(result.get("ok", false)):
+		rebind_release_keycode = code
+		rebind_action = &""
+		_refresh_controls_rows()
+		controls_status.text = tr("CONTROLS_REBOUND") % [_control_action_title(captured_action), _binding_label(captured_action)]
+		controls_status.add_theme_color_override("font_color", UITheme.GAIN)
+		controls_status.visible = true
+	else:
+		var conflict_action := StringName(result.get("conflict_action", &""))
+		if not conflict_action.is_empty():
+			controls_status.text = tr("CONTROLS_CONFLICT") % [_event_key_label(event), _control_action_title(conflict_action)]
+		else:
+			controls_status.text = tr("CONTROLS_INVALID")
+		controls_status.add_theme_color_override("font_color", UITheme.ALERT)
+		controls_status.visible = true
+	return true
+
+
+func _event_keycode(event: InputEventKey) -> int:
+	return int(event.keycode if event.keycode != 0 else event.physical_keycode)
+
+
+func _event_key_label(event: InputEventKey) -> String:
+	var label := event.as_text_key_label()
+	return label if not label.is_empty() else event.as_text()
+
+
+func _on_controls_reset_pressed() -> void:
+	if reset_bindings_dialog != null:
+		reset_bindings_dialog.popup_centered(Vector2i(500, 190))
+
+
+func _clear_optional_binding(action: StringName) -> void:
+	if settings_controller == null:
+		return
+	var binding_widget: Control = controls_action_widgets.get(String(action))
+	if binding_widget != null:
+		binding_widget.grab_focus()
+	var result: Dictionary = settings_controller.clear_editable_binding(action)
+	_refresh_controls_rows()
+	if bool(result.get("ok", false)):
+		controls_status.text = tr("CONTROLS_REMOVED") % _control_action_title(action)
+		controls_status.add_theme_color_override("font_color", UITheme.GAIN)
+	else:
+		controls_status.text = tr("CONTROLS_INVALID")
+		controls_status.add_theme_color_override("font_color", UITheme.ALERT)
+	controls_status.visible = true
+
+
+func _on_controls_reset_confirmed() -> void:
+	if settings_controller == null:
+		return
+	settings_controller.reset_nightwatch_bindings()
+	_cancel_rebind(false)
+	_refresh_controls_rows()
+	controls_status.text = tr("CONTROLS_RESTORED")
+	controls_status.add_theme_color_override("font_color", UITheme.GAIN)
+	controls_status.visible = true
 
 
 func _build_save_slot_row(parent: VBoxContainer, slot: int) -> void:
