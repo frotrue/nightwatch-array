@@ -159,25 +159,35 @@ that pause on close. This preserves an existing summary or chart pause when a
 second surface is layered above it.
 
 Menu/back has state-dependent ownership. An open chart gets first refusal. HUD
-then closes one level in this order: active capture, confirmation dialog,
-Controls, or Settings. The catalogue ending, startup slots, and modal tutorial
+then closes one level in this order: active capture, confirmation dialog, or
+the consolidated Settings console. The catalogue ending, startup slots, and modal tutorial
 welcome/completion steps block global navigation. A phase summary deliberately
 does not: menu/back opens Settings over the still-paused summary, while
 `nw_continue` or `nw_chart` advances into the chart. Ordinary gameplay
 menu/back opens Settings. Chart actions are blocked behind ending, startup,
-Settings/Controls, and modal tutorial surfaces.
+Settings, and modal tutorial surfaces.
 Tutorial replay is unavailable while a phase summary owns the intermission;
 both the HUD control and the game transition guard enforce that boundary.
 
-`HUD.open_settings()` remembers the prior focus, pauses only when necessary,
-makes the mouse visible, synchronizes persisted values, collapses both
-accordions, and defers focus to the language selector. Save management and
-Audio & Display are mutually exclusive accordions; collapsing one while it
-contains focus returns focus to its heading. Controls is a full overlay above
-Settings. It remembers its opener, focuses the first editable binding, closes
-back to Settings, and restores a still-valid prior control. Closing Settings
-cancels nested capture/dialog state and restores both pause ownership and the
-previous valid focus target.
+`HUD.open_settings()` remembers the prior gameplay focus, pauses only when
+necessary, makes the mouse visible, synchronizes persisted values, reopens the
+last selected page, and restores that page's last valid focus target. One fixed
+instrument console contains a left navigation rail and six mutually exclusive
+pages: General, Audio, Display, Accessibility, Controls, and Save. Controls is
+not a nested overlay; `Esc` from any ordinary page closes the whole console in
+one action. Active key capture and confirmation dialogs still consume `Esc`
+first. Closing Settings cancels capture/dialog state and restores both pause
+ownership and the previous valid gameplay focus target.
+
+The header explicitly says the observation is paused. Audio has master volume,
+master mute, and an effective unfocused mute that never changes the stored user
+mute. Display owns window/fullscreen, VSync, and a 30/60/120/unlimited frame
+cap. Accessibility owns camera impact
+intensity (kick and shake) and full-screen observation flashes. A zero impact
+value removes both camera channels; disabling flashes leaves rings, particles,
+banners, and sound intact. Save reports the active slot, the 60-second autosave
+policy, last-save time or failure, then exposes the existing confirmed slot
+operations.
 
 Rebinding is an explicit capture state. `Esc` cancels; modifier-only, pointer,
 and controller input is swallowed without completing the keyboard-only capture.
@@ -197,7 +207,10 @@ that slot and leaves locked `Esc` plus every other customized action intact.
 Binding changes have two notification levels. `binding_changed(action)` updates
 the chart's action labels selectively. `input_bindings_changed` refreshes HUD
 controls/readouts and the tutorial's current binding-labelled step. Audio and
-fullscreen signals likewise resynchronize the Settings controls.
+audio policy, display/performance, accessibility, and fullscreen signals
+likewise resynchronize the Settings controls. `game.gd` applies accessibility
+signals to `EffectsLayer`; scalar settings never alter target identity or
+economy.
 
 ## Observation coordinates
 
@@ -709,16 +722,17 @@ pending, unseen ending is resumed through the ordinary intermission/chart
 boundary; it is never injected mid-round.
 
 Settings are separate from the run-save payload. `game_settings.gd` reads and
-writes `user://settings.cfg` with `SETTINGS_VERSION = 1`:
+writes `user://settings.cfg` with `SETTINGS_VERSION = 3`:
 
 | Section | Keys |
 |---|---|
 | `settings` | `version` |
-| `accessibility` | `language` |
+| `accessibility` | `language`, `motion_intensity`, `screen_flashes_enabled` |
 | `onboarding` | `tutorial_completed` |
 | `research_chart` | `rotation` |
-| `audio` | `master_linear`, `muted` |
-| `display` | `fullscreen` |
+| `audio` | `master_linear`, `muted`, `mute_when_unfocused` |
+| `display` | `fullscreen`, `vsync_enabled` |
+| `performance` | `fps_limit` |
 | `input` | one editable-descriptor array for each of the six `nw_*` actions |
 
 Only editable slots are serialized. Loading starts from validated scalar
@@ -726,6 +740,12 @@ defaults and the canonical fixed input slots. A malformed or conflicting input
 entry falls back only for that action, leaving other valid overrides intact;
 missing optional slots remain empty. Applying or resetting Nightwatch bindings
 rebuilds those six actions without touching unrelated `InputMap` actions.
+
+Focus notifications change only effective process state. Audio uses
+`muted || (mute_when_unfocused && !application_focused)`, so returning to the
+game restores the player's explicit mute choice. Frame pacing never changes on
+focus transitions; the configured cap applies continuously. Headless fixtures
+and timing probes do not apply display pacing side effects.
 
 Tests can inject a path before `_ready()` with `GameSettings.new(path)` or
 `set_settings_path(path)`. The production scene uses the default path. This is

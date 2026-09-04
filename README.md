@@ -16,7 +16,8 @@
 | [docs/design.md](docs/design.md) | 현행 단일 성도 진행, 관측·엔딩·표현 계약, 미결 사항 — **코드를 바꾸기 전에 먼저 읽을 것** |
 | [docs/systems.md](docs/systems.md) | 씬 트리, 시그널 배선, 스크립트별 책임 |
 | [docs/probes.md](docs/probes.md) | 테스트와 계측 프로브 실행법 |
-| [docs/settings-accessibility-plan.md](docs/settings-accessibility-plan.md) | Agent Room에서 확정한 설정·조작·접근성 v1.3 범위와 안전장치 |
+| [docs/settings-accessibility-plan.md](docs/settings-accessibility-plan.md) | Agent Room 합의에서 확장한 설정·조작·접근성 v2.1 계약 |
+| [docs/settings-reference-study.md](docs/settings-reference-study.md) | 짧은 12종·장기형 15종 설정 UI 조사와 채택/보류 결정 |
 | [docs/full-tree-economy-baseline.md](docs/full-tree-economy-baseline.md) | 현행 107노드 경제의 3전략 × 3시드 기준선 |
 | [docs/README.md](docs/README.md) | 문서 지도: 현행 참조, 계측 기준선, 완료 작업과 역사 기록 |
 | [AGENTS.md](AGENTS.md) | 에이전트 작업 규약 |
@@ -134,9 +135,14 @@ Windows `.exe` 내보내기. `build/`는 `.gitignore`에 있으므로 산출물�
 | 우클릭 | 가장 가까운 접시를 그 지점으로 이동 (`secondary_camera` 필요) |
 | `U` (변경 가능) | 연구 성도 열기 / 관측 정산에서 계속하기 |
 | `Enter`, `Space` | 라운드 정산에서 계속하기 |
-| `Esc` | 설정 열기 / 현재 설정·조작 화면 또는 연구 성도 닫기 |
+| `Esc` | 설정 열기 / 현재 설정 콘솔 또는 연구 성도 닫기 |
 | `F11` (변경 가능) | 창 모드와 전체 화면 전환 |
 | `F9` | 디버그 HUD 토글 |
+
+설정은 현재 런 위에서 열리고 관측을 일시정지한다. `일반 / 소리 / 화면 /
+접근성 / 조작 / 저장` 페이지에서 전체 음량과 비활성 창 음소거, 전체 화면·VSync·
+FPS 상한, 카메라 impact 강도·화면 섬광, 키 재지정, 현재
+저장 슬롯 상태를 관리한다. 값은 즉시 적용하고 `settings.cfg`에 자동 저장한다.
 
 설정의 **조작키 보기 / 변경**에서 성도, 메뉴 보조키, 정산 보조키, 전체 화면 키를
 바꿀 수 있다. `Esc`와 정산의 `Enter`/`Space`는 복구 가능한 진입·진행 경로로

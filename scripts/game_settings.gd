@@ -4,20 +4,29 @@ signal language_changed(locale: String)
 signal audio_changed(master_linear: float, muted: bool)
 signal master_volume_changed(master_linear: float)
 signal mute_changed(muted: bool)
+signal audio_policy_changed
 signal fullscreen_changed(fullscreen: bool)
 signal display_changed(fullscreen: bool)
+signal performance_changed(vsync_enabled: bool, fps_limit: int)
+signal accessibility_changed(motion_intensity: float, screen_flashes_enabled: bool)
 signal binding_changed(action: StringName)
 signal bindings_changed(action: StringName)
 signal input_bindings_changed
 
 const InputBindings = preload("res://scripts/game_input_bindings.gd")
 
-const SETTINGS_VERSION := 1
+const SETTINGS_VERSION := 3
 const SETTINGS_PATH := "user://settings.cfg"
 const SUPPORTED_LOCALES := ["en", "ko"]
 const DEFAULT_MASTER_LINEAR := 1.0
 const DEFAULT_MUTED := false
 const DEFAULT_FULLSCREEN := false
+const DEFAULT_MUTE_WHEN_UNFOCUSED := false
+const DEFAULT_VSYNC_ENABLED := true
+const DEFAULT_FPS_LIMIT := 0
+const DEFAULT_MOTION_INTENSITY := 1.0
+const DEFAULT_SCREEN_FLASHES_ENABLED := true
+const SUPPORTED_FPS_LIMITS := [0, 30, 60, 120]
 const MIN_MASTER_DB := -80.0
 
 var settings_path: String = SETTINGS_PATH
@@ -27,10 +36,16 @@ var research_chart_rotation: float = 0.0
 var master_linear: float = DEFAULT_MASTER_LINEAR
 var muted: bool = DEFAULT_MUTED
 var fullscreen: bool = DEFAULT_FULLSCREEN
+var mute_when_unfocused: bool = DEFAULT_MUTE_WHEN_UNFOCUSED
+var vsync_enabled: bool = DEFAULT_VSYNC_ENABLED
+var fps_limit: int = DEFAULT_FPS_LIMIT
+var motion_intensity: float = DEFAULT_MOTION_INTENSITY
+var screen_flashes_enabled: bool = DEFAULT_SCREEN_FLASHES_ENABLED
 
 var _editable_bindings: Dictionary = {}
 var _binding_load_errors: Dictionary = {}
 var _loaded_version: int = 0
+var _application_focused: bool = true
 
 
 func _init(custom_settings_path: String = SETTINGS_PATH) -> void:
@@ -39,7 +54,17 @@ func _init(custom_settings_path: String = SETTINGS_PATH) -> void:
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	_application_focused = true if DisplayServer.get_name().to_lower() == "headless" else DisplayServer.window_is_focused()
 	load_settings()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_IN:
+		_application_focused = true
+		_apply_audio()
+	elif what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		_application_focused = false
+		_apply_audio()
 
 
 func set_settings_path(custom_settings_path: String, reload_now: bool = false) -> void:
@@ -58,6 +83,11 @@ func load_settings(path_override: String = "") -> Dictionary:
 	master_linear = DEFAULT_MASTER_LINEAR
 	muted = DEFAULT_MUTED
 	fullscreen = DEFAULT_FULLSCREEN
+	mute_when_unfocused = DEFAULT_MUTE_WHEN_UNFOCUSED
+	vsync_enabled = DEFAULT_VSYNC_ENABLED
+	fps_limit = DEFAULT_FPS_LIMIT
+	motion_intensity = DEFAULT_MOTION_INTENSITY
+	screen_flashes_enabled = DEFAULT_SCREEN_FLASHES_ENABLED
 	_loaded_version = 0
 	_binding_load_errors.clear()
 
@@ -81,9 +111,28 @@ func load_settings(path_override: String = "") -> Dictionary:
 			config.get_value("audio", "muted", DEFAULT_MUTED),
 			DEFAULT_MUTED
 		)
+		mute_when_unfocused = _validated_bool(
+			config.get_value("audio", "mute_when_unfocused", DEFAULT_MUTE_WHEN_UNFOCUSED),
+			DEFAULT_MUTE_WHEN_UNFOCUSED
+		)
 		fullscreen = _validated_bool(
 			config.get_value("display", "fullscreen", DEFAULT_FULLSCREEN),
 			DEFAULT_FULLSCREEN
+		)
+		vsync_enabled = _validated_bool(
+			config.get_value("display", "vsync_enabled", DEFAULT_VSYNC_ENABLED),
+			DEFAULT_VSYNC_ENABLED
+		)
+		fps_limit = _validated_fps_limit(
+			config.get_value("performance", "fps_limit", DEFAULT_FPS_LIMIT)
+		)
+		motion_intensity = _validated_unit_float(
+			config.get_value("accessibility", "motion_intensity", DEFAULT_MOTION_INTENSITY),
+			DEFAULT_MOTION_INTENSITY
+		)
+		screen_flashes_enabled = _validated_bool(
+			config.get_value("accessibility", "screen_flashes_enabled", DEFAULT_SCREEN_FLASHES_ENABLED),
+			DEFAULT_SCREEN_FLASHES_ENABLED
 		)
 	elif load_error != ERR_FILE_NOT_FOUND:
 		push_warning("Could not load settings: %s" % error_string(load_error))
@@ -93,6 +142,8 @@ func load_settings(path_override: String = "") -> Dictionary:
 	TranslationServer.set_locale(locale)
 	_apply_audio()
 	_apply_fullscreen()
+	_apply_vsync()
+	_apply_performance()
 	return {
 		"error": load_error,
 		"version": _loaded_version,
@@ -111,7 +162,14 @@ func save_settings() -> Error:
 	config.set_value("research_chart", "rotation", research_chart_rotation)
 	config.set_value("audio", "master_linear", master_linear)
 	config.set_value("audio", "muted", muted)
+	config.set_value("audio", "mute_when_unfocused", mute_when_unfocused)
 	config.set_value("display", "fullscreen", fullscreen)
+	config.set_value("display", "vsync_enabled", vsync_enabled)
+	config.set_value("performance", "fps_limit", fps_limit)
+	if config.has_section_key("performance", "background_throttle"):
+		config.erase_section_key("performance", "background_throttle")
+	config.set_value("accessibility", "motion_intensity", motion_intensity)
+	config.set_value("accessibility", "screen_flashes_enabled", screen_flashes_enabled)
 	for action_value in InputBindings.action_names():
 		var action := StringName(action_value)
 		config.set_value("input", String(action), _bindings_for_save(action))
@@ -213,6 +271,26 @@ func toggle_muted(persist: bool = true) -> bool:
 	return muted
 
 
+func should_mute_when_unfocused() -> bool:
+	return mute_when_unfocused
+
+
+func set_mute_when_unfocused(value: bool, persist: bool = true) -> void:
+	if mute_when_unfocused == value:
+		_apply_audio()
+		return
+	mute_when_unfocused = value
+	_apply_audio()
+	if persist:
+		save_settings()
+	audio_policy_changed.emit()
+
+
+func toggle_mute_when_unfocused(persist: bool = true) -> bool:
+	set_mute_when_unfocused(not mute_when_unfocused, persist)
+	return mute_when_unfocused
+
+
 func is_fullscreen() -> bool:
 	return fullscreen
 
@@ -232,6 +310,74 @@ func set_fullscreen(value: bool, persist: bool = true) -> void:
 func toggle_fullscreen(persist: bool = true) -> bool:
 	set_fullscreen(not fullscreen, persist)
 	return fullscreen
+
+
+func is_vsync_enabled() -> bool:
+	return vsync_enabled
+
+
+func set_vsync_enabled(value: bool, persist: bool = true) -> void:
+	if vsync_enabled == value:
+		_apply_vsync()
+		return
+	vsync_enabled = value
+	_apply_vsync()
+	if persist:
+		save_settings()
+	performance_changed.emit(vsync_enabled, fps_limit)
+
+
+func toggle_vsync(persist: bool = true) -> bool:
+	set_vsync_enabled(not vsync_enabled, persist)
+	return vsync_enabled
+
+
+func get_fps_limit() -> int:
+	return fps_limit
+
+
+func set_fps_limit(value: int, persist: bool = true) -> void:
+	var normalized := _validated_fps_limit(value)
+	if fps_limit == normalized:
+		_apply_performance()
+		return
+	fps_limit = normalized
+	_apply_performance()
+	if persist:
+		save_settings()
+	performance_changed.emit(vsync_enabled, fps_limit)
+
+
+func get_motion_intensity() -> float:
+	return motion_intensity
+
+
+func set_motion_intensity(value: float, persist: bool = true) -> void:
+	var normalized := _validated_unit_float(value, DEFAULT_MOTION_INTENSITY)
+	if is_equal_approx(motion_intensity, normalized):
+		return
+	motion_intensity = normalized
+	if persist:
+		save_settings()
+	accessibility_changed.emit(motion_intensity, screen_flashes_enabled)
+
+
+func are_screen_flashes_enabled() -> bool:
+	return screen_flashes_enabled
+
+
+func set_screen_flashes_enabled(value: bool, persist: bool = true) -> void:
+	if screen_flashes_enabled == value:
+		return
+	screen_flashes_enabled = value
+	if persist:
+		save_settings()
+	accessibility_changed.emit(motion_intensity, screen_flashes_enabled)
+
+
+func toggle_screen_flashes(persist: bool = true) -> bool:
+	set_screen_flashes_enabled(not screen_flashes_enabled, persist)
+	return screen_flashes_enabled
 
 
 func get_input_actions_metadata() -> Dictionary:
@@ -632,7 +778,7 @@ func _apply_audio() -> void:
 		push_warning("Master audio bus is unavailable")
 		return
 	AudioServer.set_bus_volume_db(master_bus, maxf(linear_to_db(master_linear), MIN_MASTER_DB))
-	AudioServer.set_bus_mute(master_bus, muted)
+	AudioServer.set_bus_mute(master_bus, muted or (mute_when_unfocused and not _application_focused))
 
 
 func _apply_fullscreen() -> void:
@@ -645,6 +791,21 @@ func _apply_fullscreen() -> void:
 	)
 	if DisplayServer.window_get_mode() != requested_mode:
 		DisplayServer.window_set_mode(requested_mode)
+
+
+func _apply_vsync() -> void:
+	if DisplayServer.get_name().to_lower() == "headless":
+		return
+	var requested_mode := DisplayServer.VSYNC_ENABLED if vsync_enabled else DisplayServer.VSYNC_DISABLED
+	if DisplayServer.window_get_vsync_mode() != requested_mode:
+		DisplayServer.window_set_vsync_mode(requested_mode)
+
+
+func _apply_performance() -> void:
+	# Headless validation and performance probes own their own pacing contracts.
+	if DisplayServer.get_name().to_lower() == "headless":
+		return
+	Engine.max_fps = fps_limit
 
 
 func _ensure_settings_directory() -> Error:
@@ -686,6 +847,20 @@ func _validated_linear(value: Variant) -> float:
 		return DEFAULT_MASTER_LINEAR
 	var numeric := float(value)
 	return clampf(numeric, 0.0, 1.0) if is_finite(numeric) else DEFAULT_MASTER_LINEAR
+
+
+func _validated_unit_float(value: Variant, fallback: float) -> float:
+	if typeof(value) != TYPE_INT and typeof(value) != TYPE_FLOAT:
+		return fallback
+	var numeric := float(value)
+	return clampf(numeric, 0.0, 1.0) if is_finite(numeric) else fallback
+
+
+func _validated_fps_limit(value: Variant) -> int:
+	if typeof(value) != TYPE_INT and typeof(value) != TYPE_FLOAT:
+		return DEFAULT_FPS_LIMIT
+	var numeric := int(value)
+	return numeric if numeric in SUPPORTED_FPS_LIMITS else DEFAULT_FPS_LIMIT
 
 
 func _result_failure(reason: String) -> Dictionary:

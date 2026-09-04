@@ -96,6 +96,8 @@ func _ready() -> void:
 		tutorial.auto_start_enabled = false
 	tutorial.setup(settings, progression)
 	settings.language_changed.connect(_on_language_changed)
+	if settings.has_signal("accessibility_changed"):
+		settings.accessibility_changed.connect(_on_accessibility_changed)
 	hud.catalogue_finish_requested.connect(_on_catalogue_finish_requested)
 	hud.catalogue_continue_requested.connect(_on_catalogue_continue_requested)
 	hud.catalogue_debug_preview_close_requested.connect(_close_catalogue_ending_debug_preview)
@@ -112,6 +114,7 @@ func _ready() -> void:
 	starfield.setup(observation_view)
 	twinkle_stars.setup(observation_view)
 	effects.setup(observation_view)
+	_apply_accessibility_settings()
 	host_stars.setup(progression, observation_view)
 	galactic_phenomena.setup(progression, observation_view, meteor_layer)
 	sky_contacts.setup(meteor_layer, progression, observation_view)
@@ -879,6 +882,22 @@ func _on_language_changed(_locale: String) -> void:
 		hud.refresh_catalogue_ending_text(_catalogue_stats_text())
 
 
+func _on_accessibility_changed(_motion_intensity: float, _screen_flashes_enabled: bool) -> void:
+	_apply_accessibility_settings()
+
+
+func _apply_accessibility_settings() -> void:
+	if effects == null or not effects.has_method("set_accessibility_effects"):
+		return
+	var motion_scale := 1.0
+	var flashes_enabled := true
+	if settings != null and settings.has_method("get_motion_intensity"):
+		motion_scale = float(settings.get_motion_intensity())
+	if settings != null and settings.has_method("are_screen_flashes_enabled"):
+		flashes_enabled = bool(settings.are_screen_flashes_enabled())
+	effects.set_accessibility_effects(motion_scale, flashes_enabled)
+
+
 func _upgrade_name(definition: Dictionary) -> String:
 	return tr("UPGRADE_%s_NAME" % String(definition.id).to_upper())
 
@@ -995,6 +1014,8 @@ func _autosave_active_slot() -> bool:
 	if error == OK:
 		hud.show_autosaved(active_save_slot)
 		return true
+	if hud.has_method("show_autosave_failed"):
+		hud.show_autosave_failed(active_save_slot)
 	hud.show_banner(tr("AUTOSAVE_FAILURE") % active_save_slot, UITheme.ALERT, 2.0)
 	return false
 

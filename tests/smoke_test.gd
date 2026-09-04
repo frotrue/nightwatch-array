@@ -535,14 +535,27 @@ func _run() -> void:
 	game.hud.open_settings()
 	_check(game.hud.is_settings_open(), "settings overlay opens")
 	_check(paused, "settings overlay pauses gameplay")
-	_check(not game.hud.save_management_container.visible, "save management stays collapsed in the default settings view")
+	_check(
+		game.hud.settings_pages.has(game.hud.settings_active_page)
+		and game.hud.settings_pages[game.hud.settings_active_page].visible,
+		"settings reopens the last page inside the same console"
+	)
+	game.hud._set_settings_page("general", false)
+	_check(game.hud.settings_pages["general"].visible, "General remains directly selectable")
+	_check(
+		game.hud.reset_bindings_dialog.title == TranslationServer.translate("CONTROLS_RESET_TITLE")
+		and game.hud.reset_bindings_dialog.dialog_text == TranslationServer.translate("CONTROLS_RESET_PROMPT")
+		and game.hud.reset_bindings_dialog.ok_button_text == TranslationServer.translate("CONTROLS_RESET_CONFIRM")
+		and game.hud.reset_bindings_dialog.cancel_button_text == TranslationServer.translate("SAVE_CANCEL"),
+		"changing locale refreshes the Controls reset confirmation as part of the live settings console"
+	)
 	game.hud._on_save_management_pressed()
-	_check(game.hud.save_management_container.visible, "save management expands on demand")
+	_check(game.hud.settings_active_page == "save" and game.hud.save_management_container.visible, "save management opens as a first-class page")
 	game.hud.close_settings()
 	_check(not paused, "closing settings resumes gameplay")
 	game.settings.set_language("en", false)
 	await process_frame
-	_check(game.hud.settings_button.text.ends_with("SETTINGS"), "English can be restored at runtime")
+	_check("SETTINGS" in game.hud.settings_button.text and "ESC" in game.hud.settings_button.text, "English settings entry advertises the global Escape shortcut")
 	_check(
 		game.upgrade_tree._upgrade_description(predictive_control_definition)
 		== "Automatically moves an idle dish toward trackable incoming objects; manual right-click placement still takes priority.",
@@ -2516,7 +2529,7 @@ func _run_input_routing_regressions(packed: PackedScene) -> void:
 		"the game owns one always-processing global input router"
 	)
 
-	# Settings keyboard focus, disclosure groups, and in-memory audio model.
+	# Settings keyboard focus, first-class pages, and live convenience options.
 	hud.open_settings()
 	await process_frame
 	await process_frame
@@ -2526,26 +2539,51 @@ func _run_input_routing_regressions(packed: PackedScene) -> void:
 		"settings opens with the language selector keyboard-focused"
 	)
 	_check(
-		not hud.audio_display_container.visible and not hud.save_management_container.visible,
-		"settings disclosure groups begin collapsed"
+		hud.settings_active_page == "general"
+		and hud.settings_pages.size() == 6
+		and hud.settings_nav_buttons.size() == 6,
+		"settings opens one six-page console on General"
 	)
-	hud._on_audio_display_pressed()
+	var settings_type_is_readable := true
+	for page_value in hud.settings_pages.values():
+		var settings_page: Control = page_value
+		var page_description := settings_page.get_node("PageDescription") as Label
+		settings_type_is_readable = settings_type_is_readable and page_description.get_theme_font_size("font_size") >= 12
+	for nav_value in hud.settings_nav_buttons.values():
+		var nav_button: Button = nav_value
+		settings_type_is_readable = settings_type_is_readable and nav_button.get_theme_font_size("font_size") >= 14
+	_check(settings_type_is_readable, "settings keeps support copy at 12 px and navigation actions at 14 px or larger")
+	var slider_focus_style := hud.master_volume_slider.get_theme_stylebox("grabber_area_highlight") as StyleBoxFlat
 	_check(
-		hud.audio_display_container.visible and not hud.save_management_container.visible,
-		"audio and display expands without opening save management"
+		slider_focus_style != null and slider_focus_style.border_width_top > 0 and slider_focus_style.border_width_bottom > 0,
+		"keyboard-focused sliders change rail shape as well as color"
 	)
-	hud._on_save_management_pressed()
+	var control_rows_margin := hud.settings_pages["controls"].get_node("ControlsScroll/ControlRowsMargin") as MarginContainer
 	_check(
-		hud.save_management_container.visible and not hud.audio_display_container.visible,
-		"opening save management collapses audio and display"
+		control_rows_margin.get_theme_constant("margin_right") >= 16,
+		"Controls reserves readable space between long binding labels and the scrollbar"
 	)
-	hud._on_audio_display_pressed()
+	hud._set_settings_page("display")
+	await process_frame
+	await process_frame
+	_check(routing_game.get_viewport().gui_get_focus_owner() == hud.fullscreen_button, "each page places focus on its first useful control")
+	hud.close_settings()
+	hud.open_settings()
+	await process_frame
+	await process_frame
 	_check(
-		hud.audio_display_container.visible and not hud.save_management_container.visible,
-		"reopening audio and display collapses save management"
+		hud.settings_active_page == "display"
+		and routing_game.get_viewport().gui_get_focus_owner() == hud.fullscreen_button,
+		"reopening settings restores the last page and its focus"
 	)
+	hud._set_settings_page("audio")
+	_check(hud.audio_display_container.visible and not hud.save_management_container.visible, "Audio is one exclusive settings page")
+	hud._set_settings_page("save")
+	_check(hud.save_management_container.visible and not hud.audio_display_container.visible, "Save replaces Audio inside the same console")
+	hud._set_settings_page("audio")
 	var original_master: float = settings.get_master_volume_linear()
 	var original_muted: bool = settings.is_muted()
+	var original_unfocused_mute: bool = settings.should_mute_when_unfocused()
 	hud.master_volume_slider.value = 37.0
 	_check(
 		is_equal_approx(settings.get_master_volume_linear(), 0.37)
@@ -2556,14 +2594,74 @@ func _run_input_routing_regressions(packed: PackedScene) -> void:
 	_check(
 		settings.is_muted() != original_muted
 		and hud.mute_button.text
-		== TranslationServer.translate("SETTINGS_MUTE_ON" if settings.is_muted() else "SETTINGS_MUTE_OFF"),
+		== TranslationServer.translate("SETTINGS_ON" if settings.is_muted() else "SETTINGS_OFF"),
 		"the mute action updates both its label and settings model"
+	)
+	hud._on_mute_unfocused_pressed()
+	_check(
+		settings.should_mute_when_unfocused() != original_unfocused_mute
+		and hud.mute_unfocused_button.text == TranslationServer.translate("SETTINGS_ON" if settings.should_mute_when_unfocused() else "SETTINGS_OFF"),
+		"the unfocused-audio policy is a real persisted toggle rather than a second mute state"
 	)
 	settings.set_master_volume_linear(original_master, false)
 	settings.set_muted(original_muted, false)
+	settings.set_mute_when_unfocused(original_unfocused_mute, false)
 
-	# Controls is one settings layer. Escape returns to settings, while capture
-	# consumes both edges of a candidate and updates the live InputMap.
+	var original_vsync: bool = settings.is_vsync_enabled()
+	var original_fps_limit: int = settings.get_fps_limit()
+	hud._set_settings_page("display")
+	hud._on_vsync_pressed()
+	hud._on_fps_limit_selected(2)
+	_check(
+		settings.is_vsync_enabled() != original_vsync
+		and settings.get_fps_limit() == 60,
+		"Display exposes independent VSync and explicit frame-cap controls"
+	)
+	settings.set_vsync_enabled(original_vsync, false)
+	settings.set_fps_limit(original_fps_limit, false)
+
+	var original_motion: float = settings.get_motion_intensity()
+	var original_flashes: bool = settings.are_screen_flashes_enabled()
+	hud._set_settings_page("accessibility")
+	routing_game.effects.reset()
+	settings.set_motion_intensity(1.0, false)
+	routing_game.effects.add_kick(Vector2.RIGHT * 20.0, 3.0)
+	routing_game.effects.add_shake(0.8)
+	var full_kick: float = routing_game.effects.kick_amplitude
+	var full_shake: float = routing_game.effects.shake_trauma
+	settings.set_motion_intensity(0.5, false)
+	_check(
+		is_equal_approx(routing_game.effects.kick_amplitude, full_kick * 0.5)
+		and is_equal_approx(routing_game.effects.shake_trauma, full_shake * 0.5),
+		"lowering camera impact immediately reduces an effect already in flight"
+	)
+	hud.motion_intensity_slider.value = 0.0
+	hud._on_screen_flashes_pressed()
+	routing_game.effects.spawn_success(Vector2.ZERO, 1.0, Color.WHITE, 1.0, 1.0, "PERFECT", Vector2.ZERO, 1.0, true)
+	_check(
+		is_zero_approx(settings.get_motion_intensity())
+		and is_zero_approx(routing_game.effects.kick_amplitude)
+		and is_zero_approx(routing_game.effects.shake_trauma),
+		"0% camera impact removes both kick and shake"
+	)
+	_check(
+		settings.are_screen_flashes_enabled() != original_flashes
+		and is_zero_approx(routing_game.effects.flash_strength)
+		and not routing_game.effects.rings.is_empty()
+		and not routing_game.effects.particles.is_empty(),
+		"screen flashes can be disabled while rings and particles retain important feedback"
+	)
+	settings.set_motion_intensity(original_motion, false)
+	settings.set_screen_flashes_enabled(original_flashes, false)
+	routing_game.effects.reset()
+	hud.show_autosaved(1)
+	_check(hud.last_autosave_unix > 0, "completed autosave records a timestamp for the active slot")
+	hud.set_active_save_slot(2)
+	_check(hud.last_autosave_unix == 0, "switching slots cannot display the previous slot's autosave timestamp")
+	hud.set_active_save_slot(0)
+
+	# Controls is a page in the same console. Escape closes the console from any
+	# page, while capture still consumes its own Escape first.
 	hud.open_controls()
 	await process_frame
 	await process_frame
@@ -2576,8 +2674,8 @@ func _run_input_routing_regressions(packed: PackedScene) -> void:
 	)
 	await _push_key_event(routing_game.get_viewport(), KEY_ESCAPE)
 	_check(
-		not hud.is_controls_open() and hud.is_settings_open() and paused,
-		"Escape closes only the controls layer and returns to settings"
+		not hud.is_controls_open() and not hud.is_settings_open() and not paused,
+		"one Escape resumes directly from the integrated Controls page"
 	)
 	hud.open_controls()
 	await process_frame
@@ -2636,8 +2734,7 @@ func _run_input_routing_regressions(packed: PackedScene) -> void:
 		"removing the optional alternate keeps locked Escape and other custom bindings"
 	)
 	await _push_key_event(routing_game.get_viewport(), KEY_ESCAPE)
-	await _push_key_event(routing_game.get_viewport(), KEY_ESCAPE)
-	_check(not hud.is_controls_open() and not hud.is_settings_open() and not paused, "two back actions close controls and then settings")
+	_check(not hud.is_controls_open() and not hud.is_settings_open() and not paused, "one back action closes the consolidated settings console")
 	await _push_key_event(routing_game.get_viewport(), KEY_U)
 	_check(not routing_game.upgrade_tree.is_open(), "the old chart key no longer opens the chart after rebinding")
 	await _push_key_event(routing_game.get_viewport(), KEY_K)

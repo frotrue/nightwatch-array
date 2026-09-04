@@ -311,10 +311,11 @@ ending-preview debug chord, performance caps, stale references, and reset.
 
 The no-persistence input-routing fixture additionally snapshots and restores
 the process-global `InputMap`, audio, display, locale, pause, and cursor state.
-It verifies the always-processing router; deferred keyboard focus for tutorial,
-Settings, and Controls; mutually exclusive Settings accordions; the audio
-slider/mute model; one-layer Controls/Settings back navigation; and rebind
-capture consuming both the candidate press and release before updating the live
+It verifies the always-processing router; deferred keyboard focus for tutorial
+and Settings; the six exclusive Settings pages; master volume/mute and
+unfocused mute; VSync and explicit FPS controls; camera
+impact and flash accessibility behavior; one-Escape exit from the integrated
+Controls page; and rebind capture consuming both the candidate press and release before updating the live
 `InputMap`. It also adds and removes the optional menu/back alternate without
 losing locked `Esc` or another custom binding. It then exercises the replaced and reset chart keys through the real
 viewport, paused-summary continuation on `U`/`Enter`/`Space`, Settings layered
@@ -778,18 +779,18 @@ first transit window at 48% and writes `build/transit_preview.png`. It does not
 perform a prior confirmation or a separate harvest; those interactions were
 removed in the approved Local Group simplification.
 
-### Settings and Controls preview
+### Settings console preview
 
-`tests/settings_preview.gd` captures the new Settings surfaces at the shipped
+`tests/settings_preview.gd` captures each Settings page at the shipped
 1152x648 viewport. It installs the no-persistence fixture before `_ready()`, so
 the capture does not read or rewrite the player's audio, display, binding, or
 onboarding settings. Run it with a real windowed renderer; headless output is not
 representative.
 
-The default expands Audio & Display and writes `build/settings_preview.png`.
-Set `NIGHTWATCH_SETTINGS_PREVIEW=controls` to open the Controls overlay and write
-`build/controls_preview.png`. `NIGHTWATCH_SETTINGS_LOCALE=ko` selects Korean and
-adds `_ko` to either filename.
+`NIGHTWATCH_SETTINGS_PREVIEW` accepts `general`, `audio`, `display`,
+`accessibility`, `controls`, or `save`; an absent or invalid value selects
+General. Output is `build/settings_<page>_preview.png`.
+`NIGHTWATCH_SETTINGS_LOCALE=ko` selects Korean and adds `_ko` before `_preview`.
 
 ```powershell
 $env:NIGHTWATCH_SETTINGS_PREVIEW = "controls"
@@ -799,10 +800,24 @@ Remove-Item Env:NIGHTWATCH_SETTINGS_PREVIEW -ErrorAction SilentlyContinue
 Remove-Item Env:NIGHTWATCH_SETTINGS_LOCALE -ErrorAction SilentlyContinue
 ```
 
-`SETTINGS_PREVIEW_SAVED` means a non-empty frame was written, not that wrapping,
-focus order, contrast, or 1152x648 fit passed human review. Inspect both English
-and Korean Settings/Controls frames after changing copy, scale, spacing, or
-focusable controls.
+`SETTINGS_PREVIEW_SAVED` means two consecutive non-empty frames had identical
+pixel data and the latter was written. It does not prove wrapping, focus order,
+contrast, or 1152x648 fit. Inspect all six pages, including English and Korean
+Controls and Accessibility, after changing copy, scale, spacing, or focusable
+controls.
+
+### Windowed settings runtime gate
+
+`settings_windowed_test.gd` verifies the display branch that headless probes
+cannot execute: startup focus synchronization, the focus-independent cap in
+`Engine.max_fps`, and both VSync states in `DisplayServer`. Run it with a
+real windowed renderer:
+
+```powershell
+& $godot --path . --script res://tests/settings_windowed_test.gd
+```
+
+- Pass: `SETTINGS_WINDOWED_PASS:`
 
 ### Catalogue-ending capture
 
