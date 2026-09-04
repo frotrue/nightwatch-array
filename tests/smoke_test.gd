@@ -494,6 +494,8 @@ func _run() -> void:
 	_check(TranslationServer.translate("CONSTELLATION_LEO") == "사자자리  /  유성 폭풍", "the mapped Leo figure exposes its Korean research role")
 	_check(TranslationServer.translate("CONSTELLATION_URSA_MINOR") == "작은곰자리  /  빈 하늘 훑기", "the mapped Ursa Minor figure exposes its Korean research role")
 	_check(TranslationServer.translate("CONSTELLATION_DRACO") == "용자리  /  최종 관측", "the mapped Draco figure exposes its Korean culmination role")
+	_check(TranslationServer.translate("UPGRADE_OBSERVATION_STREAK_NAME") == "관측 연속", "Korean player copy uses the approved observation-streak term")
+	_check(TranslationServer.translate("UPGRADE_MOMENTUM_ACQUISITION_NAME") == "관측 연속 포착", "the Taurus root keeps its distinct name while using the shared Korean term")
 	_check(TranslationServer.translate("HUD_AUTOSAVED") == "자동 저장됨", "Korean autosave status stays concise")
 	_check(TranslationServer.translate("HUD_OBSERVATION_TIME") % [1, 1, 0] == "1차 관측  •  01:00", "Korean round countdown reads naturally")
 	_check(TranslationServer.translate("TREE_INTERMISSION_SUBTITLE") % [2, 30] == "연구 시간  /  2차 관측은 30초", "Korean research-break guidance explains the next round and duration")
@@ -506,7 +508,7 @@ func _run() -> void:
 	)
 	_check(
 		game.upgrade_tree._upgrade_description(multi_target_definition)
-		== "수동 관측 범위 안의 모든 유성을 함께 관측하고 하늘에 동시에 유지되는 일반 표적의 상한을 1개 늘립니다. 표적 하나를 자동 지원하며 파편 추적을 설치했다면 파편 조각도 지원합니다.",
+		== "수동 관측 범위 안의 모든 유성을 함께 관측합니다. 하늘 활동을 높이고 하늘에 동시에 유지되는 일반 표적의 상한을 1개 늘립니다. 표적 하나를 자동 지원하며 파편 추적을 설치했다면 파편 조각도 지원합니다.",
 		"Korean Multi-Target Tracking description names capacity and both support effects"
 	)
 	_check(
@@ -556,6 +558,8 @@ func _run() -> void:
 	game.settings.set_language("en", false)
 	await process_frame
 	_check("SETTINGS" in game.hud.settings_button.text and "ESC" in game.hud.settings_button.text, "English settings entry advertises the global Escape shortcut")
+	_check(TranslationServer.translate("UPGRADE_OBSERVATION_STREAK_NAME") == "Observation Streak", "English player copy keeps Observation Streak as the shared term")
+	_check(TranslationServer.translate("UPGRADE_MOMENTUM_ACQUISITION_NAME") == "Streak Acquisition", "the Taurus root keeps a distinct English name without reintroducing Momentum")
 	_check(
 		game.upgrade_tree._upgrade_description(predictive_control_definition)
 		== "Automatically moves an idle dish toward trackable incoming objects; manual right-click placement still takes priority.",
@@ -563,7 +567,7 @@ func _run() -> void:
 	)
 	_check(
 		game.upgrade_tree._upgrade_description(multi_target_definition)
-		== "Tracks every meteor inside the manual observation area together and allows one more regular target in the sky. Automatically supports one target; with Fragment Tracking, it can also help with fragment pieces.",
+		== "Tracks every meteor inside the manual observation area together. Raises Sky Activity and allows one more regular target in the sky. Automatically supports one target; with Fragment Tracking, it can also help with fragment pieces.",
 		"English Multi-Target Tracking description names capacity and both support effects"
 	)
 	_check(
@@ -639,7 +643,7 @@ func _run() -> void:
 	_check(is_equal_approx(game.progression.get_observation_value_multiplier("fragment_piece", 4), 1.0), "new constellation rewards are inert before purchase")
 	_check(is_zero_approx(game.progression.get_observation_echo_probability()) and game.progression.get_observation_echo_count() == 0, "Gemini echoes are inert before purchase")
 	_check(game.progression.get_leonid_trigger_count() == 0 and game.progression.get_leonid_storm_count() == 0 and game.progression.leonid_charge == 0, "Leonid storms are inert before purchase")
-	_check(is_equal_approx(game.progression.get_manual_analysis_speed_multiplier(), 1.0) and is_zero_approx(game.progression.get_taurus_tracking_radius_bonus()), "Taurus Momentum is inert before its discovery root")
+	_check(is_equal_approx(game.progression.get_manual_analysis_speed_multiplier(), 1.0) and is_zero_approx(game.progression.get_taurus_tracking_radius_bonus()), "Taurus Observation Streak is inert before its discovery root")
 	var capacity_probe = load("res://scripts/progression_controller.gd").new()
 	_check(capacity_probe.get_max_active() == 4, "regular active-sky capacity begins at four")
 	for capacity_step in [
@@ -681,30 +685,38 @@ func _run() -> void:
 	_check(draco_save_probe.galaxy_unlocked() and is_equal_approx(draco_save_probe.get_observation_value_multiplier("common", 1), 8192.0), "Draco culmination and galaxy state survive ID-based saves")
 	draco_save_probe.free()
 	draco_probe.free()
+	var streak_display_probe = load("res://scripts/progression_controller.gd").new()
+	streak_display_probe.manual_combo_count = 7
+	_check(streak_display_probe.get_manual_combo_display_count() == 0, "Observation Streak stays hidden before its display research")
+	streak_display_probe.purchased_nodes["observation_streak"] = true
+	_check(streak_display_probe.get_manual_combo_display_count() == 7, "Observation Streak displays the raw consecutive-observation count")
+	streak_display_probe.purchased_nodes["momentum_acquisition"] = true
+	_check(streak_display_probe.get_manual_combo_display_count() == 7 and streak_display_probe.get_taurus_combo_stack_count() == 4, "the display count stays raw while Taurus applies its independent buff cap")
+	streak_display_probe.free()
 	var research_probe = load("res://scripts/progression_controller.gd").new()
 	var base_probe_scale: float = research_probe.get_spawn_interval_scale()
-	_check(research_probe.debug_purchase_node("momentum_acquisition"), "Taurus Momentum is available from the opening sky")
+	_check(research_probe.debug_purchase_node("momentum_acquisition"), "Taurus Observation Streak is available from the opening sky")
 	for _combo_step in range(4):
 		research_probe.add_observation(1.0, true, 1.0)
 	_check(research_probe.manual_combo_count == 4 and research_probe.get_taurus_combo_cap() == 4 and is_equal_approx(research_probe.get_manual_combo_window(), 3.0), "Taurus opens with a three-second four-stack combo")
-	_check(is_equal_approx(research_probe.get_manual_analysis_speed_multiplier(), 1.08) and is_equal_approx(research_probe.get_taurus_tracking_radius_bonus(), 4.0), "opening Momentum stacks raise only manual speed and tracking range")
+	_check(is_equal_approx(research_probe.get_manual_analysis_speed_multiplier(), 1.08) and is_equal_approx(research_probe.get_taurus_tracking_radius_bonus(), 4.0), "opening Observation Streak steps raise only manual speed and tracking range")
 	research_probe.add_observation(1.0, false, 1.0)
-	_check(research_probe.manual_combo_count == 4, "automatic observations neither build nor break manual Momentum")
+	_check(research_probe.manual_combo_count == 4, "automatic observations neither build nor break Observation Streak")
 	research_probe.update_manual_combo(3.01)
-	_check(research_probe.manual_combo_count == 0, "Momentum expires when its observation window elapses")
+	_check(research_probe.manual_combo_count == 0, "Observation Streak expires when its observation window elapses")
 	_check(research_probe.debug_purchase_node("wide_pursuit") and research_probe.debug_purchase_node("rapid_focus"), "Taurus side stars refine range and speed from the shared root")
 	for _side_combo_step in range(4):
 		research_probe.add_observation(1.0, true, 1.0)
 	_check(is_equal_approx(research_probe.get_manual_analysis_speed_multiplier(), 1.12) and is_equal_approx(research_probe.get_taurus_tracking_radius_bonus(), 6.0), "Taurus side stars independently add one percent speed and half a pixel per stack")
 	_check(research_probe.debug_purchase_node("cadence_memory") and research_probe.debug_purchase_node("expanded_sweep") and research_probe.debug_purchase_node("accelerated_analysis"), "Taurus follows its central figure through the mid-combo refinements")
-	_check(research_probe.debug_purchase_node("sustained_charge") and research_probe.debug_purchase_node("taurus_full_gallop"), "Taurus completes its five-second ten-stack Momentum path")
+	_check(research_probe.debug_purchase_node("sustained_charge") and research_probe.debug_purchase_node("taurus_full_gallop"), "Taurus completes its five-second ten-step Observation Streak path")
 	for _full_combo_step in range(10):
 		research_probe.add_observation(1.0, true, 1.0)
 	_check(research_probe.get_taurus_combo_stack_count() == 10 and is_equal_approx(research_probe.get_manual_combo_window(), 5.0), "completed Taurus holds ten effective stacks for five seconds")
 	_check(is_equal_approx(research_probe.get_manual_analysis_speed_multiplier(), 1.5) and is_equal_approx(research_probe.get_taurus_tracking_radius_bonus(), 25.0), "completed Taurus cumulatively reaches the declared 50-percent speed and 25-pixel range ceiling")
 	var combo_save_probe = load("res://scripts/progression_controller.gd").new()
 	combo_save_probe.load_save_data(research_probe.get_save_data())
-	_check(combo_save_probe.has_upgrade("taurus_full_gallop") and combo_save_probe.manual_combo_count == 0, "Taurus research persists while live Momentum never crosses a save or round boundary")
+	_check(combo_save_probe.has_upgrade("taurus_full_gallop") and combo_save_probe.manual_combo_count == 0, "Taurus research persists while live Observation Streak never crosses a save or round boundary")
 	combo_save_probe.free()
 	research_probe.reset_manual_combo()
 	_check(research_probe.debug_purchase_node("radiant_plotting"), "Perseus discovery root purchases without a hidden observation gate")
@@ -715,7 +727,10 @@ func _run() -> void:
 	_check(research_probe.debug_purchase_node("debris_correlation"), "Perseus debris branch opens from its real Mirfak segment")
 	_check(research_probe.debug_purchase_node("cascade_sampling") and research_probe.get_max_active() == 5, "Cascade Sampling opens one bounded crowded-sky channel")
 	_check(research_probe.debug_purchase_node("perseid_survey") and research_probe.get_max_active() == 6, "Perseid Survey adds its slot to this two-upgrade capacity build")
-	_check(research_probe.get_observation_value_multiplier("fragment", 3) > 1.0, "Perseus survey rewards dense fragment observations")
+	_check(not research_probe.is_perseid_survey_active(2) and research_probe.is_perseid_survey_active(3), "Perseid Survey exposes the same three-target threshold used by its cursor indicator")
+	var two_target_multiplier: float = research_probe.get_observation_value_multiplier("fragment", 2)
+	var three_target_multiplier: float = research_probe.get_observation_value_multiplier("fragment", 3)
+	_check(is_equal_approx(three_target_multiplier, two_target_multiplier * 1.18), "Perseid Survey rewards dense fragment observations at the visible threshold")
 	_check(research_probe.debug_purchase_node("ephemeris_marks") and research_probe.forecast_visible(), "Ephemeris Marks independently opens the deep-sky forecast")
 	_check(research_probe.debug_purchase_node("satellite_catalog"), "Satellite Catalog opens its same-round target family")
 	_check(research_probe.debug_purchase_node("change_detection"), "Change Detection advances the Andromeda chain")
@@ -997,7 +1012,7 @@ func _run() -> void:
 	for taurus_star_variant in chart_data.CONSTELLATIONS.taurus.stars:
 		if not String(Dictionary(taurus_star_variant).get("node_id", "")).is_empty():
 			taurus_research_stars += 1
-	_check(taurus_research_stars == 8, "Taurus maps Momentum research across all eight stars and every figure segment")
+	_check(taurus_research_stars == 8, "Taurus maps Observation Streak research across all eight stars and every figure segment")
 	var draco_research_stars := 0
 	for draco_star_variant in chart_data.CONSTELLATIONS.draco.stars:
 		if not String(Dictionary(draco_star_variant).get("node_id", "")).is_empty():

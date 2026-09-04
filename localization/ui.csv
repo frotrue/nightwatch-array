@@ -351,8 +351,8 @@ UPGRADE_BETTER_LENS_NAME,Better Lens,개량 렌즈
 UPGRADE_BETTER_LENS_DESC,A wider focus ring makes manual tracking more forgiving.,초점 범위가 넓어져 수동 추적이 쉬워집니다.
 UPGRADE_LONG_EXPOSURE_NAME,Long Exposure,장노출
 UPGRADE_LONG_EXPOSURE_DESC,Meteors stay visible 35% longer and leave denser trails.,유성이 35% 더 오래 보이며 더 짙은 궤적을 남깁니다.
-UPGRADE_OBSERVATION_STREAK_NAME,Observation Streak,연속 관측
-UPGRADE_OBSERVATION_STREAK_DESC,Manual observations completed before the combo timer expires build a modest reward chain.,콤보 제한 시간이 끝나기 전에 수동 관측을 이어가면 추가 보상이 쌓입니다.
+UPGRADE_OBSERVATION_STREAK_NAME,Observation Streak,관측 연속
+UPGRADE_OBSERVATION_STREAK_DESC,Manual observations completed before the Observation Streak timer expires build a modest reward chain.,관측 연속 제한 시간이 끝나기 전에 수동 관측을 이어가면 추가 보상이 쌓입니다.
 UPGRADE_PRECISION_MULTIPLIER_NAME,Precision Spectrometer,정밀 분광기
 UPGRADE_PRECISION_MULTIPLIER_DESC,Centered manual tracking builds a reward multiplier.,유성 중심을 정확히 추적할수록 보상 배율이 올라갑니다.
 UPGRADE_PERFECT_OBSERVATION_NAME,Perfect Observation,완벽한 관측
@@ -370,7 +370,7 @@ UPGRADE_FRAGMENT_ANALYSIS_DESC,Discovers splitting meteors; the observation netw
 UPGRADE_SHOWER_DETECTOR_NAME,Meteor Shower Forecast,유성우 예보
 UPGRADE_SHOWER_DETECTOR_DESC,"Unlocks warned meteor-shower events across the whole sky. Doubles all observation Data, including automatic completions. All eight ×2 systems combine to ×256.",하늘 전역에서 발생하는 유성우 예보 이벤트를 해금합니다. 자동 완료를 포함한 모든 관측 데이터를 2배로 늘립니다. 여덟 개의 ×2 시스템을 모두 설치하면 ×256입니다.
 UPGRADE_ARRAY_PLANNING_NAME,Array Planning,관측망 설계
-UPGRADE_ARRAY_PLANNING_DESC,Allows one more regular target to remain in the sky at once.,하늘에 동시에 유지되는 일반 표적의 상한을 1개 늘립니다.
+UPGRADE_ARRAY_PLANNING_DESC,Raises Sky Activity and allows one more regular target to remain in the sky at once.,하늘 활동을 높이고 하늘에 동시에 유지되는 일반 표적의 상한을 1개 늘립니다.
 UPGRADE_OBSERVATION_SCHEDULING_NAME,Observation Scheduling,관측 일정 최적화
 UPGRADE_OBSERVATION_SCHEDULING_DESC,Plans longer shifts and extends each future observation window by 10 seconds.,관측 일정을 조정해 다음 관측부터 관측 시간을 10초 늘립니다.
 UPGRADE_THERMAL_MANAGEMENT_NAME,Equipment Thermal Control,장비 열 관리
@@ -384,7 +384,7 @@ UPGRADE_SECONDARY_CAMERA_DESC,Forecasts incoming objects and gives you a dish. R
 UPGRADE_PREDICTIVE_DISH_CONTROL_NAME,Predictive Dish Control,예측 접시 제어
 UPGRADE_PREDICTIVE_DISH_CONTROL_DESC,Automatically moves an idle dish toward trackable incoming objects; manual right-click placement still takes priority.,추적 가능한 천체가 들어오면 유휴 접시를 예상 위치로 자동 이동하며 우클릭 수동 배치가 항상 우선합니다.
 UPGRADE_MULTI_TARGET_ANALYSIS_NAME,Multi-Target Tracking,다중 표적 관측
-UPGRADE_MULTI_TARGET_ANALYSIS_DESC,"Tracks every meteor inside the manual observation area together and allows one more regular target in the sky. Automatically supports one target; with Fragment Tracking, it can also help with fragment pieces.",수동 관측 범위 안의 모든 유성을 함께 관측하고 하늘에 동시에 유지되는 일반 표적의 상한을 1개 늘립니다. 표적 하나를 자동 지원하며 파편 추적을 설치했다면 파편 조각도 지원합니다.
+UPGRADE_MULTI_TARGET_ANALYSIS_DESC,"Tracks every meteor inside the manual observation area together. Raises Sky Activity and allows one more regular target in the sky. Automatically supports one target; with Fragment Tracking, it can also help with fragment pieces.",수동 관측 범위 안의 모든 유성을 함께 관측합니다. 하늘 활동을 높이고 하늘에 동시에 유지되는 일반 표적의 상한을 1개 늘립니다. 표적 하나를 자동 지원하며 파편 추적을 설치했다면 파편 조각도 지원합니다.
 UPGRADE_AUTOMATED_TRACKING_NAME,Automated Common Tracking,일반 표적 자동 추적
 UPGRADE_AUTOMATED_TRACKING_DESC,Common targets are observed automatically; rare and high-value targets still need you.,일반 표적은 자동으로 관측하지만 희귀하거나 가치가 높은 표적은 직접 관측해야 합니다.
 UPGRADE_OBSERVATORY_NETWORK_NAME,Observatory Network,천문대 네트워크
@@ -402,11 +402,11 @@ UPGRADE_BURST_WINDOWING_DESC,Permanently compresses regular arrival intervals by
 UPGRADE_DEBRIS_CORRELATION_NAME,Debris Correlation,잔해 상관 분석
 UPGRADE_DEBRIS_CORRELATION_DESC,Raises Data recovered from every fragment and fragment piece by 20%.,모든 분열 유성과 파편 조각에서 얻는 데이터를 20% 늘립니다.
 UPGRADE_CASCADE_SAMPLING_NAME,Cascade Sampling,연쇄 표본 수집
-UPGRADE_CASCADE_SAMPLING_DESC,Allows one more regular target to remain in the sky at once.,하늘에 동시에 유지되는 일반 표적의 상한을 1개 늘립니다.
+UPGRADE_CASCADE_SAMPLING_DESC,Raises Sky Activity and allows one more regular target to remain in the sky at once.,하늘 활동을 높이고 하늘에 동시에 유지되는 일반 표적의 상한을 1개 늘립니다.
 UPGRADE_ADAPTIVE_EXPOSURE_GRID_NAME,Adaptive Exposure Grid,적응형 노출 격자
 UPGRADE_ADAPTIVE_EXPOSURE_GRID_DESC,Keeps every target visible 12% longer.,모든 표적을 12% 더 오래 보이게 합니다.
 UPGRADE_PERSEID_SURVEY_NAME,Perseid Watch,페르세우스 유성군 관측
-UPGRADE_PERSEID_SURVEY_DESC,"Allows one more regular target in the sky. While at least three targets are present, every observation earns 18% more Data.",하늘에 동시에 유지되는 일반 표적의 상한을 1개 늘립니다. 표적이 3개 이상 있을 때 모든 관측에서 데이터를 18% 더 얻습니다.
+UPGRADE_PERSEID_SURVEY_DESC,"Raises Sky Activity and allows one more regular target in the sky. While at least three targets are present, every observation earns 18% more Data.",하늘 활동을 높이고 하늘에 동시에 유지되는 일반 표적의 상한을 1개 늘립니다. 표적이 3개 이상 있을 때 모든 관측에서 데이터를 18% 더 얻습니다.
 UPGRADE_FILTER_WHEEL_NAME,Calibration Framework,보정 연구 기반
 UPGRADE_FILTER_WHEEL_DESC,Opens automatic band-calibration and binary-star research.,자동 대역 보정 연구와 쌍성 연구를 엽니다.
 UPGRADE_BLUE_BAND_NAME,Blue Band,청색 대역
@@ -473,34 +473,34 @@ UPGRADE_ECHO_DECONFLICTION_NAME,Echo Spacing,공명 간격 조정
 UPGRADE_ECHO_DECONFLICTION_DESC,Spreads each echo burst across separate parts of the sky so its targets do not overlap.,한 공명의 표적이 겹치지 않도록 하늘의 서로 떨어진 위치에 분산합니다.
 UPGRADE_ECHO_BEACON_NAME,Echo Beacon,공명 비콘
 UPGRADE_ECHO_BEACON_DESC,Shows delayed echoes as ordinary incoming alerts so dishes can move into position early.,지연 공명을 일반 진입 예고로 표시해 접시를 미리 배치할 수 있게 합니다.
-UPGRADE_MOMENTUM_ACQUISITION_NAME,Momentum Acquisition,모멘텀 포착
-UPGRADE_MOMENTUM_ACQUISITION_DESC,Manual observations within three seconds build up to four Momentum stacks; each adds 2% observation speed and 1 px of tracking range.,3초 안에 수동 관측을 이어가면 모멘텀이 최대 4중첩됩니다. 중첩마다 관측 속도가 2% 빨라지고 추적 범위가 1px 넓어집니다.
+UPGRADE_MOMENTUM_ACQUISITION_NAME,Streak Acquisition,관측 연속 포착
+UPGRADE_MOMENTUM_ACQUISITION_DESC,Observations completed within three seconds extend Observation Streak. Up to four observations affect this upgrade; each adds 2% observation speed and 1 px of tracking range.,3초 안에 수동 관측을 이어가면 관측 연속이 늘어납니다. 이 연구에는 최대 4회까지 반영되며 1회마다 관측 속도가 2% 빨라지고 추적 범위가 1px 넓어집니다.
 UPGRADE_WIDE_PURSUIT_NAME,Wide Pursuit,광역 추적
-UPGRADE_WIDE_PURSUIT_DESC,Adds 0.5 px of tracking range per Momentum stack on top of Expanded Sweep.,확장 탐색 위에 모멘텀 중첩당 추적 범위 0.5px를 더합니다.
+UPGRADE_WIDE_PURSUIT_DESC,Adds 0.5 px of tracking range per Observation Streak step on top of Expanded Sweep.,확장 탐색 위에 관측 연속 1회당 추적 범위 0.5px를 더합니다.
 UPGRADE_RAPID_FOCUS_NAME,Rapid Focus,신속 초점
-UPGRADE_RAPID_FOCUS_DESC,Adds 1% manual-observation speed per Momentum stack on top of Faster Observation.,관측 가속 위에 모멘텀 중첩당 수동 관측 속도 1%를 더합니다.
+UPGRADE_RAPID_FOCUS_DESC,Adds 1% manual-observation speed per Observation Streak step on top of Faster Observation.,관측 가속 위에 관측 연속 1회당 수동 관측 속도 1%를 더합니다.
 UPGRADE_CANIS_OPENING_NAME,Canis Relay,큰개자리 중계
 UPGRADE_CANIS_OPENING_DESC,Opens the Canis Major research chain without changing how often meteors currently appear.,현재 유성 출현 간격은 바꾸지 않고 큰개자리 연구를 엽니다.
 UPGRADE_CANIS_CADENCE_I_NAME,Swift Signal,신속 신호
-UPGRADE_CANIS_CADENCE_I_DESC,Sets the shortest time between regular meteors to 1.00 seconds.,일반 유성의 최소 출현 간격을 1.00초로 낮춥니다.
+UPGRADE_CANIS_CADENCE_I_DESC,Raises Sky Activity and sets the shortest time between regular meteors to 1.00 seconds.,하늘 활동을 높이고 일반 유성의 최소 출현 간격을 1.00초로 낮춥니다.
 UPGRADE_CANIS_CAPACITY_I_NAME,Long Leash,긴 목줄
-UPGRADE_CANIS_CAPACITY_I_DESC,"Allows one more regular target in the sky, raising the limit from eight to nine.",일반 표적의 상한을 1개 늘립니다. 8개에서 9개가 됩니다.
+UPGRADE_CANIS_CAPACITY_I_DESC,"Raises Sky Activity and allows one more regular target in the sky, raising the limit from eight to nine.",하늘 활동을 높이고 일반 표적의 상한을 1개 늘립니다. 8개에서 9개가 됩니다.
 UPGRADE_CANIS_CADENCE_II_NAME,Running Cadence,질주 리듬
-UPGRADE_CANIS_CADENCE_II_DESC,Sets the shortest time between regular meteors to 0.85 seconds.,일반 유성의 최소 출현 간격을 0.85초로 낮춥니다.
+UPGRADE_CANIS_CADENCE_II_DESC,Raises Sky Activity and sets the shortest time between regular meteors to 0.85 seconds.,하늘 활동을 높이고 일반 유성의 최소 출현 간격을 0.85초로 낮춥니다.
 UPGRADE_CANIS_CAPACITY_II_NAME,Twin Watch,쌍자 경계
-UPGRADE_CANIS_CAPACITY_II_DESC,"Allows one more regular target in the sky, raising the limit from nine to ten.",일반 표적의 상한을 1개 늘립니다. 9개에서 10개가 됩니다.
+UPGRADE_CANIS_CAPACITY_II_DESC,"Raises Sky Activity and allows one more regular target in the sky, raising the limit from nine to ten.",하늘 활동을 높이고 일반 표적의 상한을 1개 늘립니다. 9개에서 10개가 됩니다.
 UPGRADE_CANIS_CADENCE_III_NAME,White-Star Tempo,백성 템포
-UPGRADE_CANIS_CADENCE_III_DESC,Sets the shortest time between regular meteors to 0.70 seconds.,일반 유성의 최소 출현 간격을 0.70초로 낮춥니다.
+UPGRADE_CANIS_CADENCE_III_DESC,Raises Sky Activity and sets the shortest time between regular meteors to 0.70 seconds.,하늘 활동을 높이고 일반 유성의 최소 출현 간격을 0.70초로 낮춥니다.
 UPGRADE_CANIS_CAPACITY_III_NAME,Pack Array,무리 관측망
-UPGRADE_CANIS_CAPACITY_III_DESC,"Allows two more regular targets in the sky, raising the limit from ten to twelve.",일반 표적의 상한을 2개 늘립니다. 10개에서 12개가 됩니다.
+UPGRADE_CANIS_CAPACITY_III_DESC,"Raises Sky Activity and allows two more regular targets in the sky, raising the limit from ten to twelve.",하늘 활동을 높이고 일반 표적의 상한을 2개 늘립니다. 10개에서 12개가 됩니다.
 UPGRADE_SIRIUS_FIREBALL_NAME,Sirius Bloom,시리우스 발광
 UPGRADE_SIRIUS_FIREBALL_DESC,One Major Fireball may appear after a warning in observation rounds with enough time left.,관측할 시간이 충분한 회차에는 경고 뒤 대형 화구가 최대 한 번 나타납니다.
 UPGRADE_DRACO_SYNTHESIS_NAME,All-Sky Synthesis,전천 합성
 UPGRADE_DRACO_SYNTHESIS_DESC,"Multiplies all observation Data by 4, including automatic completions.",자동 완료를 포함한 모든 관측 데이터를 4배로 늘립니다.
 UPGRADE_DRACO_CADENCE_NAME,Circumpolar Cadence,주극 리듬
-UPGRADE_DRACO_CADENCE_DESC,Sets the shortest time between regular meteors to 0.45 seconds.,일반 유성의 최소 출현 간격을 0.45초로 낮춥니다.
+UPGRADE_DRACO_CADENCE_DESC,Raises Sky Activity and sets the shortest time between regular meteors to 0.45 seconds.,하늘 활동을 높이고 일반 유성의 최소 출현 간격을 0.45초로 낮춥니다.
 UPGRADE_DRACO_CAPACITY_NAME,Dragon-Spine Array,용등 관측망
-UPGRADE_DRACO_CAPACITY_DESC,"Allows six more regular targets in the sky, raising the limit from twelve to eighteen.",일반 표적의 상한을 6개 늘립니다. 12개에서 18개가 됩니다.
+UPGRADE_DRACO_CAPACITY_DESC,"Raises Sky Activity and allows six more regular targets in the sky, raising the limit from twelve to eighteen.",하늘 활동을 높이고 일반 표적의 상한을 6개 늘립니다. 12개에서 18개가 됩니다.
 UPGRADE_DRACO_SWEEP_NAME,Coiled-Sky Sweep,환천 훑기
 UPGRADE_DRACO_SWEEP_DESC,"Every 190 px of blank-sky sweeping now calls four meteors, always succeeds, and can trigger again after 0.45 seconds.",빈 하늘을 190px 훑을 때마다 반드시 유성 4개를 부르고 0.45초 뒤 다시 발동할 수 있습니다.
 UPGRADE_DRACO_ECHO_NAME,Polar Resonance,극점 공명
@@ -602,15 +602,15 @@ GALAXY_LEO_I,LEO I,사자자리 I
 GALAXY_LEO_II,LEO II,사자자리 II
 GALAXY_ANDROMEDA_II,ANDROMEDA II,안드로메다 II
 UPGRADE_CADENCE_MEMORY_NAME,Cadence Memory,박자 기억
-UPGRADE_CADENCE_MEMORY_DESC,Extends the Momentum window from three seconds to 3.5 seconds and lets five stacks affect its buffs.,모멘텀 제한 시간을 3초에서 3.5초로 늘리고 최대 5중첩까지 강화 효과에 반영합니다.
+UPGRADE_CADENCE_MEMORY_DESC,Extends the Observation Streak window from three seconds to 3.5 seconds and lets up to five observations affect its buffs.,관측 연속 제한 시간을 3초에서 3.5초로 늘리고 최대 5회까지 강화 효과에 반영합니다.
 UPGRADE_EXPANDED_SWEEP_NAME,Expanded Sweep,확장 탐색
-UPGRADE_EXPANDED_SWEEP_DESC,Sets the central Momentum tracking gain to 2 px per stack; Wide Pursuit adds 0.5 px on top.,중앙 모멘텀의 중첩당 추적 범위를 2px로 설정하며 광역 추적은 그 위에 0.5px를 더합니다.
+UPGRADE_EXPANDED_SWEEP_DESC,Sets the central Observation Streak tracking gain to 2 px per step; Wide Pursuit adds 0.5 px on top.,중앙 관측 연속의 1회당 추적 범위를 2px로 설정하며 광역 추적은 그 위에 0.5px를 더합니다.
 UPGRADE_ACCELERATED_ANALYSIS_NAME,Faster Observation,관측 가속
-UPGRADE_ACCELERATED_ANALYSIS_DESC,Sets the central Momentum manual-observation gain to 4% per stack; Rapid Focus adds 1% on top.,중앙 모멘텀의 중첩당 수동 관측 속도를 4%로 설정하며 신속 초점은 그 위에 1%를 더합니다.
+UPGRADE_ACCELERATED_ANALYSIS_DESC,Sets the central Observation Streak manual-observation gain to 4% per step; Rapid Focus adds 1% on top.,중앙 관측 연속의 1회당 수동 관측 속도를 4%로 설정하며 신속 초점은 그 위에 1%를 더합니다.
 UPGRADE_SUSTAINED_CHARGE_NAME,Sustained Charge,지속 가속
-UPGRADE_SUSTAINED_CHARGE_DESC,Extends the Momentum window to four seconds and lets seven stacks affect its buffs.,모멘텀 제한 시간을 4초로 늘리고 최대 7중첩까지 강화 효과에 반영합니다.
+UPGRADE_SUSTAINED_CHARGE_DESC,Extends the Observation Streak window to four seconds and lets up to seven observations affect its buffs.,관측 연속 제한 시간을 4초로 늘리고 최대 7회까지 강화 효과에 반영합니다.
 UPGRADE_TAURUS_FULL_GALLOP_NAME,Full Gallop,전력 질주
-UPGRADE_TAURUS_FULL_GALLOP_DESC,"Extends Momentum to five seconds and ten stacks; with both flank upgrades, they grant up to 50% manual-observation speed and 25 px of tracking range. Doubles all observation Data, including automatic completions. All eight ×2 systems combine to ×256.",모멘텀을 5초·10중첩으로 확장합니다. 양쪽 측면 연구를 함께 설치하면 수동 관측 속도 50%와 추적 범위 25px를 얻습니다. 자동 완료를 포함한 모든 관측 데이터를 2배로 늘립니다. 여덟 개의 ×2 시스템을 모두 설치하면 ×256입니다.
+UPGRADE_TAURUS_FULL_GALLOP_DESC,"Extends Observation Streak to five seconds; up to ten observations affect its buffs. With both flank upgrades, they grant up to 50% manual-observation speed and 25 px of tracking range. Doubles all observation Data, including automatic completions. All eight ×2 systems combine to ×256.",관측 연속을 5초로 늘리고 최대 10회까지 강화 효과에 반영합니다. 양쪽 측면 연구를 함께 설치하면 수동 관측 속도 50%와 추적 범위 25px를 얻습니다. 자동 완료를 포함한 모든 관측 데이터를 2배로 늘립니다. 여덟 개의 ×2 시스템을 모두 설치하면 ×256입니다.
 UPGRADE_POLAR_SURVEY_NAME,Sky Sweep,하늘 훑기
 UPGRADE_POLAR_SURVEY_DESC,Opens blank-sky sweeping: travel 460 px through quiet sky for a 30% chance to call a meteor at the cursor.,빈 하늘 훑기를 엽니다. 조용한 하늘에서 460px 움직일 때마다 커서 위치에 유성을 부를 30% 확률을 굴립니다.
 UPGRADE_SWEEP_GAIN_NAME,Sweep Gain,훑기 증폭

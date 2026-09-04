@@ -84,7 +84,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "observation_streak", "name": "Observation Streak", "icon": "×3", "cost": 120,
-		"description": "Manual observations completed before the combo timer expires build a modest reward chain.",
+		"description": "Manual observations completed before the Observation Streak timer expires build a modest reward chain.",
 		"branch": "optics", "prerequisites": ["better_lens"],
 		"hidden_until": ["better_lens"], "effect_type": "transformation", "effect_notes": {"step": 0.08, "maximum": 0.5},
 		"major": false
@@ -153,7 +153,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "array_planning", "name": "Array Planning", "icon": "⬡", "cost": 50,
-		"description": "Allows one more regular target to remain in the sky at once.",
+		"description": "Raises Sky Activity and allows one more regular target to remain in the sky at once.",
 		"branch": "network", "prerequisites": [],
 		"hidden_until": [], "effect_type": "unlock", "effect_notes": {"max_active": 1},
 		"effect_contract": {"kind": "max_active_delta", "value": 1, "scope": "regular_active_contacts"},
@@ -211,7 +211,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "multi_target_analysis", "name": "Multi-Target Tracking", "icon": "⊕", "cost": 1200,
-		"description": "Tracks every meteor inside the manual observation area together and allows one more regular target in the sky. Automatically supports one target; with Fragment Tracking, it can also help with fragment pieces.",
+		"description": "Tracks every meteor inside the manual observation area together. Raises Sky Activity and allows one more regular target in the sky. Automatically supports one target; with Fragment Tracking, it can also help with fragment pieces.",
 		"branch": "network", "prerequisites": ["secondary_camera", "extended_watch_protocol"],
 		"hidden_until": ["secondary_camera"], "effect_type": "transformation", "effect_notes": {"assist_slots": 2, "manual_group_tracking": true},
 		"effect_contract": {"kind": "max_active_delta", "value": 1, "scope": "regular_active_contacts"},
@@ -324,7 +324,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "cascade_sampling", "name": "Cascade Sampling", "icon": "⠿", "cost": 120000,
-		"description": "Allows one more regular target to remain in the sky at once.",
+		"description": "Raises Sky Activity and allows one more regular target to remain in the sky at once.",
 		"branch": "perseus", "prerequisites": ["debris_correlation"],
 		"hidden_until": ["debris_correlation"], "effect_type": "passive", "effect_notes": {"max_active": 1},
 		"effect_contract": {"kind": "max_active_delta", "value": 1, "scope": "regular_active_contacts"},
@@ -339,7 +339,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "perseid_survey", "name": "Perseid Watch", "icon": "✹", "cost": 30000,
-		"description": "Allows one more regular target in the sky. While at least three targets are present, every observation earns 18% more Data.",
+		"description": "Raises Sky Activity and allows one more regular target in the sky. While at least three targets are present, every observation earns 18% more Data.",
 		"branch": "perseus", "prerequisites": ["adaptive_exposure_grid"],
 		"hidden_until": ["adaptive_exposure_grid"], "effect_type": "transformation", "effect_notes": {"max_active": 1, "crowd_value_multiplier": 1.18},
 		"effect_contract": {"kind": "max_active_delta", "value": 1, "scope": "regular_active_contacts"},
@@ -596,57 +596,57 @@ const UPGRADE_NODES: Array[Dictionary] = [
 		"major": true, "affects_pacing": false
 	},
 	{
-		"id": "momentum_acquisition", "name": "Momentum Acquisition", "icon": "×4", "cost": 18000,
-		"description": "Manual observations within three seconds build up to four Momentum stacks; each adds 2% observation speed and 1 px of tracking range.",
+		"id": "momentum_acquisition", "name": "Streak Acquisition", "icon": "×4", "cost": 18000,
+		"description": "Observations completed within three seconds extend Observation Streak. Up to four observations affect this upgrade; each adds 2% observation speed and 1 px of tracking range.",
 		"branch": "taurus", "prerequisites": [],
 		"hidden_until": [], "effect_type": "unlock", "effect_notes": {"combo_window": 3.0, "combo_cap": 4, "speed_per_stack": 0.02, "radius_per_stack": 1.0},
 		"major": false, "affects_pacing": false
 	},
 	{
 		"id": "wide_pursuit", "name": "Wide Pursuit", "icon": "+1.5", "cost": 420000,
-		"description": "Adds 0.5 px of tracking range per Momentum stack on top of Expanded Sweep.",
+		"description": "Adds 0.5 px of tracking range per Observation Streak step on top of Expanded Sweep.",
 		"branch": "taurus", "prerequisites": ["momentum_acquisition"],
 		"hidden_until": ["momentum_acquisition"], "effect_type": "passive", "effect_notes": {"radius_bonus_per_stack": 0.5},
 		"major": false, "affects_pacing": false
 	},
 	{
 		"id": "rapid_focus", "name": "Rapid Focus", "icon": "+3%", "cost": 460000,
-		"description": "Adds 1% manual-observation speed per Momentum stack on top of Faster Observation.",
+		"description": "Adds 1% manual-observation speed per Observation Streak step on top of Faster Observation.",
 		"branch": "taurus", "prerequisites": ["momentum_acquisition"],
 		"hidden_until": ["momentum_acquisition"], "effect_type": "passive", "effect_notes": {"speed_bonus_per_stack": 0.01},
 		"major": false, "affects_pacing": false
 	},
 	{
 		"id": "cadence_memory", "name": "Cadence Memory", "icon": "3.5s", "cost": 30000,
-		"description": "Extends the Momentum window from three seconds to 3.5 seconds and lets five stacks affect its buffs.",
+		"description": "Extends the Observation Streak window from three seconds to 3.5 seconds and lets up to five observations affect its buffs.",
 		"branch": "taurus", "prerequisites": ["momentum_acquisition"],
 		"hidden_until": ["momentum_acquisition"], "effect_type": "transformation", "effect_notes": {"combo_window": 3.5, "combo_cap": 5},
 		"major": false, "affects_pacing": false
 	},
 	{
 		"id": "expanded_sweep", "name": "Expanded Sweep", "icon": "+2", "cost": 45000,
-		"description": "Sets the central Momentum tracking gain to 2 px per stack; Wide Pursuit adds 0.5 px on top.",
+		"description": "Sets the central Observation Streak tracking gain to 2 px per step; Wide Pursuit adds 0.5 px on top.",
 		"branch": "taurus", "prerequisites": ["cadence_memory"],
 		"hidden_until": ["cadence_memory"], "effect_type": "passive", "effect_notes": {"radius_per_stack": 2.0},
 		"major": false, "affects_pacing": false
 	},
 	{
 		"id": "accelerated_analysis", "name": "Faster Observation", "icon": "+4%", "cost": 65000,
-		"description": "Sets the central Momentum manual-observation gain to 4% per stack; Rapid Focus adds 1% on top.",
+		"description": "Sets the central Observation Streak manual-observation gain to 4% per step; Rapid Focus adds 1% on top.",
 		"branch": "taurus", "prerequisites": ["expanded_sweep"],
 		"hidden_until": ["expanded_sweep"], "effect_type": "transformation", "effect_notes": {"speed_per_stack": 0.04},
 		"major": true, "affects_pacing": false
 	},
 	{
 		"id": "sustained_charge", "name": "Sustained Charge", "icon": "×7", "cost": 95000,
-		"description": "Extends the Momentum window to four seconds and lets seven stacks affect its buffs.",
+		"description": "Extends the Observation Streak window to four seconds and lets up to seven observations affect its buffs.",
 		"branch": "taurus", "prerequisites": ["accelerated_analysis"],
 		"hidden_until": ["accelerated_analysis"], "effect_type": "transformation", "effect_notes": {"combo_window": 4.0, "combo_cap": 7},
 		"major": true, "affects_pacing": false
 	},
 	{
 		"id": "taurus_full_gallop", "name": "Full Gallop", "icon": "×10", "cost": 140000,
-		"description": "Extends Momentum to five seconds and ten stacks; with both flank upgrades, they grant up to 50% manual-observation speed and 25 px of tracking range. Doubles all observation Data, including automatic completions. All eight ×2 systems combine to ×256.",
+		"description": "Extends Observation Streak to five seconds; up to ten observations affect its buffs. With both flank upgrades, they grant up to 50% manual-observation speed and 25 px of tracking range. Doubles all observation Data, including automatic completions. All eight ×2 systems combine to ×256.",
 		"branch": "taurus", "prerequisites": ["sustained_charge"],
 		"hidden_until": ["sustained_charge"], "effect_type": "transformation",
 		"effect_notes": {"combo_window": 5.0, "combo_cap": 10},
@@ -664,7 +664,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "canis_cadence_i", "name": "Swift Signal", "icon": "1.00s", "cost": 760000,
-		"description": "Sets the shortest time between regular meteors to 1.00 seconds.",
+		"description": "Raises Sky Activity and sets the shortest time between regular meteors to 1.00 seconds.",
 		"branch": "canis_major", "prerequisites": [],
 		"hidden_until": [], "effect_type": "transformation", "effect_notes": {"regular_spawn_interval_floor": 1.0},
 		"effect_contract": {"kind": "regular_spawn_interval_floor", "value": 1.0, "scope": "regular_meteor_arrivals"},
@@ -672,7 +672,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "canis_capacity_i", "name": "Long Leash", "icon": "+1", "cost": 900000,
-		"description": "Allows one more regular target in the sky, raising the limit from eight to nine.",
+		"description": "Raises Sky Activity and allows one more regular target in the sky, raising the limit from eight to nine.",
 		"branch": "canis_major", "prerequisites": [],
 		"hidden_until": [], "effect_type": "passive", "effect_notes": {"max_active_delta": 1},
 		"effect_contract": {"kind": "max_active_delta", "value": 1, "scope": "regular_active_contacts"},
@@ -680,7 +680,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "canis_cadence_ii", "name": "Running Cadence", "icon": "0.85s", "cost": 1150000,
-		"description": "Sets the shortest time between regular meteors to 0.85 seconds.",
+		"description": "Raises Sky Activity and sets the shortest time between regular meteors to 0.85 seconds.",
 		"branch": "canis_major", "prerequisites": ["canis_capacity_i"],
 		"hidden_until": ["canis_capacity_i"], "effect_type": "transformation", "effect_notes": {"regular_spawn_interval_floor": 0.85},
 		"effect_contract": {"kind": "regular_spawn_interval_floor", "value": 0.85, "scope": "regular_meteor_arrivals"},
@@ -688,7 +688,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "canis_capacity_ii", "name": "Twin Watch", "icon": "+1", "cost": 1400000,
-		"description": "Allows one more regular target in the sky, raising the limit from nine to ten.",
+		"description": "Raises Sky Activity and allows one more regular target in the sky, raising the limit from nine to ten.",
 		"branch": "canis_major", "prerequisites": [],
 		"hidden_until": [], "effect_type": "passive", "effect_notes": {"max_active_delta": 1},
 		"effect_contract": {"kind": "max_active_delta", "value": 1, "scope": "regular_active_contacts"},
@@ -696,7 +696,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "canis_cadence_iii", "name": "White-Star Tempo", "icon": "0.70s", "cost": 1750000,
-		"description": "Sets the shortest time between regular meteors to 0.70 seconds.",
+		"description": "Raises Sky Activity and sets the shortest time between regular meteors to 0.70 seconds.",
 		"branch": "canis_major", "prerequisites": ["canis_opening", "canis_cadence_ii"],
 		"hidden_until": ["canis_opening", "canis_cadence_ii"], "effect_type": "transformation", "effect_notes": {"regular_spawn_interval_floor": 0.70},
 		"effect_contract": {"kind": "regular_spawn_interval_floor", "value": 0.70, "scope": "regular_meteor_arrivals"},
@@ -704,7 +704,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "canis_capacity_iii", "name": "Pack Array", "icon": "+2", "cost": 2100000,
-		"description": "Allows two more regular targets in the sky, raising the limit from ten to twelve.",
+		"description": "Raises Sky Activity and allows two more regular targets in the sky, raising the limit from ten to twelve.",
 		"branch": "canis_major", "prerequisites": ["canis_cadence_iii"],
 		"hidden_until": ["canis_cadence_iii"], "effect_type": "passive", "effect_notes": {"max_active_delta": 2},
 		"effect_contract": {"kind": "max_active_delta", "value": 2, "scope": "regular_active_contacts"},
@@ -729,7 +729,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "draco_cadence", "name": "Circumpolar Cadence", "icon": "0.45s", "cost": 8000000,
-		"description": "Sets the shortest time between regular meteors to 0.45 seconds.",
+		"description": "Raises Sky Activity and sets the shortest time between regular meteors to 0.45 seconds.",
 		"branch": "draco", "prerequisites": ["draco_synthesis"],
 		"hidden_until": ["draco_synthesis"], "effect_type": "transformation", "effect_notes": {"regular_spawn_interval_floor": 0.45},
 		"effect_contract": {"kind": "regular_spawn_interval_floor", "value": 0.45, "scope": "regular_meteor_arrivals"},
@@ -737,7 +737,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "draco_capacity", "name": "Dragon-Spine Array", "icon": "+6", "cost": 30000000,
-		"description": "Allows six more regular targets in the sky, raising the limit from twelve to eighteen.",
+		"description": "Raises Sky Activity and allows six more regular targets in the sky, raising the limit from twelve to eighteen.",
 		"branch": "draco", "prerequisites": ["draco_cadence"],
 		"hidden_until": ["draco_cadence"], "effect_type": "transformation", "effect_notes": {"max_active_delta": 6},
 		"effect_contract": {"kind": "max_active_delta", "value": 6, "scope": "regular_active_contacts"},
