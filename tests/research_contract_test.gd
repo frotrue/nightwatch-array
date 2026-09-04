@@ -26,6 +26,31 @@ const EXPECTED_DYNAMIC_CONNECTION_IDS := [
 	"violet_band",
 ]
 const EXPECTED_PREREQUISITE_ONLY_IDS := ["canis_opening", "filter_wheel"]
+const EXPECTED_SKY_ACTIVITY_IDS := [
+	"array_planning",
+	"multi_target_analysis",
+	"cascade_sampling",
+	"perseid_survey",
+	"canis_cadence_i",
+	"canis_capacity_i",
+	"canis_cadence_ii",
+	"canis_capacity_ii",
+	"canis_cadence_iii",
+	"canis_capacity_iii",
+	"draco_cadence",
+	"draco_capacity",
+]
+const EXPECTED_OBSERVATION_STREAK_TERM_IDS := [
+	"observation_streak",
+	"momentum_acquisition",
+	"wide_pursuit",
+	"rapid_focus",
+	"cadence_memory",
+	"expanded_sweep",
+	"accelerated_analysis",
+	"sustained_charge",
+	"taurus_full_gallop",
+]
 
 # This exact baseline makes the remaining contract debt visible without making
 # `unverified` a free escape hatch. New nodes and verified-node regressions fail
@@ -331,11 +356,20 @@ func _verify_claims_bidirectionally(contract_ids_by_kind: Dictionary) -> void:
 		"lensed_supernova": [],
 	}
 	var original_locale := TranslationServer.get_locale()
+	var sky_activity_claim_ids: Array[String] = []
 	for definition_variant in Balance.UPGRADE_NODES:
 		var definition: Dictionary = definition_variant
 		var node_id := String(definition.id)
 		var english := _localized_description(node_id, "en")
 		var korean := _localized_description(node_id, "ko")
+		var claims_sky_activity := "Sky Activity" in english or "하늘 활동" in korean
+		if claims_sky_activity:
+			sky_activity_claim_ids.append(node_id)
+			_check("Sky Activity" in english and "하늘 활동" in korean, node_id + " exposes the shared Sky Activity term in both locales")
+		if node_id in EXPECTED_OBSERVATION_STREAK_TERM_IDS:
+			_check("Observation Streak" in english, node_id + " uses the shared English Observation Streak term")
+			_check("관측 연속" in korean, node_id + " uses the shared Korean observation-streak term")
+			_check("Momentum" not in english and "모멘텀" not in korean, node_id + " removes the retired Momentum term from player copy")
 		var contract: Dictionary = definition.get("effect_contract", {})
 		if _claims_global_multiplier(english, korean):
 			claimed_ids_by_kind["observation_value_multiplier"].append(node_id)
@@ -389,6 +423,11 @@ func _verify_claims_bidirectionally(contract_ids_by_kind: Dictionary) -> void:
 					_check("supernova" in english.to_lower() and "lens" in english.to_lower() and "초신성" in korean and "렌즈" in korean, node_id + " exposes the combined coda verb in both locales")
 					claimed_ids_by_kind["lensed_supernova"].append(node_id)
 	TranslationServer.set_locale(original_locale)
+	_verify_exact_string_set(
+		sky_activity_claim_ids,
+		EXPECTED_SKY_ACTIVITY_IDS,
+		"shared Sky Activity player-term ids"
+	)
 
 	# The reverse comparison is essential: the 2026-08-26 audit checked that all
 	# eight x2 contracts had claims but missed a ninth false claim on leonid_storm.

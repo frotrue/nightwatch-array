@@ -63,14 +63,14 @@ content.
 | `game_input_router.gd` | Pause-safe global input dispatch, HUD rebind capture before GUI handling, modal navigation precedence, summary/chart transitions, and fullscreen routing. Raw debug chords remain owned by `game.gd`. |
 | `game_input_bindings.gd` | The six `nw_*` action definitions, fixed/editable slot metadata, active conflict contexts, descriptor validation/labels, project-default restoration, and editable override application. |
 | `observation_view.gd` | The fixed atmospheric playfield, laterally expanding meteor-activity rectangle, dynamic camera-visible world rectangle, screen/world point conversion, interaction-length conversion, partial meteor visual scaling, and the Camera2D feedback offset. Four Local Group chapter milestones expand its span from 1.0 to the 1.4774554 ceiling. |
-| `progression_controller.gd` | Data balance, purchased nodes, discovery gates, transient Taurus manual combo, persistent Leo storm charge, and systemic derived upgrade effects. Single source of truth: consumers ask it, not `game_balance.gd`. |
+| `progression_controller.gd` | Data balance, purchased nodes, discovery gates, transient manual Observation Streak, the Perseid three-target predicate, persistent Leo storm charge, and systemic derived upgrade effects. Single source of truth: consumers ask it, not `game_balance.gd`. |
 | `game_balance.gd` | Static data: 107 installable research definitions, their immutable ID index, four simple Local Group observation profiles, the meteor/long-watch-target spec table, and the final galactic observation-span ceiling. `RefCounted`, no mutable progression state. |
 | `meteor_spawner.gd` | Spawn cadence, type rolls (including same-round satellites, variable stars, comets, binary stars, and distant galaxies), delayed/forecast Gemini observation echoes, paced Leo meteor-storm queues, sky-wide burnout endpoint planning, forecast contact announcements, fragment spawning, survey-requested custom-start spawns, shower and round-guarded Canis Major spawns, support-lane assignment. |
 | `meteor.gd` | One object's burn-progress motion, optional fixed-endpoint quadratic lens curve, explicit in-zone lensed state, trail and terminal fade, observation progress, quality grading, split behaviour, and passive spectral calibration result. |
 | `galactic_phenomena_controller.gd` | Persistent supernova and black-hole target lifecycle, semantic five-record completion queries, active-observation-time phase advancement, save/load, lens-zone rendering, and lensed-meteor curve assignment. |
 | `supernova_target.gd` | Peak/fade/remnant timing choice. A missed light-curve phase always ends in a trackable remnant. |
 | `black_hole_target.gd` | Full-ring and partial-arc contact distance with ordinary aim-and-hold progress, not angular travel. Releasing does not erase progress. The coda target also carries the supernova phase state. |
-| `observation_controller.gd` | Cursor sampling, the tracking-versus-survey input latch, manual tracking across meteor/host/phenomena layers, point or annulus swept-path hit detection, tracking and hover rings, and the software cursor. |
+| `observation_controller.gd` | Cursor sampling, the tracking-versus-survey input latch, manual tracking across meteor/host/phenomena layers, point or annulus swept-path hit detection, tracking and hover rings, the raw Observation Streak counter, the cursor-local Perseid three-target indicator, and the software cursor. |
 | `sky_contacts.gd` | Low-chrome forecast contact rendering and steerable dishes. Right-click moves the nearest dish; Predictive Dish Control automatically pre-positions an idle dish. Forecast Log narrows the expected-position ring instead of adding value/time text. After galaxy entry, common/fast contacts remain in the simulation and automatic assignment but omit their ring, label, countdown, hover target, and automatic-assignment tether. |
 | `survey_controller.gd` | Round-local blank-sky sweep charge, the 150 px live-meteor guard, isolated deterministic summon rolls, custom-start spawner calls, cooldown, and the cursor-local red-light arc. |
 | `event_controller.gd` | Meteor showers, Perseid outbursts, and the randomized warned Canis Major event schedule. |
@@ -482,7 +482,16 @@ Successful manual observations also advance one transient combo in
 effective stacks into manual-only observation speed and tracking-radius bonuses.
 Automatic completions neither advance nor clear it; elapsed observation time,
 round transitions, and save loads do. The software cursor renders its timer arc
-and stack count directly around the changing observation radius.
+and raw Observation Streak count directly around the changing observation radius
+as soon as `observation_streak` is installed. Taurus keeps a separate 4/5/7/10
+cap for the stacks that affect its buffs; it does not change the meaning of the
+displayed count.
+
+Perseid Watch keeps its three-live-target reward threshold. The controller counts
+the same trackable atmospheric children used by the completion reward path and
+draws three cursor-local red-light pips; filled pips show progress to the threshold
+and all three brighten when it is active. No multiplier text or persistent panel
+is added.
 
 Automatic progress (passive automation, dish assist, support lanes) adds into
 the same `observation_progress`. Manual and automatic completions are separated
@@ -623,6 +632,13 @@ same-round long-watch targets are long-dwell catalog work, so neither suppresses
 regular arrival stream. Atmospheric objects created by events, echoes, storms,
 and fragments do count once live; every source still shares the separate global
 `MAX_TOTAL_METEORS = 32` cap.
+
+Player copy groups the permanent capacity steps and the explicit regular-arrival
+floors under `Sky Activity` while retaining each exact delta or floor. This is a
+terminology layer only: `get_max_active()` and
+`get_regular_spawn_interval_floor()` remain separate scheduling inputs. It is
+also unrelated to `EventController.sky_activity_changed`, which controls only
+the event-driven starfield tint and brightness.
 
 `game_balance.gd::upgrade_definition()` uses a read-only ID index built once
 from the constant `UPGRADE_NODES` array. Ordered enumeration still uses that

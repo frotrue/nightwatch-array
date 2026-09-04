@@ -29,6 +29,8 @@ var cursor_initialized: bool = false
 var was_holding: bool = false
 var tracking_grace_remaining: float = 0.0
 var tracking_visual_active_last_frame: bool = false
+var perseid_indicator_visible_last_frame: bool = false
+var perseid_target_count_last_frame: int = -1
 var native_cursor_visible: bool = false
 var interaction_mode: InteractionMode = InteractionMode.NONE
 var pending_blank_distance: float = 0.0
@@ -70,6 +72,8 @@ func reset() -> void:
 	tracking_grace_remaining = 0.0
 	was_holding = false
 	tracking_visual_active_last_frame = false
+	perseid_indicator_visible_last_frame = false
+	perseid_target_count_last_frame = -1
 	interaction_mode = InteractionMode.NONE
 	pending_blank_distance = 0.0
 	if survey != null:
@@ -117,19 +121,30 @@ func _process(delta: float) -> void:
 		hud.hide_tracking()
 	# Keep animated tracking feedback live, but leave an idle software cursor
 	# cached until either it moves or a tracking visual changes state.
+	var combo_visual_active: bool = (
+		progression != null
+		and progression.get_manual_combo_display_count() > 0
+	)
+	var perseid_indicator_visible: bool = (
+		progression != null
+		and progression.has_upgrade("perseid_survey")
+	)
+	var perseid_target_count := _active_atmospheric_target_count() if perseid_indicator_visible else 0
+	var perseid_visual_changed := (
+		perseid_indicator_visible != perseid_indicator_visible_last_frame
+		or perseid_target_count != perseid_target_count_last_frame
+	)
 	var tracking_visual_active: bool = (
 		_selection_is_valid()
 		or _target_is_valid(hovered_meteor)
 		or not tracked_meteors.is_empty()
-		or (
-			progression != null
-			and progression.has_upgrade("momentum_acquisition")
-			and progression.get_taurus_combo_stack_count() > 0
-		)
+		or combo_visual_active
 	)
-	if cursor_position != previous_cursor_position or tracking_visual_active or tracking_visual_active_last_frame:
+	if cursor_position != previous_cursor_position or tracking_visual_active or tracking_visual_active_last_frame or perseid_visual_changed:
 		queue_redraw()
 	tracking_visual_active_last_frame = tracking_visual_active
+	perseid_indicator_visible_last_frame = perseid_indicator_visible
+	perseid_target_count_last_frame = perseid_target_count
 	was_holding = holding
 
 
@@ -446,18 +461,19 @@ func _draw_software_cursor() -> void:
 		draw_circle(cursor_position, 4.0 * visual_scale, shadow_color)
 		draw_circle(cursor_position, 1.8 * visual_scale, cursor_color)
 	_draw_manual_combo(observation_radius)
+	_draw_perseid_survey_indicator(observation_radius)
 
 
 func _draw_manual_combo(observation_radius: float) -> void:
-	if progression == null or not progression.has_upgrade("momentum_acquisition"):
+	if progression == null:
 		return
-	var stacks: int = progression.get_taurus_combo_stack_count()
-	if stacks <= 0:
+	var streak_count: int = progression.get_manual_combo_display_count()
+	if streak_count <= 0:
 		return
 	var visual_scale := _world_px(1.0)
 	var timer_radius := observation_radius + 8.0 * visual_scale
 	var timer_progress: float = progression.get_manual_combo_progress()
-	var timer_color := UITheme.ACCENT_LINE.lerp(UITheme.INK_MAX, float(stacks) / 10.0)
+	var timer_color := UITheme.ACCENT_LINE.lerp(UITheme.INK_MAX, clampf(float(streak_count) / 10.0, 0.0, 1.0))
 	draw_arc(cursor_position, timer_radius, 0.0, TAU, 64, Color(UITheme.SHADOW, 0.78), 4.2 * visual_scale, true)
 	draw_arc(
 		cursor_position,
@@ -475,12 +491,52 @@ func _draw_manual_combo(observation_radius: float) -> void:
 	draw_string(
 		font,
 		label_position,
-		"×%d" % stacks,
+		"×%d" % streak_count,
 		HORIZONTAL_ALIGNMENT_LEFT,
 		-1.0,
 		font_size,
 		Color(timer_color, 0.94)
 	)
+
+
+func _draw_perseid_survey_indicator(observation_radius: float) -> void:
+	if progression == null or not progression.has_upgrade("perseid_survey"):
+		return
+	var target_count := _active_atmospheric_target_count()
+	var threshold: int = progression.PERSEID_SURVEY_TARGET_THRESHOLD
+	var threshold_reached: bool = progression.is_perseid_survey_active(target_count)
+	var visual_scale := _world_px(1.0)
+	var pip_gap := 9.0 * visual_scale
+	var pip_y := observation_radius + 15.0 * visual_scale
+	var start_x := -float(threshold - 1) * pip_gap * 0.5
+	var filled_count := mini(target_count, threshold)
+	var filled_color: Color = UITheme.ACCENT_TEXT if threshold_reached else UITheme.ACCENT_LINE
+	for index in range(threshold):
+		var pip_position := cursor_position + Vector2(start_x + float(index) * pip_gap, pip_y)
+		draw_circle(pip_position, 3.6 * visual_scale, Color(UITheme.SHADOW, 0.82))
+		if index < filled_count:
+			draw_circle(pip_position, 2.1 * visual_scale, Color(filled_color, 0.94))
+		else:
+			draw_arc(
+				pip_position,
+				2.0 * visual_scale,
+				0.0,
+				TAU,
+				16,
+				Color(UITheme.ACCENT_DEEP, 0.72),
+				1.0 * visual_scale,
+				true
+			)
+
+
+func _active_atmospheric_target_count() -> int:
+	if meteor_layer == null:
+		return 0
+	var count := 0
+	for candidate in meteor_layer.get_children():
+		if _target_is_valid(candidate):
+			count += 1
+	return count
 
 
 func _software_cursor_radius() -> float:

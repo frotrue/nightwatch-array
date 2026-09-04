@@ -10,6 +10,7 @@ const Balance = preload("res://scripts/game_balance.gd")
 const PACING_NODE_COUNT := 51
 const BASE_MANUAL_COMBO_WINDOW := 2.6
 const MAX_MANUAL_COMBO_COUNT := 12
+const PERSEID_SURVEY_TARGET_THRESHOLD := 3
 # Spectral capstone x maximum precision factor x Perfect grade. Legacy saves
 # may contain the research economy multiplier in this stat; values above the
 # intrinsic ceiling cannot be a truthful manual-observation multiplier.
@@ -369,6 +370,12 @@ func get_taurus_combo_stack_count() -> int:
 	return mini(manual_combo_count, get_taurus_combo_cap())
 
 
+func get_manual_combo_display_count() -> int:
+	if not has_upgrade("observation_streak"):
+		return 0
+	return manual_combo_count
+
+
 func get_manual_combo_progress() -> float:
 	if manual_combo_count <= 0:
 		return 0.0
@@ -605,9 +612,13 @@ func get_observation_value_multiplier(type_id: String, active_target_count: int)
 		multiplier *= 1.2
 	if is_andromeda_target(type_id) and has_upgrade("andromeda_deep_survey"):
 		multiplier *= 1.3
-	if active_target_count >= 3 and has_upgrade("perseid_survey"):
+	if is_perseid_survey_active(active_target_count):
 		multiplier *= 1.18
 	return multiplier
+
+
+func is_perseid_survey_active(active_target_count: int) -> bool:
+	return has_upgrade("perseid_survey") and active_target_count >= PERSEID_SURVEY_TARGET_THRESHOLD
 
 
 func is_research_complete() -> bool:

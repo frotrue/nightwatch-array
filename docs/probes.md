@@ -280,6 +280,11 @@ advertised numeric claim must have a contract. The reverse check exists because
 a 2026-08-26 copy audit verified all eight real `×2` claims but missed a ninth
 false claim on Storm Zenith.
 
+The localization audit also requires the twelve approved capacity/floor nodes
+to use `Sky Activity / 하늘 활동` in both languages while retaining their exact
+runtime claims. The optics/Taurus descriptions must use
+`Observation Streak / 관측 연속` and may not restore the retired Momentum term.
+
 ```powershell
 & $godot --headless --path . --script res://tests/research_contract_test.gd
 ```
@@ -308,6 +313,10 @@ presentation-only inclusion of 17 decorative galaxies, the two-second skip
 boundary and identical natural/skip final frame, keyboard focus, save-failure
 retry, active-final-watch resume/signature validation, corrupt-slot recovery, the non-destructive
 ending-preview debug chord, performance caps, stale references, and reset.
+
+Observation coverage includes the display gate for the raw Observation Streak
+count, its independence from the Taurus buff cap, and the shared Perseid
+three-target predicate used by both reward calculation and the cursor indicator.
 
 The no-persistence input-routing fixture additionally snapshots and restores
 the process-global `InputMap`, audio, display, locale, pause, and cursor state.
