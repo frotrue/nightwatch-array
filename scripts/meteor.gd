@@ -482,6 +482,7 @@ func _draw() -> void:
 			linger_alpha *= 0.12
 		var trail_visibility := burn_visibility * burn_tail_scale * linger_alpha
 		_draw_tapered_trail(trail_visibility, burn_tail_scale, visual_scale)
+		_draw_exposure_filament(trail_visibility, visual_scale)
 
 	if prediction_enabled and alive:
 		draw_multiline(prediction_draw_points, Color(UITheme.ACCENT_LINE, 0.30 * minf(1.0, burn_visibility)), 1.0 * visual_scale, true)
@@ -591,6 +592,25 @@ func _draw_tapered_trail(visibility: float, tail_scale: float, visual_scale: flo
 	RenderingServer.canvas_item_add_triangle_array(
 		canvas, indices, trail_core_ribbon, trail_core_ribbon_colors
 	)
+
+
+func _draw_exposure_filament(visibility: float, visual_scale: float) -> void:
+	# Subpixel triangle ribbons alone lose their luminous centre at the shipped
+	# viewport. One antialiased filament follows their actual sampled centreline;
+	# it cannot extend the lifetime, straighten a lens curve, or invent motion.
+	if type_id in ["satellite", "variable_star", "binary_star", "galaxy"]:
+		return
+	var count := trail_core_ribbon.size() / 3
+	if count < 2 or visibility <= 0.0:
+		return
+	var points := PackedVector2Array()
+	var colors := PackedColorArray()
+	var light := primary_color.lerp(Color.WHITE, 0.34)
+	for index in range(count):
+		points.append(trail_core_ribbon[index * 3 + 1])
+		var t := float(index) / float(count - 1)
+		colors.append(Color(light, pow(1.0 - t, 1.6) * visibility * 0.52))
+	draw_polyline_colors(points, colors, 0.7 * visual_scale, true)
 
 
 func _ensure_trail_station_weights(point_count: int) -> void:
@@ -807,6 +827,17 @@ func _draw_directional_head(
 		bloom_points[index] += sheath_shift
 	var optical_flicker := 0.94 + 0.06 * sin(phase * 1.71 + 0.8)
 	var bright_point := direction * radius * 0.12
+	# A soft asymmetric optical skirt gives small heads a visible footprint.
+	# Its transparent edge stays subordinate to the compact overexposed core.
+	var optical_skirt := PackedVector2Array()
+	for point in bloom_points:
+		optical_skirt.append(point * 2.0)
+	_draw_graded_polygon(
+		optical_skirt,
+		bright_point + sheath_shift,
+		Color(glow_color, clampf(0.10 * visibility * optical_flicker, 0.0, 0.18)),
+		Color(glow_color, 0.0)
+	)
 	_draw_graded_polygon(
 		bloom_points,
 		bright_point + sheath_shift,

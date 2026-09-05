@@ -24,20 +24,25 @@ Read before changing anything:
 
 ## Commit Attribution
 
-Every commit created for this project must end with this co-author trailer,
-separated from the commit message body by a blank line:
+Keep the human author as `Frotrue <105928069+frotrue@users.noreply.github.com>`.
+Preserve the repository's matching Git user identity; never replace the author
+or the human committer identity with an AI name.
 
-```text
-Co-authored-by: Claude <81847+claude@users.noreply.github.com>
-```
+End each AI-assisted commit message with the co-author trailer for the agent
+that performed the work, separated from the body by a blank line:
 
-That is the GitHub noreply address for the `claude` account, so the commit
-resolves to that profile instead of showing an unlinked name. The address
-must keep its numeric id prefix; the bare `name@users.noreply.github.com`
-form does not resolve for accounts created recently.
+- Claude models / Claude Code: `Co-authored-by: Claude <noreply@anthropic.com>`
+- OpenAI models / Codex: `Co-authored-by: Codex <noreply@openai.com>`
 
-Use this trailer and no other, whatever attribution an agent is otherwise
-configured to add. Exactly one co-author line per commit.
+Choose by the actual contributing agent, not by a fixed project-wide default.
+Model variants and reasoning levels use their agent's shared name above.
+Include each contributing agent at most once; include both only when both
+contributed to the committed work. Never invent a GitHub account or numeric
+noreply address to force a profile association.
+
+Apply the same attribution rules to merge and squash commit messages. Do not
+rewrite existing published commits just to change attribution unless the user
+explicitly requests a history rewrite.
 
 ## Agent Room Protocol
 

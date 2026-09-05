@@ -116,11 +116,11 @@ func _draw() -> void:
 	for index in range(bands):
 		var t := float(index) / float(bands - 1)
 		var band_y := sky_frame.position.y + t * sky_size.y
-		var sky := Color("05080E")
+		var sky := Color("03060C")
 		if t <= 0.52:
-			sky = Color("05080E").lerp(Color("08111C"), smoothstep(0.0, 1.0, t / 0.52))
+			sky = Color("03060C").lerp(Color("09131F"), smoothstep(0.0, 1.0, t / 0.52))
 		else:
-			sky = Color("08111C").lerp(Color("101E2B"), smoothstep(0.0, 1.0, (t - 0.52) / 0.48))
+			sky = Color("09131F").lerp(Color("203746"), smoothstep(0.0, 1.0, (t - 0.52) / 0.48))
 		sky = sky.lerp(Color("28191D"), activity * (0.06 + t * 0.10))
 		draw_rect(Rect2(sky_frame.position.x, band_y, sky_size.x, sky_size.y / bands + 2.0), sky)
 
@@ -131,9 +131,10 @@ func _draw() -> void:
 	for star in outer_stars:
 		_draw_star(Vector2(star.p), star)
 
-	# One low, flat silhouette locates the view at an observatory without turning
-	# the foreground into an illustration or competing with live targets.
-	draw_colored_polygon(_horizon_ridge(sky_frame), Color("020409"))
+	# Quiet ridges establish distance below the playable sky. The near plateau
+	# and observatory are the one authored focal shape beneath the moving light.
+	_draw_distant_ridges(sky_frame)
+	draw_colored_polygon(_horizon_ridge(sky_frame), Color("03070C"))
 	_draw_observatory_silhouette(sky_frame)
 
 
@@ -220,42 +221,66 @@ func _airglow_band(frame: Rect2, base: float, amplitude: float, thickness: float
 
 
 func _draw_observatory_silhouette(frame: Rect2) -> void:
-	var ground := Color("020409")
-	var horizon_y := frame.position.y + frame.size.y * 0.915
+	var scale := frame.size.y / 648.0
+	var base := frame.position + frame.size * Vector2(0.79, 0.947)
+	var dome_center := base + Vector2(0.0, -15.0) * scale
+	var radius := 25.0 * scale
+	var shell := Color("0B131C")
+	var rim := Color("30414C")
+	var ground := Color("03070C")
+	var dome := PackedVector2Array()
+	for index in range(33):
+		var angle := PI + PI * float(index) / 32.0
+		dome.append(dome_center + Vector2.from_angle(angle) * radius)
+	draw_colored_polygon(dome, shell)
+	draw_arc(dome_center, radius, PI * 1.08, PI * 1.87, 28, Color(rim, 0.62), 0.8 * scale, true)
+	draw_rect(Rect2(base + Vector2(-28.0, -15.0) * scale, Vector2(56.0, 17.0) * scale), shell)
+	draw_line(base + Vector2(-29.0, -15.0) * scale, base + Vector2(29.0, -15.0) * scale, Color(rim, 0.42), 1.0 * scale, true)
+	# The open shutter, its lip and the low service wing identify a real dome.
+	var shutter := PackedVector2Array([
+		dome_center + Vector2(-7.0, -24.0) * scale,
+		dome_center + Vector2(-2.0, -25.0) * scale,
+		dome_center + Vector2(8.0, -3.0) * scale,
+		dome_center + Vector2(2.0, -1.0) * scale,
+	])
+	draw_colored_polygon(shutter, ground)
+	draw_line(shutter[1], shutter[2], Color(rim, 0.5), 0.8 * scale, true)
+	draw_rect(Rect2(base + Vector2(-48.0, -9.0) * scale, Vector2(22.0, 12.0) * scale), Color("070D14"))
+	draw_line(base + Vector2(-49.0, -9.0) * scale, base + Vector2(-28.0, -9.0) * scale, Color(rim, 0.34), 0.8 * scale, true)
+	# One sheltered red window ties the physical station to its instrument ink.
+	draw_rect(Rect2(base + Vector2(-40.0, -5.0) * scale, Vector2(7.0, 2.0) * scale), Color("714334"))
+	draw_rect(Rect2(base + Vector2(13.0, -8.0) * scale, Vector2(5.0, 10.0) * scale), ground)
 
-	# A shallow dome and narrow base.
-	var dome_center := Vector2(frame.position.x + frame.size.x * 0.465, horizon_y)
-	var dome_radius := frame.size.x * 0.0095
-	var dome := PackedVector2Array([Vector2(dome_center.x - dome_radius, horizon_y)])
-	for index in range(9):
-		var angle := PI + PI * float(index) / 8.0
-		dome.append(dome_center + Vector2(cos(angle), sin(angle)) * dome_radius)
-	dome.append(Vector2(dome_center.x + dome_radius, horizon_y))
-	draw_colored_polygon(dome, ground)
-	draw_rect(
-		Rect2(
-			Vector2(dome_center.x - dome_radius * 1.15, horizon_y - frame.size.y * 0.002),
-			Vector2(dome_radius * 2.3, frame.size.y * 0.012)
-		),
-		ground,
-		true
-	)
-
-	# One small dish, reduced to a mast, brace, and triangular bowl.
-	var dish_base := Vector2(frame.position.x + frame.size.x * 0.545, horizon_y + frame.size.y * 0.002)
-	var pivot := dish_base + Vector2(0.0, -frame.size.y * 0.018)
+	var dish_base := base + Vector2(78.0, 0.0) * scale
+	var pivot := dish_base + Vector2(0.0, -23.0) * scale
 	var aim := Vector2(-0.62, -0.78)
 	var tangent := Vector2(-aim.y, aim.x)
-	var bowl_center := pivot + aim * frame.size.y * 0.010
-	var half_rim := frame.size.y * 0.007
-	var bowl := PackedVector2Array([
-		bowl_center - tangent * half_rim,
-		bowl_center + tangent * half_rim,
-		bowl_center - aim * frame.size.y * 0.004,
-	])
-	draw_line(dish_base, pivot, ground, _world_px(1.2), true)
-	draw_line(dish_base + Vector2(-frame.size.x * 0.005, 0.0), pivot, ground, _world_px(0.9), true)
-	draw_colored_polygon(bowl, ground)
+	var bowl := PackedVector2Array()
+	for index in range(17):
+		var along := lerpf(-12.0, 12.0, float(index) / 16.0)
+		bowl.append(pivot + (tangent * along + aim * (along * along / 32.0)) * scale)
+	draw_colored_polygon(bowl, Color("0A121A"))
+	draw_polyline(bowl, Color(rim, 0.56), 0.8 * scale, true)
+	draw_line(dish_base, pivot, shell, 2.5 * scale, true)
+	draw_line(dish_base + Vector2(-9.0, 0.0) * scale, pivot, shell, 1.5 * scale, true)
+	draw_line(pivot, pivot + aim * 13.0 * scale, Color(rim, 0.58), 1.0 * scale, true)
+	draw_line(bowl[0], pivot + aim * 13.0 * scale, Color(rim, 0.36), 0.7 * scale, true)
+
+
+func _draw_distant_ridges(frame: Rect2) -> void:
+	var back := PackedVector2Array()
+	var near := PackedVector2Array()
+	# Low irregular landforms, all outside the meteor burnout safety region.
+	var heights := [0.930, 0.923, 0.912, 0.919, 0.904, 0.914, 0.926, 0.919, 0.908, 0.917, 0.906, 0.917, 0.913, 0.921, 0.915, 0.924, 0.929]
+	for index in range(heights.size()):
+		var x := float(index) / float(heights.size() - 1)
+		back.append(frame.position + frame.size * Vector2(x, float(heights[index])))
+		near.append(frame.position + frame.size * Vector2(x, float(heights[(index + 5) % heights.size()]) + 0.018))
+	for index in range(2):
+		var ridge: PackedVector2Array = back if index == 0 else near
+		ridge.append(frame.end)
+		ridge.append(Vector2(frame.position.x, frame.end.y))
+		draw_colored_polygon(ridge, Color("152531") if index == 0 else Color("0C1721"))
 
 
 func _atmospheric_rect() -> Rect2:
@@ -277,14 +302,15 @@ func _sky_frame_rect() -> Rect2:
 
 
 func _horizon_ridge(frame: Rect2) -> PackedVector2Array:
-	var horizon_y := frame.position.y + frame.size.y * 0.915
+	var horizon_y := frame.position.y + frame.size.y * 0.952
 	return PackedVector2Array([
 		Vector2(frame.position.x, horizon_y + 2.0),
 		Vector2(frame.position.x + frame.size.x * 0.12, horizon_y - 1.0),
 		Vector2(frame.position.x + frame.size.x * 0.27, horizon_y + 1.0),
 		Vector2(frame.position.x + frame.size.x * 0.44, horizon_y - 2.0),
 		Vector2(frame.position.x + frame.size.x * 0.62, horizon_y + 1.0),
-		Vector2(frame.position.x + frame.size.x * 0.81, horizon_y - 1.0),
+		Vector2(frame.position.x + frame.size.x * 0.74, horizon_y - frame.size.y * 0.005),
+		Vector2(frame.position.x + frame.size.x * 0.88, horizon_y - frame.size.y * 0.005),
 		Vector2(frame.end.x, horizon_y + 2.0),
 		frame.end,
 		Vector2(frame.position.x, frame.end.y),
