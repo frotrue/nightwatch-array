@@ -172,9 +172,11 @@ func _run() -> void:
 	)
 	_check(
 		is_equal_approx(horizon_ridge[0].x, sky_frame.position.x)
-		and is_equal_approx(horizon_ridge[6].x, sky_frame.end.x)
-		and horizon_ridge[7].is_equal_approx(sky_frame.end)
-		and is_equal_approx(horizon_ridge[8].x, sky_frame.position.x),
+		# Authored ridge detail may add vertices; the final three still close the
+		# visible right edge and both bottom corners without an exposed border.
+		and is_equal_approx(horizon_ridge[-3].x, sky_frame.end.x)
+		and horizon_ridge[-2].is_equal_approx(sky_frame.end)
+		and horizon_ridge[-1].is_equal_approx(Vector2(sky_frame.position.x, sky_frame.end.y)),
 		"horizon ridge spans the full visible frame"
 	)
 	_check(

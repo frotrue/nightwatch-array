@@ -206,8 +206,8 @@ func _draw() -> void:
 	var radius: float = _world_px(progression.get_tracking_radius() + 16.0)
 	var blocked := scanning and not is_blank_sky(cursor_position)
 	var track_alpha := 0.16 if blocked else 0.30
-	draw_arc(cursor_position, radius, 0.0, TAU, 64, Color(UITheme.SHADOW, 0.76), 4.2 * visual_scale, true)
-	draw_arc(cursor_position, radius, 0.0, TAU, 64, Color(UITheme.ACCENT_DEEP, track_alpha), 1.4 * visual_scale, true)
+	draw_arc(cursor_position, radius, 0.0, TAU, 64, Color(UITheme.SHADOW, 0.44), 2.5 * visual_scale, true)
+	draw_arc(cursor_position, radius, 0.0, TAU, 64, Color(UITheme.ACCENT_DEEP, track_alpha), 0.85 * visual_scale, true)
 	var progress := get_charge_progress()
 	var arc_color := Color(UITheme.ACCENT_LINE, 0.38 if blocked else 0.92)
 	if cooldown_remaining > 0.0:
@@ -222,7 +222,7 @@ func _draw() -> void:
 		-PI * 0.5 + TAU * progress,
 		64,
 		arc_color,
-		2.2 * visual_scale,
+		1.3 * visual_scale,
 		true
 	)
 

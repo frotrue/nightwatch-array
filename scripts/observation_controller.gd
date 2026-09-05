@@ -414,16 +414,13 @@ func _draw_software_cursor() -> void:
 	# and stays in red light; the moment it latches onto a target it becomes the
 	# live instrument and is the only neutral-white thing on screen. The colour
 	# change is what says "you are measuring now".
-	var shadow_color := Color(0.03, 0.012, 0.008, 0.94)
+	var shadow_color := Color(0.02, 0.025, 0.035, 0.56)
 	var cursor_color := UITheme.INSTRUMENT_ARC if tracking else UITheme.INK_HIGH
-	var field_alpha := 0.030 if tracking else (0.055 if was_holding else 0.020)
-	var reticle_alpha := 0.34 if tracking else (0.96 if was_holding else 0.72)
-	draw_circle(cursor_position, observation_radius, Color(cursor_color, field_alpha))
-	# The backing stroke only needs to be wide enough for whatever sits on it.
-	draw_arc(cursor_position, observation_radius, 0.0, TAU, 64, shadow_color, (5.6 if tracking else 4.2) * visual_scale, true)
-	# Plain circle at rest. Under observation the same circle sweeps and thickens,
-	# so progress is read as a fattening border rather than as a second ring.
-	draw_arc(cursor_position, observation_radius, 0.0, TAU, 64, Color(cursor_color, reticle_alpha), 1.8 * visual_scale, true)
+	var reticle_alpha := 0.17 if tracking else (0.42 if was_holding else 0.26)
+	# An unfilled optical field leaves the target's light and colour intact.
+	# The real interaction radius remains visible without a heavy circular bezel.
+	draw_arc(cursor_position, observation_radius, 0.0, TAU, 64, shadow_color, 2.6 * visual_scale, true)
+	draw_arc(cursor_position, observation_radius, 0.0, TAU, 64, Color(cursor_color, reticle_alpha), 0.85 * visual_scale, true)
 	if tracking and progress > 0.0:
 		draw_arc(
 			cursor_position,
@@ -431,15 +428,15 @@ func _draw_software_cursor() -> void:
 			-PI * 0.5,
 			-PI * 0.5 + TAU * progress,
 			64,
-			cursor_color,
-			lerpf(2.4, 3.8, progress) * visual_scale,
+			Color(cursor_color, 0.76),
+			1.25 * visual_scale,
 			true
 		)
 	for direction in [Vector2.LEFT, Vector2.RIGHT, Vector2.UP, Vector2.DOWN]:
-		var range_tick_start: Vector2 = cursor_position + direction * (observation_radius - 4.0 * visual_scale)
-		var range_tick_end: Vector2 = cursor_position + direction * (observation_radius + 5.0 * visual_scale)
-		draw_line(range_tick_start, range_tick_end, shadow_color, 4.2 * visual_scale, true)
-		draw_line(range_tick_start, range_tick_end, Color(cursor_color, reticle_alpha), 1.8 * visual_scale, true)
+		var range_tick_start: Vector2 = cursor_position + direction * (observation_radius + 2.0 * visual_scale)
+		var range_tick_end: Vector2 = cursor_position + direction * (observation_radius + 6.0 * visual_scale)
+		draw_line(range_tick_start, range_tick_end, shadow_color, 2.6 * visual_scale, true)
+		draw_line(range_tick_start, range_tick_end, Color(cursor_color, 0.48), 1.0 * visual_scale, true)
 		if not tracking:
 			var center_mark_start: Vector2 = cursor_position + direction * 4.0 * visual_scale
 			var center_mark_end: Vector2 = cursor_position + direction * 8.0 * visual_scale
@@ -462,7 +459,7 @@ func _draw_manual_combo(observation_radius: float) -> void:
 	var timer_radius := observation_radius + 8.0 * visual_scale
 	var timer_progress: float = progression.get_manual_combo_progress()
 	var timer_color := UITheme.ACCENT_LINE.lerp(UITheme.INK_MAX, clampf(float(streak_count) / 10.0, 0.0, 1.0))
-	draw_arc(cursor_position, timer_radius, 0.0, TAU, 64, Color(UITheme.SHADOW, 0.78), 4.2 * visual_scale, true)
+	draw_arc(cursor_position, timer_radius, 0.0, TAU, 64, Color(UITheme.SHADOW, 0.44), 2.5 * visual_scale, true)
 	draw_arc(
 		cursor_position,
 		timer_radius,
@@ -470,7 +467,7 @@ func _draw_manual_combo(observation_radius: float) -> void:
 		-PI * 0.5 + TAU * timer_progress,
 		64,
 		Color(timer_color, 0.92),
-		2.2 * visual_scale,
+		1.3 * visual_scale,
 		true
 	)
 	var font: Font = UITheme.mono_tabular(true)
