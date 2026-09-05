@@ -70,35 +70,35 @@ const BRANCHES := {
 const UPGRADE_NODES: Array[Dictionary] = [
 	{
 		"id": "better_lens", "name": "Better Lens", "icon": "◉", "cost": 10,
-		"description": "A wider focus ring makes manual tracking more forgiving.",
+		"description": "Base observation radius increases by about 44%.",
 		"branch": "optics", "prerequisites": [],
 		"hidden_until": [], "effect_type": "passive", "effect_notes": {"tracking_radius": 52.0},
 		"major": false
 	},
 	{
 		"id": "long_exposure", "name": "Long Exposure", "icon": "◐", "cost": 50,
-		"description": "Meteors stay visible 35% longer and leave denser trails.",
+		"description": "Meteor visibility duration +35%.",
 		"branch": "optics", "prerequisites": ["better_lens"],
 		"hidden_until": ["better_lens"], "effect_type": "transformation", "effect_notes": {"lifetime_multiplier": 1.35},
 		"major": false
 	},
 	{
 		"id": "observation_streak", "name": "Observation Streak", "icon": "×3", "cost": 120,
-		"description": "Manual observations completed before the Observation Streak timer expires build a modest reward chain.",
+		"description": "Observation Streak: manual successes add 8% Data per step after the first, up to +50%. Base time limit: 2.6 seconds.",
 		"branch": "optics", "prerequisites": ["better_lens"],
 		"hidden_until": ["better_lens"], "effect_type": "transformation", "effect_notes": {"step": 0.08, "maximum": 0.5},
 		"major": false
 	},
 	{
 		"id": "precision_multiplier", "name": "Precision Spectrometer", "icon": "⌾", "cost": 300,
-		"description": "Centered manual tracking builds a reward multiplier.",
+		"description": "Centered manual tracking increases Data, up to 3 times.",
 		"branch": "optics", "prerequisites": ["long_exposure"],
 		"hidden_until": ["long_exposure"], "effect_type": "transformation", "effect_notes": {"precision_gain": 0.58},
 		"major": false
 	},
 	{
 		"id": "perfect_observation", "name": "Perfect Observation", "icon": "✦", "cost": 800,
-		"description": "Grades manual tracking; Excellent and Perfect runs earn ×1.25 and ×1.55 quality bonuses. Doubles all observation Data, including automatic completions. All eight ×2 systems combine to ×256.",
+		"description": "Manual grade bonus: Excellent +25% Data, Perfect +55%. Observation Data ×2 (automatic included; Local Group excluded).",
 		"branch": "optics", "prerequisites": ["precision_multiplier"],
 		"hidden_until": ["precision_multiplier"], "effect_type": "transformation",
 		"effect_notes": {"excellent_bonus": 1.25, "perfect_bonus": 1.55},
@@ -107,43 +107,43 @@ const UPGRADE_NODES: Array[Dictionary] = [
 		"major": true
 	},
 	{
-		"id": "edge_detection", "name": "Edge Detection", "icon": "≋", "cost": 30,
-		"description": "Identifies fast arrivals and introduces fast meteors.",
+		"id": "edge_detection", "name": "Edge Detection", "icon": "≋", "cost": 50,
+		"description": "Unlocks fast meteors.",
 		"branch": "detection", "prerequisites": [],
 		"hidden_until": [], "effect_type": "discovery", "effect_notes": {"meteor_type": "fast"},
 		"major": false
 	},
 	{
 		"id": "wide_field", "name": "Wide Field Sensor", "icon": "⌗", "cost": 100,
-		"description": "Shows where incoming objects are expected to appear so you have time to prepare.",
+		"description": "Shows predicted arrival positions at least 2 seconds before meteors appear.",
 		"branch": "detection", "prerequisites": ["edge_detection"],
 		"hidden_until": ["edge_detection"], "effect_type": "unlock", "effect_notes": {"entry_warning": true},
 		"major": false
 	},
 	{
 		"id": "trajectory", "name": "Trajectory Prediction", "icon": "➤", "cost": 220,
-		"description": "Makes expected entry positions more accurate and shows each object's direction.",
+		"description": "Base maximum arrival-position error decreases by about 31%. Adds direction markers.",
 		"branch": "detection", "prerequisites": ["wide_field", "contact_ledger"],
 		"hidden_until": ["wide_field"], "effect_type": "unlock", "effect_notes": {"trajectory_line": true},
 		"major": true
 	},
 	{
 		"id": "rare_detection", "name": "Rare Meteor Detection", "icon": "★", "cost": 450,
-		"description": "Reveals rare fireballs and shows the type of every incoming object before it appears.",
+		"description": "Unlocks fireballs and identifies incoming target types.",
 		"branch": "detection", "prerequisites": ["trajectory"],
 		"hidden_until": ["trajectory"], "effect_type": "discovery", "effect_notes": {"meteor_type": "fireball"},
 		"major": true
 	},
 	{
 		"id": "fragment_analysis", "name": "Fragment Tracking", "icon": "◆", "cost": 900,
-		"description": "Discovers splitting meteors; the observation network can help track their fragments.",
+		"description": "Unlocks splitting meteors and observable fragments.",
 		"branch": "detection", "prerequisites": ["rare_detection"],
 		"hidden_until": ["rare_detection"], "effect_type": "discovery", "effect_notes": {"meteor_type": "fragment"},
 		"major": true
 	},
 	{
 		"id": "shower_detector", "name": "Meteor Shower Forecast", "icon": "☄", "cost": 1800,
-		"description": "Unlocks warned meteor-shower events across the whole sky. Doubles all observation Data, including automatic completions. All eight ×2 systems combine to ×256.",
+		"description": "Unlocks meteor showers: 2.6-second warning, 9-second duration. Observation Data ×2 (automatic included; Local Group excluded).",
 		"branch": "detection", "prerequisites": ["fragment_analysis"],
 		"hidden_until": ["fragment_analysis"], "effect_type": "discovery",
 		"effect_notes": {"event": "meteor_shower"},
@@ -152,8 +152,8 @@ const UPGRADE_NODES: Array[Dictionary] = [
 		"major": true
 	},
 	{
-		"id": "array_planning", "name": "Array Planning", "icon": "⬡", "cost": 50,
-		"description": "Raises Sky Activity and allows one more regular target to remain in the sky at once.",
+		"id": "array_planning", "name": "Array Planning", "icon": "⬡", "cost": 110,
+		"description": "Sky Activity: simultaneous regular targets +1.",
 		"branch": "network", "prerequisites": [],
 		"hidden_until": [], "effect_type": "unlock", "effect_notes": {"max_active": 1},
 		"effect_contract": {"kind": "max_active_delta", "value": 1, "scope": "regular_active_contacts"},
@@ -161,7 +161,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "observation_scheduling", "name": "Observation Scheduling", "icon": "◷", "cost": 150,
-		"description": "Plans longer shifts and extends each future observation window by 10 seconds.",
+		"description": "Adds 10 seconds to each future observation window.",
 		"branch": "network", "prerequisites": ["array_planning"],
 		"hidden_until": ["array_planning"], "effect_type": "passive",
 		"runtime_parameters": {"observation_duration_bonus": 10.0},
@@ -170,7 +170,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "thermal_management", "name": "Equipment Thermal Control", "icon": "❄", "cost": 450,
-		"description": "Controls sensor heat during longer shifts and adds another 10 seconds to future observation windows.",
+		"description": "Adds 10 seconds to each future observation window.",
 		"branch": "network", "prerequisites": ["observation_scheduling"],
 		"hidden_until": ["observation_scheduling"], "effect_type": "passive",
 		"runtime_parameters": {"observation_duration_bonus": 10.0},
@@ -179,7 +179,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "extended_watch_protocol", "name": "Extended Watch Protocol", "icon": "◴", "cost": 700,
-		"description": "Coordinates a long-watch protocol and extends each future observation window by 10 seconds.",
+		"description": "Adds 10 seconds to each future observation window.",
 		"branch": "network", "prerequisites": ["thermal_management"],
 		"hidden_until": ["thermal_management"], "effect_type": "transformation",
 		"runtime_parameters": {"observation_duration_bonus": 10.0},
@@ -188,7 +188,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "continuous_watch_rotation", "name": "Continuous Watch Rotation", "icon": "↻", "cost": 1000,
-		"description": "Coordinates uninterrupted handoffs and adds 10 seconds to future observation windows, reaching their 60-second maximum.",
+		"description": "Adds 10 seconds to each future observation window, up to 60 seconds.",
 		"branch": "network", "prerequisites": ["extended_watch_protocol"],
 		"hidden_until": ["extended_watch_protocol"], "effect_type": "transformation",
 		"runtime_parameters": {"observation_duration_bonus": 10.0},
@@ -197,21 +197,21 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "secondary_camera", "name": "Secondary Camera", "icon": "▣", "cost": 600,
-		"description": "Forecasts incoming objects and gives you a dish. Right-click anywhere to move the nearest dish.",
+		"description": "Adds 1 movable observation dish and arrival warnings. Right-click to position it; fireballs require manual observation.",
 		"branch": "network", "prerequisites": ["array_planning"],
 		"hidden_until": ["array_planning"], "effect_type": "automation", "effect_notes": {"assist_slots": 1},
 		"major": true
 	},
 	{
 		"id": "predictive_dish_control", "name": "Predictive Dish Control", "icon": "⌁", "cost": 800,
-		"description": "Automatically moves an idle dish toward trackable incoming objects; manual right-click placement still takes priority.",
+		"description": "Automatically moves idle dishes to predicted arrival positions. Right-click placement takes priority.",
 		"branch": "network", "prerequisites": ["secondary_camera"],
 		"hidden_until": ["secondary_camera"], "effect_type": "automation", "effect_notes": {"dish_auto_assignment": true},
 		"major": true
 	},
 	{
 		"id": "multi_target_analysis", "name": "Multi-Target Tracking", "icon": "⊕", "cost": 1200,
-		"description": "Tracks every meteor inside the manual observation area together. Raises Sky Activity and allows one more regular target in the sky. Automatically supports one target; with Fragment Tracking, it can also help with fragment pieces.",
+		"description": "Observes all meteors inside the cursor ring together. Automatic support: 1 target, including fragments after Fragment Tracking. Sky Activity: simultaneous regular targets +1.",
 		"branch": "network", "prerequisites": ["secondary_camera", "extended_watch_protocol"],
 		"hidden_until": ["secondary_camera"], "effect_type": "transformation", "effect_notes": {"assist_slots": 2, "manual_group_tracking": true},
 		"effect_contract": {"kind": "max_active_delta", "value": 1, "scope": "regular_active_contacts"},
@@ -219,112 +219,112 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "automated_tracking", "name": "Automated Common Tracking", "icon": "⚙", "cost": 2200,
-		"description": "Common targets are observed automatically; rare and high-value targets still need you.",
+		"description": "Automatically fills ordinary meteor observation gauges. Rare targets still need manual observation.",
 		"branch": "network", "prerequisites": ["multi_target_analysis"],
 		"hidden_until": ["multi_target_analysis"], "effect_type": "automation", "effect_notes": {"common_rate": 0.29},
 		"major": true
 	},
 	{
 		"id": "observatory_network", "name": "Observatory Network", "icon": "✧", "cost": 3500,
-		"description": "Links the array and previews shower entry areas. Adds a second steerable dish and raises automatic support from one target to two.",
+		"description": "Movable dishes: 1 → 2. Automatic support: 1 → 2 targets. Adds meteor-shower entry forecasts.",
 		"branch": "network", "prerequisites": ["automated_tracking"],
 		"hidden_until": ["automated_tracking"], "effect_type": "transformation", "effect_notes": {"assist_slots": 3, "shower_preview": true},
 		"major": true
 	},
 	{
 		"id": "contact_ledger", "name": "Forecast Log", "icon": "≣", "cost": 180,
-		"description": "Combines incoming records to make expected entry positions more accurate without adding another sky label.",
+		"description": "Base maximum arrival-position error decreases by about 17%.",
 		"branch": "detection", "prerequisites": ["edge_detection"],
 		"hidden_until": ["edge_detection"], "effect_type": "transformation", "effect_notes": {"forecast_error_scale": 0.82},
 		"major": false
 	},
 	{
 		"id": "companion_resolution", "name": "Companion Resolution", "icon": "∴", "cost": 1000,
-		"description": "Resolves fragment companions as a single family and raises the value of recovered pieces.",
+		"description": "Data from fragment pieces +35%.",
 		"branch": "detection", "prerequisites": ["fragment_analysis"],
 		"hidden_until": ["fragment_analysis"], "effect_type": "transformation", "effect_notes": {"fragment_piece_value_multiplier": 1.35},
 		"major": true
 	},
 	{
-		"id": "polar_survey", "name": "Sky Sweep", "icon": "✣", "cost": 80,
-		"description": "Opens blank-sky sweeping: travel 460 px through quiet sky for a 30% chance to call a meteor at the cursor.",
+		"id": "polar_survey", "name": "Sky Sweep", "icon": "✣", "cost": 120,
+		"description": "Each sweep of about 40% screen width has a 30% summon chance. Keep holding to switch between empty-sky sweeping and target observation.",
 		"branch": "ursa_minor", "prerequisites": [],
 		"hidden_until": [], "effect_type": "unlock", "effect_notes": {"survey_distance": 460.0, "survey_probability": 0.30},
 		"major": true, "affects_pacing": false
 	},
 	{
 		"id": "sweep_gain", "name": "Sweep Gain", "icon": "⌁", "cost": 180,
-		"description": "Reduces the blank-sky travel needed for each summon roll from 460 px to 380 px.",
+		"description": "Sky Sweep distance per attempt decreases by about 17%.",
 		"branch": "ursa_minor", "prerequisites": ["polar_survey"],
 		"hidden_until": ["polar_survey"], "effect_type": "passive", "effect_notes": {"survey_distance": 380.0},
 		"major": false, "affects_pacing": false
 	},
 	{
 		"id": "faint_recovery", "name": "Faint Recovery", "icon": "◌", "cost": 400,
-		"description": "Raises each blank-sky summon chance from 30% to 42%.",
+		"description": "Sky Sweep success chance: 30% → 42%.",
 		"branch": "ursa_minor", "prerequisites": ["sweep_gain"],
 		"hidden_until": ["sweep_gain"], "effect_type": "passive", "effect_notes": {"survey_probability": 0.42},
 		"major": false, "affects_pacing": false
 	},
 	{
 		"id": "sustained_sweep", "name": "Sustained Sweep", "icon": "▧", "cost": 800,
-		"description": "Keeps partial sweep charge when the button is released, until the current observation round ends.",
+		"description": "Keeps Sky Sweep charge after releasing the button. Resets at round end.",
 		"branch": "ursa_minor", "prerequisites": ["faint_recovery"],
 		"hidden_until": ["faint_recovery"], "effect_type": "transformation", "effect_notes": {"persistent_survey_charge": true},
 		"major": true, "affects_pacing": false
 	},
 	{
 		"id": "deep_exposure", "name": "Deep Exposure", "icon": "+", "cost": 1500,
-		"description": "Raises each blank-sky summon chance from 42% to 55%.",
+		"description": "Sky Sweep success chance: 42% → 55%.",
 		"branch": "ursa_minor", "prerequisites": ["sustained_sweep"],
 		"hidden_until": ["sustained_sweep"], "effect_type": "passive", "effect_notes": {"survey_probability": 0.55},
 		"major": false, "affects_pacing": false
 	},
 	{
 		"id": "rapid_scan", "name": "Rapid Scan", "icon": "↻", "cost": 2500,
-		"description": "Reduces the cooldown after a successful summon from 1.5 seconds to 0.9 seconds.",
+		"description": "Sky Sweep cooldown after success: 1.5 → 0.9 seconds.",
 		"branch": "ursa_minor", "prerequisites": ["deep_exposure"],
 		"hidden_until": ["deep_exposure"], "effect_type": "passive", "effect_notes": {"survey_cooldown": 0.9},
 		"major": false, "affects_pacing": false
 	},
 	{
 		"id": "polar_cascade", "name": "Polar Cascade", "icon": "✦", "cost": 4000,
-		"description": "Calls two meteors from one successful blank-sky summon roll.",
+		"description": "Meteors per successful Sky Sweep: 1 → 2.",
 		"branch": "ursa_minor", "prerequisites": ["rapid_scan"],
 		"hidden_until": ["rapid_scan"], "effect_type": "transformation", "effect_notes": {"survey_spawn_count": 2},
 		"major": true, "affects_pacing": false
 	},
 	{
 		"id": "radiant_plotting", "name": "Radiant Cadence", "icon": "✺", "cost": 8000,
-		"description": "Permanently shortens regular arrival intervals by 6%.",
+		"description": "Regular meteor arrival interval −6%.",
 		"branch": "perseus", "prerequisites": [],
 		"hidden_until": [], "effect_type": "discovery", "effect_notes": {"spawn_interval_multiplier": 0.94},
 		"major": false
 	},
 	{
 		"id": "crowd_forecast", "name": "Crowd Forecast", "icon": "⌁", "cost": 12000,
-		"description": "Shows every incoming object 0.8 seconds earlier.",
+		"description": "Arrival warnings appear 0.8 seconds earlier.",
 		"branch": "perseus", "prerequisites": ["radiant_plotting"],
 		"hidden_until": ["radiant_plotting"], "effect_type": "unlock", "effect_notes": {"forecast_lead_bonus": 0.8},
 		"major": false
 	},
 	{
 		"id": "burst_windowing", "name": "Arrival Compression", "icon": "⋮", "cost": 18000,
-		"description": "Permanently compresses regular arrival intervals by 12%.",
+		"description": "Regular meteor arrival interval −12%.",
 		"branch": "perseus", "prerequisites": ["crowd_forecast"],
 		"hidden_until": ["crowd_forecast"], "effect_type": "transformation", "effect_notes": {"spawn_interval_multiplier": 0.88},
 		"major": false
 	},
 	{
 		"id": "debris_correlation", "name": "Debris Correlation", "icon": "⟡", "cost": 26000,
-		"description": "Raises Data recovered from every fragment and fragment piece by 20%.",
+		"description": "Data from splitting meteors and fragment pieces +20%.",
 		"branch": "perseus", "prerequisites": ["burst_windowing"],
 		"hidden_until": ["burst_windowing"], "effect_type": "transformation", "effect_notes": {"fragment_value_multiplier": 1.2},
 		"major": false
 	},
 	{
 		"id": "cascade_sampling", "name": "Cascade Sampling", "icon": "⠿", "cost": 120000,
-		"description": "Raises Sky Activity and allows one more regular target to remain in the sky at once.",
+		"description": "Sky Activity: simultaneous regular targets +1.",
 		"branch": "perseus", "prerequisites": ["debris_correlation"],
 		"hidden_until": ["debris_correlation"], "effect_type": "passive", "effect_notes": {"max_active": 1},
 		"effect_contract": {"kind": "max_active_delta", "value": 1, "scope": "regular_active_contacts"},
@@ -332,14 +332,14 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "adaptive_exposure_grid", "name": "Adaptive Exposure Grid", "icon": "▦", "cost": 24000,
-		"description": "Keeps every target visible 12% longer.",
+		"description": "Meteor and long-watch target visibility duration +12%.",
 		"branch": "perseus", "prerequisites": ["burst_windowing"],
 		"hidden_until": ["burst_windowing"], "effect_type": "passive", "effect_notes": {"lifetime_multiplier": 1.12},
 		"major": true
 	},
 	{
 		"id": "perseid_survey", "name": "Perseid Watch", "icon": "✹", "cost": 30000,
-		"description": "Raises Sky Activity and allows one more regular target in the sky. While at least three targets are present, every observation earns 18% more Data.",
+		"description": "With 3+ trackable targets present, meteor Data +18%. Sky Activity: simultaneous regular targets +1.",
 		"branch": "perseus", "prerequisites": ["adaptive_exposure_grid"],
 		"hidden_until": ["adaptive_exposure_grid"], "effect_type": "transformation", "effect_notes": {"max_active": 1, "crowd_value_multiplier": 1.18},
 		"effect_contract": {"kind": "max_active_delta", "value": 1, "scope": "regular_active_contacts"},
@@ -347,7 +347,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "filter_wheel", "name": "Calibration Framework", "icon": "◒", "cost": 10000,
-		"description": "Opens automatic band-calibration and binary-star research.",
+		"description": "Unlocks band upgrades and binary-star research. No direct observation bonus.",
 		"branch": "lyra", "prerequisites": [],
 		"hidden_until": [], "effect_type": "unlock", "effect_notes": {"opens_band_calibration": true},
 		"implementation_connection": "prerequisite_only",
@@ -355,7 +355,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "blue_band", "name": "Blue Band", "icon": "B", "cost": 18000,
-		"description": "Automatically calibrates blue-band targets, improving observation speed and value.",
+		"description": "Common meteors, major fireballs and satellites: observation speed +25%, Data +15%.",
 		"branch": "lyra", "prerequisites": ["filter_wheel"],
 		"hidden_until": ["filter_wheel"], "effect_type": "passive", "effect_notes": {"calibration": "blue"},
 		"implementation_connection": "dynamic_upgrade_id",
@@ -363,7 +363,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "amber_band", "name": "Amber Band", "icon": "A", "cost": 22000,
-		"description": "Automatically calibrates amber-band targets, improving observation speed and value.",
+		"description": "Splitting meteors, fireballs, comets and distant galaxies: observation speed +25%, Data +15%.",
 		"branch": "lyra", "prerequisites": ["blue_band"],
 		"hidden_until": ["blue_band"], "effect_type": "passive", "effect_notes": {"calibration": "amber"},
 		"implementation_connection": "dynamic_upgrade_id",
@@ -371,7 +371,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "violet_band", "name": "Violet Band", "icon": "V", "cost": 26000,
-		"description": "Automatically calibrates violet-band targets, improving observation speed and value.",
+		"description": "Fast meteors, fragment pieces, variable stars and binary stars: observation speed +25%, Data +15%.",
 		"branch": "lyra", "prerequisites": ["amber_band"],
 		"hidden_until": ["amber_band"], "effect_type": "passive", "effect_notes": {"calibration": "violet"},
 		"implementation_connection": "dynamic_upgrade_id",
@@ -379,133 +379,133 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "lyrid_spectrograph", "name": "Lyrid Spectrograph", "icon": "≋", "cost": 180000,
-		"description": "Strengthens every calibrated spectral band for faster observations and a decisive data bonus.",
+		"description": "All band bonuses: observation speed +25% → +45%, Data +15% → +35%.",
 		"branch": "lyra", "prerequisites": ["violet_band"],
 		"hidden_until": ["violet_band"], "effect_type": "transformation", "effect_notes": {"calibrated_speed": 1.45, "calibrated_value": 1.35},
 		"major": true
 	},
 	{
 		"id": "ephemeris_marks", "name": "Ephemeris Marks", "icon": "⊹", "cost": 16000,
-		"description": "Shows every incoming object three seconds before it appears.",
+		"description": "Shows arrival warnings at least 3 seconds before appearance.",
 		"branch": "andromeda", "prerequisites": [],
 		"hidden_until": [], "effect_type": "discovery", "effect_notes": {"deep_forecast": true},
 		"major": false
 	},
 	{
 		"id": "satellite_catalog", "name": "Satellite Catalog", "icon": "▰", "cost": 20000,
-		"description": "Adds slow artificial satellites that can appear during the current observation round.",
+		"description": "Unlocks slow-moving satellites for observation.",
 		"branch": "andromeda", "prerequisites": ["ephemeris_marks"],
 		"hidden_until": ["ephemeris_marks"], "effect_type": "discovery", "effect_notes": {"target_type": "satellite"},
 		"major": false
 	},
 	{
 		"id": "change_detection", "name": "Change Detection", "icon": "Δ", "cost": 24000,
-		"description": "Identifies Andromeda targets and predicts where they will appear within 8–22 px.",
+		"description": "Identifies satellites, variable stars, comets and distant galaxies. Maximum forecast error: about 2% of screen width.",
 		"branch": "andromeda", "prerequisites": ["satellite_catalog"],
 		"hidden_until": ["satellite_catalog"], "effect_type": "transformation", "effect_notes": {"deep_classification": true},
 		"major": false
 	},
 	{
 		"id": "variable_watchlist", "name": "Variable Watchlist", "icon": "≈", "cost": 220000,
-		"description": "Adds pulsing variable stars that must be completed within their current watch.",
+		"description": "Unlocks variable stars that brighten and dim. Observation must finish within the round.",
 		"branch": "andromeda", "prerequisites": ["change_detection"],
 		"hidden_until": ["change_detection"], "effect_type": "discovery", "effect_notes": {"target_type": "variable_star"},
 		"major": true
 	},
 	{
 		"id": "comet_solutions", "name": "Comet Tracking", "icon": "☄", "cost": 28000,
-		"description": "Adds slow comets that draw long trails and remain until the current observation round ends.",
+		"description": "Unlocks slow comets that remain until the round ends.",
 		"branch": "andromeda", "prerequisites": ["change_detection"],
 		"hidden_until": ["change_detection"], "effect_type": "discovery", "effect_notes": {"target_type": "comet"},
 		"major": true
 	},
 	{
 		"id": "andromeda_deep_survey", "name": "Andromeda Long Watch", "icon": "◎", "cost": 32000,
-		"description": "Raises observation speed by 25% and Data by 30% for satellites, variable stars, comets, and distant galaxies; binary stars are excluded.",
+		"description": "Satellites, variable stars, comets and distant galaxies: observation speed +25%, Data +30%.",
 		"branch": "andromeda", "prerequisites": ["comet_solutions"],
 		"hidden_until": ["comet_solutions"], "effect_type": "transformation", "effect_notes": {"deep_speed": 1.25, "deep_value": 1.3},
 		"major": true
 	},
 	{
 		"id": "echo_correlation_10", "name": "Echo Correlation I", "icon": "10%", "cost": 8000,
-		"description": "Sets a 10% manual-observation chance to open a Gemini echo once an echo channel is online.",
+		"description": "Manual success has a 10% chance to call extra meteors (echo). Requires Single Echo Channel.",
 		"branch": "gemini", "prerequisites": [],
 		"hidden_until": [], "effect_type": "transformation", "effect_notes": {"echo_probability": 0.10},
 		"major": false
 	},
 	{
 		"id": "echo_correlation_20", "name": "Echo Correlation II", "icon": "20%", "cost": 11000,
-		"description": "Raises the manual-observation echo chance from 10% to 20%.",
+		"description": "Echo chance after manual success: 10% → 20%. Requires an echo channel.",
 		"branch": "gemini", "prerequisites": ["echo_correlation_10"],
 		"hidden_until": ["echo_correlation_10"], "effect_type": "transformation", "effect_notes": {"echo_probability": 0.20},
 		"major": true
 	},
 	{
 		"id": "single_echo_channel", "name": "Single Echo Channel", "icon": "+1", "cost": 12000,
-		"description": "Opens one echo channel that launches one additional meteor when Echo Correlation reacts.",
+		"description": "Adds 1 meteor per echo. Requires Echo Correlation I.",
 		"branch": "gemini", "prerequisites": [],
 		"hidden_until": [], "effect_type": "unlock", "effect_notes": {"echo_count": 1},
 		"major": false
 	},
 	{
 		"id": "dual_echo_channel", "name": "Dual Echo Channels", "icon": "+2", "cost": 16000,
-		"description": "Raises each Gemini echo burst from one additional meteor to two.",
+		"description": "Meteors per echo: 1 → 2. Requires Echo Correlation research.",
 		"branch": "gemini", "prerequisites": ["single_echo_channel"],
 		"hidden_until": ["single_echo_channel"], "effect_type": "transformation", "effect_notes": {"echo_count": 2},
 		"major": false
 	},
 	{
 		"id": "triple_echo_array", "name": "Triple Echo Array", "icon": "+3", "cost": 20000,
-		"description": "Raises each Gemini echo burst from two additional meteors to three.",
+		"description": "Meteors per echo: 2 → 3. Requires Echo Correlation research.",
 		"branch": "gemini", "prerequisites": ["dual_echo_channel"],
 		"hidden_until": ["dual_echo_channel"], "effect_type": "transformation", "effect_notes": {"echo_count": 3},
 		"major": true
 	},
 	{
 		"id": "leonid_radiant", "name": "Leonid Radiant", "icon": "10", "cost": 16000,
-		"description": "Starts a seven-second, eight-meteor Leonid storm after 10 fresh manual observations.",
+		"description": "10 eligible manual observations trigger 8 meteors over 7 seconds. Major fireballs and echo/storm/Perseid/Sweep targets do not count.",
 		"branch": "leo", "prerequisites": [],
 		"hidden_until": [], "effect_type": "unlock", "effect_notes": {"manual_trigger": 10, "storm_count": 8},
 		"major": true
 	},
 	{
 		"id": "compressed_cadence", "name": "Compressed Cadence", "icon": "9", "cost": 20000,
-		"description": "A Leonid storm now charges after nine fresh manual observations; it still carries eight meteors.",
+		"description": "Storm trigger: 10 → 9 manual observations. Meteors per storm: 8.",
 		"branch": "leo", "prerequisites": ["leonid_radiant"],
 		"hidden_until": ["leonid_radiant"], "effect_type": "transformation", "effect_notes": {"manual_trigger": 9, "storm_count": 8},
 		"major": false
 	},
 	{
 		"id": "dense_stream", "name": "Dense Stream", "icon": "8", "cost": 24000,
-		"description": "Eight fresh manual observations now launch a 12-meteor Leonid storm.",
+		"description": "Storm trigger: 9 → 8 manual observations. Meteors per storm: 8 → 12.",
 		"branch": "leo", "prerequisites": ["compressed_cadence"],
 		"hidden_until": ["compressed_cadence"], "effect_type": "transformation", "effect_notes": {"manual_trigger": 8, "storm_count": 12},
 		"major": true
 	},
 	{
 		"id": "rapid_reacquisition", "name": "Rapid Reacquisition", "icon": "7", "cost": 28000,
-		"description": "Seven fresh manual observations now relaunch the 12-meteor Leonid storm.",
+		"description": "Storm trigger: 8 → 7 manual observations. Meteors per storm: 12.",
 		"branch": "leo", "prerequisites": ["dense_stream"],
 		"hidden_until": ["dense_stream"], "effect_type": "transformation", "effect_notes": {"manual_trigger": 7, "storm_count": 12},
 		"major": false
 	},
 	{
 		"id": "storm_front", "name": "Storm Front", "icon": "6", "cost": 32000,
-		"description": "Six fresh manual observations now launch a 16-meteor Leonid storm.",
+		"description": "Storm trigger: 7 → 6 manual observations. Meteors per storm: 12 → 16.",
 		"branch": "leo", "prerequisites": ["rapid_reacquisition"],
 		"hidden_until": ["rapid_reacquisition"], "effect_type": "transformation", "effect_notes": {"manual_trigger": 6, "storm_count": 16},
 		"major": true
 	},
 	{
 		"id": "leonid_storm", "name": "Storm Zenith", "icon": "5", "cost": 300000,
-		"description": "Five fresh manual observations now launch 20 meteors over seven seconds.",
+		"description": "Storm trigger: 6 → 5 manual observations. Meteors per storm: 16 → 20 over 7 seconds.",
 		"branch": "leo", "prerequisites": ["storm_front"],
 		"hidden_until": ["storm_front"], "effect_type": "transformation", "effect_notes": {"manual_trigger": 5, "storm_count": 20},
 		"major": true
 	},
 	{
 		"id": "perseid_outburst", "name": "Perseid Outburst", "icon": "✺", "cost": 50000,
-		"description": "Unlocks short Perseid bursts that arrive after a warning. Doubles all observation Data, including automatic completions. All eight ×2 systems combine to ×256.",
+		"description": "Unlocks Perseid bursts: 8 meteors over 3.4 seconds, after a warning. Observation Data ×2 (automatic included; Local Group excluded).",
 		"branch": "perseus", "prerequisites": ["perseid_survey"],
 		"hidden_until": ["perseid_survey"], "effect_type": "discovery",
 		"effect_notes": {"event": "perseid_outburst"},
@@ -515,7 +515,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "double_star_resolution", "name": "Double-Star Resolution", "icon": "⁚", "cost": 12000,
-		"description": "Adds binary stars, identifies them before they appear, and predicts where they will appear within 8–22 px. Doubles all observation Data, including automatic completions. All eight ×2 systems combine to ×256.",
+		"description": "Unlocks binary stars and their arrival forecasts. Maximum error: about 2% of screen width. Observation Data ×2 (automatic included; Local Group excluded).",
 		"branch": "lyra", "prerequisites": ["filter_wheel"],
 		"hidden_until": ["filter_wheel"], "effect_type": "discovery",
 		"effect_notes": {"target_type": "binary_star"},
@@ -525,7 +525,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "galaxy_imaging", "name": "Distant Galaxy Imaging", "icon": "M31", "cost": 90000,
-		"description": "Adds distant galaxies that need long observation but can be completed within the current round. Doubles all observation Data, including automatic completions. All eight ×2 systems combine to ×256.",
+		"description": "Unlocks distant galaxies as long-watch targets. Observation Data ×2 (automatic included; Local Group excluded).",
 		"branch": "andromeda", "prerequisites": ["andromeda_deep_survey"],
 		"hidden_until": ["andromeda_deep_survey"], "effect_type": "discovery",
 		"effect_notes": {"target_type": "galaxy"},
@@ -535,21 +535,21 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "split_radiant_model", "name": "Split Radiant Model", "icon": "⋔", "cost": 20000,
-		"description": "Alternates Leonid storm entries between two mirrored radiant sectors.",
+		"description": "Storm meteors alternate between 2 mirrored entry areas.",
 		"branch": "leo", "prerequisites": ["leonid_radiant"],
 		"hidden_until": ["leonid_radiant"], "effect_type": "transformation", "effect_notes": {"storm_radiants": 2},
 		"major": false, "affects_pacing": false
 	},
 	{
 		"id": "fragment_front", "name": "Fragment Front", "icon": "◆", "cost": 24000,
-		"description": "Leads each Leonid storm with a fragmenting meteor that announces the front's arrival.",
+		"description": "Each meteor storm starts with a splitting meteor.",
 		"branch": "leo", "prerequisites": ["split_radiant_model"],
 		"hidden_until": ["split_radiant_model"], "effect_type": "discovery", "effect_notes": {"storm_lead_type": "fragment"},
 		"major": true, "affects_pacing": false
 	},
 	{
 		"id": "fireball_tail", "name": "Fireball Tail", "icon": "★", "cost": 32000,
-		"description": "Closes each Leonid storm with a manual-only fireball after the regular stream. Doubles all observation Data, including automatic completions. All eight ×2 systems combine to ×256.",
+		"description": "Each meteor storm ends with a manual-only fireball. Observation Data ×2 (automatic included; Local Group excluded).",
 		"branch": "leo", "prerequisites": ["fragment_front"],
 		"hidden_until": ["fragment_front"], "effect_type": "discovery",
 		"effect_notes": {"storm_tail_type": "fireball"},
@@ -559,21 +559,21 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "echo_signature_lock", "name": "Echo Signature Lock", "icon": "≡", "cost": 14000,
-		"description": "Echoes copy the type of a freshly observed common, fast, fragmenting, or fireball target. Other targets still produce a random unlocked regular type.",
+		"description": "Echoes copy observed common/fast/splitting meteors or fireballs. Other types produce a random unlocked meteor.",
 		"branch": "gemini", "prerequisites": ["echo_correlation_20"],
 		"hidden_until": ["echo_correlation_20"], "effect_type": "transformation", "effect_notes": {"echo_signature_lock": true},
 		"major": false, "affects_pacing": false
 	},
 	{
 		"id": "mirror_echo_solution", "name": "Mirror Echo Solution", "icon": "⇋", "cost": 17000,
-		"description": "Reconstructs copied echoes from the mirrored side of the triggering target's path.",
+		"description": "Echo meteors appear from the opposite side on a mirrored path.",
 		"branch": "gemini", "prerequisites": ["echo_signature_lock"],
 		"hidden_until": ["echo_signature_lock"], "effect_type": "transformation", "effect_notes": {"mirror_echo_path": true},
 		"major": true, "affects_pacing": false
 	},
 	{
 		"id": "echo_delay_line", "name": "Echo Delay Line", "icon": "⋯", "cost": 22000,
-		"description": "Staggers each Gemini burst into a readable sequence that still finishes inside the current watch. Doubles all observation Data, including automatic completions. All eight ×2 systems combine to ×256.",
+		"description": "Echo meteors arrive 0.75 seconds apart. Observation Data ×2 (automatic included; Local Group excluded).",
 		"branch": "gemini", "prerequisites": ["mirror_echo_solution"],
 		"hidden_until": ["mirror_echo_solution"], "effect_type": "unlock",
 		"effect_notes": {"echo_delay_line": true},
@@ -583,70 +583,70 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "echo_deconfliction", "name": "Echo Spacing", "icon": "⌗", "cost": 340000,
-		"description": "Spreads each echo burst across separate parts of the sky so its targets do not overlap.",
+		"description": "Spreads echo meteors apart to prevent overlap.",
 		"branch": "gemini", "prerequisites": ["triple_echo_array"],
 		"hidden_until": ["triple_echo_array"], "effect_type": "automation", "effect_notes": {"echo_deconfliction": true},
 		"major": true, "affects_pacing": false
 	},
 	{
 		"id": "echo_beacon", "name": "Echo Beacon", "icon": "⌁", "cost": 380000,
-		"description": "Shows delayed echoes as ordinary incoming alerts so dishes can move into position early.",
+		"description": "Warns of echo arrival positions 1.25 seconds in advance.",
 		"branch": "gemini", "prerequisites": ["triple_echo_array"],
 		"hidden_until": ["triple_echo_array"], "effect_type": "unlock", "effect_notes": {"echo_forecast": true},
 		"major": true, "affects_pacing": false
 	},
 	{
 		"id": "momentum_acquisition", "name": "Streak Acquisition", "icon": "×4", "cost": 18000,
-		"description": "Observations completed within three seconds extend Observation Streak. Up to four observations affect this upgrade; each adds 2% observation speed and 1 px of tracking range.",
+		"description": "Observation Streak: 3-second limit, up to 4 bonus steps. Each step adds manual speed +2% and about 2.8% of the starting radius.",
 		"branch": "taurus", "prerequisites": [],
 		"hidden_until": [], "effect_type": "unlock", "effect_notes": {"combo_window": 3.0, "combo_cap": 4, "speed_per_stack": 0.02, "radius_per_stack": 1.0},
 		"major": false, "affects_pacing": false
 	},
 	{
 		"id": "wide_pursuit", "name": "Wide Pursuit", "icon": "+1.5", "cost": 420000,
-		"description": "Adds 0.5 px of tracking range per Observation Streak step on top of Expanded Sweep.",
+		"description": "Each Observation Streak step adds about 1.4% of the starting observation radius.",
 		"branch": "taurus", "prerequisites": ["momentum_acquisition"],
 		"hidden_until": ["momentum_acquisition"], "effect_type": "passive", "effect_notes": {"radius_bonus_per_stack": 0.5},
 		"major": false, "affects_pacing": false
 	},
 	{
 		"id": "rapid_focus", "name": "Rapid Focus", "icon": "+3%", "cost": 460000,
-		"description": "Adds 1% manual-observation speed per Observation Streak step on top of Faster Observation.",
+		"description": "Observation Streak: manual-speed bonus +1% per step, added to other speed bonuses.",
 		"branch": "taurus", "prerequisites": ["momentum_acquisition"],
 		"hidden_until": ["momentum_acquisition"], "effect_type": "passive", "effect_notes": {"speed_bonus_per_stack": 0.01},
 		"major": false, "affects_pacing": false
 	},
 	{
 		"id": "cadence_memory", "name": "Cadence Memory", "icon": "3.5s", "cost": 30000,
-		"description": "Extends the Observation Streak window from three seconds to 3.5 seconds and lets up to five observations affect its buffs.",
+		"description": "Observation Streak time limit: 3 → 3.5 seconds. Bonus steps: 4 → 5.",
 		"branch": "taurus", "prerequisites": ["momentum_acquisition"],
 		"hidden_until": ["momentum_acquisition"], "effect_type": "transformation", "effect_notes": {"combo_window": 3.5, "combo_cap": 5},
 		"major": false, "affects_pacing": false
 	},
 	{
 		"id": "expanded_sweep", "name": "Expanded Sweep", "icon": "+2", "cost": 45000,
-		"description": "Sets the central Observation Streak tracking gain to 2 px per step; Wide Pursuit adds 0.5 px on top.",
+		"description": "Observation Streak base radius bonus +100% (excluding Wide Pursuit).",
 		"branch": "taurus", "prerequisites": ["cadence_memory"],
 		"hidden_until": ["cadence_memory"], "effect_type": "passive", "effect_notes": {"radius_per_stack": 2.0},
 		"major": false, "affects_pacing": false
 	},
 	{
 		"id": "accelerated_analysis", "name": "Faster Observation", "icon": "+4%", "cost": 65000,
-		"description": "Sets the central Observation Streak manual-observation gain to 4% per step; Rapid Focus adds 1% on top.",
+		"description": "Observation Streak base manual-speed bonus: +2% → +4% per step. Rapid Focus adds +1%.",
 		"branch": "taurus", "prerequisites": ["expanded_sweep"],
 		"hidden_until": ["expanded_sweep"], "effect_type": "transformation", "effect_notes": {"speed_per_stack": 0.04},
 		"major": true, "affects_pacing": false
 	},
 	{
 		"id": "sustained_charge", "name": "Sustained Charge", "icon": "×7", "cost": 95000,
-		"description": "Extends the Observation Streak window to four seconds and lets up to seven observations affect its buffs.",
+		"description": "Observation Streak time limit: 3.5 → 4 seconds. Bonus steps: 5 → 7.",
 		"branch": "taurus", "prerequisites": ["accelerated_analysis"],
 		"hidden_until": ["accelerated_analysis"], "effect_type": "transformation", "effect_notes": {"combo_window": 4.0, "combo_cap": 7},
 		"major": true, "affects_pacing": false
 	},
 	{
 		"id": "taurus_full_gallop", "name": "Full Gallop", "icon": "×10", "cost": 140000,
-		"description": "Extends Observation Streak to five seconds; up to ten observations affect its buffs. With both flank upgrades, they grant up to 50% manual-observation speed and 25 px of tracking range. Doubles all observation Data, including automatic completions. All eight ×2 systems combine to ×256.",
+		"description": "Observation Streak time limit: 4 → 5 seconds. Bonus steps: 7 → 10. Observation Data ×2 (automatic included; Local Group excluded).",
 		"branch": "taurus", "prerequisites": ["sustained_charge"],
 		"hidden_until": ["sustained_charge"], "effect_type": "transformation",
 		"effect_notes": {"combo_window": 5.0, "combo_cap": 10},
@@ -656,7 +656,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "canis_opening", "name": "Canis Relay", "icon": "CMa", "cost": 620000,
-		"description": "Opens the Canis Major research chain without changing how often meteors currently appear.",
+		"description": "Unlocks Canis Major research. No immediate change to meteor arrival intervals.",
 		"branch": "canis_major", "prerequisites": [],
 		"hidden_until": [], "effect_type": "unlock", "effect_notes": {"canis_major_branch": true},
 		"implementation_connection": "prerequisite_only",
@@ -664,7 +664,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "canis_cadence_i", "name": "Swift Signal", "icon": "1.00s", "cost": 760000,
-		"description": "Raises Sky Activity and sets the shortest time between regular meteors to 1.00 seconds.",
+		"description": "Sky Activity: minimum regular meteor interval 1.00 seconds.",
 		"branch": "canis_major", "prerequisites": [],
 		"hidden_until": [], "effect_type": "transformation", "effect_notes": {"regular_spawn_interval_floor": 1.0},
 		"effect_contract": {"kind": "regular_spawn_interval_floor", "value": 1.0, "scope": "regular_meteor_arrivals"},
@@ -672,7 +672,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "canis_capacity_i", "name": "Long Leash", "icon": "+1", "cost": 900000,
-		"description": "Raises Sky Activity and allows one more regular target in the sky, raising the limit from eight to nine.",
+		"description": "Sky Activity: simultaneous regular targets +1.",
 		"branch": "canis_major", "prerequisites": [],
 		"hidden_until": [], "effect_type": "passive", "effect_notes": {"max_active_delta": 1},
 		"effect_contract": {"kind": "max_active_delta", "value": 1, "scope": "regular_active_contacts"},
@@ -680,7 +680,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "canis_cadence_ii", "name": "Running Cadence", "icon": "0.85s", "cost": 1150000,
-		"description": "Raises Sky Activity and sets the shortest time between regular meteors to 0.85 seconds.",
+		"description": "Sky Activity: minimum regular meteor interval 0.85 seconds.",
 		"branch": "canis_major", "prerequisites": ["canis_capacity_i"],
 		"hidden_until": ["canis_capacity_i"], "effect_type": "transformation", "effect_notes": {"regular_spawn_interval_floor": 0.85},
 		"effect_contract": {"kind": "regular_spawn_interval_floor", "value": 0.85, "scope": "regular_meteor_arrivals"},
@@ -688,7 +688,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "canis_capacity_ii", "name": "Twin Watch", "icon": "+1", "cost": 1400000,
-		"description": "Raises Sky Activity and allows one more regular target in the sky, raising the limit from nine to ten.",
+		"description": "Sky Activity: simultaneous regular targets +1.",
 		"branch": "canis_major", "prerequisites": [],
 		"hidden_until": [], "effect_type": "passive", "effect_notes": {"max_active_delta": 1},
 		"effect_contract": {"kind": "max_active_delta", "value": 1, "scope": "regular_active_contacts"},
@@ -696,7 +696,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "canis_cadence_iii", "name": "White-Star Tempo", "icon": "0.70s", "cost": 1750000,
-		"description": "Raises Sky Activity and sets the shortest time between regular meteors to 0.70 seconds.",
+		"description": "Sky Activity: minimum regular meteor interval 0.70 seconds.",
 		"branch": "canis_major", "prerequisites": ["canis_opening", "canis_cadence_ii"],
 		"hidden_until": ["canis_opening", "canis_cadence_ii"], "effect_type": "transformation", "effect_notes": {"regular_spawn_interval_floor": 0.70},
 		"effect_contract": {"kind": "regular_spawn_interval_floor", "value": 0.70, "scope": "regular_meteor_arrivals"},
@@ -704,7 +704,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "canis_capacity_iii", "name": "Pack Array", "icon": "+2", "cost": 2100000,
-		"description": "Raises Sky Activity and allows two more regular targets in the sky, raising the limit from ten to twelve.",
+		"description": "Sky Activity: simultaneous regular targets +2.",
 		"branch": "canis_major", "prerequisites": ["canis_cadence_iii"],
 		"hidden_until": ["canis_cadence_iii"], "effect_type": "passive", "effect_notes": {"max_active_delta": 2},
 		"effect_contract": {"kind": "max_active_delta", "value": 2, "scope": "regular_active_contacts"},
@@ -712,14 +712,14 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "sirius_fireball", "name": "Sirius Bloom", "icon": "★", "cost": 10000000,
-		"description": "One Major Fireball may appear after a warning in observation rounds with enough time left.",
+		"description": "Unlocks a major fireball, up to 1 per round with enough time left. Manual observation required.",
 		"branch": "canis_major", "prerequisites": ["canis_capacity_ii", "canis_cadence_i", "canis_capacity_iii"],
 		"hidden_until": ["canis_capacity_ii", "canis_cadence_i", "canis_capacity_iii"], "effect_type": "unlock", "effect_notes": {"major_fireball_per_round": 1},
 		"major": true, "affects_pacing": false
 	},
 	{
 		"id": "draco_synthesis", "name": "All-Sky Synthesis", "icon": "×4", "cost": 2000000,
-		"description": "Multiplies all observation Data by 4, including automatic completions.",
+		"description": "Observation Data ×4 (automatic included; Local Group excluded).",
 		"branch": "draco", "prerequisites": [],
 		"hidden_until": [{"type": "other_constellations_complete", "excluded_branch": "draco"}],
 		"effect_type": "transformation", "effect_notes": {"culmination_gate": true},
@@ -729,7 +729,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "draco_cadence", "name": "Circumpolar Cadence", "icon": "0.45s", "cost": 8000000,
-		"description": "Raises Sky Activity and sets the shortest time between regular meteors to 0.45 seconds.",
+		"description": "Sky Activity: minimum regular meteor interval 0.45 seconds.",
 		"branch": "draco", "prerequisites": ["draco_synthesis"],
 		"hidden_until": ["draco_synthesis"], "effect_type": "transformation", "effect_notes": {"regular_spawn_interval_floor": 0.45},
 		"effect_contract": {"kind": "regular_spawn_interval_floor", "value": 0.45, "scope": "regular_meteor_arrivals"},
@@ -737,7 +737,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "draco_capacity", "name": "Dragon-Spine Array", "icon": "+6", "cost": 30000000,
-		"description": "Raises Sky Activity and allows six more regular targets in the sky, raising the limit from twelve to eighteen.",
+		"description": "Sky Activity: simultaneous regular targets +6.",
 		"branch": "draco", "prerequisites": ["draco_cadence"],
 		"hidden_until": ["draco_cadence"], "effect_type": "transformation", "effect_notes": {"max_active_delta": 6},
 		"effect_contract": {"kind": "max_active_delta", "value": 6, "scope": "regular_active_contacts"},
@@ -745,35 +745,35 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "draco_sweep", "name": "Coiled-Sky Sweep", "icon": "4×", "cost": 40000000,
-		"description": "Every 190 px of blank-sky sweeping now calls four meteors, always succeeds, and can trigger again after 0.45 seconds.",
+		"description": "Sky Sweep: distance −50%, success 100%, 4 meteors, 0.45-second cooldown.",
 		"branch": "draco", "prerequisites": ["draco_capacity"],
 		"hidden_until": ["draco_capacity"], "effect_type": "transformation", "effect_notes": {"survey_distance": 190.0, "survey_probability": 1.0, "survey_count": 4, "survey_cooldown": 0.45},
 		"major": true, "affects_pacing": false
 	},
 	{
 		"id": "draco_echo", "name": "Polar Resonance", "icon": "6×", "cost": 55000000,
-		"description": "Raises manual-observation echo chance to 65% and launches six echoes at once.",
+		"description": "Echo chance: 20% → 65%. Meteors per echo: 3 → 6.",
 		"branch": "draco", "prerequisites": ["draco_sweep"],
 		"hidden_until": ["draco_sweep"], "effect_type": "transformation", "effect_notes": {"echo_probability": 0.65, "echo_count": 6},
 		"major": true, "affects_pacing": false
 	},
 	{
 		"id": "draco_storm", "name": "Radiant Convergence", "icon": "30", "cost": 70000000,
-		"description": "Arms a 30-object Leonid storm after two eligible manual observations.",
+		"description": "Storm trigger: 5 → 2 manual observations. Meteors per storm: 20 → 30.",
 		"branch": "draco", "prerequisites": ["draco_echo"],
 		"hidden_until": ["draco_echo"], "effect_type": "transformation", "effect_notes": {"manual_trigger": 2, "storm_count": 30},
 		"major": true, "affects_pacing": false
 	},
 	{
 		"id": "draco_array", "name": "Total Array", "icon": "4+4", "cost": 70000000,
-		"description": "Expands the observatory to four steerable dishes that can automatically support four targets.",
+		"description": "Movable dishes: 2 → 4. Automatic support: 2 → 4 targets.",
 		"branch": "draco", "prerequisites": ["draco_storm"],
 		"hidden_until": ["draco_storm"], "effect_type": "transformation", "effect_notes": {"dish_count": 4, "support_lanes": 4},
 		"major": true, "affects_pacing": false
 	},
 	{
 		"id": "draco_apotheosis", "name": "Dragon's Eye", "icon": "×8", "cost": 85000000,
-		"description": "Multiplies all observation Data by 8, including automatic completions.",
+		"description": "Observation Data ×8 (automatic included; Local Group excluded).",
 		"branch": "draco", "prerequisites": ["draco_array"],
 		"hidden_until": ["draco_array"], "effect_type": "transformation", "effect_notes": {"culmination_multiplier": true},
 		"runtime_parameters": {"observation_value_multiplier": 8.0},
@@ -782,14 +782,14 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "galactic_reference_frame", "name": "Galaxy Map", "icon": "MW", "cost": 400000000,
-		"description": "Pulls the completed research chart back to galactic scale and reveals the Local Group route.",
+		"description": "Opens the galaxy map and Local Group research.",
 		"branch": "draco", "prerequisites": ["draco_apotheosis"],
 		"hidden_until": ["draco_apotheosis"], "effect_type": "unlock", "effect_notes": {"galactic_survey": true},
 		"major": true, "affects_pacing": false
 	},
 	{
 		"id": "lmc_transit_watch", "name": "LMC Distant Watch", "icon": "LMC", "cost": 550000000,
-		"description": "Opens the first distant-galaxy target. Observe it with the same aim-and-hold gesture used everywhere else.",
+		"description": "Unlocks 1 distant target, observed with aim-and-hold tracking.",
 		"branch": "local_group", "prerequisites": ["galactic_reference_frame"],
 		"hidden_until": ["galactic_reference_frame"], "effect_type": "unlock",
 		"effect_notes": {"distant_targets": 1, "active_targets": 1},
@@ -798,7 +798,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "smc_reference_baseline", "name": "SMC Faint Watch", "icon": "SMC", "cost": 800000000,
-		"description": "Adds a fainter distant target that takes 35% longer to observe, without adding a new interaction rule.",
+		"description": "Unlocks a faint target: observation takes 35% longer and gives 15% more Data than the first type.",
 		"branch": "local_group", "prerequisites": ["lmc_transit_watch"],
 		"hidden_until": ["lmc_transit_watch"], "effect_type": "unlock",
 		"effect_contract": {"kind": "galactic_observation_profile", "value": 1.35, "scope": "faint_aim_and_hold"},
@@ -806,70 +806,70 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "m31_hidden_decoy_survey", "name": "M31 Drift Watch", "icon": "M31", "cost": 1100000000,
-		"description": "Adds a large target that drifts slowly across the sky and is observed by ordinary tracking.",
+		"description": "Unlocks a large, slowly drifting target for manual tracking.",
 		"branch": "local_group", "prerequisites": ["smc_reference_baseline"], "hidden_until": ["smc_reference_baseline"],
 		"effect_type": "unlock", "effect_contract": {"kind": "galactic_observation_profile", "value": 30.0, "scope": "drifting_aim_and_hold"},
 		"major": true, "affects_pacing": false
 	},
 	{
 		"id": "m33_transit_network", "name": "M33 Twin Watch", "icon": "M33", "cost": 3200000000,
-		"description": "Lets two ordinary distant targets appear together and widens the field by 10.25%.",
+		"description": "Simultaneous distant targets: 1 → 2. Visible field +10.25%.",
 		"branch": "local_group", "prerequisites": ["m31_hidden_decoy_survey"], "hidden_until": ["m31_hidden_decoy_survey"],
 		"effect_type": "transformation", "effect_contract": {"kind": "galactic_chapter_milestone", "value": 1.1025, "max_host_stars": 2, "max_active_transits": 2, "scope": "visible_world+host_star_layer"},
 		"major": true, "affects_pacing": false
 	},
 	{
 		"id": "ngc6822_supernova_watch", "name": "NGC 6822 Supernova Watch", "icon": "SN-I", "cost": 3600000000,
-		"description": "Introduces a persistent supernova with peak, fade, and recoverable remnant phases.",
+		"description": "Unlocks a supernova. Peak-brightness reward ×1.5; missed peaks leave an observable remnant.",
 		"branch": "local_group", "prerequisites": ["m33_transit_network"], "hidden_until": ["m33_transit_network"],
 		"effect_type": "unlock", "effect_contract": {"kind": "supernova_watch", "value": 1.0, "scope": "galactic_phenomena_layer"},
 		"major": true, "affects_pacing": false
 	},
 	{
 		"id": "ic10_supernova_overlap", "name": "IC 10 Supernova Overlap", "icon": "SN-II", "cost": 4000000000,
-		"description": "Keeps two supernova light curves active at once for a timing choice.",
+		"description": "Allows two supernovae to appear at once.",
 		"branch": "local_group", "prerequisites": ["ngc6822_supernova_watch"], "hidden_until": ["ngc6822_supernova_watch"],
 		"effect_type": "unlock", "effect_contract": {"kind": "supernova_overlap", "value": 2.0, "scope": "galactic_phenomena_layer"},
 		"major": true, "affects_pacing": false
 	},
 	{
 		"id": "ic1613_supernova_ephemeris", "name": "IC 1613 Supernova Ephemeris", "icon": "SN-III", "cost": 4300000000,
-		"description": "Shows the remaining phase around active supernovae and widens the field by 10.25%.",
+		"description": "Displays supernova phase time remaining. Visible field +10.25%.",
 		"branch": "local_group", "prerequisites": ["ic10_supernova_overlap"], "hidden_until": ["ic10_supernova_overlap"],
 		"effect_type": "transformation", "effect_contract": {"kind": "galactic_chapter_milestone", "value": 1.1025, "scope": "visible_world+supernova_ephemeris"},
 		"major": true, "affects_pacing": false
 	},
 	{
 		"id": "wlm_einstein_ring", "name": "WLM Einstein Ring", "icon": "ER-I", "cost": 4600000000,
-		"description": "Adds a full lens ring that completes through the same aim-and-hold observation used for every target.",
+		"description": "Unlocks a full lens ring. Aim-and-hold on its bright edge to observe.",
 		"branch": "local_group", "prerequisites": ["ic1613_supernova_ephemeris"], "hidden_until": ["ic1613_supernova_ephemeris"],
 		"effect_type": "unlock", "effect_contract": {"kind": "lens_observation", "value": 1.0, "scope": "aim_and_hold"},
 		"major": true, "affects_pacing": false
 	},
 	{
 		"id": "pegasus_partial_lens", "name": "Pegasus Partial Lens", "icon": "ER-II", "cost": 4600000000,
-		"description": "Adds a partial lens ring with a smaller visible contact area but the same aim-and-hold observation.",
+		"description": "Unlocks a partial lens ring. Aim-and-hold on its bright arc to observe.",
 		"branch": "local_group", "prerequisites": ["wlm_einstein_ring"], "hidden_until": ["wlm_einstein_ring"],
 		"effect_type": "transformation", "effect_contract": {"kind": "lens_observation", "value": 0.62, "scope": "aim_and_hold"},
 		"major": true, "affects_pacing": false
 	},
 	{
 		"id": "phoenix_lensed_meteors", "name": "Phoenix Lensed Paths", "icon": "LENS", "cost": 4600000000,
-		"description": "Bends meteor paths as a visual tracking variation without changing observation or automation rules, and widens the field by 10.25%.",
+		"description": "Meteors curve through gravitational lenses. Visible field +10.25%.",
 		"branch": "local_group", "prerequisites": ["pegasus_partial_lens"], "hidden_until": ["pegasus_partial_lens"],
 		"effect_type": "transformation", "effect_contract": {"kind": "galactic_chapter_milestone", "value": 1.1025, "scope": "visible_world+lensed_meteor_field"},
 		"major": true, "affects_pacing": false
 	},
 	{
 		"id": "leo_a_lensed_supernova", "name": "Leo A Lensed Supernova", "icon": "LSN", "cost": 4600000000,
-		"description": "Combines supernova timing with a partial lens shape while keeping the same aim-and-hold observation.",
+		"description": "Unlocks a lensed supernova. Observe its bright arc; peak-brightness reward ×1.5.",
 		"branch": "local_group", "prerequisites": ["phoenix_lensed_meteors"], "hidden_until": ["phoenix_lensed_meteors"],
 		"effect_type": "transformation", "effect_contract": {"kind": "lensed_supernova", "value": 1.0, "scope": "galactic_phenomena_layer"},
 		"major": true, "affects_pacing": false
 	},
 	{
 		"id": "aquarius_local_group_record", "name": "Local Group Record", "icon": "REC", "cost": 4600000000,
-		"description": "Completes the four-chapter record and widens the field by the final 10.25% to its ceiling.",
+		"description": "Completes Local Group research. Visible field +10.25% (final expansion).",
 		"branch": "local_group", "prerequisites": ["leo_a_lensed_supernova"], "hidden_until": ["leo_a_lensed_supernova"],
 		"effect_type": "capstone", "effect_contract": {"kind": "galactic_chapter_milestone", "value": 1.1025, "scope": "visible_world+local_group_record"},
 		"major": true, "affects_pacing": false

@@ -392,7 +392,8 @@ func _run_round(duration: float) -> void:
 		if not manual_target_used:
 			_process_survey_gap(delta)
 		else:
-			game.survey.set_scanning(false, survey_driver_cursor)
+			# Model the same continuously held gesture as the observation controller.
+			game.survey.set_scanning(false, survey_driver_cursor, true)
 		round_elapsed += delta
 		active_elapsed += delta
 		_record_success_checkpoints()

@@ -25,6 +25,12 @@ says so in its own header. Fun decisions are made by playing a build. See
 The correctness gates are different: they are mechanical checks, not feel
 measurements.
 
+The research contract gate also checks the opening purchase budget through real
+purchase sequences: 50/75/100 Data, both with and without the tutorial lens.
+It verifies the two affordable starting choices and the one-to-two-purchase
+limit, without asserting one preferred purchase order. This is a fixed-bank
+check; it does not predict a person's first-round income or learning speed.
+
 ## Routine validation
 
 From the repository root, run all twelve fast gates and refresh the Windows
@@ -86,10 +92,16 @@ reuse these services; compatibility aliases remain for older local drivers.
 
 Runs one save-free, human-driven 60-second window with only Sky Sweep added
 to the opening sky. Track meteors and sweep empty sky with the same left button;
-successful distance rolls call a meteor at the cursor. Release before changing
-intent. It prints `SURVEY_SLICE_READY` and
+successful distance rolls call a meteor at the cursor. Keep holding to alternate
+between tracking and sweeping; charge survives mode changes. It prints `SURVEY_SLICE_READY` and
 one `SURVEY_SLICE_RESULT` line, but does not pass or fail because it measures
 feel rather than correctness.
+
+The smoke gate separately checks held scanning-to-tracking and return-to-scanning,
+primary-target priority, summoned-target pickup, no double charge on completion,
+and release/reset behavior while scanning is suspended. It includes synchronous
+non-meteor completions and queued-for-deletion targets. These checks establish
+input behavior, not a human verdict on comfort.
 
 ```powershell
 & $godot --path . --script res://tests/survey_slice.gd
@@ -445,6 +457,12 @@ point and inside the production tracking radius. Predictive dishes, survey
 summons, purchased Lyra calibration, Taurus combo speed, Gemini echoes, Leo
 storms, immediate-pay hosts, supernova clocks, and lens contact shapes all run
 through their production controllers.
+
+The survey-gap driver preserves partial charge when manual work resumes,
+matching the continuous-hold transition introduced on 2026-09-05. It invokes
+target observation directly, so it does not test the input state machine or
+represent a human assessment of the new gesture. Earlier measurements used
+release-on-transition charge behavior and remain historical samples.
 
 That `107/107 + 5/5` stop is the content/economy measurement boundary, not a
 simulation of the shipped catalogue-ending presentation. The driver stops as

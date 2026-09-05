@@ -503,33 +503,33 @@ func _run() -> void:
 	_check(TranslationServer.translate("PHASE_SUMMARY_SYSTEMS_CHANGED") % 130.0 == "분당 데이터 130.0  •  시스템 변경  •  다음 회차부터 비교", "Korean mixed-build summary explains the data rate and next comparison")
 	_check(
 		game.upgrade_tree._upgrade_description(predictive_control_definition)
-		== "추적 가능한 천체가 들어오면 유휴 접시를 예상 위치로 자동 이동하며 우클릭 수동 배치가 항상 우선합니다.",
+		== "쉬고 있는 접시를 예상 출현 위치로 자동 이동합니다. 우클릭 배치가 우선합니다.",
 		"Korean Predictive Dish Control description explains automatic movement"
 	)
 	_check(
 		game.upgrade_tree._upgrade_description(multi_target_definition)
-		== "수동 관측 범위 안의 모든 유성을 함께 관측합니다. 하늘 활동을 높이고 하늘에 동시에 유지되는 일반 표적의 상한을 1개 늘립니다. 표적 하나를 자동 지원하며 파편 추적을 설치했다면 파편 조각도 지원합니다.",
+		== "커서 원 안의 유성을 동시 관측합니다. 자동 지원 1개(파편 추적 설치 시 조각 포함). 하늘 활동: 일반 표적 동시 출현 상한 +1개.",
 		"Korean Multi-Target Tracking description names capacity and both support effects"
 	)
 	_check(
 		game.upgrade_tree._upgrade_description(observatory_definition)
-		== "전체 관측망을 연결하고 유성우 진입 구역을 예측합니다. 직접 조준하는 두 번째 접시를 추가하고 동시에 자동 지원하는 표적을 1개에서 2개로 늘립니다.",
+		== "접시 1 → 2대, 자동 지원 표적 1 → 2개. 유성우 진입 구역도 예고합니다.",
 		"Korean Observatory Network description names the second dish and two automatically supported targets"
 	)
 	_check(
 		game.upgrade_tree._upgrade_description(triple_echo_definition)
-		== "쌍둥이자리 공명으로 진입하는 추가 유성을 2개에서 3개로 늘립니다.",
+		== "공명 발생 시 추가 유성 2 → 3개. 공명 상관 분석 연구도 필요합니다.",
 		"Korean Triple Echo Array description names the three-meteor burst"
 	)
 	_check(
 		game.upgrade_tree._upgrade_description(leonid_storm_definition)
-		== "이제 새로운 유성을 수동으로 5회 관측하면 7초 동안 유성 20개가 진입합니다.",
+		== "폭풍 발동에 필요한 수동 관측 6 → 5회. 7초간 발생 유성 16 → 20개.",
 		"Korean Leonid Storm description names the five-observation twenty-meteor capstone"
 	)
 	for multiplier_id in global_x2_ids:
 		var multiplier_definition: Dictionary = balance.upgrade_definition(multiplier_id)
 		var multiplier_description: String = game.upgrade_tree._upgrade_description(multiplier_definition)
-		_check("2배" in multiplier_description and "×256" in multiplier_description, "%s exposes its global multiplier in Korean" % multiplier_id)
+		_check("데이터 2배" in multiplier_description and "자동 포함" in multiplier_description and "국부은하군 제외" in multiplier_description, "%s exposes its global multiplier in Korean" % multiplier_id)
 	_check(TranslationServer.translate("UPGRADE_ERROR_NEED_DATA") % 12 == "데이터가 12개 더 필요합니다", "Korean shortfall text is a complete sentence")
 	_check(TranslationServer.translate("TREE_NEED_MORE") % [8, 12] == "◇  데이터 8 / 12", "Korean tree affordability text shows current and required Data")
 	_check(TranslationServer.translate("SAVE_RESET_PROMPT") % 2 == "슬롯 2의 모든 진행 상황을 삭제합니다. 이 작업은 되돌릴 수 없습니다.", "Korean reset warning clearly explains permanent deletion")
@@ -562,27 +562,27 @@ func _run() -> void:
 	_check(TranslationServer.translate("UPGRADE_MOMENTUM_ACQUISITION_NAME") == "Streak Acquisition", "the Taurus root keeps a distinct English name without reintroducing Momentum")
 	_check(
 		game.upgrade_tree._upgrade_description(predictive_control_definition)
-		== "Automatically moves an idle dish toward trackable incoming objects; manual right-click placement still takes priority.",
+		== "Automatically moves idle dishes to predicted arrival positions. Right-click placement takes priority.",
 		"English Predictive Dish Control description explains automatic movement"
 	)
 	_check(
 		game.upgrade_tree._upgrade_description(multi_target_definition)
-		== "Tracks every meteor inside the manual observation area together. Raises Sky Activity and allows one more regular target in the sky. Automatically supports one target; with Fragment Tracking, it can also help with fragment pieces.",
+		== "Observes all meteors inside the cursor ring together. Automatic support: 1 target, including fragments after Fragment Tracking. Sky Activity: simultaneous regular targets +1.",
 		"English Multi-Target Tracking description names capacity and both support effects"
 	)
 	_check(
 		game.upgrade_tree._upgrade_description(observatory_definition)
-		== "Links the array and previews shower entry areas. Adds a second steerable dish and raises automatic support from one target to two.",
+		== "Movable dishes: 1 → 2. Automatic support: 1 → 2 targets. Adds meteor-shower entry forecasts.",
 		"English Observatory Network description names the second dish and two automatically supported targets"
 	)
 	_check(
 		game.upgrade_tree._upgrade_description(triple_echo_definition)
-		== "Raises each Gemini echo burst from two additional meteors to three.",
+		== "Meteors per echo: 2 → 3. Requires Echo Correlation research.",
 		"English Triple Echo Array description names the three-meteor burst"
 	)
 	_check(
 		game.upgrade_tree._upgrade_description(leonid_storm_definition)
-		== "Five fresh manual observations now launch 20 meteors over seven seconds.",
+		== "Storm trigger: 6 → 5 manual observations. Meteors per storm: 16 → 20 over 7 seconds.",
 		"English Leonid Storm description names the five-observation twenty-meteor capstone"
 	)
 	for definition_variant in balance.UPGRADE_NODES:
@@ -598,7 +598,7 @@ func _run() -> void:
 	for multiplier_id in global_x2_ids:
 		var multiplier_definition: Dictionary = balance.upgrade_definition(multiplier_id)
 		var multiplier_description: String = game.upgrade_tree._upgrade_description(multiplier_definition)
-		_check("Doubles all observation Data" in multiplier_description and "×256" in multiplier_description, "%s exposes its global multiplier in English" % multiplier_id)
+		_check("Observation Data ×2" in multiplier_description and "automatic included" in multiplier_description and "Local Group excluded" in multiplier_description, "%s exposes its global multiplier in English" % multiplier_id)
 	_check(
 		String(secondary_camera_definition.description)
 		== game.upgrade_tree._upgrade_description(secondary_camera_definition),
@@ -3152,8 +3152,7 @@ func _run_feedback_regressions(packed: PackedScene, global_x2_ids: Array) -> voi
 
 func _run_survey_regressions(packed: PackedScene, balance) -> void:
 	var survey_game = packed.instantiate()
-	survey_game.startup_slot_prompt_enabled = false
-	survey_game.get_node("Tutorial").auto_start_enabled = false
+	Fixtures.configure_before_ready(survey_game)
 	root.add_child(survey_game)
 	await process_frame
 	await process_frame
@@ -3198,17 +3197,73 @@ func _run_survey_regressions(packed: PackedScene, balance) -> void:
 	observer.previous_cursor_position = Vector2(180.0, 160.0)
 	observer.cursor_position = Vector2(200.0, 160.0)
 	observer._update_survey_interaction(0.016)
-	_check(observer.interaction_mode == observer.InteractionMode.SCANNING and survey.scanning, "fourteen pixels of blank drag latches the survey gesture")
+	_check(observer.interaction_mode == observer.InteractionMode.SCANNING and survey.scanning, "blank drag enters scanning without a new press")
 	var crossed_target = survey_game.spawner.spawn_meteor("common", Vector2(220.0, 160.0), Vector2.ZERO, 20.0)
 	observer.previous_cursor_position = Vector2(200.0, 160.0)
 	observer.cursor_position = Vector2(240.0, 160.0)
 	var charge_before_crossing: float = survey.charge_distance
 	observer._update_survey_interaction(0.016)
-	_check(observer.interaction_mode == observer.InteractionMode.SCANNING and observer.selected_meteor == null and crossed_target.can_be_tracked(), "a latched survey stroke crosses a meteor without being hijacked into tracking")
-	_check(is_equal_approx(survey.charge_distance, charge_before_crossing), "a nearby live meteor pauses sweep charge while scanning stays latched")
+	_check(observer.interaction_mode == observer.InteractionMode.TRACKING and observer.selected_meteor == crossed_target and crossed_target.get_progress() > 0.0, "a held survey gesture automatically begins observing a crossed target")
+	_check(not survey.scanning and charge_before_crossing > 0.0 and is_equal_approx(survey.charge_distance, charge_before_crossing), "tracking suspends scanning and preserves held-button charge")
+	var closer_target = survey_game.spawner.spawn_meteor("common", observer.cursor_position, Vector2.ZERO, 20.0)
+	survey_game.progression.purchased_nodes["multi_target_analysis"] = true
+	observer.previous_cursor_position = observer.cursor_position
+	observer._update_survey_interaction(0.016)
+	_check(observer.selected_meteor == crossed_target and closer_target.get_progress() > 0.0, "multi-target support observes a closer arrival without stealing the existing primary target")
+	survey_game.progression.purchased_nodes.erase("multi_target_analysis")
+	observer.previous_cursor_position = Vector2(600.0, 420.0)
+	observer.cursor_position = observer.previous_cursor_position
+	observer._update_survey_interaction(observer.TRACKING_GRACE_SECONDS + 0.01)
+	_check(observer.selected_meteor == null and is_equal_approx(survey.charge_distance, charge_before_crossing), "expired tracking grace releases the target without counting that frame as sweep travel")
+	observer.previous_cursor_position = observer.cursor_position
+	observer.cursor_position += Vector2(10.0, 0.0)
+	observer._update_survey_interaction(0.016)
+	_check(observer.interaction_mode == observer.InteractionMode.PENDING and is_equal_approx(survey.charge_distance, charge_before_crossing), "small movement after tracking keeps pending charge without jittering into scanning")
+	observer.previous_cursor_position = observer.cursor_position
+	observer.cursor_position += Vector2(20.0, 0.0)
+	observer._update_survey_interaction(0.016)
+	_check(observer.interaction_mode == observer.InteractionMode.SCANNING and survey.charge_distance > charge_before_crossing, "held movement in empty sky resumes scanning and continues the saved charge")
+	var resumed_charge: float = survey.charge_distance
+	observer.previous_cursor_position = crossed_target.global_position
+	observer.cursor_position = observer.previous_cursor_position
+	observer._update_survey_interaction(0.016)
+	_check(observer.interaction_mode == observer.InteractionMode.TRACKING and not survey.scanning and is_equal_approx(survey.charge_distance, resumed_charge), "the same held gesture can switch back to tracking again")
 	observer._clear_interaction_mode()
-	_check(observer.interaction_mode == observer.InteractionMode.NONE and not survey.scanning and is_zero_approx(survey.charge_distance), "releasing the base survey gesture clears its latch and partial charge")
+	_check(observer.interaction_mode == observer.InteractionMode.NONE and not survey.scanning and is_zero_approx(survey.charge_distance), "actual release clears base charge even when tracking already suspended scanning")
 	survey_game.spawner.reset()
+	observer.reset()
+	var finishing_target = survey_game.spawner.spawn_meteor("common", Vector2(440.0, 260.0), Vector2.ZERO, 20.0)
+	finishing_target.observation_progress = 0.999
+	survey.charge_distance = 70.0
+	observer.previous_cursor_position = Vector2(420.0, 260.0)
+	observer.cursor_position = Vector2(450.0, 260.0)
+	observer._update_survey_interaction(0.016)
+	_check(finishing_target.observation_progress >= 1.0, "queued-for-deletion targets do not block a live target under the cursor")
+	finishing_target._process(0.0)
+	_check(not finishing_target.can_be_tracked() and observer.selected_meteor == null, "a completed meteor releases its selection through the real completion signal")
+	_check(observer.interaction_mode == observer.InteractionMode.TRACKING and is_equal_approx(survey.charge_distance, 70.0), "a completion frame cannot also charge survey travel")
+	observer.reset()
+	_check(is_zero_approx(survey.charge_distance), "reset clears base charge while scanning is already suspended")
+	survey_game.spawner.reset()
+	# Supernovae finish synchronously inside apply_manual_observation, unlike
+	# meteors that finish in _process. Both lifecycles must reserve the frame.
+	var instant_layer := Node2D.new()
+	survey_game.add_child(instant_layer)
+	observer.additional_target_layers.append(instant_layer)
+	var instant_target = load("res://scripts/supernova_target.gd").new()
+	instant_layer.add_child(instant_target)
+	instant_target.configure("survey_transition_probe", Vector2(440.0, 260.0), 0.0, false, survey_game.observation_view)
+	instant_target.observed.connect(func(target, _reward, _multiplier, _was_manual, _quality): observer.release_target(target))
+	instant_target.observation_progress = 0.999
+	survey.charge_distance = 70.0
+	observer.previous_cursor_position = Vector2(420.0, 260.0)
+	observer.cursor_position = Vector2(450.0, 260.0)
+	observer._update_survey_interaction(0.016)
+	_check(not instant_target.can_be_tracked() and observer.selected_meteor == null, "automatic survey transition can acquire and synchronously finish a non-meteor target")
+	_check(observer.interaction_mode == observer.InteractionMode.TRACKING and is_equal_approx(survey.charge_distance, 70.0), "synchronous completion never double-credits the frame as scanning")
+	observer.additional_target_layers.erase(instant_layer)
+	instant_layer.queue_free()
+	observer.reset()
 
 	survey.begin_round(3)
 	var blocked_position := Vector2(560.0, 400.0)
@@ -3233,9 +3288,16 @@ func _run_survey_regressions(packed: PackedScene, balance) -> void:
 	_check(is_instance_valid(summoned_meteor) and bool(summoned_meteor.get_meta("polar_summoned", false)) and summoned_meteor.type_id == "common", "a base survey summon is tagged against recursive procs and uses the unlocked common type")
 	_check(is_instance_valid(summoned_meteor) and summoned_meteor.global_position.is_equal_approx(summon_position), "a survey meteor begins at the cursor position")
 	_check(survey_game.spawner.rng.state == spawner_rng_before, "survey rolls and custom summons do not advance the regular meteor RNG")
+	observer.interaction_mode = observer.InteractionMode.SCANNING
+	observer.previous_cursor_position = summon_position
+	observer.cursor_position = summon_position
+	observer._update_survey_interaction(0.016)
+	_check(observer.interaction_mode == observer.InteractionMode.TRACKING and observer.selected_meteor == summoned_meteor and summoned_meteor.get_progress() > 0.0, "a summoned meteor is observed on the next held frame without release/repress")
+	_check(not survey.scanning and survey.cooldown_remaining > 0.0, "observing a summoned meteor preserves its summon cooldown")
 	var recursive_rolls_before: int = survey.roll_count
 	var recursive_count_before: int = survey_game.meteor_layer.get_child_count()
 	survey.cooldown_remaining = 0.0
+	survey.set_scanning(true, summon_position)
 	survey.apply_scan_segment(summon_position - Vector2(500.0, 0.0), summon_position + Vector2(100.0, 0.0))
 	_check(survey.roll_count == recursive_rolls_before and survey_game.meteor_layer.get_child_count() == recursive_count_before, "a summoned live meteor blocks another nearby summon instead of forming a recursive chain")
 	survey_game.spawner.reset()
@@ -3254,8 +3316,9 @@ func _run_survey_regressions(packed: PackedScene, balance) -> void:
 	survey.set_scanning(true, Vector2(390.0, 420.0))
 	survey.apply_scan_segment(Vector2(200.0, 420.0), Vector2(390.0, 420.0))
 	var retained_charge: float = survey.charge_distance
+	survey.set_scanning(false, Vector2(390.0, 420.0), true)
 	survey.set_scanning(false, Vector2(390.0, 420.0))
-	_check(retained_charge > 0.0 and is_equal_approx(survey.charge_distance, retained_charge), "Sustained Sweep preserves partial charge across button releases within a round")
+	_check(retained_charge > 0.0 and is_equal_approx(survey.charge_distance, retained_charge), "Sustained Sweep preserves charge on release even after a tracking suspension")
 	survey.end_round()
 	_check(is_zero_approx(survey.charge_distance) and is_zero_approx(survey.cooldown_remaining), "round cleanup removes unfinished sweep charge and cooldown")
 
