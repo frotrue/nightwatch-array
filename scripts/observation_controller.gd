@@ -153,39 +153,26 @@ func _survey_input_enabled() -> bool:
 
 
 func _update_survey_interaction(delta: float) -> void:
-	if interaction_mode == InteractionMode.NONE:
-		interaction_mode = InteractionMode.PENDING
+	# One held gesture can alternate freely. Tracking (including its existing
+	# soft lock/grace period) owns the frame before empty-sky travel is considered.
+	# A completion still owns that frame, so its cursor travel is not also charged.
+	if _update_manual_tracking(delta, true):
+		interaction_mode = InteractionMode.TRACKING
 		pending_blank_distance = 0.0
-		selected_meteor = null
-		tracked_meteors.clear()
-		tracking_grace_remaining = 0.0
+		survey.set_scanning(false, cursor_position, true)
+		return
 
-	match interaction_mode:
-		InteractionMode.PENDING:
-			var target = _find_target_under_cursor()
-			if _target_is_valid(target):
-				selected_meteor = target
-				tracking_grace_remaining = TRACKING_GRACE_SECONDS
-				interaction_mode = InteractionMode.TRACKING
-				survey.set_scanning(false, cursor_position)
-				_update_manual_tracking(delta)
-				return
-			pending_blank_distance += previous_cursor_position.distance_to(cursor_position)
-			if pending_blank_distance >= _world_px(SCAN_INTENT_DISTANCE):
-				interaction_mode = InteractionMode.SCANNING
-				survey.set_scanning(true, cursor_position)
-				survey.apply_scan_segment(previous_cursor_position, cursor_position, delta / maxf(Engine.time_scale, 0.001))
-			else:
-				survey.set_scanning(false, cursor_position)
-		InteractionMode.TRACKING:
-			survey.set_scanning(false, cursor_position)
-			_update_manual_tracking(delta)
-		InteractionMode.SCANNING:
-			selected_meteor = null
-			tracked_meteors.clear()
-			tracking_grace_remaining = 0.0
-			survey.set_scanning(true, cursor_position)
-			survey.apply_scan_segment(previous_cursor_position, cursor_position, delta / maxf(Engine.time_scale, 0.001))
+	if interaction_mode != InteractionMode.SCANNING:
+		if interaction_mode != InteractionMode.PENDING:
+			pending_blank_distance = 0.0
+		interaction_mode = InteractionMode.PENDING
+		pending_blank_distance += previous_cursor_position.distance_to(cursor_position)
+		if pending_blank_distance < _world_px(SCAN_INTENT_DISTANCE):
+			survey.set_scanning(false, cursor_position, true)
+			return
+		interaction_mode = InteractionMode.SCANNING
+	survey.set_scanning(true, cursor_position)
+	survey.apply_scan_segment(previous_cursor_position, cursor_position, delta / maxf(Engine.time_scale, 0.001))
 
 
 func _clear_interaction_mode() -> void:
@@ -198,7 +185,7 @@ func _clear_interaction_mode() -> void:
 		survey.set_scanning(false, cursor_position)
 
 
-func _update_manual_tracking(delta: float) -> void:
+func _update_manual_tracking(delta: float, keep_primary: bool = false) -> bool:
 	tracked_meteors.clear()
 	# On button-down, keep the previous rendered position as the sweep origin.
 	# This covers fast press-and-drag motion without subscribing to raw events.
@@ -207,7 +194,7 @@ func _update_manual_tracking(delta: float) -> void:
 		if _selection_is_valid():
 			tracking_grace_remaining = TRACKING_GRACE_SECONDS
 	if not _selection_is_valid():
-		return
+		return false
 
 	var primary = selected_meteor
 	var tracking_radius: float = primary.get_tracking_radius(_world_px(progression.get_tracking_radius()))
@@ -226,8 +213,9 @@ func _update_manual_tracking(delta: float) -> void:
 	if progression.has_upgrade("multi_target_analysis"):
 		_observe_additional_targets(delta, primary)
 		var closest_tracked = _closest_valid_tracked_target()
-		if closest_tracked != null:
+		if closest_tracked != null and (not keep_primary or not _selection_is_valid()):
 			selected_meteor = closest_tracked
+	return true
 
 
 func _observe_additional_targets(delta: float, primary) -> void:
@@ -322,7 +310,7 @@ func _find_target_under_cursor():
 	var closest = null
 	var closest_distance := INF
 	for child in _target_children():
-		if not child.has_method("can_be_tracked") or not child.can_be_tracked():
+		if not _target_is_valid(child):
 			continue
 		var tracking_radius: float = child.get_tracking_radius(_world_px(progression.get_tracking_radius()))
 		# Swept point-to-segment distance prevents fast mouse movement from

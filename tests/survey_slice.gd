@@ -31,7 +31,7 @@ func _run() -> void:
 	game.hud.set_observation_phase(1, SLICE_SECONDS, SLICE_SECONDS)
 	var starting_data: float = game.progression.total_data_earned
 	var starting_successes: int = game.progression.success_count
-	print("SURVEY_SLICE_READY: track meteors or sweep empty sky to call one; release before changing intent")
+	print("SURVEY_SLICE_READY: keep holding to track meteors or sweep empty sky; mode changes preserve sweep charge")
 	await create_timer(SLICE_SECONDS).timeout
 	print("SURVEY_SLICE_RESULT seconds=%.0f summons=%d meteor_observations=%d total_data=%.0f" % [
 		SLICE_SECONDS,

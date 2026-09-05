@@ -74,16 +74,18 @@ func advance_time(real_delta: float) -> void:
 	queue_redraw()
 
 
-func set_scanning(value: bool, position: Vector2) -> void:
+func set_scanning(value: bool, position: Vector2, preserve_charge: bool = false) -> void:
 	var enabled: bool = (
 		active_round > 0
 		and progression != null
 		and progression.survey_enabled()
 	)
-	var was_scanning := scanning
 	scanning = value and enabled
 	cursor_position = position
-	if was_scanning and not scanning and progression != null and not progression.survey_charge_persists():
+	# A tracking transition suspends scanning while the button remains held.
+	# A later release must still clear base charge even though scanning is already
+	# false. Sustained Sweep alone preserves it across actual releases.
+	if not scanning and not preserve_charge and progression != null and not progression.survey_charge_persists():
 		charge_distance = 0.0
 	if not enabled:
 		charge_distance = 0.0

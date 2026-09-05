@@ -70,7 +70,7 @@ content.
 | `galactic_phenomena_controller.gd` | Persistent supernova and black-hole target lifecycle, semantic five-record completion queries, active-observation-time phase advancement, save/load, lens-zone rendering, and lensed-meteor curve assignment. |
 | `supernova_target.gd` | Peak/fade/remnant timing choice. A missed light-curve phase always ends in a trackable remnant. |
 | `black_hole_target.gd` | Full-ring and partial-arc contact distance with ordinary aim-and-hold progress, not angular travel. Releasing does not erase progress. The coda target also carries the supernova phase state. |
-| `observation_controller.gd` | Cursor sampling, the tracking-versus-survey input latch, manual tracking across meteor/host/phenomena layers, point or annulus swept-path hit detection, tracking and hover rings, the raw Observation Streak counter, the cursor-local Perseid three-target indicator, and the software cursor. |
+| `observation_controller.gd` | Cursor sampling, held-button tracking/survey transitions with primary-target priority, manual tracking across meteor/host/phenomena layers, point or annulus swept-path hit detection, tracking and hover rings, the raw Observation Streak counter, the cursor-local Perseid three-target indicator, and the software cursor. |
 | `sky_contacts.gd` | Low-chrome forecast contact rendering and steerable dishes. Right-click moves the nearest dish; Predictive Dish Control automatically pre-positions an idle dish. Forecast Log narrows the expected-position ring instead of adding value/time text. After galaxy entry, common/fast contacts remain in the simulation and automatic assignment but omit their ring, label, countdown, hover target, and automatic-assignment tether. |
 | `survey_controller.gd` | Round-local blank-sky sweep charge, the 150 px live-meteor guard, isolated deterministic summon rolls, custom-start spawner calls, cooldown, and the cursor-local red-light arc. |
 | `event_controller.gd` | Meteor showers, Perseid outbursts, and the randomized warned Canis Major event schedule. |
@@ -497,9 +497,13 @@ Automatic progress (passive automation, dish assist, support lanes) adds into
 the same `observation_progress`. Manual and automatic completions are separated
 at the reward and feedback layer, not at the progress layer.
 
-After `polar_survey`, one left-button press is latched as `PENDING`, then as
-either `TRACKING` or `SCANNING`. A meteor swept hit wins while pending; otherwise
-14 px of blank travel selects scanning until release. While no live meteor is
+After `polar_survey`, a held left button automatically alternates between
+`TRACKING` and `SCANNING`, with 14 px of `PENDING` travel before scanning starts.
+Tracking gets first refusal on every held frame, including existing target
+grace, swept-path hits and non-meteor targets. Multi-target observation keeps a
+valid primary target selected. A completion or grace-expiry frame cannot also
+charge its travel as a survey stroke. A newly summoned target can be tracked on
+the next frame without releasing the button. While no live meteor is
 within 150 px, `SurveyController` accumulates cursor distance and rolls a summon
 chance at the purchased threshold. A success calls `MeteorSpawner.spawn_meteor`
 with the cursor as `custom_start` and a velocity within 60 degrees of the screen
@@ -508,8 +512,11 @@ from every spawner RNG stream.
 
 Summoned meteors carry `polar_summoned` metadata. They use normal observation
 rewards, success counts, and Taurus momentum, but the proc tag
-prevents them from charging Leo or opening Gemini echoes. Base partial charge is
-lost on release; `sustained_sweep` preserves it only inside the current round.
+prevents them from charging Leo or opening Gemini echoes. Switching modes while
+held calls `set_scanning(false, position, true)` to suspend without losing charge.
+Base partial charge is lost on actual release, including release while tracking
+has already suspended scanning; `sustained_sweep` preserves it only inside the
+current round. Round/load/reset boundaries still clear round-local charge.
 The charge/cooldown arc stays red and cursor-local; neutral white still belongs
 only to live meteor tracking.
 

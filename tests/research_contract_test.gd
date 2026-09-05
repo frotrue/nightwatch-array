@@ -252,6 +252,7 @@ func _run() -> void:
 	progression.queue_free()
 
 	_verify_claims_bidirectionally(contract_ids_by_kind)
+	_verify_opening_purchase_budget()
 	print("RESEARCH_CONTRACT_UNVERIFIED: %d exact ids" % actual_unverified_ids.size())
 	if failures.is_empty():
 		print("RESEARCH_CONTRACT_PASS: 107 installable research nodes, 38 executable contracts, 69 exact unverified ids, and bidirectional en/ko claims")
@@ -259,6 +260,42 @@ func _run() -> void:
 	else:
 		push_error("RESEARCH_CONTRACT_FAIL: %d failure(s)" % failures.size())
 		quit(1)
+
+
+func _verify_opening_purchase_budget() -> void:
+	# First-intermission learning budget: cover a fresh game and a tutorial
+	# that already bought its lens. Explore real purchase sequences rather than
+	# checking just the three tuned prices or one greedy purchase order.
+	for lens_installed in [false, true]:
+		for budget in [50, 75, 100]:
+			var opening := ProgressionController.new()
+			if lens_installed:
+				_check(opening.debug_purchase_node("better_lens"), "opening budget fixture installs the tutorial lens")
+			opening.observation_data = float(budget)
+			var affordable: Array[String] = []
+			for definition in Balance.UPGRADE_NODES:
+				if opening.can_purchase(definition.id):
+					affordable.append(definition.id)
+			var expected_choices := ["long_exposure", "edge_detection"] if lens_installed else ["better_lens", "edge_detection"]
+			_verify_exact_string_set(affordable, expected_choices, "opening %d Data choices (lens=%s)" % [budget, lens_installed])
+			var purchases := _max_opening_purchases(opening)
+			var expected_count := 2 if budget == 100 or (budget == 75 and not lens_installed) else 1
+			_check(purchases == expected_count, "opening %d Data buys %d systems at most (lens=%s), got %d" % [budget, expected_count, lens_installed, purchases])
+			opening.free()
+
+
+func _max_opening_purchases(progression: Node) -> int:
+	var maximum := 0
+	for definition in Balance.UPGRADE_NODES:
+		var node_id := String(definition.id)
+		if not progression.can_purchase(node_id):
+			continue
+		var branch := ProgressionController.new()
+		branch.load_save_data(progression.get_save_data())
+		_check(branch.request_purchase(node_id), "opening sequence purchase succeeds: " + node_id)
+		maximum = maxi(maximum, 1 + _max_opening_purchases(branch))
+		branch.free()
+	return maximum
 
 
 func _verify_definition_lookup_misses() -> void:
@@ -383,26 +420,19 @@ func _verify_claims_bidirectionally(contract_ids_by_kind: Dictionary) -> void:
 			match String(contract.kind):
 				"observation_value_multiplier":
 					var value := int(round(float(contract.value)))
-					if value == 2:
-						_check("Doubles all observation Data" in english and "automatic completions" in english and "×256" in english, node_id + " English copy exposes global x2, automation scope, and legacy x256 combination")
-						_check("모든 관측 데이터를 2배" in korean and "자동 완료" in korean and "×256" in korean, node_id + " Korean copy exposes global x2, automation scope, and legacy x256 combination")
-					else:
-						_check("Multiplies all observation Data by %d" % value in english and "automatic completions" in english, node_id + " English copy exposes its global multiplier and automation scope")
-						_check("모든 관측 데이터를 %d배" % value in korean and "자동 완료" in korean, node_id + " Korean copy exposes its global multiplier and automation scope")
+					_check("Observation Data ×%d" % value in english and "automatic included" in english and "Local Group excluded" in english, node_id + " English copy exposes the exact multiplier and its automation/Local Group scope")
+					_check("관측 데이터 %d배" % value in korean and "자동 포함" in korean and "국부은하군 제외" in korean, node_id + " Korean copy exposes the exact multiplier and its automation/Local Group scope")
 				"observation_duration_bonus":
 					_check("10 seconds" in english and "future observation window" in english, node_id + " English copy exposes the 10-second future-window delta")
 					_check("10초" in korean and "다음 관측부터 관측 시간을" in korean, node_id + " Korean copy exposes the 10-second future-window delta")
 				"max_active_delta":
-					var delta_words := {1: "one", 2: "two", 6: "six"}
 					var delta_value := int(round(float(contract.value)))
-					var english_delta := String(delta_words.get(delta_value, str(delta_value)))
-					var korean_delta := "%d개" % delta_value
-					_check("allows " + english_delta + " more regular target" in english.to_lower(), node_id + " English copy exposes its regular active-contact delta")
-					_check("일반 표적의 상한을 " + korean_delta + " 늘립니다" in korean, node_id + " Korean copy exposes its regular active-contact delta")
+					_check("simultaneous regular targets +%d" % delta_value in english.to_lower(), node_id + " English copy exposes its regular active-contact delta")
+					_check("일반 표적 동시 출현 상한 +%d개" % delta_value in korean, node_id + " Korean copy exposes its regular active-contact delta")
 				"regular_spawn_interval_floor":
 					var seconds := "%.2f" % float(contract.value)
-					_check("shortest time between regular meteors to " + seconds + " seconds" in english, node_id + " English copy exposes the exact regular-arrival floor")
-					_check("일반 유성의 최소 출현 간격을 " + seconds + "초로" in korean, node_id + " Korean copy exposes the exact regular-arrival floor")
+					_check("minimum regular meteor interval " + seconds + " seconds" in english, node_id + " English copy exposes the exact regular-arrival floor")
+					_check("일반 유성 최소 출현 간격 " + seconds + "초" in korean, node_id + " Korean copy exposes the exact regular-arrival floor")
 				"galactic_observation_profile":
 					_check(("aim-and-hold" in english or "tracking" in english or "35% longer" in english), node_id + " English copy exposes an ordinary observation variation")
 					_check("관측" in korean, node_id + " Korean copy keeps observation as the player verb")
@@ -417,7 +447,7 @@ func _verify_claims_bidirectionally(contract_ids_by_kind: Dictionary) -> void:
 					_check("two supernova" in english.to_lower() and "두 초신성" in korean, node_id + " exposes the overlapping timing choice in both locales")
 					claimed_ids_by_kind["supernova_overlap"].append(node_id)
 				"lens_observation":
-					_check(("ring" in english.to_lower() or "lens" in english.to_lower()) and "aim-and-hold" in english and "관측" in korean, node_id + " exposes lens shape without a new verb")
+					_check(("ring" in english.to_lower() or "lens" in english.to_lower()) and "aim-and-hold" in english.to_lower() and "관측" in korean, node_id + " exposes lens shape without a new verb")
 					claimed_ids_by_kind["lens_observation"].append(node_id)
 				"lensed_supernova":
 					_check("supernova" in english.to_lower() and "lens" in english.to_lower() and "초신성" in korean and "렌즈" in korean, node_id + " exposes the combined coda verb in both locales")
@@ -444,7 +474,13 @@ func _verify_claims_bidirectionally(contract_ids_by_kind: Dictionary) -> void:
 
 func _claims_global_multiplier(english: String, korean: String) -> bool:
 	return (
-		"Doubles all observation Data" in english
+		"Observation Data ×" in english
+		or "관측 데이터 2배" in korean
+		or "관측 데이터 4배" in korean
+		or "관측 데이터 8배" in korean
+		or "Data from meteors and long-watch targets is multiplied by " in english
+		or "먼 은하의 데이터 " in korean
+		or "Doubles all observation Data" in english
 		or "Multiplies all observation Data by " in english
 		or "×256" in english
 		or "모든 관측 데이터를 2배" in korean
@@ -461,15 +497,23 @@ func _claims_duration_bonus(english: String, korean: String) -> bool:
 func _claims_max_active_delta(english: String, korean: String) -> bool:
 	var plain_english := english.to_lower()
 	return (
-		"allows one more regular target" in plain_english
+		"simultaneous regular targets +" in plain_english
+		or "일반 표적 동시 출현 상한 +" in korean
+		or "allows one more regular target" in plain_english
 		or "allows two more regular targets" in plain_english
 		or "allows six more regular targets" in plain_english
+		or "동시에 나타날 수 있는 일반 표적 수 +" in korean
 		or ("일반 표적의 상한을 " in korean and "개 늘립니다" in korean)
 	)
 
 
 func _claims_regular_spawn_interval_floor(english: String, korean: String) -> bool:
-	return "shortest time between regular meteors to " in english or "일반 유성의 최소 출현 간격을 " in korean
+	return (
+		"minimum regular meteor interval " in english
+		or "일반 유성 최소 출현 간격 " in korean
+		or "shortest time between regular meteors to " in english
+		or "일반 유성의 최소 출현 간격을 " in korean
+	)
 
 
 func _localized_description(node_id: String, locale: String) -> String:

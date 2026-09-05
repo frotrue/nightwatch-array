@@ -2148,7 +2148,7 @@ func _build_node_tooltip() -> void:
 	fields.add_theme_constant_override("v_separation", UITheme.size_px(7.0))
 	fields.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(fields)
-	for field_key in ["STATUS", "COST", "EFFECT"]:
+	for field_key in ["STATUS", "COST"]:
 		var field_label := _spec_label(tr("TREE_CONSTELLATION_FIELD_%s" % field_key), UITheme.mono(), 11.0, UITheme.TOOLTIP_LABEL, 0.18)
 		field_label.name = "Field%sLabel" % field_key.capitalize()
 		field_label.custom_minimum_size.x = UITheme.px(44.0)
@@ -2160,11 +2160,15 @@ func _build_node_tooltip() -> void:
 			"COST":
 				tooltip_cost = _spec_label("", UITheme.mono_tabular(), 13.0, UITheme.TOOLTIP_BODY)
 				fields.add_child(tooltip_cost)
-			"EFFECT":
-				tooltip_description = _spec_label("", UITheme.sans("light"), 13.0, UITheme.TOOLTIP_BODY)
-				tooltip_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-				tooltip_description.custom_minimum_size.x = UITheme.px(220.0)
-				fields.add_child(tooltip_description)
+	# The effect is the purchase decision: give it the full inspector width.
+	# 15 spec pixels become 9 logical / 15 output pixels at 1920x1080.
+	var effect_label := _spec_label(tr("TREE_CONSTELLATION_FIELD_EFFECT"), UITheme.mono(), 11.0, UITheme.TOOLTIP_LABEL, 0.18)
+	effect_label.name = "FieldEffectLabel"
+	column.add_child(effect_label)
+	tooltip_description = _spec_label("", UITheme.sans(), 15.0, UITheme.TOOLTIP_VALUE)
+	tooltip_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	tooltip_description.custom_minimum_size.x = UITheme.px(292.0)
+	column.add_child(tooltip_description)
 	tooltip_action = _spec_label("", UITheme.mono(), 13.0, UITheme.TOOLTIP_ACTION, 0.6 / 13.0)
 	tooltip_action.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(tooltip_action)
@@ -2294,7 +2298,7 @@ func _build_galactic_overlays() -> void:
 	galactic_panel_cost = _spec_label("", UITheme.mono_tabular(), 13.0, UITheme.TOOLTIP_BODY)
 	galactic_panel_cost.name = "FieldCostValue"
 	galactic_panel.add_child(galactic_panel_cost)
-	galactic_panel_effect = _spec_label("", UITheme.sans("light"), 13.0, UITheme.TOOLTIP_BODY)
+	galactic_panel_effect = _spec_label("", UITheme.sans(), 15.0, UITheme.TOOLTIP_VALUE)
 	galactic_panel_effect.name = "FieldEffectValue"
 	galactic_panel_effect.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	galactic_panel.add_child(galactic_panel_effect)
