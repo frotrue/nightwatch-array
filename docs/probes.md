@@ -3,7 +3,7 @@
 Top-level entry points in `tests/` are `SceneTree` scripts run through `--script`,
 not a GUT/gdUnit suite; `tests/support/` contains shared fixtures. There is no
 test framework to install. This directory contains
-twelve fast pass/fail gates, eight measurement probes, visual/audio review utilities, and
+thirteen fast pass/fail gates, eight measurement probes, visual/audio review utilities, and
 a human-driven survey slice. The full-tree economy gate is documented with
 the pacing probes below because it reports both acceptance and diagnostic data.
 
@@ -33,7 +33,7 @@ check; it does not predict a person's first-round income or learning speed.
 
 ## Routine validation
 
-From the repository root, run all twelve fast gates and refresh the Windows
+From the repository root, run all thirteen fast gates and refresh the Windows
 executable with the checked-in PowerShell runner:
 
 ```powershell
@@ -108,6 +108,25 @@ input behavior, not a human verdict on comfort.
 ```
 
 ## Gates
+
+### Andromeda stage and modules
+
+`andromeda_stage_test.gd` exercises the real galaxy-chart entry button, existing
+research effects, shared Data purchases, exact debit/duplicate rejection,
+single-slot equip, focus speed, wide target count/radius/per-target speed,
+automatic dish support, pause/settings layering, round rollover, suspended
+atmospheric accounting, and real game save/load/reset. It uses the isolated
+fixture and does not write player saves. Pass: `ANDROMEDA_STAGE_PASS`.
+
+`andromeda_stage_preview.gd` requires the real Windows/OpenGL renderer. It writes
+seven stable English/Korean destination/observation/module frames, including actual wide
+tracking, to a unique `build/andromeda_review/<timestamp>/` directory. Its manifest
+records source hashes and PNG hashes. The 45-second watchdog makes a failed
+capture terminate. Pass: `ANDROMEDA_PREVIEW_PASS`. These are synthetic fixed
+poses, not an assessment of player comfort or long-term economy.
+
+The existing full-tree economy gate still measures the original research path.
+It does not claim coverage of Andromeda's new module economy.
 
 ### UI presentation gate
 
@@ -234,8 +253,9 @@ their explicit accent eligibility; combo, economy and proc origin cannot promote
 a routine completion. It verifies directional particle cones, ring/flash/motion
 thresholds, shared capacity caps, distant-target events, galaxy-stage flash
 suppression and the pause-safe, replaceable installation-rule tween. The fixture
-uses actual chart-open purchases at both scales and checks that the visible
-inspector rule survives deferred container layout while paused. Selection,
+uses actual constellation purchases and checks that the visible
+inspector rule survives deferred container layout while paused. The galaxy
+destination hub rejects old research holds and never emits purchase feedback. Selection,
 context, close and scale changes cancel stale tweens; Reference Frame keeps its
 pull-back without a hidden pulse. Save storage and settings are replaced before
 startup. A mechanical pass is not a visual verdict.
@@ -252,14 +272,15 @@ For a narrow rendered stage-2 check, run without `--headless`:
 & $godot --path . --script res://tests/effect_feedback_preview.gd
 ```
 
-This creates eight uniquely named PNG/JSON pairs in
-`build/effect_feedback_review`: routine/accented observation poses and both
-chart inspectors at installation-tween start, midpoint and end. The fixture
+This creates six uniquely named PNG/JSON pairs in
+`build/effect_feedback_review`: routine/accented observation poses, the
+constellation inspector at installation-tween start/midpoint/end, and the
+galaxy destination hub without purchase feedback. The fixture
 uses real completion/purchase routes without reading or writing saves/settings,
 then freezes animation after deferred layout settles. Each sidecar records
 viewport, renderer, base HEAD, dirty status, relevant source hashes and measured
 state. A missing display, blank image, unexpected state/count or write failure
-exits nonzero. `EFFECT_PREVIEW_PASS` means the eight diagnostic images were
+exits nonzero. `EFFECT_PREVIEW_PASS` means the six diagnostic images were
 written, not that animation feel was approved. This windowed diagnostic is not
 the stage-3 headless capture gate.
 
@@ -708,11 +729,12 @@ the number of chart layout passes. The burst deliberately sends more wheel
 events than a frame should commit; `layout_passes` should stay at roughly one
 per rendered frame rather than eight. The candidate pull-back accepts only a
 windowed `galactic_transition` and `galactic_final` p95 below 16.7 ms. The ENV
-line separately records 12 galactic research nodes, 17 non-interactive
-decorative records, 74 faint non-interactive
-galactic background points, and pull-back duration. The final phase also includes
-the miniature 95-node decorative core, radial halos, dashed orbits, code labels,
-completion ledger, and fixed inspector introduced by the galaxy-map redesign.
+line identifies the old 12 research/17 decorative/74 background records as
+retired compatibility data. The final phase now renders the destination hub
+with one playable galaxy, without those markers, orbits, ledger or inspector.
+Do not compare its `galactic_final` result to older galaxy-research frames as
+the same workload. Frame times include hub rendering; the chart subclass's
+`draw` CPU metric does not include the hub's separate draw callback.
 
 The probe uses the no-persistence fixture and scripted input with hardware
 events disabled. `inspector_selection` alternates two real node selections;

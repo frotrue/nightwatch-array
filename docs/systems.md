@@ -87,6 +87,33 @@ content.
 
 ## Setup calls
 
+The final galaxy scale now displays `galaxy_hub.gd`, a destination selector.
+Its data-driven destination list currently contains only the playable Andromeda
+stage. Selection never spends Data or requests research purchases. The old
+Local Group markers have zero presentation alpha and reject interaction;
+their routes, orbits, labels and decorative shapes are no longer submitted to
+the chart renderer. The research header, install ledger, inspector, and core
+hitbox are hidden. A dedicated action returns to the completed constellation
+chart, which has a return-to-hub action. Old research definitions/save IDs and
+legacy ending data remain storage compatibility concerns, not destination UI.
+
+`game.gd` also instantiates `AndromedaStage` at runtime. The galaxy chart's
+`andromeda_requested` signal opens its independent observation surface after
+Galaxy Map is installed. It suspends the atmospheric scene, owns its own round
+timer, and adds actual observation time to the shared run. On return, the chart
+resumes its previous atmospheric/intermission lifecycle. Stage earnings are
+excluded from the suspended atmospheric round's baseline statistics.
+
+`observation_modules.gd` owns permanent purchases and one equipped slot.
+Andromeda consumes its focus/wide effects, the existing lens/analysis/value
+research, and basic-star support from the existing dishes. The three target
+groups use deterministic authored positions; observations recur after seven
+seconds. `andromeda_sky.gd` owns procedural drawing only. Shared settings remain
+above the new surface and stop its simulation. `andromeda` is an optional run
+save section; old saves receive empty module ownership, and malformed module
+IDs or unowned equipped values are discarded. Loading/reset cancels stale
+deferred stage restoration.
+
 `game.gd::_ready()` performs dependency injection by hand. There are no
 autoloads.
 
@@ -376,6 +403,13 @@ line tells the player to close the chart and begin it; if that watch is already
 active, the chart reverts to ordinary close/resume copy. Once the qualified
 watch has ended, the same line and both close actions say that they will seal
 the record. The chart does not derive completion from node counts itself.
+
+### Retired galaxy research presentation (compatibility reference)
+
+The following describes the former 29-marker renderer. Its selection surface,
+routes, labels and inspector are retired in favor of the destination hub above.
+The data and saved progression remain available for compatibility; this is not
+the current player-facing galaxy screen.
 
 Installing the 86 non-Draco systems reveals Draco's root; installing all 95
 original systems opens the saved Galactic Reference Frame state. The open chart

@@ -3,10 +3,13 @@ extends CanvasLayer
 signal tree_opened
 signal tree_closed
 signal galactic_pullback_finished
+signal andromeda_requested
+signal observatory_requested
 
 const Balance = preload("res://scripts/game_balance.gd")
 const ChartData = preload("res://scripts/research_chart_data.gd")
 const UITheme = preload("res://scripts/ui_theme.gd")
+const GalaxyHub = preload("res://scripts/galaxy_hub.gd")
 const StarNodeVisual = preload("res://scripts/research_star_visual.gd")
 const ACTION_CHART := &"nw_chart"
 const ACTION_MENU_BACK := &"nw_menu_back"
@@ -122,6 +125,9 @@ var galactic_inspector_node_id: String = ""
 var north_label: Label
 var subtitle_label: Label
 var close_button: Button
+var andromeda_button: Button
+var galaxy_hub: Control
+var hub_return_button: Button
 var controls_label: Label
 var constellation_horizon_hint: Label
 var constellation_bottom_action: Label
@@ -430,7 +436,7 @@ func _input(event: InputEvent) -> void:
 	if galactic_mode == GALACTIC_MODE_PULLBACK and _is_deliberate_pullback_skip(event):
 		_finish_galactic_pullback()
 		if close_requested:
-			close_tree()
+			observatory_requested.emit()
 		# Let an ordinary mouse press continue through the GUI so a press on the
 		# close action both skips and closes. Wheel presses are consumed here so the
 		# same event cannot immediately zoom away from the final galaxy frame.
@@ -438,7 +444,10 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 		return
 	if close_requested:
-		close_tree()
+		if is_galaxy_hub_active():
+			observatory_requested.emit()
+		else:
+			close_tree()
 		get_viewport().set_input_as_handled()
 		return
 
@@ -672,13 +681,9 @@ func _galactic_route_progress() -> float:
 
 
 func _local_group_alpha() -> float:
-	if not galactic_unlocked:
-		return 0.0
-	if galactic_mode == GALACTIC_MODE_PULLBACK:
-		return _galactic_route_progress()
-	if not galactic_pullback_seen:
-		return 0.0
-	return 1.0 - smoothstep(0.05, 0.34, galactic_chart_detail)
+	# The old 29-marker research presentation is retired, including during the
+	# pullback. Definitions remain readable for existing save compatibility.
+	return 0.0
 
 
 func _galactic_background_alpha() -> float:
@@ -723,7 +728,9 @@ func _legacy_chart_alpha() -> float:
 
 func _node_presentation_alpha(node_id: String) -> float:
 	if _is_local_group_node(node_id):
-		return _local_group_node_reveal(node_id)
+		return 0.0
+	if is_galaxy_hub_active():
+		return 0.0
 	if node_id == "galactic_reference_frame" and galactic_unlocked:
 		return 1.0
 	return _legacy_chart_alpha()
@@ -731,7 +738,9 @@ func _node_presentation_alpha(node_id: String) -> float:
 
 func _node_interaction_ready(node_id: String) -> bool:
 	if _is_local_group_node(node_id):
-		return galactic_unlocked and galactic_pullback_seen and galactic_chart_detail <= 0.06
+		return false
+	if is_galaxy_hub_active():
+		return false
 	if node_id == "galactic_reference_frame" and galactic_unlocked:
 		# The 112-spec-pixel core target owns galactic-scale input. The original
 		# star button returns only when the completed chart becomes readable again.
@@ -967,7 +976,37 @@ func _layout_constellation_overlays() -> void:
 
 
 func _galactic_panel_active() -> bool:
-	return galactic_unlocked and _galactic_core_alpha() > 0.01 and galactic_chart_detail < 0.34
+	return false
+
+
+func is_galaxy_hub_active() -> bool:
+	return galactic_unlocked and galactic_pullback_seen and not _galactic_chart_is_readable()
+
+
+func _show_completed_constellations() -> void:
+	_cancel_node_hold()
+	_zoom_galactic_chart(CONSTELLATION_ZOOM / maxf(zoom, 0.001))
+
+
+func _refresh_galaxy_hub() -> void:
+	if galaxy_hub == null:
+		return
+	var active := is_galaxy_hub_active()
+	galaxy_hub.visible = active
+	content_clip.visible = not active
+	var header := overlay.get_node_or_null("ChartHeader")
+	if header != null:
+		header.visible = not active
+	hub_return_button.visible = galactic_unlocked and galactic_pullback_seen and _galactic_chart_is_readable()
+	hub_return_button.text = tr("GALAXY_HUB_TITLE")
+	var binding := String(settings_controller.binding_label(ACTION_CHART)) if settings_controller != null else "U"
+	galaxy_hub.refresh_text(binding)
+	if active:
+		_cancel_node_hold()
+		_cancel_installation_rule()
+		for button in node_buttons.values():
+			button.visible = false
+			button.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
 func _layout_galactic_overlays() -> void:
@@ -1068,6 +1107,7 @@ func _refresh_galactic_overlays() -> void:
 	var active := _galactic_panel_active()
 	var constellation_active := _constellation_panel_active()
 	var alpha := _galactic_core_alpha()
+	_refresh_galaxy_hub()
 	galactic_panel.visible = active
 	galactic_ledger.visible = active
 	galactic_panel.modulate.a = alpha
@@ -1094,6 +1134,11 @@ func _refresh_galactic_overlays() -> void:
 		reference_visual.visible = not active
 	if constellation_active:
 		_refresh_constellation_overlays()
+	if is_galaxy_hub_active():
+		constellation_ledger.visible = false
+		tooltip_panel.visible = false
+		completion_detail_label.visible = false
+		return
 	if progression != null:
 		galactic_span_value.text = "×%.4f" % float(progression.get_observation_span())
 		for index in range(GALACTIC_LEDGER_ORDER.size()):
@@ -1166,6 +1211,9 @@ func _refresh_constellation_overlays() -> void:
 	constellation_ledger_counts[local_group_index].add_theme_color_override("font_color", local_group_tone)
 	constellation_ledger_counts[local_group_index].text = "%d / %d" % [local_group_installed, local_group_total]
 	constellation_ledger_notes[local_group_index].text = tr("TREE_CONSTELLATION_IN_PROGRESS") if local_group_kind == "active" else ("" if local_group_kind == "done" else tr("TREE_CONSTELLATION_LOCKED"))
+	# Retired Local Group research does not appear as another unfinished branch.
+	for widget in [constellation_ledger_names[local_group_index], constellation_ledger_counts[local_group_index], constellation_ledger_notes[local_group_index], constellation_ledger_leaders[local_group_index]]:
+		widget.visible = false
 	constellation_horizon_hint.text = tr("TREE_CONSTELLATION_HORIZON_HINT") % below_horizon_count
 	constellation_bottom_action.text = _phase_bottom_action_text()
 	_refresh_constellation_detail_line()
@@ -1575,6 +1623,8 @@ func _is_node_above_horizon(node_id: String) -> bool:
 
 func _on_node_hold_started(node_id: String) -> void:
 	_cancel_node_hold()
+	if _is_local_group_node(node_id) or is_galaxy_hub_active():
+		return
 	if hovered_node_id == node_id and not tooltip_suppressed_until_motion:
 		_show_node_tooltip(node_id)
 	if progression == null or progression.get_node_state(node_id) != "available" or not progression.can_purchase(node_id):
@@ -1612,6 +1662,8 @@ func _cancel_node_hold() -> void:
 
 
 func _on_node_hovered(node_id: String) -> void:
+	if _is_local_group_node(node_id) or is_galaxy_hub_active():
+		return
 	if node_hold_bars.has(node_id):
 		var star_visual: StarNodeVisual = node_hold_bars[node_id]
 		star_visual.set_hovered(true)
@@ -1700,7 +1752,7 @@ func _refresh() -> void:
 		button.mouse_filter = Control.MOUSE_FILTER_STOP if presentation_alpha >= 0.92 and _node_interaction_ready(node_id) else Control.MOUSE_FILTER_IGNORE
 		button.visible = visible and presentation_alpha > 0.01 and _is_node_above_horizon(node_id)
 		button.set_meta("visual_state", visual_state)
-		if not visible:
+		if not visible or _is_local_group_node(node_id):
 			continue
 		if state == "available":
 			available_count += 1
@@ -2022,6 +2074,32 @@ func _build_interface() -> void:
 	_build_constellation_ledger()
 	_build_node_tooltip()
 	_build_galactic_overlays()
+	galaxy_hub = GalaxyHub.new()
+	galaxy_hub.name = "GalaxyHub"
+	galaxy_hub.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	galaxy_hub.z_index = 100
+	galaxy_hub.visible = false
+	overlay.add_child(galaxy_hub)
+	galaxy_hub.destination_requested.connect(func(id: String):
+		if id == "andromeda":
+			andromeda_requested.emit()
+	)
+	galaxy_hub.observatory_requested.connect(func(): observatory_requested.emit())
+	galaxy_hub.constellations_requested.connect(_show_completed_constellations)
+	andromeda_button = galaxy_hub.enter_button
+	hub_return_button = Button.new()
+	hub_return_button.flat = true
+	hub_return_button.add_theme_font_override("font", UITheme.sans())
+	hub_return_button.add_theme_font_size_override("font_size", 14)
+	hub_return_button.add_theme_color_override("font_color", UITheme.ACCENT_TEXT)
+	hub_return_button.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	hub_return_button.offset_left = -80
+	hub_return_button.offset_right = 80
+	hub_return_button.offset_top = -82
+	hub_return_button.offset_bottom = -42
+	hub_return_button.pressed.connect(_frame_galaxy)
+	hub_return_button.visible = false
+	overlay.add_child(hub_return_button)
 	_layout_chart()
 
 
@@ -2377,10 +2455,9 @@ func _cached_node_state(node_id: String) -> String:
 
 
 func _draw_tree() -> void:
+	if is_galaxy_hub_active():
+		return
 	_draw_chart_background()
-	_draw_galactic_halos()
-	_draw_galactic_background()
-	_draw_galactic_orbits()
 	var structure_alpha := _galactic_structure_alpha()
 	for constellation_id in ChartData.CONSTELLATIONS:
 		var constellation: Dictionary = ChartData.CONSTELLATIONS[constellation_id]
@@ -2406,11 +2483,7 @@ func _draw_tree() -> void:
 						_draw_background_galaxy(point, star_radius, alpha)
 			tree_canvas.draw_circle(point, maxf(1.2, star_radius * 0.55), Color(UITheme.STAR_BACKGROUND, alpha))
 	if progression != null and (structure_alpha > 0.01 or _local_group_alpha() > 0.01):
-		_draw_local_group_decorations()
-		_draw_local_group_route()
 		_draw_frontier_overlay()
-	_draw_galactic_core()
-	_draw_local_group_labels()
 	# The ground goes on last. Half the sky now sits below the horizon at any
 	# one rotation, and it has to be buried by the ground rather than drawn
 	# over it.
