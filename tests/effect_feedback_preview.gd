@@ -2,7 +2,7 @@ extends SceneTree
 
 # Stage-2-only rendered diagnostics. Run WINDOWED, not --headless:
 #   godot --path . --script res://tests/effect_feedback_preview.gd
-# Eight frozen PNGs and per-image JSON notes go to build/effect_feedback_review.
+# Six frozen PNGs and per-image JSON notes go to build/effect_feedback_review.
 # This is not the stage-3 capture pipeline or a verdict on live animation feel.
 const MainScene = preload("res://scenes/main.tscn")
 const Fixtures = preload("res://tests/support/game_fixture.gd")
@@ -14,7 +14,7 @@ const SOURCE_FILES := [
 	"scripts/game.gd", "scripts/effects_layer.gd", "scripts/hud.gd",
 	"scripts/upgrade_tree.gd", "tests/effect_feedback_preview.gd",
 	"tests/support/game_fixture.gd", "scripts/research_star_visual.gd",
-	"scripts/ui_theme.gd",
+	"scripts/ui_theme.gd", "scripts/galaxy_hub.gd",
 ]
 
 var game: Node
@@ -73,16 +73,18 @@ func _run() -> void:
 	game.upgrade_tree.configure_galactic_state(true, true)
 	game.upgrade_tree.open_tree()
 	await _settle_layout()
-	game.upgrade_tree._on_node_hovered("lmc_transit_watch")
-	if not await _capture_installation("04_galaxy", "lmc_transit_watch", game.upgrade_tree.galactic_installation_rule):
+	if not game.upgrade_tree.galaxy_hub.is_visible_in_tree() or game.upgrade_tree.galactic_panel.is_visible_in_tree():
+		_fail("Galaxy hub must replace the retired purchase inspector.")
+		return
+	if not await _save_frame("04_galaxy_hub", {"kind": "galaxy_destination", "destination": "andromeda", "purchase_feedback": false}):
 		return
 	if source.files_sha256 != _source_hashes():
 		_fail("Source files changed during capture; do not treat this image set as one revision.")
 		return
-	if captured_count != 8:
-		_fail("Expected exactly eight stage-2 diagnostic PNGs, got %d." % captured_count)
+	if captured_count != 6:
+		_fail("Expected exactly six stage-2 diagnostic PNGs, got %d." % captured_count)
 		return
-	print("EFFECT_PREVIEW_PASS: 8 windowed stage-2 diagnostic PNGs; frozen poses, not live animation approval; run %s" % run_id)
+	print("EFFECT_PREVIEW_PASS: 6 windowed stage-2 diagnostic PNGs; frozen poses, not live animation approval; run %s" % run_id)
 	game.free()
 	quit(0)
 

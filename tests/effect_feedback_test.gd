@@ -245,23 +245,15 @@ func _test_chart_installation_rule(game) -> void:
 	await process_frame
 	await process_frame
 	chart._on_node_hovered("lmc_transit_watch")
-	_check(game.progression.request_purchase("lmc_transit_watch"), "galaxy-scale integration buys real available LMC research")
-	var galaxy_rule: ColorRect = chart.galactic_installation_rule
-	_check_chart_rule(chart, galaxy_rule, "galaxy purchase")
-	_check(chart.installation_node_id == "lmc_transit_watch", "galaxy pulse belongs to its selected research")
-	_check(game.hud.installation_tween == old_hud_tween, "galaxy purchase also avoids the obscured HUD pulse")
-	var galaxy_tween: Tween = chart.installation_tween
-	await process_frame
-	await process_frame
-	_check(galaxy_tween.is_running() and galaxy_rule.scale.x > 0.2 and galaxy_rule.scale.x < 1.0, "galaxy pulse survives real purchase state refresh and paused frames")
-	chart._on_node_hovered("smc_reference_baseline")
-	_check(not galaxy_tween.is_valid() and galaxy_rule.scale.is_equal_approx(Vector2.ONE), "galaxy selection cancels and resets the previous pulse")
-	_check(game.progression.request_purchase("smc_reference_baseline"), "a second galaxy purchase succeeds")
-	_check_chart_rule(chart, galaxy_rule, "second galaxy purchase")
-	var scale_tween: Tween = chart.installation_tween
-	chart.galactic_chart_detail = 1.0
-	chart._update_galactic_presentation()
-	_check(not scale_tween.is_valid() and galaxy_rule.scale.is_equal_approx(Vector2.ONE), "switching inspector scale cancels the hidden rule")
+	var old_balance: float = game.progression.observation_data
+	chart._on_node_hold_started("lmc_transit_watch")
+	chart._process(1.0)
+	chart.pulse_installation_rule()
+	_check(chart.galaxy_hub.is_visible_in_tree(), "galaxy scale is a destination hub")
+	_check(chart.installation_rule == null and not chart.galactic_panel.is_visible_in_tree(), "destination navigation never animates the retired purchase inspector")
+	_check(not game.progression.has_upgrade("lmc_transit_watch") and game.progression.observation_data == old_balance, "retired Local Group holds cannot buy research")
+	chart.galaxy_hub.select_destination("andromeda")
+	_check(game.hud.installation_tween == old_hud_tween, "selecting a destination does not dispatch purchase feedback")
 	chart.close_tree()
 
 	# Galactic Reference Frame owns the existing pull-back, where neither
