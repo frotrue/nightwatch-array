@@ -3,7 +3,7 @@
 Top-level entry points in `tests/` are `SceneTree` scripts run through `--script`,
 not a GUT/gdUnit suite; `tests/support/` contains shared fixtures. There is no
 test framework to install. This directory contains
-thirteen fast pass/fail gates, eight measurement probes, visual/audio review utilities, and
+fourteen fast pass/fail gates, eight measurement probes, visual/audio review utilities, and
 a human-driven survey slice. The full-tree economy gate is documented with
 the pacing probes below because it reports both acceptance and diagnostic data.
 
@@ -33,7 +33,7 @@ check; it does not predict a person's first-round income or learning speed.
 
 ## Routine validation
 
-From the repository root, run all thirteen fast gates and refresh the Windows
+From the repository root, run all fourteen fast gates and refresh the Windows
 executable with the checked-in PowerShell runner:
 
 ```powershell
@@ -109,6 +109,14 @@ input behavior, not a human verdict on comfort.
 
 ## Gates
 
+### Save integrity
+
+`save_integrity_test.gd` uses unique directories under `build/` and never player
+slots. It checks successful same-directory replacement, injected staging-write
+and rename failures, preservation of previous bytes and summary, ignored stale
+staging files, occupied corrupt slots, malformed numeric/container rejection,
+detached reads and explicit reset. Pass: `SAVE_INTEGRITY_PASS`.
+
 ### Deep-sky continuation and module popup
 
 `deep_sky_test.gd` follows the original 95-node path without the retired research,
@@ -124,7 +132,8 @@ research launcher, equip, popup close and chart return; the popup must draw
 above research. Real meteor progress verifies
 1.8x / 0.75x / 1.35x module speed, plus the real tracking radius. Save/load tests
 cover M31 partial progress, inventory and legacy active-stage migration back to
-the original sky. Pass: `DEEP_SKY_PASS`.
+the original sky. The module cache checks direct slot/ownership mutations,
+duplicate suppression, reset/legacy load and unchanged numeric results. Pass: `DEEP_SKY_PASS`.
 
 `deep_sky_preview.gd` uses the real Windows/OpenGL renderer and writes seven
 stable 1152x648 frames under `build/deep_sky_review/<timestamp>/`: the original

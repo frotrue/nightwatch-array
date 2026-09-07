@@ -19,6 +19,8 @@ var price: Label
 var buy_button: Button
 var back_button: Button
 var chart_button: Button
+var _miniature_edges: Array[PackedVector2Array] = []
+var _miniature_stars: Array[Dictionary] = []
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
@@ -43,11 +45,13 @@ func _ready() -> void:
 	for state in ["normal", "hover", "pressed", "focus"]:
 		chart_button.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	back_button = button_at(Vector2(902, 588), Vector2(203, 35), func(): observatory_requested.emit())
+	visibility_changed.connect(refresh_text)
 	refresh_text()
 
 func bind(controller: Node, tree: Node) -> void:
 	research = controller
 	chart = tree
+	_cache_miniature()
 	research.changed.connect(refresh_text)
 	refresh_text()
 
@@ -60,7 +64,7 @@ func purchase() -> void:
 		research.purchase(selected_id)
 
 func refresh_text(_binding: String = "U") -> void:
-	if title == null:
+	if title == null or not is_visible_in_tree():
 		return
 	title.text = tr("DEEP_CHART_TITLE")
 	back_button.text = tr("MODULE_RETURN_TO_SKY")
@@ -116,7 +120,11 @@ func _draw() -> void:
 	_draw_caption(Vector2(199, 479), tr("DEEP_OLD_CHART"), UITheme.INK_HIGH, 13)
 	_draw_caption(Vector2(199, 502), tr("DEEP_EXPAND_OLD"), UITheme.INK_MID, 11)
 
-func _draw_old_constellations() -> void:
+func _cache_miniature() -> void:
+	# Base chart geometry is constructed once by UpgradeTree. Zoom and rotation
+	# affect its presentation positions, not these immutable source coordinates.
+	_miniature_edges.clear()
+	_miniature_stars.clear()
 	if chart == null or chart.base_star_positions.is_empty():
 		return
 	var bounds := Rect2(Vector2(chart.base_star_positions.values()[0]), Vector2.ZERO)
@@ -129,10 +137,16 @@ func _draw_old_constellations() -> void:
 		for edge in constellation.segments:
 			var a: Vector2 = chart.base_star_positions[constellation_id + "/" + edge[0]]
 			var b: Vector2 = chart.base_star_positions[constellation_id + "/" + edge[1]]
-			draw_line(center + (a - bounds.get_center()) * ratio, center + (b - bounds.get_center()) * ratio, Color(UITheme.LINE_INSTALLED, 0.52), 0.7, true)
+			_miniature_edges.append(PackedVector2Array([center + (a - bounds.get_center()) * ratio, center + (b - bounds.get_center()) * ratio]))
 		for star in constellation.stars:
 			var p: Vector2 = chart.base_star_positions[constellation_id + "/" + star.id]
-			draw_circle(center + (p - bounds.get_center()) * ratio, 1.4 if not String(star.get("node_id", "")).is_empty() else 0.7, Color("E7DCCC", 0.8))
+			_miniature_stars.append({"position": center + (p - bounds.get_center()) * ratio, "radius": 1.4 if not String(star.get("node_id", "")).is_empty() else 0.7})
+
+func _draw_old_constellations() -> void:
+	for edge in _miniature_edges:
+		draw_line(edge[0], edge[1], Color(UITheme.LINE_INSTALLED, 0.52), 0.7, true)
+	for star in _miniature_stars:
+		draw_circle(star.position, star.radius, Color("E7DCCC", 0.8))
 
 func _draw_caption(p: Vector2, caption: String, ink: Color, font_size: int) -> void:
 	var font: Font = UITheme.sans()

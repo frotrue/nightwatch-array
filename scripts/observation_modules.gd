@@ -9,6 +9,9 @@ const DEFINITIONS := {
 var purchased: Array[String] = []
 var equipped := ""
 var secondary := ""
+var _cached_first := "\u0001"
+var _cached_second := "\u0001"
+var _cached_effects: Dictionary = {}
 
 func purchase(id: String, progression: Node) -> bool:
 	if not DEFINITIONS.has(id) or id in purchased or not progression.galaxy_unlocked():
@@ -41,7 +44,15 @@ func installed_ids() -> Array[String]:
 	return result
 
 func effect(key: String):
-	return configuration(installed_ids()).get(key)
+	# Public slot/ownership fields are also used by save fixtures. Compare the
+	# effective ids on read so direct changes cannot leave stale cached effects.
+	var first := equipped if equipped in purchased else ""
+	var second := secondary if secondary in purchased and secondary != first else ""
+	if first != _cached_first or second != _cached_second:
+		_cached_effects = configuration([first, second])
+		_cached_first = first
+		_cached_second = second
+	return _cached_effects.get(key)
 
 static func configuration(selection) -> Dictionary:
 	var result := {"cost": 0.0, "speed": 1.0, "radius": 1.0, "targets": 1}

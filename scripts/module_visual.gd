@@ -8,6 +8,8 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 func configure(id: String, active: bool = true) -> void:
+	if module_id == id and owned == active:
+		return
 	module_id = id
 	owned = active
 	queue_redraw()

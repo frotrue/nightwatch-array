@@ -30,7 +30,7 @@
 | [docs/probes.md](docs/probes.md) | 테스트와 계측 프로브 실행법 |
 | [docs/settings-accessibility-plan.md](docs/settings-accessibility-plan.md) | Agent Room 합의에서 확장한 설정·조작·접근성 v2.1 계약 |
 | [docs/settings-reference-study.md](docs/settings-reference-study.md) | 짧은 12종·장기형 15종 설정 UI 조사와 채택/보류 결정 |
-| [docs/full-tree-economy-baseline.md](docs/full-tree-economy-baseline.md) | 현행 107노드 경제의 3전략 × 3시드 기준선 |
+| [docs/full-tree-economy-baseline.md](docs/full-tree-economy-baseline.md) | 이전 107노드 경로의 3전략 × 3시드 기준선 (현재 모듈 구간과 구분) |
 | [docs/README.md](docs/README.md) | 문서 지도: 현행 참조, 계측 기준선, 완료 작업과 역사 기록 |
 | [AGENTS.md](AGENTS.md) | 에이전트 작업 규약 |
 
@@ -67,7 +67,7 @@ C:\Users\user\AppData\Local\Temp\codex-godot-4.7.2\Godot_v4.7.2-stable_win64_con
 
 ### 한 명령으로 검증하고 빌드하기
 
-빠른 게이트 13개를 검사하고, 모두 통과하면 Windows 실행 파일을 갱신한다.
+빠른 게이트 14개를 검사하고, 모두 통과하면 Windows 실행 파일을 갱신한다.
 
 ```powershell
 $godot = "C:\Users\user\AppData\Local\Temp\codex-godot-4.7.2\Godot_v4.7.2-stable_win64_console.exe"
@@ -93,7 +93,7 @@ $godot = "C:\Users\user\AppData\Local\Temp\codex-godot-4.7.2\Godot_v4.7.2-stable
 
 ### 개별 게이트 직접 실행
 
-연구 계약 테스트는 설치 가능한 107개 연구를 검사한다. 38개는 실행 계약으로
+연구 계약 테스트는 95개 기존 연구와 호환용 12개 정의, 합계 107개를 검사한다. 38개는 실행 계약으로
 독립 검증하고, 나머지 69개 ID는 exact-unverified 기준선으로 보존한다. 국부은하군의
 비상호작용 장식 기록 17개도 연구 정의와 별도로 검사한다.
 
@@ -125,7 +125,7 @@ Layer 2 프로브 테스트도 통과/실패 게이트다.
 확인한다. 청취 자료와 창 모드 효과 캡처의 재현법·검증 한계는
 [docs/probes.md](docs/probes.md)에 정리돼 있다.
 
-계측 프로브 8개와 현행 107노드 전체 경제 게이트는
+계측 프로브 8개와 호환용 107노드 경로의 전체 경제 게이트는
 [docs/probes.md](docs/probes.md) 참고. 경제 결과 기준선은
 [docs/full-tree-economy-baseline.md](docs/full-tree-economy-baseline.md)에 보존한다.
 

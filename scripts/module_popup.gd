@@ -154,6 +154,8 @@ func refresh() -> void:
 		return
 	launcher.text = tr("DEEP_MODULES")
 	launcher.visible = game.upgrade_tree.is_open() and game.deep_sky.modules_unlocked()
+	if not is_open():
+		return
 	heading.text = tr("DEEP_MODULES")
 	slot_heading.text = tr("DEEP_SLOTS")
 	owned_heading.text = tr("DEEP_OWNED")

@@ -49,9 +49,11 @@ func _process(delta: float) -> void:
 	var game: Node = research.game
 	position = game.observation_view.screen_to_world(get_viewport_rect().size * Vector2(0.73, 0.30))
 	scale = Vector2.ONE * game.observation_view.screen_length_to_world(1.0)
+	var was_cooling := cooldown > 0.0
 	if game.observation_phase_active:
 		cooldown = maxf(0.0, cooldown - delta / maxf(Engine.time_scale, 0.001))
-	queue_redraw()
+	if was_cooling != (cooldown > 0.0):
+		queue_redraw()
 
 func _draw() -> void:
 	var alpha := 0.3 if cooldown > 0 else 1.0

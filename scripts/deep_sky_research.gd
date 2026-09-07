@@ -8,14 +8,24 @@ var game: Node
 var modules = Modules.new()
 var observations := 0
 var target: Node2D
+var _last_available := false
 
 func setup(controller: Node) -> void:
 	game = controller
 	target = Target.new()
 	target.research = self
 	add_child(target)
-	game.progression.state_changed.connect(func(): target.visible = available(); changed.emit())
-	target.visible = available()
+	game.progression.state_changed.connect(_on_progression_changed)
+	game.settings.language_changed.connect(func(_locale): target.queue_redraw())
+	_last_available = available()
+	target.visible = _last_available
+
+func _on_progression_changed() -> void:
+	var unlocked := available()
+	target.visible = unlocked
+	if unlocked != _last_available:
+		_last_available = unlocked
+		changed.emit()
 
 func available() -> bool:
 	return game != null and game.progression.galaxy_unlocked()
@@ -60,6 +70,7 @@ func reset() -> void:
 	target.progress = 0.0
 	target.cooldown = 0.0
 	target.visible = available()
+	target.queue_redraw()
 	changed.emit()
 
 func get_save_data() -> Dictionary:
@@ -74,6 +85,7 @@ func load_save_data(data: Dictionary, legacy: Dictionary = {}) -> void:
 	observations = int(_number(data.get("observations", 0), 1000000000.0))
 	target.progress = _number(data.get("progress", 0), 0.999)
 	target.cooldown = _number(data.get("cooldown", 0), 7.0)
+	target.queue_redraw()
 	changed.emit()
 
 func _number(value, maximum: float) -> float:

@@ -4,6 +4,8 @@ signal slots_changed
 
 const SAVE_VERSION := 1
 const SLOT_COUNT := 3
+const RUN_NUMBER_FIELDS := ["elapsed_time", "observation_round", "observation_phase_remaining", "observation_phase_duration", "phase_start_successes", "phase_start_manual_successes", "phase_start_automatic_successes", "phase_start_total_data", "best_round_rate", "best_round_data"]
+const PROGRESSION_NUMBER_FIELDS := ["observation_data", "success_count", "manual_successes", "automatic_successes", "total_data_earned", "best_multiplier", "leonid_charge"]
 
 var save_directory := "user://saves"
 var slot_summaries: Dictionary = {}
@@ -24,17 +26,42 @@ func set_save_directory(path: String) -> void:
 func save_slot(slot: int, run_data: Dictionary) -> Error:
 	if not _is_valid_slot(slot):
 		return ERR_INVALID_PARAMETER
+	if not _valid_run_data(run_data):
+		return ERR_INVALID_DATA
 	_ensure_save_directory()
 	var config := ConfigFile.new()
 	var saved_at := int(Time.get_unix_time_from_system())
 	config.set_value("meta", "version", SAVE_VERSION)
 	config.set_value("meta", "saved_at", saved_at)
 	config.set_value("run", "data", run_data.duplicate(true))
-	var error := config.save(_slot_path(slot))
+	# Stage beside the destination, then replace it in one rename. A failed
+	# write/commit never truncates the last successfully saved player record.
+	var destination := ProjectSettings.globalize_path(_slot_path(slot))
+	var staged := destination + ".tmp.%d" % OS.get_process_id()
+	var error := _write_slot_config(config, staged)
+	if error == OK:
+		error = _commit_slot_file(staged, destination)
+	if error != OK and FileAccess.file_exists(staged):
+		DirAccess.remove_absolute(staged)
 	if error == OK:
 		slot_summaries[slot] = _summary_from_run_data(run_data, saved_at)
 		slots_changed.emit()
 	return error
+
+
+func _write_slot_config(config: ConfigFile, path: String) -> Error:
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	if file == null:
+		return FileAccess.get_open_error()
+	file.store_string(config.encode_to_text())
+	file.flush()
+	var error := file.get_error()
+	file.close()
+	return error
+
+
+func _commit_slot_file(staged: String, destination: String) -> Error:
+	return DirAccess.rename_absolute(staged, destination)
 
 
 func load_slot(slot: int) -> Dictionary:
@@ -43,10 +70,7 @@ func load_slot(slot: int) -> Dictionary:
 	var config := ConfigFile.new()
 	if config.load(_slot_path(slot)) != OK:
 		return {}
-	if int(config.get_value("meta", "version", -1)) != SAVE_VERSION:
-		return {}
-	var data = config.get_value("run", "data", {})
-	return data.duplicate(true) if data is Dictionary else {}
+	return _decoded_run(config).duplicate(true)
 
 
 func reset_slot(slot: int) -> Error:
@@ -72,25 +96,42 @@ func get_slot_summary(slot: int) -> Dictionary:
 
 
 func _read_slot_summary(slot: int) -> Dictionary:
+	if not FileAccess.file_exists(_slot_path(slot)):
+		return {"exists": false, "valid": true}
 	var config := ConfigFile.new()
 	var error := config.load(_slot_path(slot))
 	if error != OK:
-		return {"exists": false, "valid": true}
-	var version := int(config.get_value("meta", "version", -1))
-	var data = config.get_value("run", "data", {})
-	if version != SAVE_VERSION or not (data is Dictionary):
 		return {"exists": true, "valid": false}
-	var progression_data = data.get("progression", {})
-	if not (progression_data is Dictionary):
-		progression_data = {}
-	return {
-		"exists": true,
-		"valid": true,
-		"saved_at": int(config.get_value("meta", "saved_at", 0)),
-		"elapsed_time": maxf(0.0, float(data.get("elapsed_time", 0.0))),
-		"observation_data": maxf(0.0, float(progression_data.get("observation_data", 0.0))),
-		"upgrade_level": _validated_string_array(progression_data.get("purchased_nodes", [])).size(),
-	}
+	var data := _decoded_run(config)
+	if data.is_empty():
+		return {"exists": true, "valid": false}
+	var timestamp = config.get_value("meta", "saved_at", 0)
+	return _summary_from_run_data(data, timestamp if timestamp is int else 0)
+
+
+func _decoded_run(config: ConfigFile) -> Dictionary:
+	var version = config.get_value("meta", "version", -1)
+	var data = config.get_value("run", "data", {})
+	if not version is int or version != SAVE_VERSION or not data is Dictionary:
+		return {}
+	return data if _valid_run_data(data) else {}
+
+
+func _valid_run_data(data: Dictionary) -> bool:
+	if data.is_empty():
+		return false
+	var progression = data.get("progression", {})
+	return progression is Dictionary and _valid_number_fields(data, RUN_NUMBER_FIELDS) and _valid_number_fields(progression, PROGRESSION_NUMBER_FIELDS)
+
+
+func _valid_number_fields(data: Dictionary, fields: Array) -> bool:
+	for key in fields:
+		if not data.has(key):
+			continue
+		var value = data[key]
+		if not (value is int or value is float) or not is_finite(float(value)):
+			return false
+	return true
 
 
 func _summary_from_run_data(run_data: Dictionary, saved_at: int) -> Dictionary:
@@ -101,10 +142,16 @@ func _summary_from_run_data(run_data: Dictionary, saved_at: int) -> Dictionary:
 		"exists": true,
 		"valid": true,
 		"saved_at": saved_at,
-		"elapsed_time": maxf(0.0, float(run_data.get("elapsed_time", 0.0))),
-		"observation_data": maxf(0.0, float(progression_data.get("observation_data", 0.0))),
+		"elapsed_time": _nonnegative_number(run_data.get("elapsed_time", 0.0)),
+		"observation_data": _nonnegative_number(progression_data.get("observation_data", 0.0)),
 		"upgrade_level": _validated_string_array(progression_data.get("purchased_nodes", [])).size(),
 	}
+
+
+func _nonnegative_number(value) -> float:
+	if not (value is int or value is float) or not is_finite(float(value)):
+		return 0.0
+	return maxf(0.0, float(value))
 
 
 func _reload_slot_summaries() -> void:

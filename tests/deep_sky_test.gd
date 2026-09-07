@@ -8,6 +8,7 @@ func _initialize() -> void:
 	_run.call_deferred()
 
 func _run() -> void:
+	_check_module_effect_cache()
 	create_timer(35.0, true, false, true).timeout.connect(func(): push_error("Deep sky watchdog"); quit(1))
 	var game: Node = load("res://scenes/main.tscn").instantiate()
 	Fixtures.configure_before_ready(game)
@@ -37,6 +38,13 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	var chart = tree.deep_sky_chart
+	var forwarded := [0]
+	research.changed.connect(func(): forwarded[0] += 1)
+	game.progression.add_debug_data(17.0)
+	await process_frame
+	await process_frame
+	_check(forwarded[0] == 0, "ordinary income does not broadcast duplicate module-state changes")
+	_check(chart.balance.text.begins_with(game.UITheme.grouped_integer(int(game.progression.observation_data))), "visible research still updates its balance through progression changes")
 	_check(chart.visible and chart.nodes.keys() == ["m31", "modules", "focus", "wide"], "one compact continuation replaces the destination hub")
 	chart.select("focus")
 	game.progression.observation_data = 240000000.0
@@ -259,3 +267,20 @@ func _click_in_viewport(viewport: SubViewport, point: Vector2) -> void:
 		event.button_index = MOUSE_BUTTON_LEFT
 		event.pressed = pressed
 		viewport.push_input(event, true)
+
+func _check_module_effect_cache() -> void:
+	var model = load("res://scripts/observation_modules.gd").new()
+	model.load_save_data({"purchased": ["focus", "wide"], "slots": ["focus", "wide"]})
+	_check(is_equal_approx(model.effect("speed"), 1.35) and model.effect("targets") == 3, "combined cached effects match the existing contract")
+	for index in range(20):
+		_check(is_equal_approx(model.effect("radius"), 1.65), "repeated cached reads remain stable")
+	model.secondary = ""
+	_check(is_equal_approx(model.effect("speed"), 1.8) and model.effect("targets") == 1, "direct slot change invalidates cached effects")
+	model.purchased.clear()
+	_check(is_equal_approx(model.effect("speed"), 1.0), "direct ownership removal invalidates cached effects")
+	model.purchased.append("focus")
+	_check(is_equal_approx(model.effect("speed"), 1.8), "ownership restoration is reflected without an equip call")
+	model.secondary = "focus"
+	_check(is_equal_approx(model.effect("speed"), 1.8), "duplicate direct slots do not stack cached effects")
+	model.load_save_data({"purchased": ["wide"], "equipped": "wide"})
+	_check(is_equal_approx(model.effect("speed"), 0.75) and model.effect("missing") == null, "legacy load invalidates cache and unknown effect lookup remains null")
