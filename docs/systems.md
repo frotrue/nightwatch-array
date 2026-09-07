@@ -11,6 +11,13 @@ The [documentation map](README.md) separates current contracts from historical
 baselines and superseded decisions. Start with the responsibility table for code
 ownership, then the relevant flow and save contract below.
 
+The active content path is the original sky and constellation chart followed by
+M31 and modules. Descriptions below of the old 107-research path, Local Group
+chapters, and catalogue ending cover retained compatibility and diagnostics;
+they do not define new continuation content. See [legacy contracts](legacy-contracts.md)
+when maintaining those paths, and [current feature details](design-details.md)
+for the active values and behavior.
+
 ## Scene tree
 
 `scenes/main.tscn`:

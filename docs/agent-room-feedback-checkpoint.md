@@ -34,7 +34,8 @@ Fable 리뷰를 거쳐 완료됐고, `ef769ee`로 main에 병합됐다.
   저장소에 포함되지 않고 재생성이 필요할 수 있다.
 
 현행 재현 명령과 검증 범위는 [probes.md](probes.md),
-현재 표현 계약은 [design.md](design.md#화면소리피드백)에 있다.
+현재 표현 방향은 [design.md](design.md#화면소리피드백), 값과 동작은
+[상세 기준](design-details.md#표현과-설명)에 있다.
 
 ## 남겨 둔 후속 검토
 

@@ -26,19 +26,27 @@ while participating in a room meeting.
 
 ## Orientation
 
-Read before changing anything:
+Read the README and design brief before changing anything. Then read only the
+relevant sections of the detailed references; historical records are for tracing
+a specific decision, not a routine prerequisite.
 
 - [README.md](README.md) — how to run, test, export, and where the Godot binary
   actually lives. The commands this file requires are written out there.
-- [docs/design.md](docs/design.md) — current genre, target length, single-chart
-  progression, and the principles a change has to satisfy. Superseded decisions
-  are preserved under `docs/history/`, not additional implementation requirements. If a proposal
-  conflicts with this document, raise the conflict with the user and get a
-  decision. Record the approved decision in the document before or alongside
-  the code. Never edit the design document on your own authority to make a
-  change you already want to look compliant.
+- [docs/design.md](docs/design.md) — core direction, current progression, open
+  decisions, and the boundary between autonomous adjustments and user decisions.
+  Within the requested task, small UI, presentation, and balance adjustments are
+  authorized; report their effect and validation, and update the relevant detail.
+  Ask before changing core direction, controls, save compatibility, content
+  direction, the overall economy, or the ending. Preserve the user's decision
+  before or alongside implementation. Never rewrite a guardrail to justify an
+  unauthorized change.
+- [docs/design-details.md](docs/design-details.md) — current values and behavior;
+  consult only the feature being changed. These values are starting points within
+  the design brief's adjustment boundary, not blanket approval gates.
 - [docs/systems.md](docs/systems.md) — scene tree, signal wiring, ownership.
 - [docs/probes.md](docs/probes.md) — what each test and probe measures.
+- [docs/legacy-contracts.md](docs/legacy-contracts.md) — retained compatibility
+  and diagnostic paths; read when touching those paths, not as future content requirements.
 
 ## Completion Requirements
 

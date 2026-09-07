@@ -19,7 +19,7 @@
 집중은 수동 분석 ×1.8, 광역은 반경 ×1.65 / 수동 분석 ×0.75이며 함께 쓰면 속도 ×1.35다.
 후속 모듈은 정밀 추적(속도 ×1.5 / 반경 ×0.7), 심층 기록(M31 데이터 ×1.5 /
 수동 속도 ×0.8), 재관측(M31 완료 후 대기 ×0.6)으로, 총 다섯 종류다.
-구매·자리 해금의 가격과 선행 조건은 [설계 문서](docs/design.md)에 정리했다.
+구매·자리 해금의 가격과 선행 조건은 [모듈 상세 기준](docs/design-details.md#m31과-모듈)에 정리했다.
 기존 다중 관측과 접시 자동화는 유지된다. 구매·다섯 자리·열린 자리 수·M31 기록과 부분 진행은 저장한다.
 이전 별도 스테이지 저장의 구매·장착 모듈도 기존 하늘에서 이어 쓸 수 있다.
 
@@ -30,7 +30,9 @@
 
 | 문서 | 내용 |
 |---|---|
-| [docs/design.md](docs/design.md) | 현행 단일 성도 진행, 관측·엔딩·표현 계약, 미결 사항 — **코드를 바꾸기 전에 먼저 읽을 것** |
+| [docs/design.md](docs/design.md) | 핵심 방향, 현재 흐름, 자율 개발·사용자 결정 경계 — **작업 시작 시 읽을 것** |
+| [docs/design-details.md](docs/design-details.md) | 모듈·관측·성도·표현의 현재 값과 동작 — 관련 기능만 참조 |
+| [docs/legacy-contracts.md](docs/legacy-contracts.md) | 이전 국부은하군·엔딩의 호환·진단 유지 조건 |
 | [docs/systems.md](docs/systems.md) | 씬 트리, 시그널 배선, 스크립트별 책임 |
 | [docs/probes.md](docs/probes.md) | 테스트와 계측 프로브 실행법 |
 | [docs/settings-accessibility-plan.md](docs/settings-accessibility-plan.md) | Agent Room 합의에서 확장한 설정·조작·접근성 v2.1 계약 |
