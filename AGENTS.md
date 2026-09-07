@@ -12,48 +12,20 @@ Adapted from [OpenAI's GPT-6 Astra prompting guidance](https://developers.openai
   link it, quote the rule, and distinguish the requirement from your interpretation.
 - Lead with the result in concise, plain prose. Use lists where useful; report
   verification and material limitations.
-- Autonomously use subagents for independent work when this is expected to save
-  time or improve quality after startup, handoff, and review costs. Keep quick
-  or tightly coupled work local when delegation delays the next decision.
-  Start with 1-2; add more only when independent work
-  justifies the coordination and usage cost. Delegate only with clear file
-  ownership or a read-only remit, completion criteria, and useful independent
-  work for the primary agent. Handle an isolated small edit directly.
-- Explicitly select both model and reasoning effort for every subagent,
-  including reviewers: `gpt-5.6-luna` / `max` for clear, bounded work or
-  `gpt-5.6-terra` / `xhigh` for broader implementation and investigation. Choose
-  directly by task; a Luna attempt is not required before using Terra.
-- Use `gpt-5.6-sol` / `xhigh` only when genuinely needed, either from the outset
-  or after evidence that Luna/Terra cannot resolve the task. Pass along failed
-  approaches and remaining questions to avoid repeating the same work.
-- Never use GPT-6 Astra as a subagent, including for review. The primary agent
-  keeps context-dependent decisions, difficult judgement, and final integration.
-  If the selected model/effort is unavailable, handle the work directly and
-  report the limitation instead of silently inheriting Astra or substituting.
-- Give each agent one outcome, exact cwd, relevant context, owned files or
-  commands, constraints, completion evidence, and a stop condition. Include
-  before/after behavior for implementation. Use fresh context by default
-  (`fork_turns: "none"` where supported), with necessary instructions and evidence rather
-  than the full conversation. Prefer independent regression, save
-  compatibility, and documentation checks; parallelize implementation when file
-  ownership is separate. Avoid overlapping edits.
+- Default to working directly in the primary GPT-6 Astra session. Keep planning,
+  implementation, review, testing, and final integration with this single agent.
+- Spawn subagents only when the user explicitly requests subagents, delegation,
+  or parallel agent work. Task size, expected cost savings, and review needs do
+  not authorize delegation. Do not routinely ask to delegate; proceed directly.
+- When delegation is explicitly requested, keep it within the requested scope.
+  Give each agent a bounded outcome, relevant context, clear file ownership or
+  a read-only remit, and completion evidence. The primary agent verifies results
+  and owns integration and final validation. Avoid duplicate work, overlapping
+  edits, and nested delegation beyond the user's request.
 - After required orientation, start with the supplied files and evidence.
   Expand into historical documents, old commits, or repository-wide searches
   only to resolve missing or conflicting information. Read focused sections;
   avoid repeated whole-file reads and unnecessarily large tool outputs.
-- Keep simple edits and CodeGraph exploration local and avoid duplicate work.
-  Continue useful independent work while agents run. The primary agent reviews
-  results against the actual changes and owns integration and final validation.
-  Use readable handoffs; delegation does not expand approved design scope or
-  waive the completion requirements below.
-- Assign validation responsibility in the handoff: editors run focused checks;
-  the primary agent owns integration tests, visual review, build, commit, and
-  requested push. Command execution may be delegated without transferring final
-  responsibility. Preserve required independent verification without having
-  every agent repeat the full validation suite.
-- Give shared result files one writer; serialize work sharing mutable outputs,
-  ports, or services. Avoid duplicate jobs and automatic agent chains; nested
-  delegation requires an explicit assignment.
 
 ### Verification efficiency
 
@@ -73,29 +45,18 @@ Adapted from [OpenAI's GPT-6 Astra prompting guidance](https://developers.openai
   or fixture failure. Establish the contract or environment difference; workers
   return scope or acceptance changes to the primary agent.
 
-### Execution-only assignments
+### Explicit execution-only assignments
 
-Apply these restrictions only when a worker is explicitly assigned command
-execution and result collection. Existing Luna implementation work is permitted.
+These rules apply only to command execution explicitly delegated by the user.
 
-- Keep the model policy above. Delegate supplied commands/scripts only when
-  runtime or output justifies it; do not create scripts or elaborate handoffs
-  merely to use a runner. Include cwd, prerequisites, whole-job completion
-  evidence, time limits, and cancellation ownership in the assignment.
-- The runner does not edit source/config/tests, install dependencies, change
-  acceptance criteria, commit/push, clean/reset/checkout, or spawn agents.
-  Expected command artifacts and concise reports are allowed.
-- One owner executes and monitors each job, preserving handles, logs, and exit
-  status. Resume existing jobs; transfer monitoring ownership explicitly.
-  Phase success or 100% progress is not completion. Failed prerequisites block
-  dependent checks; safe independent checks may continue. Do not use stale builds.
-- Use completion signals or bounded waits within tool limits. Retry only after
-  a concrete fix or explicit bounded policy; report any in-scope correction of
-  a demonstrated invocation/collection error. Cancel only the authorized job.
-- Report PASS, FAIL, BLOCKED, or TIMEOUT with exit codes, decisive output, logs,
-  skipped checks, and running jobs. Missing or stale evidence is not a pass.
-  Send actionable blockers promptly and final evidence once; the primary agent
-  handles diagnosis and scope changes.
+- Supply cwd, commands, prerequisites, completion evidence, and time limits.
+  The runner executes and reports; it does not edit source, change acceptance
+  criteria, commit/push, clean/reset/checkout, or spawn more agents.
+- Give each job one execution and monitoring owner. Preserve handles, logs, and
+  exit status; resume existing jobs. Report actual PASS, FAIL, BLOCKED, or TIMEOUT
+  with decisive evidence. Phase progress and stale artifacts are not completion.
+- Report blockers promptly. The primary agent handles diagnosis, scope changes,
+  independent verification, and final completion requirements.
 
 These defaults supplement the project contracts below. In particular, routine
 implementation choices do not need a design meeting, but a conflict with
