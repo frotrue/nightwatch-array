@@ -21,6 +21,17 @@ Read before changing anything:
 - After making project changes, always run the relevant tests and build or refresh the Windows `.exe` before reporting the task as complete.
 - If the executable export fails, do not report the task as complete. Report the failure and its cause.
 - Include the absolute path to the generated `.exe` in the final response.
+- Commit the work before reporting it complete. Finished work is not left
+  sitting in the working tree.
+- Leave no new file untracked at the end of a unit of work. An untracked file
+  has no ancestor commit, so a later branch that creates the same path cannot be
+  three-way merged; the merge degenerates into choosing one whole file over the
+  other instead of combining them.
+- Stage only the files belonging to your own unit of work. Another session may
+  be editing this tree at the same time. Never sweep its changes into your
+  commit, and split unrelated work into separate commits.
+- If work is paused rather than finished, commit it anyway. A checkpoint commit
+  gives later branches an ancestor; a dirty tree gives them nothing.
 
 ## Commit Attribution
 
@@ -54,8 +65,8 @@ meeting is.
 
 End the turn only when one of these is true:
 
-- The next step requires a decision only the user can make — commit, merge,
-  scope, or design direction.
+- The next step requires a decision only the user can make — merge, scope, or
+  design direction.
 - The other agent is holding and nothing is pending from either side.
 - The user has interrupted with something else.
 
