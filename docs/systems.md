@@ -36,7 +36,8 @@ All script names below are under `scripts/`.
 | M31 lifecycle, first record, module validation and accounting | `deep_sky_research.gd`, `andromeda_target.gd` |
 | Stable extension catalogue, research graph, plans and acquisition state | `expansion_data.gd`, `expansion_state.gd` |
 | Independent anomaly scheduler, persistent tickets and concrete targets | `anomaly_director.gd`, `anomaly_target.gd` |
-| Continuation nodes and cached constellation miniature | `deep_sky_chart.gd` |
+| Outer figure geometry and stable research/star mapping | `constellation_extension_data.gd` |
+| Auxiliary field plans and specimen analysis; return to the same chart | `deep_sky_chart.gd` |
 | Module definitions, ownership, five slots, capacity and effect cache | `observation_modules.gd` |
 | Research-only equipment popup and shared glyphs | `module_popup.gd`, `module_visual.gd` |
 | Palette, fonts, spec coordinates and integer formatting | `ui_theme.gd` |
@@ -58,6 +59,12 @@ The observer's additional target layers include hosts, phenomena and DeepSkyRese
 The survey discovery guard also includes these layers. `observer.modules` points
 to `deep_sky.modules`; the chart's continuation binds DeepSkyResearch and the chart.
 ModulePopup receives the game and is exposed to the chart for input/modal ownership.
+UpgradeTree merges the outer figure records into its existing coordinate cache,
+star buttons, hold controller, renderer, ledger and inspector. It dispatches
+outer purchases to DeepSkyResearch while preserving the original progression owner.
+Alpheratz is one shared coordinate/state at the Andromeda/Pegasus corner.
+The original 95-star geometry stays intact when the wider sky is revealed.
+Plans and analysis are explicit auxiliary views; returning preserves rotation/zoom.
 
 ## Signal wiring
 

@@ -165,6 +165,8 @@ func _capture(game: Node, name: String) -> void:
 		failures.append("popup missing or obscured by research: " + name)
 	game.module_popup.finish_animations()
 	game.module_popup.set_process(false)
+	for visual in game.upgrade_tree.node_hold_bars.values():
+		visual.set_process(false)
 	game.hud.data_gain_label.hide()
 	game.hud.banner_root.hide()
 	for tween in get_processed_tweens():
@@ -173,12 +175,10 @@ func _capture(game: Node, name: String) -> void:
 	await process_frame
 	_redraw_capture_items(game)
 	await process_frame
-	RenderingServer.force_draw()
-	RenderingServer.force_sync()
+	await RenderingServer.frame_post_draw
 	var first := root.get_texture().get_image()
 	await process_frame
-	RenderingServer.force_draw()
-	RenderingServer.force_sync()
+	await RenderingServer.frame_post_draw
 	var second := root.get_texture().get_image()
 	if first.get_data() != second.get_data() or second.get_size() != Vector2i(1152, 648):
 		failures.append("unstable or wrong-size frame: " + name)

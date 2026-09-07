@@ -174,6 +174,19 @@ class MockTree:
 
 	var progression: MockProgression
 	var base_star_positions: Dictionary = {}
+	var selected := ""
+
+	func bind_extension(_research: Node) -> void:
+		pass
+
+	func _cancel_node_hold() -> void:
+		pass
+
+	func _refresh_galactic_overlays() -> void:
+		pass
+
+	func select_extension(id: String) -> void:
+		selected = id
 
 	func _init(value: MockProgression) -> void:
 		progression = value
@@ -206,24 +219,15 @@ func _run() -> void:
 	chart.bind(research, tree)
 	await process_frame
 
-	_check(chart.nodes.size() == 20, "research tab exposes M31, the legacy eight, and ten continuation research nodes")
-	for id in Modules.RESEARCH_IDS + Data.RESEARCH_ORDER:
-		_check(chart.nodes.has(id), "research node remains reachable by its stable id: " + id)
-	_check(chart._visible_base_owned_count() == 95, "continuation progress excludes retained Local Group records from the visible 95-node base array")
-
+	_check(chart._visible_base_owned_count() == 95, "auxiliary progress excludes legacy Local Group records")
 	chart.select("focus")
-	_check(chart.detail_title.text == "Study focus" and chart.buy_button.visible, "legacy research selection still uses the shared detail and purchase path")
-	chart.buy_button.pressed.emit()
-	_check(research.purchase_calls == ["focus"] and research.modules.research_owned("focus"), "legacy research purchase is forwarded once through the chart")
+	_check(tree.selected == "focus", "research selection returns to the real constellation chart")
 	chart.select("ext_trace_study")
-	_check(chart.detail_title.text == "Study ext_trace_study" and chart.buy_button.visible, "continuation research selection shares the inspector and purchase control")
-	chart.buy_button.pressed.emit()
-	_check(research.purchase_calls == ["focus", "ext_trace_study"] and research.owned.has("ext_trace_study"), "continuation research purchase is forwarded once through the chart")
+	_check(tree.selected == "ext_trace_study", "new research uses the same constellation selection path")
 
 	chart.tab_buttons[1].pressed.emit()
 	await process_frame
-	_check(chart.plans_panel.visible and not chart.research_panel.visible, "Plans tab replaces the research surface")
-	_check(not chart.detail_title.is_visible_in_tree() and not chart.detail_body.is_visible_in_tree() and not chart.status.is_visible_in_tree() and not chart.price.is_visible_in_tree() and not chart.buy_button.is_visible_in_tree(), "Plans tab hides the research inspector instead of leaving stale purchase detail beside plan records")
+	_check(chart.plans_panel.visible and not chart.analysis_panel.visible, "Plans tab replaces the research surface")
 	_check(chart.plan_buttons.size() == Data.PLAN_ORDER.size() and Data.field_count() == 18, "Plans tab lists all seven plans and the data model retains eighteen fields")
 	chart.plan_buttons["plan_sweep_1"].pressed.emit()
 	_check(research.active_plan() == "plan_sweep_1" and chart.plan_title.text == "Plan plan_sweep_1", "available plan controls select the plan and refresh its detail")
@@ -231,7 +235,6 @@ func _run() -> void:
 	chart.tab_buttons[2].pressed.emit()
 	await process_frame
 	_check(chart.analysis_panel.visible and chart.analysis_button.visible and chart.direct_button.disabled, "Analysis tab exposes the eight-sample draw while targeted analysis waits for twelve samples")
-	_check(not chart.detail_title.is_visible_in_tree() and not chart.detail_body.is_visible_in_tree() and not chart.status.is_visible_in_tree() and not chart.price.is_visible_in_tree() and not chart.buy_button.is_visible_in_tree(), "Analysis tab hides the research inspector instead of leaving stale purchase detail beside specimen choices")
 	research.samples = 8
 	chart.refresh_text()
 	chart.analysis_button.pressed.emit()
@@ -268,7 +271,7 @@ func _run() -> void:
 	mock_game.free()
 	await process_frame
 	if failures.is_empty():
-		print("DEEP_SKY_CHART_EXPANSION_PASS: tabs, continuation research, plans, saved specimen choices and return controls")
+		print("DEEP_SKY_CHART_EXPANSION_PASS: auxiliary plans, persisted specimen choices and constellation return controls")
 		quit(0)
 	else:
 		push_error(str(failures))

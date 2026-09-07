@@ -10,7 +10,7 @@ no GUT/gdUnit installation is needed.
 .\tools\validate.ps1 -GodotPath $godot -Build
 ```
 
-This runs the 19 fast gates below, then exports Windows. Add `-FullEconomy` for
+This runs the 20 fast gates below, then exports Windows. Add `-FullEconomy` for
 changes to progression, rewards, spawning or target logic. Omit `-Build` to test only.
 The economy run inherits its seed/strategy environment; it does not force three strategies.
 
@@ -67,7 +67,8 @@ Each file below is under `tests/`. Run one while iterating with:
 | `expansion_state_test.gd` | `EXPANSION_STATE_PASS` | Research graph, all plan shapes, exposures/evidence, specimen offer determinism and malformed saves |
 | `module_expansion_test.gd` | `MODULE_EXPANSION_PASS` | Conditional new effects, legacy multipliers, trail contact, sweep and contribution eligibility |
 | `module_inventory_test.gd` | `MODULE_INVENTORY_PASS` | Fourteen entries, categories, ownership, acquisition routes and scroll/focus controls |
-| `deep_sky_chart_expansion_test.gd` | `DEEP_SKY_CHART_EXPANSION_PASS` | Research/plan/analysis panels, pending candidates, routes and localization |
+| `deep_sky_chart_expansion_test.gd` | `DEEP_SKY_CHART_EXPANSION_PASS` | Auxiliary plans/analysis, pending candidates and constellation return routes |
+| `constellation_extension_test.gd` | `CONSTELLATION_EXTENSION_PASS` | Original geometry preserved, shared Alpheratz, eighteen mapped stars, real hold purchases, module/target unlocks, save compatibility and bilingual navigation |
 | `expansion_integration_test.gd` | `EXPANSION_INTEGRATION_PASS` | Real targets through all 18 fields without specimen modules, duplicate rewards, transactional failure, active save/load, integrated M31 equipment and round context |
 | `observation_span_probe.gd` | `OBSERVATION_SPAN_PASS` | Fixed-seed atmospheric equality, screen/world bounds, input/effect scaling, forecast suppression |
 | `galactic_slice_test.gd` | `GALACTIC_SLICE_PASS` | Legacy 12+17 topology, target/phenomenon behavior, lens automation, span and save contracts |

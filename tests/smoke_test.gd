@@ -1070,7 +1070,7 @@ func _run() -> void:
 	_check(game.upgrade_tree.node_buttons["long_exposure"].visible and game.upgrade_tree.node_buttons["long_exposure"].get_meta("visual_state") == "teaser", "one upcoming system is previewed as an unresolved signal")
 	_check(opening_optics.size == game.upgrade_tree.STAR_HIT_SIZE, "research stars use compact transparent point hit targets")
 	_check(game.upgrade_tree.tooltip_panel.visible and not game.upgrade_tree.selected_node_id.is_empty(), "research chart opens with the reference-style fixed inspector selection")
-	_check(game.upgrade_tree.constellation_ledger.visible and game.upgrade_tree.constellation_ledger_counts.size() == 13, "research chart exposes twelve constellation rows and the Local Group row")
+	_check(game.upgrade_tree.constellation_ledger.visible and game.upgrade_tree.constellation_ledger_counts.size() == 16, "research chart includes the original twelve and four outer constellation rows")
 	_check(game.upgrade_tree.tree_canvas.find_children("*", "Label", true, false).is_empty(), "constellation chart keeps node-name text out of the central playfield")
 	game.upgrade_tree._on_node_hovered("edge_detection")
 	_check(game.upgrade_tree.tooltip_panel.visible and game.upgrade_tree.hovered_node_id == "edge_detection" and game.upgrade_tree.selected_node_id == "edge_detection", "hovering a node updates the fixed constellation inspector")
@@ -2185,8 +2185,8 @@ func _run() -> void:
 	open_night_game.upgrade_tree._advance_galactic_pullback(1.35)
 	var overlap_legacy_alpha: float = open_night_game.upgrade_tree._node_presentation_alpha("better_lens")
 	_check(
-		overlap_legacy_alpha > 0.05 and overlap_legacy_alpha < 0.95 and is_zero_approx(open_night_game.upgrade_tree._local_group_alpha()),
-		"the completed chart fades without revealing the retired Local Group research route"
+		is_equal_approx(overlap_legacy_alpha, 1.0) and is_zero_approx(open_night_game.upgrade_tree._local_group_alpha()),
+		"the original stars remain visible as the outer constellations are revealed"
 	)
 	_check(open_night_game.upgrade_tree._galactic_background_alpha() < 0.01, "the sparse galactic background waits until the legacy chart has nearly cleared")
 	_check(
@@ -2198,12 +2198,12 @@ func _run() -> void:
 	pullback_skip.pressed = true
 	open_night_game.upgrade_tree._input(pullback_skip)
 	_check(open_night_game.upgrade_tree.galactic_mode == open_night_game.upgrade_tree.GALACTIC_MODE_FINAL and open_night_game.galactic_pullback_seen, "a deliberate input skips to the same saved galactic final state")
-	_check(is_equal_approx(open_night_game.upgrade_tree.zoom, open_night_game.upgrade_tree.GALACTIC_ZOOM) and open_night_game.upgrade_tree.zoom < open_night_game.upgrade_tree.MIN_ZOOM, "the galactic frame uses its presentation zoom outside the player chart clamp")
+	_check(is_equal_approx(open_night_game.upgrade_tree.zoom, 0.43) and open_night_game.upgrade_tree.zoom < open_night_game.upgrade_tree.MIN_ZOOM, "the wider constellation view fits the new outer stars")
 	var visible_galactic_buttons := 0
 	for galactic_button_variant in open_night_game.upgrade_tree.node_buttons.values():
 		if galactic_button_variant.visible:
 			visible_galactic_buttons += 1
-	_check(visible_galactic_buttons == 0, "the destination hub exposes none of the old research buttons")
+	_check(visible_galactic_buttons > 18, "the expanded chart keeps original and outer star hit targets together")
 	_check(
 		open_night_game.upgrade_tree.galactic_background_stars.size() == open_night_game.upgrade_tree.GALACTIC_BACKGROUND_STAR_COUNT,
 		"the final galaxy frame retains exactly 74 sparse non-interactive background stars"
@@ -2220,11 +2220,11 @@ func _run() -> void:
 			galactic_background_clear = false
 			break
 	_check(galactic_background_clear, "galactic background stars stay outside the route and node exclusion ellipse")
-	_check(not open_night_game.upgrade_tree.galactic_panel.visible and not open_night_game.upgrade_tree.galactic_ledger.visible and open_night_game.upgrade_tree.deep_sky_chart.visible, "the extended chart replaces the retired inspector and install ledger")
+	_check(not open_night_game.upgrade_tree.galactic_panel.visible and not open_night_game.upgrade_tree.galactic_ledger.visible and not open_night_game.upgrade_tree.deep_sky_chart.visible and open_night_game.upgrade_tree.constellation_ledger.visible, "the expanded constellation chart keeps its original inspector and ledger")
 	_check(not open_night_game.upgrade_tree.galactic_core_hit.visible and open_night_game.upgrade_tree.galactic_core_hit.mouse_filter == Control.MOUSE_FILTER_IGNORE, "the old galactic core cannot intercept destination input")
 	_check(
-		Vector2(open_night_game.upgrade_tree.node_positions["galactic_reference_frame"]).is_equal_approx(open_night_game.upgrade_tree.CHART_ORIGIN),
-		"the original 95-node chart collapses into the interactive Galactic Reference Frame at the Milky Way centre"
+		not Vector2(open_night_game.upgrade_tree.node_positions["galactic_reference_frame"]).is_equal_approx(open_night_game.upgrade_tree.CHART_ORIGIN),
+		"the original research coordinates are preserved instead of collapsing to one point"
 	)
 	open_night_game.upgrade_tree._zoom_at(open_night_game.upgrade_tree.content_clip.global_position + open_night_game.upgrade_tree.content_clip.size * 0.5, 4.0)
 	var readable_chart_buttons := 0
@@ -2236,7 +2236,7 @@ func _run() -> void:
 	open_night_game.upgrade_tree._reset_view(false)
 	open_night_game.upgrade_tree._on_content_resized()
 	await process_frame
-	_check(is_equal_approx(open_night_game.upgrade_tree.zoom, open_night_game.upgrade_tree.GALACTIC_ZOOM) and open_night_game.upgrade_tree.galactic_chart_detail == 0.0, "reset and resize preserve the unlocked galaxy frame instead of applying the normal MIN_ZOOM fit")
+	_check(is_equal_approx(open_night_game.upgrade_tree.zoom, 0.43) and open_night_game.upgrade_tree.galactic_chart_detail == 1.0, "reset and resize frame the expanded constellations")
 	var seen_galactic_save: Dictionary = open_night_game._build_save_data()
 	_check(bool(seen_galactic_save.get("galactic_pullback_seen", false)), "the completed or skipped pull-back is present in the flat game save")
 	open_night_game.upgrade_tree.close_tree()
@@ -2247,7 +2247,7 @@ func _run() -> void:
 	open_night_game._on_phase_summary_continue_requested()
 	await process_frame
 	await process_frame
-	_check(open_night_game.upgrade_tree.galactic_mode == open_night_game.upgrade_tree.GALACTIC_MODE_FINAL and is_equal_approx(open_night_game.upgrade_tree.zoom, open_night_game.upgrade_tree.GALACTIC_ZOOM), "a seen pull-back reopens at the galaxy frame without replaying")
+	_check(open_night_game.upgrade_tree.galactic_mode == open_night_game.upgrade_tree.GALACTIC_MODE_FINAL and is_equal_approx(open_night_game.upgrade_tree.zoom, 0.43), "a seen reveal reopens the expanded chart without replaying")
 	open_night_game.upgrade_tree.close_tree()
 	await process_frame
 	_check(

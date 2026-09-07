@@ -4,7 +4,6 @@ signal observatory_requested
 signal constellations_requested
 
 const UITheme = preload("res://scripts/ui_theme.gd")
-const ChartData = preload("res://scripts/research_chart_data.gd")
 const Modules = preload("res://scripts/observation_modules.gd")
 const Data = preload("res://scripts/expansion_data.gd")
 
@@ -14,27 +13,6 @@ enum View {
 	ANALYSIS,
 }
 
-const RESEARCH_IDS := Modules.RESEARCH_IDS + Data.RESEARCH_ORDER
-const NODE_POSITIONS := {
-	"m31": Vector2(292, 146), "modules": Vector2(420, 146),
-	"focus": Vector2(294, 240), "wide": Vector2(420, 240),
-	"precision": Vector2(294, 314), "record": Vector2(420, 314),
-	"slot_3": Vector2(294, 388), "revisit": Vector2(420, 388),
-	"slot_4": Vector2(294, 462), "slot_5": Vector2(420, 536),
-	"ext_protocol": Vector2(652, 146),
-	"ext_trace_study": Vector2(552, 230), "ext_sweep_study": Vector2(652, 230), "ext_link_study": Vector2(752, 230),
-	"ext_trace_advanced": Vector2(552, 326), "ext_sweep_advanced": Vector2(652, 326), "ext_link_advanced": Vector2(752, 326),
-	"ext_synthesis": Vector2(652, 422), "ext_combined_watch": Vector2(652, 500), "ext_record_complete": Vector2(652, 568),
-}
-const CONNECTIONS := [
-	["m31", "modules"], ["modules", "focus"], ["modules", "wide"],
-	["focus", "precision"], ["wide", "record"], ["modules", "slot_3"],
-	["slot_3", "slot_4"], ["slot_4", "slot_5"], ["slot_3", "revisit"],
-	["m31", "ext_protocol"], ["ext_protocol", "ext_trace_study"], ["ext_protocol", "ext_sweep_study"], ["ext_protocol", "ext_link_study"],
-	["ext_trace_study", "ext_trace_advanced"], ["ext_sweep_study", "ext_sweep_advanced"], ["ext_link_study", "ext_link_advanced"],
-	["ext_trace_study", "ext_synthesis"], ["ext_sweep_study", "ext_synthesis"], ["ext_link_study", "ext_synthesis"],
-	["ext_synthesis", "ext_combined_watch"], ["ext_combined_watch", "ext_record_complete"],
-]
 const CATEGORY_COLORS := {
 	"trace": Color("8BB8D5"),
 	"sweep": Color("C7A6C5"),
@@ -46,18 +24,11 @@ var chart: Node
 var research: Node
 var selected_id := "m31"
 var active_view: View = View.RESEARCH
-var nodes: Dictionary = {}
 var title: Label
 var balance: Label
-var detail_title: Label
-var detail_body: Label
-var status: Label
-var price: Label
-var buy_button: Button
 var back_button: Button
 var chart_button: Button
 var tab_buttons: Dictionary = {}
-var research_panel: Control
 var plans_panel: Control
 var analysis_panel: Control
 var plan_scroll: ScrollContainer
@@ -74,8 +45,6 @@ var candidate_buttons: Array[Button] = []
 var direct_selector: OptionButton
 var direct_button: Button
 var catalogue_button: Button
-var _miniature_edges: Array[PackedVector2Array] = []
-var _miniature_stars: Array[Dictionary] = []
 var _last_acquired := ""
 
 
@@ -88,24 +57,6 @@ func _ready() -> void:
 		var view: View = descriptor[0]
 		var tab := button_at(Vector2(328 + int(view) * 115, 65), Vector2(106, 27), _set_view.bind(view))
 		tab_buttons[view] = tab
-
-	research_panel = Control.new()
-	research_panel.name = "ResearchPanel"
-	research_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(research_panel)
-	for id in NODE_POSITIONS:
-		var button := node_button_at(NODE_POSITIONS[id] - Vector2(43, 22), Vector2(86, 44), select.bind(id))
-		nodes[id] = button
-
-	detail_title = panel_label(research_panel, Vector2(842, 142), 266, 19)
-	detail_body = panel_label(research_panel, Vector2(842, 186), 266, 13)
-	detail_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	detail_body.size.y = 126
-	status = panel_label(research_panel, Vector2(842, 322), 266, 12)
-	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	status.size.y = 70
-	price = panel_label(research_panel, Vector2(842, 404), 266, 14)
-	buy_button = panel_button(research_panel, Vector2(842, 438), Vector2(266, 35), purchase)
 
 	plans_panel = Control.new()
 	plans_panel.name = "PlansPanel"
@@ -164,10 +115,7 @@ func _ready() -> void:
 	direct_button = panel_button(analysis_panel, Vector2(468, 492), Vector2(246, 34), direct_analysis)
 	catalogue_button = panel_button(analysis_panel, Vector2(54, 548), Vector2(258, 32), _open_catalogue)
 
-	chart_button = button_at(Vector2(43, 152), Vector2(178, 282), func(): constellations_requested.emit(), false)
-	chart_button.flat = true
-	for state in ["normal", "hover", "pressed", "focus"]:
-		chart_button.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+	chart_button = button_at(Vector2(328, 590), Vector2(260, 34), func(): constellations_requested.emit())
 	back_button = button_at(Vector2(902, 590), Vector2(203, 34), func(): observatory_requested.emit())
 	visibility_changed.connect(refresh_text)
 	refresh_text()
@@ -176,28 +124,21 @@ func _ready() -> void:
 func bind(controller: Node, tree: Node) -> void:
 	research = controller
 	chart = tree
-	_cache_miniature()
+	chart.bind_extension(research)
 	if not research.changed.is_connected(refresh_text):
 		research.changed.connect(refresh_text)
 	refresh_text()
 
 
 func select(id: String) -> void:
-	if id in Data.PLAN_ORDER:
-		selected_id = id
-		_set_view(View.PLANS)
-		return
-	if id == "analysis":
-		_set_view(View.ANALYSIS)
-		return
 	selected_id = id
-	_set_view(View.RESEARCH)
-
-
-func purchase() -> void:
-	if research != null and selected_id in RESEARCH_IDS:
-		research.purchase(selected_id)
-	refresh_text()
+	if id in Data.PLAN_ORDER:
+		_set_view(View.PLANS)
+	elif id == "analysis":
+		_set_view(View.ANALYSIS)
+	else:
+		_set_view(View.RESEARCH)
+		if chart != null: chart.select_extension(id)
 
 
 func refresh_text(_binding: String = "U") -> void:
@@ -205,10 +146,11 @@ func refresh_text(_binding: String = "U") -> void:
 		return
 	title.text = tr("CHX_TITLE")
 	back_button.text = tr("MODULE_RETURN_TO_SKY")
-	chart_button.tooltip_text = tr("DEEP_EXPAND_OLD")
+	chart_button.text = tr("ATLAS_RETURN")
 	for view in tab_buttons:
 		var tab: Button = tab_buttons[view]
-		tab.text = tr(["CHX_TAB_RESEARCH", "CHX_TAB_PLANS", "CHX_TAB_ANALYSIS"][int(view)])
+		tab.text = tr(["ATLAS_RETURN", "CHX_TAB_PLANS", "CHX_TAB_ANALYSIS"][int(view)])
+		tab.add_theme_font_size_override("font_size", 11)
 		tab.add_theme_color_override("font_color", UITheme.ACCENT_TEXT if view == active_view else UITheme.INK_MID)
 	if research == null:
 		queue_redraw()
@@ -218,58 +160,22 @@ func refresh_text(_binding: String = "U") -> void:
 	var base_owned := _visible_base_owned_count()
 	var paid: int = research.paid_research_count()
 	balance.tooltip_text = tr("CHX_PROGRESS") % [base_owned, 95, paid, 16, research.modules.purchased.size(), Modules.DEFINITIONS.size()]
-	research_panel.visible = active_view == View.RESEARCH
 	plans_panel.visible = active_view == View.PLANS
 	analysis_panel.visible = active_view == View.ANALYSIS
-	chart_button.visible = active_view == View.RESEARCH
-	if active_view == View.RESEARCH:
-		_refresh_research_view()
-	elif active_view == View.PLANS:
+	chart_button.visible = active_view != View.RESEARCH
+	if active_view == View.PLANS:
 		_refresh_plans_view()
-	else:
+	elif active_view == View.ANALYSIS:
 		_refresh_analysis_view()
 	queue_redraw()
 
 
 func _set_view(view: View) -> void:
 	active_view = view
+	if chart != null:
+		chart._cancel_node_hold()
+		chart._refresh_galactic_overlays()
 	refresh_text()
-
-
-func _refresh_research_view() -> void:
-	for id in nodes:
-		var button: Button = nodes[id]
-		button.visible = true
-		button.disabled = false
-	if selected_id not in NODE_POSITIONS:
-		selected_id = "m31"
-	buy_button.visible = selected_id in RESEARCH_IDS
-	price.text = ""
-	if selected_id == "m31":
-		detail_title.text = tr("DEEP_M31_NAME")
-		detail_body.text = tr("DEEP_M31_DESC")
-		status.text = tr("CHX_RECORDED_OBJECTIVE") % [research.observations, research.current_objective()]
-	elif selected_id == "modules":
-		detail_title.text = tr("CHX_MODULES_TITLE")
-		detail_body.text = tr("CHX_MODULES_BODY")
-		status.text = tr("CHX_MODULES_STATUS") % [research.modules.purchased.size(), Modules.DEFINITIONS.size()]
-	else:
-		var owned: bool = research.research_owned(selected_id)
-		var ready: bool = research.research_ready(selected_id)
-		var cost: float = research.research_cost(selected_id)
-		detail_title.text = research.research_name(selected_id)
-		detail_body.text = research.research_description(selected_id)
-		if owned:
-			status.text = tr("CHX_OWNED")
-		elif ready:
-			status.text = tr("CHX_READY")
-		else:
-			status.text = research.prerequisite_text(selected_id)
-		price.text = tr("CHX_FREE") if is_zero_approx(cost) else UITheme.grouped_integer(int(cost)) + " " + tr("MODULE_DATA")
-		buy_button.text = tr("MODULE_OWNED") if owned else tr("CHX_PURCHASE")
-		buy_button.disabled = not research.can_purchase(selected_id)
-	if research.game.hud.autosave_failed:
-		status.text = tr("AUTOSAVE_FAILURE") % research.game.active_save_slot
 
 
 func _refresh_plans_view() -> void:
@@ -371,49 +277,8 @@ func _draw() -> void:
 		draw_circle(Vector2(fmod(index * 123.7 + 49, 1152), fmod(index * 89.3 + 103, 648)), 0.55, Color(UITheme.STAR_BACKGROUND, 0.20))
 	draw_line(Vector2(38, 102), Vector2(1110, 102), Color(UITheme.INK_MID, 0.35), 1)
 	match active_view:
-		View.RESEARCH: _draw_research_network()
 		View.PLANS: _draw_plan_surface()
 		View.ANALYSIS: _draw_analysis_surface()
-
-
-func _draw_research_network() -> void:
-	_draw_old_constellations()
-	draw_rect(Rect2(38, 128, 196, 326), Color(UITheme.GROUND, 0.28), false, 1)
-	draw_line(Vector2(221, 294), NODE_POSITIONS.m31, Color(UITheme.LINE_INSTALLED, 0.34), 1, true)
-	for edge in CONNECTIONS:
-		var a: Vector2 = NODE_POSITIONS[edge[0]]
-		var b: Vector2 = NODE_POSITIONS[edge[1]]
-		var installed := research != null and _node_owned(edge[0]) and _node_owned(edge[1])
-		draw_line(a, b, Color(UITheme.LINE_INSTALLED if installed else UITheme.INK_LOW, 0.68 if installed else 0.28), 1, true)
-	for id in NODE_POSITIONS:
-		_draw_research_node(id, NODE_POSITIONS[id])
-	_draw_caption(Vector2(136, 470), tr("DEEP_OLD_CHART"), UITheme.INK_HIGH, 13)
-	_draw_caption(Vector2(136, 493), tr("DEEP_EXPAND_OLD"), UITheme.INK_MID, 11)
-	draw_line(Vector2(814, 126), Vector2(814, 570), Color(UITheme.INK_MID, 0.35), 1)
-
-
-func _draw_research_node(id: String, point: Vector2) -> void:
-	var owned := _node_owned(id)
-	var ready := _node_ready(id)
-	var tone := UITheme.ACCENT_TEXT if owned else (UITheme.INK_HIGH if ready else UITheme.INK_LOW)
-	var category := _node_category(id)
-	if category != "root" and (id.begins_with("ext_") or id in Modules.DEFINITIONS):
-		tone = _category_color(category) if owned or ready else UITheme.INK_LOW
-	if id == "m31":
-		draw_circle(point, 11, Color("D4DAE5", 0.18 if not owned else 0.34))
-		draw_arc(point, 16, 0, TAU, 40, tone, 1, true)
-	elif id == "modules":
-		draw_polyline(PackedVector2Array([point + Vector2(0, -14), point + Vector2(14, 0), point + Vector2(0, 14), point + Vector2(-14, 0), point + Vector2(0, -14)]), tone, 1, true)
-	else:
-		draw_rect(Rect2(point - Vector2(29, 12), Vector2(58, 24)), Color(UITheme.GROUND, 0.88), true)
-		draw_rect(Rect2(point - Vector2(29, 12), Vector2(58, 24)), Color(tone, 0.86), false, 1, true)
-		draw_circle(point + Vector2(-20, 0), 2.2, tone)
-	if selected_id == id:
-		draw_arc(point, 27, 0, TAU, 48, Color(UITheme.ACCENT_LINE, 0.58), 1, true)
-	var caption_size := 12 if id.begins_with("ext_") else 10
-	_draw_caption(point + Vector2(0, 29), _node_caption(id), tone, caption_size)
-	if id in ["slot_3", "slot_4", "slot_5"]:
-		_draw_caption(point + Vector2(0, 41), tr("CHX_PLAN_GATE"), UITheme.INK_LOW, 8)
 
 
 func _draw_plan_surface() -> void:
@@ -479,50 +344,6 @@ func _draw_m31_legend(center_x: float, title_y: float, include_progress: bool) -
 		_draw_caption(Vector2(center_x, 540), tr("CHX_MODULE_PROGRESS") % [research.modules.purchased.size(), Modules.DEFINITIONS.size()], UITheme.INK_MID, 10)
 
 
-func _node_owned(id: String) -> bool:
-	if research == null:
-		return false
-	if id == "m31":
-		return research.observations > 0
-	if id == "modules":
-		return research.modules_unlocked()
-	return research.research_owned(id)
-
-
-func _node_ready(id: String) -> bool:
-	if research == null:
-		return false
-	if id == "m31":
-		return research.available()
-	if id == "modules":
-		return research.modules_unlocked()
-	return research.research_ready(id)
-
-
-func _node_category(id: String) -> String:
-	if Data.RESEARCH.has(id):
-		return String(Data.RESEARCH[id].get("category", "root"))
-	if id in ["focus", "precision"]:
-		return "trace"
-	if id in ["wide"]:
-		return "sweep"
-	if id in ["record", "revisit"]:
-		return "link"
-	return "root"
-
-
-func _node_caption(id: String) -> String:
-	if id == "m31":
-		return tr("DEEP_M31_SHORT")
-	if id == "modules":
-		return tr("CHX_MODULES_SHORT")
-	if Data.RESEARCH.has(id):
-		return tr("CHX_NODE_%s" % id.trim_prefix("ext_").to_upper())
-	if research != null:
-		return research.research_name(id)
-	return id
-
-
 func _module_name(id: String) -> String:
 	return tr("MODULE_%s_NAME" % id.to_upper())
 
@@ -539,34 +360,6 @@ func _visible_base_owned_count() -> int:
 		if not chart._is_local_group_node(String(definition.id)) and chart.progression.has_upgrade(String(definition.id)):
 			count += 1
 	return count
-
-
-func _cache_miniature() -> void:
-	_miniature_edges.clear()
-	_miniature_stars.clear()
-	if chart == null or chart.base_star_positions.is_empty():
-		return
-	var bounds := Rect2(Vector2(chart.base_star_positions.values()[0]), Vector2.ZERO)
-	for point in chart.base_star_positions.values():
-		bounds = bounds.expand(point)
-	var ratio := minf(166.0 / maxf(1, bounds.size.x), 218.0 / maxf(1, bounds.size.y))
-	var center := Vector2(132, 294)
-	for constellation_id in ChartData.CONSTELLATIONS:
-		var constellation: Dictionary = ChartData.CONSTELLATIONS[constellation_id]
-		for edge in constellation.segments:
-			var a: Vector2 = chart.base_star_positions[constellation_id + "/" + edge[0]]
-			var b: Vector2 = chart.base_star_positions[constellation_id + "/" + edge[1]]
-			_miniature_edges.append(PackedVector2Array([center + (a - bounds.get_center()) * ratio, center + (b - bounds.get_center()) * ratio]))
-		for star in constellation.stars:
-			var p: Vector2 = chart.base_star_positions[constellation_id + "/" + star.id]
-			_miniature_stars.append({"position": center + (p - bounds.get_center()) * ratio, "radius": 1.4 if not String(star.get("node_id", "")).is_empty() else 0.7})
-
-
-func _draw_old_constellations() -> void:
-	for edge in _miniature_edges:
-		draw_line(edge[0], edge[1], Color(UITheme.LINE_INSTALLED, 0.52), 0.7, true)
-	for star in _miniature_stars:
-		draw_circle(star.position, star.radius, Color(UITheme.STAR_INSTALLED, 0.8))
 
 
 func _draw_caption(p: Vector2, caption: String, ink: Color, font_size: int) -> void:
@@ -618,19 +411,6 @@ func panel_button(parent: Control, p: Vector2, dimensions: Vector2, callback: Ca
 	_configure_button(button)
 	button.pressed.connect(callback)
 	parent.add_child(button)
-	return button
-
-
-func node_button_at(p: Vector2, dimensions: Vector2, callback: Callable) -> Button:
-	var button := Button.new()
-	button.position = p
-	button.size = dimensions
-	button.flat = true
-	button.focus_mode = Control.FOCUS_ALL
-	for state in ["normal", "hover", "focus", "pressed", "disabled"]:
-		button.add_theme_stylebox_override(state, StyleBoxEmpty.new())
-	button.pressed.connect(callback)
-	research_panel.add_child(button)
 	return button
 
 

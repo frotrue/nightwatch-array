@@ -56,7 +56,7 @@ const SCENARIOS := [
 	{"id": "research_chart", "stage": "constellation", "density": "81_of_107_research", "overlays": ["chart", "constellation_inspector"], "note": "Existing reference build: ten completed constellations plus three Canis nodes; canis_capacity_ii selected.", "expected": {"meteors": 0, "installed": 81, "tracking": false, "span": 1.0}},
 	{"id": "galactic_sky", "stage": "galactic", "density": "two_hosts_two_phenomena", "overlays": [], "note": "Full research, two idle hosts and two supernovae at six explicit seconds; no atmospheric specimens.", "expected": {"meteors": 0, "installed": 107, "tracking": false, "span": 1.477455443789063}},
 	{"id": "exoplanet_transit", "stage": "galactic", "density": "two_hosts_two_phenomena", "overlays": [], "note": "Full research; first host's first transit window at exactly 48%, without a simulated completion.", "expected": {"meteors": 0, "installed": 107, "tracking": false, "span": 1.477455443789063}},
-	{"id": "deep_sky_chart", "stage": "chart_continuation", "density": "first_branch", "overlays": ["chart", "deep_sky_chart"], "note": "A completed save opens the extended chart. Original constellation shapes connect to M31 and module research; retired nodes remain invisible.", "expected": {"meteors": 0, "installed": 107, "tracking": false, "span": 1.477455443789063}},
+	{"id": "deep_sky_chart", "stage": "chart_continuation", "density": "first_branch", "overlays": ["chart", "constellation_inspector"], "note": "A completed save opens four outer constellations on the original chart. Eighteen research stars share its canvas and inspector; retired nodes remain invisible.", "expected": {"meteors": 0, "installed": 107, "tracking": false, "span": 1.477455443789063}},
 	{"id": "catalogue_ending", "stage": "ending_preview", "density": "completed_catalogue", "overlays": ["ending"], "note": "Synthetic completed-run statistics through the non-persistent production debug reveal, stepped 8.1 seconds.", "expected": {"meteors": 0, "installed": 107, "tracking": false, "span": 1.477455443789063}},
 	{"id": "palette_active", "stage": "synthetic_palette", "density": "117_visuals_13_branches", "overlays": ["palette_diagnostic"], "note": "Synthetic13-branch input matrix using real StarNodeVisual draws: star/cluster/galaxy in purchased, affordable and unaffordable available states. Not a gameplay chart.", "expected": {"meteors": 0, "installed": 0, "tracking": false, "span": 1.0}},
 	{"id": "palette_inactive", "stage": "synthetic_palette", "density": "117_visuals_13_branches", "overlays": ["palette_diagnostic"], "note": "Synthetic13-branch input matrix using real StarNodeVisual draws: star/cluster/galaxy in locked, hidden and teaser states. Inactive silhouettes are intentionally shown as test specimens.", "expected": {"meteors": 0, "installed": 0, "tracking": false, "span": 1.0}},
@@ -165,7 +165,7 @@ func prepare(tree: SceneTree, id: String) -> Node:
 		game.upgrade_tree._on_node_hovered("canis_capacity_ii")
 	elif id == "deep_sky_chart":
 		game.upgrade_tree._finish_galactic_pullback()
-		game.upgrade_tree.deep_sky_chart.select("m31")
+		game.upgrade_tree.select_extension("ext_trace_study")
 	elif id == "catalogue_ending":
 		var reveal: Tween = game.hud.end_reveal_tween
 		if reveal == null or not reveal.is_valid():
@@ -282,7 +282,11 @@ func inspect(game: Node, id: String) -> Dictionary:
 	if id == "exoplanet_transit":
 		_check(not hosts.is_empty() and hosts[0].state == "transiting" and is_equal_approx(float(hosts[0].transit_phase), 0.48), id, "primary transit must be at exactly 48%")
 	if id == "deep_sky_chart":
-		_check(state.chart_mode == game.upgrade_tree.GALACTIC_MODE_FINAL and state.deep_sky_selection == "m31" and game.upgrade_tree.deep_sky_chart.is_visible_in_tree(), id, "M31 continuation chart not active")
+		var chart: Node = game.upgrade_tree
+		_check(state.chart_mode == chart.GALACTIC_MODE_FINAL and state.chart_selection == "ext_trace_study" and chart.content_clip.is_visible_in_tree() and not chart.deep_sky_chart.is_visible_in_tree(), id, "extended constellation chart not active")
+		_check(chart.chart_constellations.size() == 16 and chart.extension_definitions.size() == 18, id, "four outer figures and eighteen research stars must be present")
+		for research in chart.extension_definitions:
+			_check(chart.node_buttons[research.id].get_parent() == chart.tree_canvas, id, "extension research must share the original star canvas")
 	if id == "catalogue_ending":
 		_check(state.ending_complete and state.ending_debug_preview and state.phenomena_recorded == 5, id, "completed catalogue reveal is missing")
 		for value in state.ending_map_progress:

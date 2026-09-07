@@ -1,0 +1,31 @@
+keys,en,ko
+ATLAS_PEGASUS,Pegasus,페가수스자리
+ATLAS_CYGNUS,Cygnus,백조자리
+ATLAS_CEPHEUS,Cepheus,세페우스자리
+ATLAS_AQUILA,Aquila,독수리자리
+ATLAS_MARKAB,Markab,마르카브
+ATLAS_SCHEAT,Scheat,셰아트
+ATLAS_ALGENIB,Algenib,알게니브
+ATLAS_HOMAM,Homam,호맘
+ATLAS_ENIF,Enif,에니프
+ATLAS_DENEB,Deneb,데네브
+ATLAS_SADR,Sadr,사드르
+ATLAS_ALBIREO,Albireo,알비레오
+ATLAS_GIENAH,Gienah,기에나
+ATLAS_DELTA_CYG,Delta Cygni,백조자리 델타
+ATLAS_ALDERAMIN,Alderamin,알데라민
+ATLAS_ALFIRK,Alfirk,알피르크
+ATLAS_ERRAI,Errai,에라이
+ATLAS_IOTA_CEP,Iota Cephei,세페우스자리 이오타
+ATLAS_ZETA_CEP,Zeta Cephei,세페우스자리 제타
+ATLAS_ALTAIR,Altair,알타이르
+ATLAS_TARAZED,Tarazed,타라제드
+ATLAS_ALSHAIN,Alshain,알샤인
+ATLAS_EXPAND,Outer constellations,바깥 별자리
+ATLAS_RETURN,Return to the star chart,성도로 돌아가기
+ATLAS_PLANS,Observation plans,관측 계획
+ATLAS_ANALYSIS,Specimen analysis,표본 분석
+ATLAS_NEW_SKY,Four new constellations · hold a star to research,새 별자리 4개 · 별을 길게 눌러 연구
+ATLAS_FIELD_RECORDS,%s · %d / 18 outer stars,%s · 바깥 연구별 %d / 18
+ATLAS_FIRST_M31,Observe M31 in the same sky to begin this research.,같은 하늘의 M31을 처음 관측하면 이 연구가 열립니다.
+ATLAS_OPEN_PLAN,Open this observation plan,관련 관측 계획 열기

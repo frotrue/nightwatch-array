@@ -34,7 +34,7 @@ driver/enable_input=false
 [internationalization]
 
 locale/fallback="en"
-locale/translations=PackedStringArray("res://localization/ui.en.translation", "res://localization/ui.ko.translation", "res://localization/modules_expansion.en.translation", "res://localization/modules_expansion.ko.translation", "res://localization/chart_expansion.en.translation", "res://localization/chart_expansion.ko.translation", "res://localization/extension.en.translation", "res://localization/extension.ko.translation")
+locale/translations=PackedStringArray("res://localization/constellation_extension.en.translation", "res://localization/constellation_extension.ko.translation", "res://localization/ui.en.translation", "res://localization/ui.ko.translation", "res://localization/modules_expansion.en.translation", "res://localization/modules_expansion.ko.translation", "res://localization/chart_expansion.en.translation", "res://localization/chart_expansion.ko.translation", "res://localization/extension.en.translation", "res://localization/extension.ko.translation")
 
 [input]
 

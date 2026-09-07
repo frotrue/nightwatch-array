@@ -251,7 +251,7 @@ func setup(controller: Node) -> void:
 	layer = game.upgrade_tree.layer + 1
 	game.deep_sky.changed.connect(refresh)
 	game.settings.language_changed.connect(func(_locale): refresh())
-	launcher = _text_action(game.upgrade_tree.overlay, Vector2(63, 980), Vector2(273, 58), open)
+	launcher = _text_action(game.upgrade_tree.overlay, Vector2(63, 940), Vector2(273, 50), open)
 	launcher.z_index = 101
 	game.upgrade_tree.tree_opened.connect(refresh)
 	game.upgrade_tree.tree_closed.connect(refresh)
@@ -324,6 +324,7 @@ func finish_animations() -> void:
 func refresh(animate: bool = true) -> void:
 	if game == null:
 		return
+	place_launcher()
 	launcher.text = tr("DEEP_MODULES")
 	launcher.visible = game.upgrade_tree.is_open() and game.deep_sky.modules_unlocked()
 	if not is_open():
@@ -644,3 +645,8 @@ func _text_action(parent: Control, p: Vector2, dimensions: Vector2, callback: Ca
 	button.draw.connect(func(): button.draw_line(Vector2(0, button.size.y - 1), button.size - Vector2(0, 1), Color(UITheme.TOOLTIP_ACTION, 0.7), UITheme.px(1), true))
 	parent.add_child(button)
 	return button
+
+func place_launcher() -> void:
+	if launcher == null or game == null: return
+	launcher.position = Vector2(38, 588 if game.upgrade_tree.is_deep_sky_chart_active() else 564)
+	launcher.size = Vector2(164, 30)

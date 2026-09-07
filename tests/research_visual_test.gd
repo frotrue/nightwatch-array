@@ -45,7 +45,7 @@ func _run() -> void:
 	_test_tutorial_copy()
 	game.free()
 	if failures.is_empty():
-		print("RESEARCH_VISUAL_PASS: 107 live branch bindings, 13-branch state-ink hierarchy, star/cluster/galaxy draw routing and bilingual tutorial truth")
+		print("RESEARCH_VISUAL_PASS: 107 legacy and 18 extension bindings, state-ink hierarchy, star/cluster/galaxy draw routing and bilingual tutorial truth")
 		quit(0)
 	else:
 		print("RESEARCH_VISUAL_FAIL: %d failure(s)" % failures.size())
@@ -63,7 +63,7 @@ func _test_live_binding(game) -> void:
 	var chart = game.upgrade_tree
 	var branches := {}
 	var kinds := {}
-	_check(Balance.UPGRADE_NODES.size() == 107 and chart.node_hold_bars.size() == 107, "binding gate covers all 107 functional research nodes")
+	_check(Balance.UPGRADE_NODES.size() == 107 and chart.node_hold_bars.size() == 125, "binding gate covers 107 legacy and 18 extension research markers")
 	_check(Balance.BRANCHES.size() == 13, "current research has thirteen branch families")
 	for definition in Balance.UPGRADE_NODES:
 		game.progression.purchased_nodes[String(definition.id)] = true
@@ -88,6 +88,11 @@ func _test_live_binding(game) -> void:
 	_check(branches.size() == 13, "live bindings visit all thirteen branch families")
 	for kind in ["star", "cluster", "galaxy"]:
 		_check(kinds.has(kind), "live bindings cover marker kind: " + kind)
+	for definition in chart.extension_definitions:
+		var visual = chart.node_hold_bars[definition.id]
+		for state in STATES:
+			chart._apply_node_visual(definition, state)
+			_check(visual.branch_color.is_equal_approx(Chart.ExtensionChart.COLORS[definition.branch]) and visual.visual_state == state and visual.star_kind == "star", "outer constellation uses the shared star visual: " + definition.id)
 
 
 func _test_state_ink() -> void:

@@ -7,6 +7,7 @@ signal observatory_requested
 
 const Balance = preload("res://scripts/game_balance.gd")
 const ChartData = preload("res://scripts/research_chart_data.gd")
+const ExtensionChart = preload("res://scripts/constellation_extension_data.gd")
 const UITheme = preload("res://scripts/ui_theme.gd")
 const DeepSkyChart = preload("res://scripts/deep_sky_chart.gd")
 const StarNodeVisual = preload("res://scripts/research_star_visual.gd")
@@ -91,6 +92,15 @@ const CLUSTER_MARKER_OFFSETS := StarNodeVisual.CLUSTER_MARKER_OFFSETS
 
 
 
+var chart_constellations: Dictionary = ChartData.CONSTELLATIONS.merged(ExtensionChart.CONSTELLATIONS)
+var chart_placements: Dictionary = ChartData.PLACEMENTS.merged(ExtensionChart.PLACEMENTS)
+var extension_definitions: Array[Dictionary] = ExtensionChart.definitions()
+var extension_research: Node
+var expanded_view_initialized := false
+var pullback_start_rotation := 0.0
+var atlas_actions: Array[Button] = []
+var atlas_footer: ColorRect
+var constellation_ledger_hits: Array[Button] = []
 var progression: Node
 var settings_controller: Node
 var tutorial_controller: Node
@@ -214,7 +224,7 @@ var galactic_watermark: Label
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_WHEN_PAUSED
-	node_star_records = ChartData.node_star_map()
+	node_star_records = ChartData.node_star_map().merged(ExtensionChart.node_star_map())
 	_build_background_stars()
 	_build_galactic_background_stars()
 	_build_galactic_halo_textures()
@@ -254,7 +264,7 @@ func configure_galactic_state(unlocked: bool, pullback_seen: bool) -> void:
 	pullback_elapsed = 0.0
 	if galactic_pullback_seen:
 		galactic_mode = GALACTIC_MODE_FINAL
-		galactic_chart_detail = 0.0
+		galactic_chart_detail = 1.0
 	else:
 		galactic_mode = GALACTIC_MODE_NORMAL
 		galactic_chart_detail = 1.0
@@ -484,7 +494,7 @@ func _process(delta: float) -> void:
 	if not is_open() or progression == null:
 		_cancel_node_hold()
 		return
-	if progression.get_node_state(held_node_id) != "available" or not progression.can_purchase(held_node_id):
+	if _research_state(held_node_id) != "available" or not _can_research(held_node_id):
 		_cancel_node_hold()
 		return
 	hold_elapsed = minf(HOLD_PURCHASE_SECONDS, hold_elapsed + delta)
@@ -543,6 +553,7 @@ func _reset_view(persist: bool = true) -> void:
 	if persist and settings_controller != null:
 		settings_controller.set_research_chart_rotation(rotation_offset)
 	if galactic_unlocked and galactic_pullback_seen:
+		expanded_view_initialized = false
 		_frame_galaxy()
 	else:
 		_frame_frontier()
@@ -566,6 +577,7 @@ func _start_galactic_pullback() -> void:
 	pending_rotation_delta = 0.0
 	galactic_mode = GALACTIC_MODE_PULLBACK
 	pullback_elapsed = 0.0
+	pullback_start_rotation = rotation_offset
 	pullback_start_zoom = zoom
 	pullback_start_pan = pan_position
 	galactic_chart_detail = 1.0
@@ -574,19 +586,11 @@ func _start_galactic_pullback() -> void:
 
 func _advance_galactic_pullback(delta: float) -> void:
 	pullback_elapsed = minf(PULLBACK_DURATION, pullback_elapsed + maxf(0.0, delta))
-	var pullback_ratio := _timed_ratio(pullback_elapsed, PULLBACK_ZOOM_START, PULLBACK_ZOOM_END)
-	var eased_pullback := _ease_in_out(pullback_ratio)
-	# Scale is perceived as a ratio, so a linear ramp through zoom reads as an
-	# accelerating rush that stops dead at the end. Stepping through zoom
-	# geometrically keeps the apparent rate of withdrawal constant.
-	zoom = pullback_start_zoom * pow(GALACTIC_ZOOM / pullback_start_zoom, eased_pullback)
-	galactic_chart_detail = 1.0 - eased_pullback
-	# The anchor has to be recomputed from the live zoom every frame. Lerping a
-	# stored start pan toward a galaxy pan puts the focal point on a different
-	# curve from the scale, and the sky slides sideways while it shrinks.
-	var anchored_pan := _galactic_pan_for_zoom(zoom, galactic_chart_detail)
-	var canonical_start_pan := _galactic_pan_for_zoom(pullback_start_zoom, 1.0)
-	pan_position = anchored_pan + (pullback_start_pan - canonical_start_pan) * (1.0 - eased_pullback)
+	var ratio := _ease_in_out(clampf(pullback_elapsed / PULLBACK_DURATION, 0.0, 1.0))
+	zoom = lerpf(pullback_start_zoom, 0.43, ratio)
+	rotation_offset = lerpf(pullback_start_rotation, 2.1, ratio)
+	galactic_chart_detail = 1.0
+	pan_position = pullback_start_pan.lerp(_galactic_pan_for_zoom(zoom), ratio)
 	_layout_chart()
 	_apply_transform()
 	_update_galactic_presentation()
@@ -601,7 +605,7 @@ func _finish_galactic_pullback() -> void:
 	galactic_pullback_seen = true
 	galactic_mode = GALACTIC_MODE_FINAL
 	pullback_elapsed = PULLBACK_DURATION
-	galactic_chart_detail = 0.0
+	galactic_chart_detail = 1.0
 	_frame_galaxy()
 	_update_galactic_presentation()
 	galactic_pullback_finished.emit()
@@ -620,53 +624,38 @@ func _ease_out_back(value: float) -> float:
 	return 1.0 + 2.70158 * offset * offset * offset + 1.70158 * offset * offset
 
 
-func _galactic_pan_for_zoom(target_zoom: float, chart_detail: float = 0.0) -> Vector2:
-	if content_clip == null:
-		return pan_position
-	# The design frame fixes the Local Group disc at (910, 590) on a 1920x1080
-	# canvas, leaving exact columns for the completion ledger and inspector.
-	var galaxy_origin_screen := GALACTIC_MAP_CENTER_SPEC * UITheme.SCALE
-	var chart_origin_screen := Vector2(content_clip.size.x * 0.5, content_clip.size.y - 18.0)
-	var origin_screen := galaxy_origin_screen.lerp(chart_origin_screen, clampf(chart_detail, 0.0, 1.0))
-	return origin_screen - CHART_ORIGIN * target_zoom
+func _galactic_pan_for_zoom(target_zoom: float, _chart_detail: float = 1.0) -> Vector2:
+	return Vector2(UITheme.px(960), UITheme.px(1008)) - CHART_ORIGIN * target_zoom
 
 
 func _frame_galaxy() -> void:
-	if content_clip == null or content_clip.size.x <= 1.0 or content_clip.size.y <= 1.0:
+	if content_clip == null or content_clip.size.x <= 1.0:
 		return
-	zoom = GALACTIC_ZOOM
-	galactic_chart_detail = 0.0
-	pan_position = _galactic_pan_for_zoom(zoom, galactic_chart_detail)
+	galactic_chart_detail = 1.0
 	galactic_mode = GALACTIC_MODE_FINAL
-	_layout_chart()
-	_apply_transform()
-	_update_galactic_presentation()
+	if not expanded_view_initialized:
+		focus_outer_constellations()
+	else:
+		_layout_chart()
+		_apply_transform()
+		_update_galactic_presentation()
 
 
 func _galactic_zoom_floor() -> float:
-	if progression != null and progression.upgrade_level >= Balance.research_node_count():
-		return GALACTIC_ZOOM_COMPLETE
-	return GALACTIC_ZOOM
+	return 0.34 if galactic_unlocked else MIN_ZOOM
 
 
 func _zoom_galactic_chart(factor: float) -> void:
-	var old_zoom := zoom
 	zoom = clampf(zoom * factor, _galactic_zoom_floor(), MAX_ZOOM)
-	if is_equal_approx(old_zoom, zoom):
-		return
-	galactic_chart_detail = _ease_in_out(_timed_ratio(
-		zoom,
-		GALACTIC_DETAIL_ZOOM_START,
-		GALACTIC_DETAIL_ZOOM_END
-	))
-	pan_position = _galactic_pan_for_zoom(zoom, galactic_chart_detail)
+	galactic_chart_detail = 1.0
+	pan_position = _galactic_pan_for_zoom(zoom)
 	_layout_chart()
 	_apply_transform()
 	_update_galactic_presentation()
 
 
 func _galactic_chart_is_readable() -> bool:
-	return not galactic_unlocked or not galactic_pullback_seen or galactic_chart_detail >= 0.94
+	return true
 
 
 func _is_local_group_node(node_id: String) -> bool:
@@ -739,18 +728,12 @@ func _local_group_node_reveal(node_id: String) -> float:
 
 
 func _legacy_chart_alpha() -> float:
-	if not galactic_unlocked:
-		return 1.0
-	if galactic_mode == GALACTIC_MODE_PULLBACK:
-		return 1.0 - _ease_in_out(_timed_ratio(
-			pullback_elapsed,
-			PULLBACK_LEGACY_FADE_START,
-			PULLBACK_LEGACY_FADE_END
-		))
-	return smoothstep(0.05, 0.34, galactic_chart_detail)
+	return 1.0
 
 
 func _node_presentation_alpha(node_id: String) -> float:
+	if _is_extension_node(node_id) and not galactic_unlocked:
+		return 0.0
 	if _is_local_group_node(node_id):
 		return 0.0
 	if is_deep_sky_chart_active():
@@ -761,6 +744,8 @@ func _node_presentation_alpha(node_id: String) -> float:
 
 
 func _node_interaction_ready(node_id: String) -> bool:
+	if _is_extension_node(node_id) and not galactic_unlocked:
+		return false
 	if _is_local_group_node(node_id):
 		return false
 	if is_deep_sky_chart_active():
@@ -773,10 +758,6 @@ func _node_interaction_ready(node_id: String) -> bool:
 
 
 func _galactic_structure_alpha() -> float:
-	if galactic_mode == GALACTIC_MODE_PULLBACK:
-		return 1.0 - _ease_in_out(_timed_ratio(pullback_elapsed, 0.0, PULLBACK_LINES_END))
-	if galactic_mode == GALACTIC_MODE_FINAL:
-		return galactic_chart_detail
 	return 1.0
 
 
@@ -905,7 +886,9 @@ func _layout_chart_header() -> void:
 	progress_fill.position = progress_track.position
 	var ratio := 0.0
 	if progression != null:
-		ratio = float(_visible_base_owned_count()) / maxf(1.0, float(_visible_base_research_count()))
+		var owned := _visible_base_owned_count() + (_extension_owned_count() if galactic_unlocked else 0)
+		var total := _visible_base_research_count() + (extension_definitions.size() if galactic_unlocked else 0)
+		ratio = float(owned) / maxf(1.0, float(total))
 	progress_fill.size = Vector2(line_width * clampf(ratio, 0.0, 1.0), UITheme.px(2.0))
 	tree_status.position.y = progress_track.position.y + progress_track.size.y + UITheme.px(10.0)
 	completion_detail_label.position.y = tree_status.position.y + tree_status.get_combined_minimum_size().y + UITheme.px(10.0)
@@ -964,7 +947,7 @@ func _north_label_y() -> float:
 
 
 func _constellation_panel_active() -> bool:
-	return galactic_mode != GALACTIC_MODE_PULLBACK and _galactic_chart_is_readable() and not _galactic_panel_active()
+	return galactic_mode != GALACTIC_MODE_PULLBACK and _galactic_chart_is_readable() and not _galactic_panel_active() and not is_deep_sky_chart_active()
 
 
 func _layout_constellation_overlays() -> void:
@@ -979,6 +962,7 @@ func _layout_constellation_overlays() -> void:
 	var row_y := ledger_title.get_combined_minimum_size().y + UITheme.px(10.0)
 	for index in range(constellation_ledger_names.size()):
 		var name_label := constellation_ledger_names[index]
+		if not name_label.visible: continue
 		var leader := constellation_ledger_leaders[index]
 		var note_label := constellation_ledger_notes[index]
 		var count_label := constellation_ledger_counts[index]
@@ -994,6 +978,8 @@ func _layout_constellation_overlays() -> void:
 		var baseline_y := row_y + maxf(name_label.get_combined_minimum_size().y, count_label.get_combined_minimum_size().y) * 0.66
 		leader.position = Vector2(name_width + UITheme.px(10.0), baseline_y)
 		leader.size = Vector2(maxf(1.0, note_label.position.x - leader.position.x - UITheme.px(10.0)), 1.0)
+		constellation_ledger_hits[index].position = Vector2(0, row_y)
+		constellation_ledger_hits[index].size = Vector2(constellation_ledger.size.x, 20)
 		row_y += maxf(name_label.get_combined_minimum_size().y, count_label.get_combined_minimum_size().y) + UITheme.px(10.0)
 	tooltip_panel.position = Vector2(frame.x - UITheme.px(40.0) - UITheme.px(292.0), UITheme.px(196.0))
 	tooltip_panel.size = Vector2(UITheme.px(292.0), maxf(1.0, frame.y - UITheme.px(196.0) - UITheme.px(70.0)))
@@ -1004,12 +990,16 @@ func _galactic_panel_active() -> bool:
 
 
 func is_deep_sky_chart_active() -> bool:
-	return galactic_unlocked and galactic_pullback_seen and not _galactic_chart_is_readable()
+	return deep_sky_chart != null and deep_sky_chart.active_view != DeepSkyChart.View.RESEARCH
 
 
 func _show_completed_constellations() -> void:
 	_cancel_node_hold()
-	_zoom_galactic_chart(CONSTELLATION_ZOOM / maxf(zoom, 0.001))
+	if deep_sky_chart != null:
+		deep_sky_chart.active_view = DeepSkyChart.View.RESEARCH
+	_layout_chart()
+	_refresh()
+	_update_galactic_presentation()
 
 
 func _refresh_deep_sky_chart() -> void:
@@ -1021,16 +1011,18 @@ func _refresh_deep_sky_chart() -> void:
 	var header := overlay.get_node_or_null("ChartHeader")
 	if header != null:
 		header.visible = not active
-	hub_return_button.visible = galactic_unlocked and galactic_pullback_seen and _galactic_chart_is_readable()
-	hub_return_button.text = tr("DEEP_CHART_TITLE")
-	var binding := String(settings_controller.binding_label(ACTION_CHART)) if settings_controller != null else "U"
-	deep_sky_chart.refresh_text(binding)
+	hub_return_button.visible = false
+	if atlas_footer != null:
+		atlas_footer.visible = galactic_unlocked and not active
+	for index in range(atlas_actions.size()):
+		atlas_actions[index].visible = galactic_unlocked and not active
+		atlas_actions[index].text = tr(["ATLAS_EXPAND", "ATLAS_PLANS", "ATLAS_ANALYSIS"][index])
+	if module_popup != null:
+		module_popup.place_launcher()
+	deep_sky_chart.refresh_text()
 	if active:
 		_cancel_node_hold()
 		_cancel_installation_rule()
-		for button in node_buttons.values():
-			button.visible = false
-			button.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
 func _layout_galactic_overlays() -> void:
@@ -1166,7 +1158,7 @@ func _refresh_galactic_overlays() -> void:
 	if progression != null:
 		galactic_span_value.text = "×%.4f" % float(progression.get_observation_span())
 		for index in range(GALACTIC_LEDGER_ORDER.size()):
-			var constellation: Dictionary = ChartData.CONSTELLATIONS[GALACTIC_LEDGER_ORDER[index]]
+			var constellation: Dictionary = chart_constellations[GALACTIC_LEDGER_ORDER[index]]
 			var installed := 0
 			for star_variant in constellation.stars:
 				var star: Dictionary = star_variant
@@ -1190,9 +1182,13 @@ func _refresh_constellation_overlays() -> void:
 	if selected_node_id.is_empty() or not node_buttons.has(selected_node_id) or _is_local_group_node(selected_node_id):
 		selected_node_id = _default_constellation_selection()
 	var below_horizon_count := 0
-	for index in range(GALACTIC_LEDGER_ORDER.size()):
-		var constellation_id: String = GALACTIC_LEDGER_ORDER[index]
-		var constellation: Dictionary = ChartData.CONSTELLATIONS[constellation_id]
+	for index in range(_constellation_order().size()):
+		var constellation_id: String = _constellation_order()[index]
+		var show_row := galactic_unlocked or constellation_id not in ExtensionChart.ORDER
+		for widget in [constellation_ledger_names[index], constellation_ledger_counts[index], constellation_ledger_notes[index], constellation_ledger_leaders[index], constellation_ledger_hits[index]]:
+			widget.visible = show_row
+		if not show_row: continue
+		var constellation: Dictionary = chart_constellations[constellation_id]
 		var installed := 0
 		var total := 0
 		var opened := false
@@ -1202,7 +1198,7 @@ func _refresh_constellation_overlays() -> void:
 			if node_id.is_empty():
 				continue
 			total += 1
-			var state: String = progression.get_node_state(node_id)
+			var state: String = _research_state(node_id)
 			if state == "purchased":
 				installed += 1
 			if state in ["purchased", "available", "locked"]:
@@ -1214,7 +1210,7 @@ func _refresh_constellation_overlays() -> void:
 		var tone := UITheme.TOOLTIP_BODY if kind == "done" else (UITheme.INK_MAX if kind == "active" else UITheme.INK_LOW)
 		constellation_ledger_names[index].add_theme_color_override("font_color", tone)
 		constellation_ledger_counts[index].add_theme_color_override("font_color", tone)
-		constellation_ledger_counts[index].text = "%d / %d" % [installed, total]
+		constellation_ledger_counts[index].text = "%d / %d" % [installed, total] if total > 0 else "—"
 		var note := ""
 		if below_horizon:
 			note = tr("TREE_CONSTELLATION_BELOW_HORIZON")
@@ -1223,21 +1219,6 @@ func _refresh_constellation_overlays() -> void:
 		elif kind == "locked":
 			note = tr("TREE_CONSTELLATION_LOCKED")
 		constellation_ledger_notes[index].text = note
-	var local_group_index := GALACTIC_LEDGER_ORDER.size()
-	var local_group_installed := 0
-	for galaxy_variant in ChartData.LOCAL_GROUP_GALAXIES:
-		if progression.get_node_state(String(galaxy_variant.node_id)) == "purchased":
-			local_group_installed += 1
-	var local_group_total := Balance.local_group_functional_node_count()
-	var local_group_kind := "done" if local_group_installed == local_group_total else ("active" if galactic_unlocked else "locked")
-	var local_group_tone := UITheme.TOOLTIP_BODY if local_group_kind == "done" else (UITheme.INK_MAX if local_group_kind == "active" else UITheme.INK_LOW)
-	constellation_ledger_names[local_group_index].add_theme_color_override("font_color", local_group_tone)
-	constellation_ledger_counts[local_group_index].add_theme_color_override("font_color", local_group_tone)
-	constellation_ledger_counts[local_group_index].text = "%d / %d" % [local_group_installed, local_group_total]
-	constellation_ledger_notes[local_group_index].text = tr("TREE_CONSTELLATION_IN_PROGRESS") if local_group_kind == "active" else ("" if local_group_kind == "done" else tr("TREE_CONSTELLATION_LOCKED"))
-	# Retired Local Group research does not appear as another unfinished branch.
-	for widget in [constellation_ledger_names[local_group_index], constellation_ledger_counts[local_group_index], constellation_ledger_notes[local_group_index], constellation_ledger_leaders[local_group_index]]:
-		widget.visible = false
 	constellation_horizon_hint.text = tr("TREE_CONSTELLATION_HORIZON_HINT") % below_horizon_count
 	constellation_bottom_action.text = _phase_bottom_action_text()
 	_refresh_constellation_detail_line()
@@ -1247,13 +1228,17 @@ func _refresh_constellation_overlays() -> void:
 
 
 func _constellation_below_horizon(constellation_id: String) -> bool:
-	var placement: Dictionary = ChartData.PLACEMENTS[constellation_id]
+	var placement: Dictionary = chart_placements[constellation_id]
 	return sin(float(placement.anchor_angle) + rotation_offset) > 0.0
 
 
 func _default_constellation_selection() -> String:
 	if progression == null:
 		return ""
+	if galactic_unlocked:
+		for definition in extension_definitions:
+			if _research_state(definition.id) == "available" and _is_node_above_horizon(definition.id):
+				return definition.id
 	for require_affordable in [true, false]:
 		for definition in Balance.UPGRADE_NODES:
 			var node_id := String(definition.id)
@@ -1273,12 +1258,18 @@ func _default_constellation_selection() -> String:
 func _refresh_constellation_detail_line() -> void:
 	if completion_detail_label == null or progression == null:
 		return
+	if catalogue_ending_ready:
+		completion_detail_label.text = tr("TREE_CATALOGUE_ENDING_READY_DETAIL")
+		return
 	var group_label := tr("TREE_CONSTELLATION_CURRENT_SKY")
 	if not selected_node_id.is_empty() and node_star_records.has(selected_node_id):
 		var star_record: Dictionary = node_star_records[selected_node_id]
 		var constellation_id := String(star_record.constellation_id)
 		if constellation_id != "local_group":
-			group_label = tr(String(ChartData.CONSTELLATIONS[constellation_id].label_key)).split("  /  ")[0]
+			group_label = tr(String(chart_constellations[constellation_id].label_key)).split("  /  ")[0]
+	if galactic_unlocked:
+		completion_detail_label.text = tr("ATLAS_FIELD_RECORDS") % [group_label, _extension_owned_count()]
+		return
 	var non_draco_installed := 0
 	for definition in Balance.UPGRADE_NODES:
 		var node_id := String(definition.id)
@@ -1324,10 +1315,9 @@ func _refresh_constellation_static_text() -> void:
 		return
 	var ledger_title: Label = constellation_ledger.get_node("LedgerTitle")
 	ledger_title.text = tr("TREE_CONSTELLATION_LEDGER")
-	for index in range(GALACTIC_LEDGER_ORDER.size()):
-		var constellation: Dictionary = ChartData.CONSTELLATIONS[GALACTIC_LEDGER_ORDER[index]]
+	for index in range(_constellation_order().size()):
+		var constellation: Dictionary = chart_constellations[_constellation_order()[index]]
 		constellation_ledger_names[index].text = tr(String(constellation.label_key)).split("  /  ")[0]
-	constellation_ledger_names[-1].text = tr(ChartData.LOCAL_GROUP_LABEL_KEY).split(" / ")[0]
 	for field_name in ["STATUS", "COST", "EFFECT"]:
 		var field_label: Label = tooltip_panel.find_child("Field%sLabel" % field_name.capitalize(), true, false)
 		field_label.text = tr("TREE_CONSTELLATION_FIELD_%s" % field_name)
@@ -1354,7 +1344,7 @@ func _refresh_galactic_static_text() -> void:
 	var branch_title: Label = galactic_ledger.get_node("BranchTitle")
 	branch_title.text = tr("TREE_GALACTIC_BRANCH_INSTALLS")
 	for index in range(GALACTIC_LEDGER_ORDER.size()):
-		var constellation: Dictionary = ChartData.CONSTELLATIONS[GALACTIC_LEDGER_ORDER[index]]
+		var constellation: Dictionary = chart_constellations[GALACTIC_LEDGER_ORDER[index]]
 		galactic_ledger_names[index].text = tr(String(constellation.label_key)).split("  /  ")[0]
 	galactic_ledger_names[-1].text = tr(ChartData.LOCAL_GROUP_LABEL_KEY).split(" / ")[0]
 	for field_name in ["STATUS", "COST", "EFFECT"]:
@@ -1466,9 +1456,9 @@ func _cache_chart_geometry() -> void:
 	local_group_node_order.clear()
 	local_group_node_route_ratios.clear()
 	local_group_route_length = 0.0
-	for constellation_id in ChartData.CONSTELLATIONS:
-		var constellation: Dictionary = ChartData.CONSTELLATIONS[constellation_id]
-		var placement: Dictionary = ChartData.PLACEMENTS[constellation_id]
+	for constellation_id in chart_constellations:
+		var constellation: Dictionary = chart_constellations[constellation_id]
+		var placement: Dictionary = chart_placements[constellation_id]
 		var anchor := CHART_ORIGIN + Vector2.RIGHT.rotated(float(placement.anchor_angle)) * float(placement.anchor_radius)
 		var tilt := float(placement.tilt)
 		var scale_amount := float(placement.scale)
@@ -1480,6 +1470,12 @@ func _cache_chart_geometry() -> void:
 			var node_id := String(star.get("node_id", ""))
 			if not node_id.is_empty():
 				star_node_ids[star_key] = node_id
+	for constellation_id in ExtensionChart.ORDER:
+		for star in ExtensionChart.CONSTELLATIONS[constellation_id].stars:
+			if star.has("shared_star_key"):
+				var key := "%s/%s" % [constellation_id, star.id]
+				base_star_positions[key] = base_star_positions[star.shared_star_key]
+				star_node_ids[key] = star_node_ids[star.shared_star_key]
 	galactic_core_max_length = 1.0
 	for base_position_variant in base_star_positions.values():
 		galactic_core_max_length = maxf(
@@ -1600,10 +1596,7 @@ func _layout_chart() -> void:
 
 
 func _present_chart_position(chart_position: Vector2) -> Vector2:
-	if not galactic_unlocked:
-		return chart_position
-	var chart_scale := lerpf(GALACTIC_CHART_SCALE, 1.0, galactic_chart_detail)
-	return CHART_ORIGIN + (chart_position - CHART_ORIGIN) * chart_scale
+	return chart_position
 
 
 func _present_local_group_position(node_id: String) -> Vector2:
@@ -1620,6 +1613,8 @@ func _present_local_group_position(node_id: String) -> Vector2:
 
 
 func _node_render_scale(node_id: String, presentation_alpha: float) -> float:
+	if _is_extension_node(node_id):
+		return maxf(1.0, CONSTELLATION_ZOOM / maxf(zoom, 0.001))
 	var galaxy_presence := 0.0
 	if _is_local_group_node(node_id):
 		galaxy_presence = presentation_alpha
@@ -1632,7 +1627,7 @@ func _node_render_scale(node_id: String, presentation_alpha: float) -> float:
 
 
 func _galactic_horizon_active() -> bool:
-	return not galactic_unlocked or galactic_chart_detail >= 0.82
+	return true
 
 
 func _is_node_above_horizon(node_id: String) -> bool:
@@ -1651,7 +1646,7 @@ func _on_node_hold_started(node_id: String) -> void:
 		return
 	if hovered_node_id == node_id and not tooltip_suppressed_until_motion:
 		_show_node_tooltip(node_id)
-	if progression == null or progression.get_node_state(node_id) != "available" or not progression.can_purchase(node_id):
+	if progression == null or _research_state(node_id) != "available" or not _can_research(node_id):
 		return
 	held_node_id = node_id
 	hold_elapsed = 0.0
@@ -1667,13 +1662,17 @@ func _on_node_hold_released(node_id: String) -> void:
 func _complete_node_hold() -> void:
 	if held_node_id.is_empty():
 		return
-	var completed_node_id := held_node_id
-	var hold_bar: StarNodeVisual = node_hold_bars[completed_node_id]
+	var id := held_node_id
+	var hold_bar: StarNodeVisual = node_hold_bars[id]
 	held_node_id = ""
 	hold_elapsed = 0.0
-	if progression.request_purchase(completed_node_id):
-		var definition := Balance.upgrade_definition(completed_node_id)
-		tree_status.text = tr("TREE_STATUS_ONLINE") % _upgrade_name(definition)
+	var purchased: bool = extension_research.purchase(id) if _is_extension_node(id) else progression.request_purchase(id)
+	if purchased:
+		var research_name: String = extension_research.research_name(id) if _is_extension_node(id) else _upgrade_name(Balance.upgrade_definition(id))
+		tree_status.text = tr("TREE_STATUS_ONLINE") % research_name
+		tooltip_content_key = ""
+		_refresh()
+		if _is_extension_node(id): pulse_installation_rule()
 	hold_bar.clear_fill()
 
 
@@ -1751,8 +1750,8 @@ func _refresh() -> void:
 		return
 	refresh_pending = false
 	data_readout.text = _grouped(int(floor(progression.observation_data)))
-	var visible_owned := _visible_base_owned_count()
-	var visible_total := _visible_base_research_count()
+	var visible_owned := _visible_base_owned_count() + (_extension_owned_count() if galactic_unlocked else 0)
+	var visible_total := _visible_base_research_count() + (extension_definitions.size() if galactic_unlocked else 0)
 	systems_readout.text = tr("TREE_PROGRESS_COUNT") % [visible_owned, visible_total]
 	galactic_progress_installed.text = "%03d" % visible_owned
 	galactic_progress_total.text = "%03d" % visible_total
@@ -1760,12 +1759,12 @@ func _refresh() -> void:
 	var available_count := 0
 	var affordable_count := 0
 	node_states.clear()
-	for definition in Balance.UPGRADE_NODES:
+	for definition in Balance.UPGRADE_NODES + extension_definitions:
 		var node_id := String(definition.id)
-		var state: String = progression.get_node_state(node_id)
+		var state: String = _research_state(node_id)
 		node_states[node_id] = state
 		var visual_state := state
-		if state == "hidden" and _is_teaser_visible(definition):
+		if state == "hidden" and not _is_extension_node(node_id) and _is_teaser_visible(definition):
 			visual_state = "teaser"
 		var visible := visual_state != "hidden"
 		var button: Button = node_buttons[node_id]
@@ -1782,9 +1781,9 @@ func _refresh() -> void:
 			continue
 		if state == "available":
 			available_count += 1
-			if progression.can_purchase(node_id):
+			if _can_research(node_id):
 				affordable_count += 1
-		var affordable: bool = state == "available" and progression.can_purchase(node_id)
+		var affordable: bool = state == "available" and _can_research(node_id)
 		var visual_key: String = "%s:%s" % [visual_state, affordable]
 		if String(node_visual_keys.get(node_id, "")) != visual_key:
 			_apply_node_visual(definition, visual_state)
@@ -1823,16 +1822,18 @@ func _apply_node_visual(definition: Dictionary, visual_state: String) -> void:
 	var star: Dictionary = star_record.star
 	star_visual.configure(
 		visual_state,
-		Balance.BRANCHES[String(definition.branch)].color,
+		_research_branch_color(String(definition.branch)),
 		float(star.magnitude),
 		String(star.kind),
-		progression.can_purchase(node_id),
+		_can_research(node_id),
 		_is_branch_endpoint(definition)
 	)
 
 
 func _is_branch_endpoint(definition: Dictionary) -> bool:
 	var node_id := String(definition.id)
+	if _is_extension_node(node_id):
+		return node_id in ["ext_record_complete", "ext_trace_advanced", "ext_link_advanced", "ext_sweep_advanced"]
 	var branch_id := String(definition.branch)
 	for candidate in Balance.UPGRADE_NODES:
 		if String(candidate.branch) != branch_id:
@@ -1865,6 +1866,9 @@ func _show_node_tooltip(node_id: String) -> void:
 func _refresh_constellation_inspector(node_id: String) -> void:
 	if progression == null or not node_buttons.has(node_id) or _is_local_group_node(node_id):
 		return
+	if _is_extension_node(node_id):
+		_refresh_extension_inspector(node_id)
+		return
 	if installation_rule == constellation_installation_rule and installation_node_id != node_id:
 		_cancel_installation_rule()
 	var visual_state := String(node_buttons[node_id].get_meta("visual_state"))
@@ -1886,7 +1890,7 @@ func _refresh_constellation_inspector(node_id: String) -> void:
 	var group_id := String(star_record.constellation_id)
 	var group_label_key := ChartData.LOCAL_GROUP_LABEL_KEY
 	if group_id != "local_group":
-		var constellation: Dictionary = ChartData.CONSTELLATIONS[group_id]
+		var constellation: Dictionary = chart_constellations[group_id]
 		group_label_key = String(constellation.label_key)
 	var constellation_label := tr(group_label_key).replace("  /  ", " / ")
 	tooltip_star.text = "%s    %s    %s" % [tr(String(star.name_key)), String(star.bayer), tr("TREE_CONSTELLATION_MAGNITUDE") % float(star.magnitude)]
@@ -2095,7 +2099,7 @@ func _build_interface() -> void:
 	header.resized.connect(_layout_chart_header)
 	_layout_chart_header()
 
-	for definition in Balance.UPGRADE_NODES:
+	for definition in Balance.UPGRADE_NODES + extension_definitions:
 		_build_node_button(definition)
 	_build_constellation_ledger()
 	_build_node_tooltip()
@@ -2121,6 +2125,22 @@ func _build_interface() -> void:
 	hub_return_button.pressed.connect(_frame_galaxy)
 	hub_return_button.visible = false
 	overlay.add_child(hub_return_button)
+	atlas_footer = ColorRect.new()
+	atlas_footer.position = Vector2(0, 552)
+	atlas_footer.size = Vector2(1152, 48)
+	atlas_footer.color = UITheme.GROUND
+	atlas_footer.mouse_filter = Control.MOUSE_FILTER_STOP
+	overlay.add_child(atlas_footer)
+	for index in range(3):
+		var action := Button.new()
+		action.flat = true
+		action.position = Vector2(280 + index * 195, 564)
+		action.size = Vector2(185, 28)
+		action.add_theme_font_size_override("font_size", 12)
+		action.add_theme_color_override("font_color", UITheme.ACCENT_TEXT)
+		action.pressed.connect(_atlas_action.bind(index))
+		overlay.add_child(action)
+		atlas_actions.append(action)
 	_layout_chart()
 
 
@@ -2149,7 +2169,7 @@ func _build_node_button(definition: Dictionary) -> void:
 	star_visual.name = "StarVisual"
 	star_visual.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	star_visual.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var branch_color: Color = Balance.BRANCHES[String(definition.branch)].color
+	var branch_color: Color = _research_branch_color(String(definition.branch))
 	var star_record: Dictionary = node_star_records[node_id]
 	var star: Dictionary = star_record.star
 	star_visual.configure(
@@ -2179,16 +2199,15 @@ func _build_constellation_ledger() -> void:
 	ledger_title.name = "LedgerTitle"
 	constellation_ledger.add_child(ledger_title)
 	var ledger_ids: Array[String] = []
-	for constellation_id in GALACTIC_LEDGER_ORDER:
+	for constellation_id in _constellation_order():
 		ledger_ids.append(String(constellation_id))
-	ledger_ids.append("local_group")
 	for constellation_id in ledger_ids:
 		var label_text := ""
 		if constellation_id == "local_group":
 			label_text = tr(ChartData.LOCAL_GROUP_LABEL_KEY).split(" / ")[0]
 		else:
-			label_text = tr(String(ChartData.CONSTELLATIONS[constellation_id].label_key)).split("  /  ")[0]
-		var name_label := _spec_label(label_text, UITheme.sans("light"), 13.0, UITheme.TOOLTIP_BODY)
+			label_text = tr(String(chart_constellations[constellation_id].label_key)).split("  /  ")[0]
+		var name_label := _spec_label(label_text, UITheme.sans("light"), 18.0, UITheme.TOOLTIP_BODY)
 		constellation_ledger.add_child(name_label)
 		constellation_ledger_names.append(name_label)
 		var leader := ColorRect.new()
@@ -2204,6 +2223,14 @@ func _build_constellation_ledger() -> void:
 		count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		constellation_ledger.add_child(count_label)
 		constellation_ledger_counts.append(count_label)
+		var hit := Button.new()
+		hit.flat = true
+		hit.tooltip_text = label_text
+		for style in ["normal", "hover", "pressed", "focus"]:
+			hit.add_theme_stylebox_override(style, StyleBoxEmpty.new())
+		hit.pressed.connect(focus_constellation.bind(constellation_id))
+		constellation_ledger.add_child(hit)
+		constellation_ledger_hits.append(hit)
 
 
 func _build_node_tooltip() -> void:
@@ -2338,7 +2365,7 @@ func _build_galactic_overlays() -> void:
 	branch_title.name = "BranchTitle"
 	galactic_ledger.add_child(branch_title)
 	for constellation_id in GALACTIC_LEDGER_ORDER:
-		var constellation: Dictionary = ChartData.CONSTELLATIONS[constellation_id]
+		var constellation: Dictionary = chart_constellations[constellation_id]
 		var name_label := _spec_label(tr(String(constellation.label_key)).split("  /  ")[0], UITheme.sans("light"), 13.0, UITheme.TOOLTIP_BODY)
 		galactic_ledger.add_child(name_label)
 		galactic_ledger_names.append(name_label)
@@ -2480,8 +2507,10 @@ func _draw_tree() -> void:
 		return
 	_draw_chart_background()
 	var structure_alpha := _galactic_structure_alpha()
-	for constellation_id in ChartData.CONSTELLATIONS:
-		var constellation: Dictionary = ChartData.CONSTELLATIONS[constellation_id]
+	for constellation_id in chart_constellations:
+		if constellation_id in ExtensionChart.ORDER and not galactic_unlocked:
+			continue
+		var constellation: Dictionary = chart_constellations[constellation_id]
 		for segment_variant in constellation.segments:
 			var segment: Array = segment_variant
 			var start := Vector2(star_positions["%s/%s" % [constellation_id, String(segment[0])]])
@@ -2503,6 +2532,7 @@ func _draw_tree() -> void:
 					"galaxy":
 						_draw_background_galaxy(point, star_radius, alpha)
 			tree_canvas.draw_circle(point, maxf(1.2, star_radius * 0.55), Color(UITheme.STAR_BACKGROUND, alpha))
+	_draw_extension_labels()
 	if progression != null and (structure_alpha > 0.01 or _local_group_alpha() > 0.01):
 		_draw_frontier_overlay()
 	# The ground goes on last. Half the sky now sits below the horizon at any
@@ -2602,8 +2632,8 @@ func _draw_galactic_core() -> void:
 	if alpha <= 0.01:
 		return
 	var scale_amount := UITheme.px(GALACTIC_CORE_RADIUS_SPEC) / (maxf(zoom, 0.001) * galactic_core_max_length)
-	for constellation_id in ChartData.CONSTELLATIONS:
-		var constellation: Dictionary = ChartData.CONSTELLATIONS[constellation_id]
+	for constellation_id in chart_constellations:
+		var constellation: Dictionary = chart_constellations[constellation_id]
 		for segment_variant in constellation.segments:
 			var segment: Array = segment_variant
 			var start := _galactic_core_point("%s/%s" % [constellation_id, String(segment[0])], scale_amount)
@@ -2875,6 +2905,8 @@ func _segment_states(constellation_id: String, segment: Array) -> PackedStringAr
 		var star_key := "%s/%s" % [constellation_id, String(segment[index])]
 		if star_node_ids.has(star_key):
 			states[index] = _cached_node_state(String(star_node_ids[star_key]))
+		elif constellation_id in ExtensionChart.ORDER:
+			states[index] = "purchased" if _constellation_complete(constellation_id) else "locked"
 	return states
 
 
@@ -2971,3 +3003,136 @@ func _panel_style(background: Color, border: Color, radius: int, width: int) -> 
 	style.corner_radius_bottom_left = radius
 	style.corner_radius_bottom_right = radius
 	return style
+
+func bind_extension(research: Node) -> void:
+	extension_research = research
+	if not research.changed.is_connected(_on_progression_state_changed):
+		research.changed.connect(_on_progression_state_changed)
+	_refresh()
+
+func _constellation_order() -> Array:
+	return GALACTIC_LEDGER_ORDER + ExtensionChart.ORDER
+
+func _is_extension_node(id: String) -> bool:
+	return node_star_records.has(id) and String(node_star_records[id].constellation_id) in ExtensionChart.ORDER
+
+func _research_branch_color(id: String) -> Color:
+	return ExtensionChart.COLORS[id] if ExtensionChart.COLORS.has(id) else Balance.BRANCHES[id].color
+
+func _research_state(id: String) -> String:
+	if not _is_extension_node(id): return progression.get_node_state(id)
+	if not galactic_unlocked or extension_research == null: return "hidden"
+	if extension_research.research_owned(id): return "purchased"
+	return "available" if extension_research.research_ready(id) else "locked"
+
+func _can_research(id: String) -> bool:
+	if _is_extension_node(id):
+		return extension_research != null and galactic_unlocked and extension_research.can_purchase(id) and not extension_research.research_owned(id)
+	return progression.can_purchase(id)
+
+func _extension_owned_count() -> int:
+	var count := 0
+	if extension_research != null:
+		for definition in extension_definitions:
+			if extension_research.research_owned(definition.id): count += 1
+	return count
+
+func _constellation_complete(id: String) -> bool:
+	for star in chart_constellations[id].stars:
+		if not String(star.node_id).is_empty() and _research_state(star.node_id) != "purchased": return false
+	return true
+
+func _atlas_action(index: int) -> void:
+	match index:
+		0: focus_outer_constellations()
+		1: deep_sky_chart._set_view(DeepSkyChart.View.PLANS)
+		2: deep_sky_chart._set_view(DeepSkyChart.View.ANALYSIS)
+
+func focus_outer_constellations() -> void:
+	if not galactic_unlocked: return
+	_cancel_node_hold()
+	if not _is_extension_node(selected_node_id):
+		selected_node_id = "ext_protocol"
+		for id in ["ext_trace_study", "ext_sweep_study", "ext_link_study"]:
+			if _research_state(id) == "available":
+				selected_node_id = id
+				break
+	expanded_view_initialized = true
+	rotation_offset = 2.1
+	zoom = 0.43
+	galactic_chart_detail = 1.0
+	pan_position = _galactic_pan_for_zoom(zoom)
+	_layout_chart()
+	_apply_transform()
+	_update_galactic_presentation()
+
+func focus_constellation(id: String) -> void:
+	if not chart_placements.has(id): return
+	if id in ExtensionChart.ORDER and not galactic_unlocked: return
+	_cancel_node_hold()
+	var placement: Dictionary = chart_placements[id]
+	rotation_offset = -PI * 0.5 - float(placement.anchor_angle)
+	zoom = clampf(330.0 / float(placement.anchor_radius), _galactic_zoom_floor(), CONSTELLATION_ZOOM)
+	pan_position = _galactic_pan_for_zoom(zoom)
+	galactic_chart_detail = 1.0
+	for star in chart_constellations[id].stars:
+		if not String(star.node_id).is_empty():
+			selected_node_id = star.node_id
+			if _research_state(star.node_id) == "available": break
+	tooltip_content_key = ""
+	_layout_chart()
+	_apply_transform()
+	_refresh()
+
+func select_extension(id: String) -> void:
+	if id == "m31": id = "galaxy_imaging"
+	elif id == "modules": id = "ext_protocol"
+	_show_completed_constellations()
+	if not node_star_records.has(id): return
+	focus_constellation(node_star_records[id].constellation_id)
+	selected_node_id = id
+	tooltip_content_key = ""
+	_refresh_constellation_inspector(id)
+
+func _refresh_extension_inspector(id: String) -> void:
+	if extension_research == null: return
+	if installation_rule == constellation_installation_rule and installation_node_id != id:
+		_cancel_installation_rule()
+	var record: Dictionary = node_star_records[id]
+	var star: Dictionary = record.star
+	var state := _research_state(id)
+	tooltip_branch.text = tr(chart_constellations[record.constellation_id].label_key)
+	tooltip_star.text = "%s    %s" % [tr(star.name_key), star.bayer]
+	tooltip_name.text = extension_research.research_name(id)
+	tooltip_description.text = extension_research.research_description(id)
+	tooltip_state.text = tr("STATE_" + state.to_upper())
+	var cost: float = extension_research.research_cost(id)
+	tooltip_cost.text = tr("CHX_FREE") if is_zero_approx(cost) else tr("TREE_CONSTELLATION_COST") % _grouped(int(cost))
+	if state == "purchased": tooltip_action.text = tr("TREE_SYSTEM_ONLINE")
+	elif _can_research(id): tooltip_action.text = tr("TREE_CONSTELLATION_INSTALL_ACTION")
+	elif not extension_research.modules_unlocked(): tooltip_action.text = tr("ATLAS_FIRST_M31")
+	elif state == "available": tooltip_action.text = tr("TREE_NEED_MORE") % [int(progression.observation_data), int(cost)]
+	else: tooltip_action.text = extension_research.prerequisite_text(id)
+	tooltip_state.add_theme_color_override("font_color", UITheme.ACCENT_PIP if _can_research(id) else UITheme.INK_MID)
+	tooltip_action.add_theme_color_override("font_color", UITheme.TOOLTIP_ACTION)
+	tooltip_panel.visible = _constellation_panel_active()
+	_layout_constellation_overlays()
+
+func _draw_extension_labels() -> void:
+	if not galactic_unlocked: return
+	for id in ExtensionChart.ORDER:
+		var bounds := Rect2()
+		var first := true
+		for star in chart_constellations[id].stars:
+			var point: Vector2 = star_positions[id + "/" + star.id]
+			if first: bounds = Rect2(point, Vector2.ZERO); first = false
+			else: bounds = bounds.expand(point)
+		if bounds.get_center().y > CHART_ORIGIN.y: continue
+		var screen_top: float = tree_canvas.position.y + bounds.position.y * zoom
+		var anchor := Vector2(bounds.get_center().x, bounds.end.y + 25.0 / zoom) if screen_top < 150 or id == "cygnus" else Vector2(bounds.get_center().x, bounds.position.y - 18.0 / zoom)
+		var label := tr(chart_constellations[id].label_key)
+		var font := UITheme.sans()
+		var width := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
+		tree_canvas.draw_set_transform(anchor, 0.0, Vector2.ONE / zoom)
+		tree_canvas.draw_string(font, Vector2(-width * 0.5, 0), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, UITheme.INK_MID)
+		tree_canvas.draw_set_transform(Vector2.ZERO)

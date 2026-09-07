@@ -1,5 +1,11 @@
 # Visual and Audio Validation
 
+The constellation extension has a dedicated real-renderer fixture:
+`--script res://tests/constellation_extension_preview.gd`. Its fourteen bilingual
+frames cover first reveal, partial/complete outer figures, a half-held research
+star, and the auxiliary plan/analysis views. The original chart remains visible
+beside the new figures. Captures use synthetic progression and preserve player saves.
+
 Use this page for changes to layout, markers, fonts, palette, effects or sound.
 Run from the repository root with `$godot` from the [README](../README.md#실행과-빌드).
 Mechanical gates and isolation requirements are in [probes.md](probes.md).
