@@ -13,6 +13,9 @@ const DeepSkyChart = preload("res://scripts/deep_sky_chart.gd")
 const StarNodeVisual = preload("res://scripts/research_star_visual.gd")
 const ACTION_CHART := &"nw_chart"
 const ACTION_MENU_BACK := &"nw_menu_back"
+const ATLAS_ACTION_ORIGIN := Vector2(34, 282)
+const ATLAS_ACTION_SIZE := Vector2(172, 34)
+const ATLAS_ACTION_STEP := Vector2(0, 46)
 const RAW_DEBUG_KEYS := [
 	KEY_D,
 	KEY_N,
@@ -99,7 +102,7 @@ var extension_research: Node
 var expanded_view_initialized := false
 var pullback_start_rotation := 0.0
 var atlas_actions: Array[Button] = []
-var atlas_footer: ColorRect
+var atlas_navigation: ColorRect
 var constellation_ledger_hits: Array[Button] = []
 var progression: Node
 var settings_controller: Node
@@ -1012,8 +1015,8 @@ func _refresh_deep_sky_chart() -> void:
 	if header != null:
 		header.visible = not active
 	hub_return_button.visible = false
-	if atlas_footer != null:
-		atlas_footer.visible = galactic_unlocked and not active
+	if atlas_navigation != null:
+		atlas_navigation.visible = galactic_unlocked and not active
 	for index in range(atlas_actions.size()):
 		atlas_actions[index].visible = galactic_unlocked and not active
 		atlas_actions[index].text = tr(["ATLAS_EXPAND", "ATLAS_PLANS", "ATLAS_ANALYSIS"][index])
@@ -1184,7 +1187,8 @@ func _refresh_constellation_overlays() -> void:
 	var below_horizon_count := 0
 	for index in range(_constellation_order().size()):
 		var constellation_id: String = _constellation_order()[index]
-		var show_row := galactic_unlocked or constellation_id not in ExtensionChart.ORDER
+		var is_extension := constellation_id in ExtensionChart.ORDER
+		var show_row := galactic_unlocked if is_extension else not (galactic_unlocked and _constellation_complete(constellation_id))
 		for widget in [constellation_ledger_names[index], constellation_ledger_counts[index], constellation_ledger_notes[index], constellation_ledger_leaders[index], constellation_ledger_hits[index]]:
 			widget.visible = show_row
 		if not show_row: continue
@@ -2125,17 +2129,20 @@ func _build_interface() -> void:
 	hub_return_button.pressed.connect(_frame_galaxy)
 	hub_return_button.visible = false
 	overlay.add_child(hub_return_button)
-	atlas_footer = ColorRect.new()
-	atlas_footer.position = Vector2(0, 552)
-	atlas_footer.size = Vector2(1152, 48)
-	atlas_footer.color = UITheme.GROUND
-	atlas_footer.mouse_filter = Control.MOUSE_FILTER_STOP
-	overlay.add_child(atlas_footer)
+	atlas_navigation = ColorRect.new()
+	atlas_navigation.position = ATLAS_ACTION_ORIGIN - Vector2(10, 14)
+	atlas_navigation.size = Vector2(192, 200)
+	atlas_navigation.color = UITheme.GROUND
+	atlas_navigation.mouse_filter = Control.MOUSE_FILTER_STOP
+	atlas_navigation.z_index = 30
+	overlay.add_child(atlas_navigation)
 	for index in range(3):
 		var action := Button.new()
 		action.flat = true
-		action.position = Vector2(280 + index * 195, 564)
-		action.size = Vector2(185, 28)
+		action.position = ATLAS_ACTION_ORIGIN + ATLAS_ACTION_STEP * (index + 1)
+		action.size = ATLAS_ACTION_SIZE
+		action.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		action.z_index = 31
 		action.add_theme_font_size_override("font_size", 12)
 		action.add_theme_color_override("font_color", UITheme.ACCENT_TEXT)
 		action.pressed.connect(_atlas_action.bind(index))

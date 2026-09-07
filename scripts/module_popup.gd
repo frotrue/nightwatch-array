@@ -648,5 +648,7 @@ func _text_action(parent: Control, p: Vector2, dimensions: Vector2, callback: Ca
 
 func place_launcher() -> void:
 	if launcher == null or game == null: return
-	launcher.position = Vector2(38, 588 if game.upgrade_tree.is_deep_sky_chart_active() else 564)
-	launcher.size = Vector2(164, 30)
+	var auxiliary: bool = game.upgrade_tree.is_deep_sky_chart_active()
+	launcher.position = Vector2(38, 588) if auxiliary else game.upgrade_tree.ATLAS_ACTION_ORIGIN
+	launcher.size = Vector2(164, 30) if auxiliary else game.upgrade_tree.ATLAS_ACTION_SIZE
+	launcher.alignment = HORIZONTAL_ALIGNMENT_CENTER if auxiliary else HORIZONTAL_ALIGNMENT_LEFT
