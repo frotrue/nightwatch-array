@@ -12,7 +12,7 @@ const DEFINITIONS := {
 	"record": {"cost": 180000000.0, "speed": 0.8, "m31_value": 1.5, "glyph": "focus", "code": "RECORD", "badge": "×1.50", "requires": ["wide"], "source": "purchase", "category": "link", "pool": ""},
 	"revisit": {"cost": 240000000.0, "m31_cooldown": 0.6, "glyph": "wide", "code": "REVISIT", "badge": "×0.60", "requires": [], "slots_required": 3, "source": "purchase", "category": "link", "pool": ""},
 	"trail_integrator": {"cost": 0.0, "new_speed": 0.9, "trail_progress": 0.6, "glyph": "focus", "code": "TRAIL", "badge": "TRAIL 60%", "requires": [], "source": "research", "research_id": "ext_trace_study", "category": "trace", "pool": ""},
-	"sweep_optics": {"cost": 0.0, "new_speed": 0.9, "sweep_charge": 1.35, "discovery_width": 1.5, "glyph": "wide", "code": "SWEEP", "badge": "CHARGE ×1.35", "requires": [], "source": "research", "research_id": "ext_sweep_study", "category": "sweep", "pool": ""},
+	"sweep_optics": {"cost": 0.0, "new_speed": 0.9, "sweep_charge": 1.35, "rare_radius": 1.5, "glyph": "wide", "code": "SWEEP", "badge": "CHARGE ×1.35", "requires": [], "source": "research", "research_id": "ext_sweep_study", "category": "sweep", "pool": ""},
 	"relay_bus": {"cost": 0.0, "new_speed": 0.9, "relay_dish": 1.75, "glyph": "wide", "code": "RELAY", "badge": "DISH ×1.75", "requires": [], "source": "research", "research_id": "ext_link_study", "category": "link", "pool": ""},
 	"long_baseline": {"cost": 0.0, "new_speed": 0.85, "baseline_speed": 1.6, "glyph": "focus", "code": "BASELINE", "badge": "1s ×1.60", "requires": [], "source": "sample", "category": "trace", "pool": "trace"},
 	"dual_processor": {"cost": 0.0, "primary_speed": 1.3, "secondary_speed": 0.55, "glyph": "focus", "code": "DUAL", "badge": "DUAL ×1.30", "requires": [], "source": "sample", "category": "trace", "pool": "trace"},
@@ -28,11 +28,13 @@ const SLOT_RESEARCH := {
 }
 const RESEARCH_IDS := ["focus", "wide", "precision", "record", "slot_3", "revisit", "slot_4", "slot_5"]
 var purchased: Array[String] = []
+var quantities: Dictionary = {}
 var slots: Array[String] = ["", "", "", "", ""]
 var unlocked_slots := INITIAL_SLOTS
 var _cached_slots: Array[String] = []
 var _cached_purchased: Array[String] = []
 var _cached_capacity := -1
+var _cached_quantities: Dictionary = {}
 var _cached_effects: Dictionary = {}
 var shutter_remaining := 0.0
 var _m31_manual_active := false
@@ -83,6 +85,27 @@ func grant(id: String) -> bool:
 	purchased.append(id)
 	return true
 
+func owned_count(id: String) -> int:
+	return int(quantities.get(id, 1)) if id in purchased else 0
+
+func installed_count(id: String) -> int:
+	return installed_ids().count(id)
+
+func spare_count(id: String) -> int:
+	return maxi(0, owned_count(id) - installed_count(id))
+
+func grant_copy(id: String) -> bool:
+	if not DEFINITIONS.has(id) or owned_count(id) >= 1000000000:
+		return false
+	var count := owned_count(id)
+	grant(id)
+	quantities[id] = count + 1
+	_cached_capacity = -1
+	return true
+
+func stacked_effect(id: String, key: String) -> float:
+	return maxf(0.1, 1.0 + (float(DEFINITIONS.get(id, {}).get(key, 1.0)) - 1.0) * installed_count(id))
+
 func first_empty_slot() -> int:
 	for index in range(mini(slots.size(), clampi(unlocked_slots, INITIAL_SLOTS, MAX_SLOTS))):
 		if slots[index].is_empty():
@@ -94,7 +117,7 @@ func equip(id: String, slot: int = -1) -> bool:
 		slot = first_empty_slot()
 	if slot < 0 or slot >= mini(slots.size(), clampi(unlocked_slots, INITIAL_SLOTS, MAX_SLOTS)):
 		return false
-	if not id.is_empty() and (not DEFINITIONS.has(id) or id not in purchased or id in slots):
+	if not id.is_empty() and (not DEFINITIONS.has(id) or id not in purchased or slots.slice(0, unlocked_slots).count(id) - int(slots[slot] == id) >= owned_count(id)):
 		return false
 	slots[slot] = id
 	return true
@@ -103,7 +126,7 @@ func installed_ids() -> Array[String]:
 	var result: Array[String] = []
 	for index in range(mini(slots.size(), clampi(unlocked_slots, INITIAL_SLOTS, MAX_SLOTS))):
 		var id := slots[index]
-		if DEFINITIONS.has(id) and id in purchased and id not in result:
+		if DEFINITIONS.has(id) and id in purchased and result.count(id) < owned_count(id):
 			result.append(id)
 	return result
 
@@ -115,10 +138,11 @@ func has(id: String) -> bool:
 
 func effect(key: String):
 	# Array equality detects direct fixture mutation without allocating on reads.
-	if _cached_capacity != unlocked_slots or _cached_slots != slots or _cached_purchased != purchased:
+	if _cached_capacity != unlocked_slots or _cached_slots != slots or _cached_purchased != purchased or _cached_quantities != quantities:
 		_cached_effects = configuration(installed_ids())
 		_cached_slots = slots.duplicate()
 		_cached_purchased = purchased.duplicate()
+		_cached_quantities = quantities.duplicate()
 		_cached_capacity = unlocked_slots
 	return _cached_effects.get(key)
 
@@ -132,7 +156,7 @@ static func configuration(selection) -> Dictionary:
 		"m31_value": 1.0,
 		"m31_cooldown": 1.0,
 		"sweep_charge": 1.0,
-		"discovery_width": 1.0,
+		"rare_radius": 1.0,
 	}
 	var ids: Array = selection if selection is Array else [selection]
 	var used: Array = []
@@ -141,8 +165,8 @@ static func configuration(selection) -> Dictionary:
 			continue
 		used.append(id)
 		var definition: Dictionary = DEFINITIONS[id]
-		for key in ["speed", "new_speed", "radius", "m31_value", "m31_cooldown", "sweep_charge", "discovery_width"]:
-			result[key] *= float(definition.get(key, 1.0))
+		for key in ["speed", "new_speed", "radius", "m31_value", "m31_cooldown", "sweep_charge", "rare_radius"]:
+			result[key] *= maxf(0.1, 1.0 + (float(definition.get(key, 1.0)) - 1.0) * ids.count(id))
 		result.targets = maxi(result.targets, int(definition.get("targets", 1)))
 		result.cost += definition.cost
 	return result
@@ -150,6 +174,7 @@ static func configuration(selection) -> Dictionary:
 func get_save_data() -> Dictionary:
 	return {
 		"purchased": purchased.duplicate(),
+		"quantities": quantities.duplicate(),
 		"slots": slots.duplicate(),
 		"unlocked_slots": unlocked_slots,
 		"shutter_remaining": shutter_remaining,
@@ -157,6 +182,7 @@ func get_save_data() -> Dictionary:
 
 func load_save_data(data: Dictionary) -> void:
 	purchased.clear()
+	quantities.clear()
 	slots = ["", "", "", "", ""]
 	shutter_remaining = _finite_range(data.get("shutter_remaining", 0.0), 0.0, 5.0)
 	_m31_manual_active = false
@@ -170,6 +196,12 @@ func load_save_data(data: Dictionary) -> void:
 		for id in owned:
 			if id is String and DEFINITIONS.has(id) and id not in purchased:
 				purchased.append(id)
+	var counts = data.get("quantities", {})
+	if counts is Dictionary:
+		for id in purchased:
+			var count = counts.get(id, 1)
+			if (count is int or count is float) and is_finite(float(count)) and floorf(float(count)) == float(count):
+				quantities[id] = int(clampf(float(count), 1, 1000000000))
 	var saved = data.get("slots", [data.get("equipped", ""), data.get("secondary", "")])
 	if saved is Array:
 		for index in range(mini(saved.size(), unlocked_slots)):
@@ -204,11 +236,11 @@ func dish_multiplier(target) -> float:
 	var multiplier := 1.0
 	var manual_contribution := _target_manual_contribution(target)
 	if has("relay_bus") and manual_contribution >= 0.25:
-		multiplier *= float(DEFINITIONS.relay_bus.relay_dish)
+		multiplier *= stacked_effect("relay_bus", "relay_dish")
 	# Reference Bus cross-feeds ordinary/anomaly dish work while the cursor is
 	# genuinely on M31. M31 itself stays manual-only.
 	if has("reference_bus") and String(target.get("type_id")) != "andromeda" and m31_manual_active():
-		multiplier *= float(DEFINITIONS.reference_bus.reference_dish)
+		multiplier *= stacked_effect("reference_bus", "reference_dish")
 	# New dish modifiers have their own cap. Existing dish rates are deliberately
 	# outside it, because this contract must not retroactively weaken old builds.
 	return clampf(multiplier, 0.25, 2.5)

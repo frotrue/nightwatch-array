@@ -32,14 +32,9 @@ func object_count() -> int:
 
 func available_kinds() -> Array[String]:
 	var kinds: Array[String] = []
-	for kind in ["spectrum", "afterglow", "pair"]:
-		if Data.study_for_kind(kind) in research.state.research_ids:
-			kinds.append(kind)
+	if research.modules_unlocked():
+		kinds.append("rare")
 	return kinds
-
-func plan_selected() -> void:
-	if research.state.selected_plan not in research.state.guided_plans:
-		remaining = minf(remaining, 8.0)
 
 func _process(delta: float) -> void:
 	if research == null or not research.game.observation_phase_active or not research.available():
@@ -59,42 +54,12 @@ func _process(delta: float) -> void:
 	try_opportunity()
 
 func try_opportunity() -> bool:
-	if available_kinds().is_empty() or not _safe_window(22.0) or not _space_for(3):
+	if available_kinds().is_empty() or not _safe_window(22.0) or not _space_for(1):
 		return false
-	var assignments: Array[Dictionary] = []
-	var field: Dictionary = research.state.active_field()
-	var definition: Dictionary = research.state.field_definition()
-	if not field.is_empty() and field.prepared and not research.state.field_ready():
-		var plan: String = research.state.selected_plan
-		var field_index: int = research.state.field_index()
-		for event in definition.events:
-			if field.evidence.get(event.slot, false):
-				continue
-			var ticket_id := "p/%s/%d/%s" % [plan, field_index, event.slot]
-			_ensure_ticket(ticket_id, event.kind, "plan", plan, field_index, event.slot, definition.get("mode", "manual"))
-			assignments.append_array(_event_descriptors(ticket_id, event.kind, event.get("variant", "single"), float(event.get("delay", 0.0))))
-		# A parallel exposure may be the only remaining evidence. Reoffer its pair
-		# using the same ticket, keeping all prior Data and sample payment flags.
-		if assignments.is_empty() and definition.get("parallel", false) and field.parallel_progress < 0.25:
-			for event in definition.events:
-				if event.kind == "pair":
-					var ticket_id := "p/%s/%d/%s" % [plan, field_index, event.slot]
-					assignments.append_array(_event_descriptors(ticket_id, "pair", event.get("variant", "upper"), 0.0, true))
-	else:
-		var kind := _next_kind()
-		if kind.is_empty():
-			return false
-		event_serial += 1
-		var ticket_id := "n/%d" % event_serial
-		_ensure_ticket(ticket_id, kind, "natural")
-		assignments.append_array(_event_descriptors(ticket_id, kind, "single" if kind == "spectrum" else "center", 0.0))
-	if assignments.is_empty() or not _space_for(assignments.size()):
-		return false
-	for descriptor in assignments:
-		pending.append(descriptor)
-	var selected: String = research.state.selected_plan
-	if not selected.is_empty() and selected not in research.state.guided_plans:
-		research.state.guided_plans.append(selected)
+	event_serial += 1
+	var ticket_id := "n/%d" % event_serial
+	_ensure_ticket(ticket_id, "rare", "natural")
+	pending.append_array(_event_descriptors(ticket_id, "rare", "single", 0.0))
 	remaining = _next_interval()
 	research.changed.emit()
 	research.game._autosave_active_slot()
@@ -125,62 +90,19 @@ func _next_interval() -> float:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = scheduler_seed + scheduler_serial * 104729
 	scheduler_serial += 1
-	return rng.randf_range(32.0, 44.0)
+	return rng.randf_range(32.0, 44.0) * (0.8 if research.research_owned("ext_sweep_advanced") else 1.0)
 
-func _next_kind() -> String:
-	var unlocked := available_kinds()
-	if unlocked.is_empty():
-		return ""
-	for index in range(cycle.size() - 1, -1, -1):
-		if cycle[index] not in unlocked:
-			cycle.remove_at(index)
-	if cycle.is_empty():
-		var rng := RandomNumberGenerator.new()
-		rng.seed = scheduler_seed + scheduler_serial * 104729
-		scheduler_serial += 1
-		while not unlocked.is_empty():
-			var index := rng.randi_range(0, unlocked.size() - 1)
-			cycle.append(unlocked[index])
-			unlocked.remove_at(index)
-	return cycle.pop_front()
+func _ensure_ticket(id: String, kind: String, origin: String) -> void:
+	if not tickets.has(id):
+		tickets[id] = {"kind": kind, "origin_kind": origin, "components": {}, "sample_units": 0, "completed": false}
 
-func _ensure_ticket(id: String, kind: String, origin: String, plan: String = "", field_index: int = 0, slot: String = "", mode: String = "manual") -> void:
-	if tickets.has(id):
-		return
-	tickets[id] = {"kind": kind, "origin_kind": origin, "plan": plan, "field": field_index, "slot": slot, "mode": mode, "components": {}, "sample_units": 0, "completed": false}
-
-func _event_descriptors(ticket_id: String, kind: String, variant: String, delay: float, force_replay: bool = false) -> Array[Dictionary]:
-	var result: Array[Dictionary] = []
-	var ticket: Dictionary = tickets[ticket_id]
-	var replay: bool = force_replay or bool(ticket.completed)
-	var count := 2 if kind == "pair" else 1
-	for index in range(count):
-		var saved: Dictionary = ticket.components.get(str(index), {})
-		if saved.get("complete", false) and not replay:
-			continue
-		var route := _route(kind, variant, index)
-		result.append({"ticket": ticket_id, "event_id": ticket_id, "kind": kind, "origin_kind": ticket.origin_kind, "variant": variant, "component": index, "start": route[0], "end": route[1], "delay": delay, "progress": {} if replay else saved.duplicate(true), "restart": true})
+func _event_descriptors(ticket_id: String, kind: String, _variant: String, delay: float) -> Array[Dictionary]:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = scheduler_seed + event_serial * 15485863
+	var start := Vector2(rng.randf_range(0.15, 0.35), rng.randf_range(0.23, 0.66))
+	var end := Vector2(rng.randf_range(0.65, 0.85), rng.randf_range(0.23, 0.66))
+	var result: Array[Dictionary] = [{"ticket": ticket_id, "event_id": ticket_id, "kind": kind, "origin_kind": tickets[ticket_id].origin_kind, "component": 0, "start": start, "end": end, "delay": delay}]
 	return result
-
-func _route(kind: String, variant: String, component: int) -> Array[Vector2]:
-	if kind == "afterglow":
-		var centers := {"center": Vector2(0.48, 0.51), "outer": Vector2(0.18, 0.58), "left": Vector2(0.22, 0.47), "right": Vector2(0.83, 0.60), "upper": Vector2(0.49, 0.20), "lower": Vector2(0.47, 0.72)}
-		var end: Vector2 = centers.get(variant, Vector2(0.48, 0.51))
-		return [end - Vector2(0.10, 0.04), end]
-	if kind == "pair":
-		var base_y := 0.31 if variant == "upper" else (0.65 if variant == "lower" else 0.48)
-		var start := Vector2(0.34 + component * 0.04, base_y)
-		var end := Vector2(0.66 + component * 0.04, base_y + 0.04)
-		if variant in ["diverging", "upper", "lower"]:
-			end.y += -0.12 if component == 0 else 0.12
-		return [start, end]
-	match variant:
-		"diagonal": return [Vector2(0.24, 0.23), Vector2(0.68, 0.65)]
-		"parallel_a": return [Vector2(0.22, 0.37), Vector2(0.67, 0.42)]
-		"parallel_b": return [Vector2(0.26, 0.49), Vector2(0.71, 0.54)]
-		"cross_a": return [Vector2(0.22, 0.29), Vector2(0.73, 0.61)]
-		"cross_b": return [Vector2(0.24, 0.63), Vector2(0.69, 0.27)]
-	return [Vector2(0.26, 0.40), Vector2(0.73, 0.47)]
 
 func _spawn_component(descriptor: Dictionary) -> void:
 	var target := Target.new()
@@ -205,9 +127,11 @@ func remember_component(target: Node) -> void:
 	ticket.components[key] = snapshot
 
 func complete_component(target: Node) -> void:
+	if target.alive or target.get_progress() < 0.9999:
+		return
 	remember_component(target)
 	var ticket: Dictionary = tickets.get(target.reward_ticket_id, {})
-	if ticket.is_empty():
+	if ticket.is_empty() or ticket.completed:
 		return
 	var component: Dictionary = ticket.components[str(target.component_index)]
 	if not component.data_paid:
@@ -215,66 +139,19 @@ func complete_component(target: Node) -> void:
 		research.award_anomaly_data(target)
 	research.modules.notify_completed(target)
 	research.game.observer.release_target(target)
-	var count := 2 if ticket.kind == "pair" else 1
-	var complete := true
-	for index in range(count):
-		if not ticket.components.get(str(index), {}).get("complete", false):
-			complete = false
-	if complete:
-		ticket.completed = true
-		if ticket.origin_kind in ["plan", "natural"]:
-			var desired := 2 if _manual_qualified(ticket) else 1
-			var awarded: int = research.state.award_samples(maxi(0, desired - int(ticket.sample_units)), research.modules.purchased)
-			ticket.sample_units += awarded
-			if awarded > 0:
-				research.sample_feedback(awarded)
-		if not String(ticket.plan).is_empty() and _task_qualified(ticket):
-			research.state.record_evidence(ticket.plan, ticket.field, ticket.slot)
+	ticket.completed = true
+	if ticket.origin_kind == "natural":
+		var awarded: int = research.state.award_samples(maxi(0, research.state.sample_reward() - int(ticket.sample_units)))
+		ticket.sample_units += awarded
+		if awarded > 0:
+			research.sample_feedback(awarded)
 	research.changed.emit()
 	research.game._autosave_active_slot()
-
-func _manual_qualified(ticket: Dictionary) -> bool:
-	var total := 0.0
-	for component in ticket.components.values():
-		total += float(component.get("manual_best", 0.0))
-		if ticket.kind == "afterglow" and component.get("found", false):
-			return true
-	return total / (2.0 if ticket.kind == "pair" else 1.0) >= 0.25
-
-func _task_qualified(ticket: Dictionary) -> bool:
-	if ticket.kind != "pair" or ticket.mode == "manual":
-		return _manual_qualified(ticket)
-	var a: Dictionary = ticket.components.get("0", {})
-	var b: Dictionary = ticket.components.get("1", {})
-	match ticket.mode:
-		"split": return (a.get("manual_best", 0) >= 0.25 and b.get("auto_best", 0) >= 0.75) or (b.get("manual_best", 0) >= 0.25 and a.get("auto_best", 0) >= 0.75)
-		"handoff": return a.get("handoff", false) or b.get("handoff", false)
-		"parallel": return a.get("auto_best", 0) > 0.0 or b.get("auto_best", 0) > 0.0
-	return false
 
 func expire_component(target: Node) -> void:
 	remember_component(target)
 	research.game.observer.release_target(target)
 	research.changed.emit()
-
-func pair_automatic_active() -> bool:
-	var plan: String = research.state.selected_plan
-	var index: int = research.state.field_index()
-	for target in targets():
-		if target.kind != "pair" or not target.can_be_tracked() or target.last_auto_frame < Engine.get_process_frames() - 1:
-			continue
-		var ticket: Dictionary = tickets.get(target.reward_ticket_id, {})
-		if ticket.get("plan", "") == plan and ticket.get("field", -1) == index:
-			return true
-	return false
-
-func record_sweep_segment(from: Vector2, to: Vector2) -> void:
-	var width: float = research.game.observation_view.screen_length_to_world(30.0 * float(research.modules.effect("discovery_width")))
-	var revealed := false
-	for target in targets():
-		revealed = target.reveal(from, to, width) or revealed
-	if revealed:
-		research.changed.emit()
 
 func archive_meteor(meteor: Node) -> void:
 	if not research.modules.has("afterglow_archive") or not research.game.observation_phase_active or meteor.type_id not in ["common", "fast"] or not meteor.is_natural_observation():
@@ -290,7 +167,7 @@ func archive_meteor(meteor: Node) -> void:
 	event_serial += 1
 	var id := "a/%d" % event_serial
 	_ensure_ticket(id, "afterglow", "archive")
-	_spawn_component({"ticket": id, "event_id": id, "kind": "afterglow", "origin_kind": "archive", "component": 0, "start": uv, "end": uv, "archive_value": meteor.base_value * 0.5})
+	_spawn_component({"ticket": id, "event_id": id, "kind": "afterglow", "origin_kind": "archive", "component": 0, "start": uv, "end": uv, "archive_value": meteor.base_value * 0.5 * research.modules.installed_count("afterglow_archive")})
 
 func end_round() -> void:
 	for target in targets():
@@ -342,16 +219,13 @@ func load_save_data(data: Dictionary) -> void:
 			if not id is String or id.length() > 120 or tickets.size() >= 10000:
 				continue
 			var ticket = raw_tickets[id]
-			if not ticket is Dictionary or ticket.get("kind", "") not in ["spectrum", "pair", "afterglow"] or not ticket.get("components", {}) is Dictionary:
+			if not ticket is Dictionary or ticket.get("kind", "") not in ["rare", "afterglow"] or not ticket.get("components", {}) is Dictionary:
 				continue
 			var origin: String = ticket.get("origin_kind", "natural") if ticket.get("origin_kind", "") is String else "natural"
-			if origin not in ["plan", "natural", "archive"]:
+			if origin not in ["natural", "archive"]:
 				continue
-			var plan: String = ticket.get("plan", "") if ticket.get("plan", "") is String else ""
-			if not plan.is_empty() and not Data.PLANS.has(plan):
-				continue
-			_ensure_ticket(id, ticket.kind, origin, plan, Data.integer(ticket.get("field", 0), 2), str(ticket.get("slot", "")), str(ticket.get("mode", "manual")))
-			tickets[id].sample_units = Data.integer(ticket.get("sample_units", 0), 2)
+			_ensure_ticket(id, ticket.kind, origin)
+			tickets[id].sample_units = Data.integer(ticket.get("sample_units", 0), 3)
 			tickets[id].completed = Data.flag(ticket.get("completed", false))
 			for key in ["0", "1"]:
 				var component = ticket.components.get(key, {})
@@ -379,7 +253,7 @@ func load_save_data(data: Dictionary) -> void:
 					pending.append(descriptor)
 
 func _decode_descriptor(entry: Dictionary) -> Dictionary:
-	if entry.get("kind", "") not in ["spectrum", "pair", "afterglow"] or not tickets.has(entry.get("ticket", "")):
+	if entry.get("kind", "") not in ["rare", "afterglow"] or not tickets.has(entry.get("ticket", "")):
 		return {}
 	var descriptor: Dictionary = entry.duplicate(true)
 	for key in ["start", "end"]:
@@ -396,6 +270,63 @@ func _decode_descriptor(entry: Dictionary) -> Dictionary:
 	descriptor.progress = entry.get("progress", {}) if entry.get("progress", {}) is Dictionary else {}
 	descriptor.restart = Data.flag(entry.get("restart", false))
 	return descriptor
+
+# Collapse each in-flight v2 event into one ordinary rare meteor. Already earned
+# currency/Data stays in the game save; partial observation becomes normalized
+# progress on the new target, and the old payment flags still prevent replays.
+static func migrate_v2(data: Dictionary) -> Dictionary:
+	var result: Dictionary = data.duplicate(true)
+	result.active = []
+	result.pending = []
+	result.tickets = {}
+	var old_tickets = data.get("tickets", {})
+	if not old_tickets is Dictionary: old_tickets = {}
+	var grouped: Dictionary = {}
+	for list_key in ["active", "pending"]:
+		var entries = data.get(list_key, [])
+		if not entries is Array: continue
+		for entry in entries:
+			if not entry is Dictionary or not entry.get("ticket", "") is String: continue
+			var id: String = entry.get("ticket", "")
+			if id.is_empty() or entry.get("kind", "") not in ["spectrum", "pair", "afterglow"]: continue
+			if not grouped.has(id): grouped[id] = {"entry": entry.duplicate(true), "key": list_key, "components": {}}
+			var progress = entry if list_key == "active" else entry.get("progress", {})
+			if progress is Dictionary:
+				grouped[id].components[str(Data.integer(entry.get("component", 0), 1))] = progress
+	for id in grouped:
+		var group: Dictionary = grouped[id]
+		var entry: Dictionary = group.entry
+		var old = old_tickets.get(id, {})
+		if not old is Dictionary: old = {}
+		var components = old.get("components", {})
+		if not components is Dictionary: components = {}
+		components = components.duplicate(true)
+		components.merge(group.components, true)
+		var count := 2 if entry.kind == "pair" else 1
+		var progress := 0.0
+		var data_paid := false
+		for index in range(count):
+			var component = components.get(str(index), {})
+			if not component is Dictionary: continue
+			var amount := Data.number(component.get("stage_progress", 0.0), 1.0)
+			if entry.kind == "spectrum": amount = (Data.integer(component.get("stage", 0), 1) + amount) / 2.0
+			if Data.flag(component.get("complete", false)): amount = 1.0
+			progress += amount / count
+		var saved_components = old.get("components", {})
+		if saved_components is Dictionary:
+			for component in saved_components.values():
+				if component is Dictionary: data_paid = data_paid or Data.flag(component.get("data_paid", false))
+		var archive: bool = entry.get("origin_kind", "") == "archive"
+		entry.kind = "afterglow" if archive else "rare"
+		entry.origin_kind = "archive" if archive else "natural"
+		entry.component = 0
+		entry.stage_progress = minf(progress, 0.999999)
+		entry.age = 0.0 # Give migrated partial work a full new observation window.
+		entry.discovered = archive
+		entry.progress = {"stage_progress": entry.stage_progress, "discovered": archive}
+		result[group.key].append(entry)
+		result.tickets[id] = {"kind": entry.kind, "origin_kind": entry.origin_kind, "components": {"0": {"data_paid": data_paid}}, "sample_units": Data.integer(old.get("sample_units", 0), 2), "completed": Data.flag(old.get("completed", false))}
+	return result
 
 func resume_targets() -> void:
 	for descriptor in _restore_targets:

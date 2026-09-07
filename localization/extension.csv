@@ -1,24 +1,24 @@
 keys,en,ko
-EXT_RESEARCH_PROTOCOL_NAME,Continuation protocol,후속 관측 프로토콜
-EXT_RESEARCH_PROTOCOL_DESC,Open continuation research and field plans.,후속 연구와 관측장을 엽니다.
-EXT_RESEARCH_TRACE_STUDY_NAME,Spectrum tracing,분광 추적 연구
-EXT_RESEARCH_TRACE_STUDY_DESC,"Unlock spectrum targets, Spectrum pass I, the Trail integrator module and its specimen pool.",분광 표적·분광 관측 I·궤적 적분 모듈과 표본 풀을 엽니다.
-EXT_RESEARCH_SWEEP_STUDY_NAME,Afterglow survey,잔광 탐색 연구
-EXT_RESEARCH_SWEEP_STUDY_DESC,"Unlock afterglow targets, Afterglow pass I, the Sweep optics module and its specimen pool.",잔광 표적·잔광 탐색 I·훑기 광학 모듈과 표본 풀을 엽니다.
-EXT_RESEARCH_LINK_STUDY_NAME,Paired relay,쌍체 연계 연구
-EXT_RESEARCH_LINK_STUDY_DESC,"Unlock paired targets, Paired relay I, the Relay bus module and its specimen pool.",쌍체 표적·쌍체 연계 I·연계 버스 모듈과 표본 풀을 엽니다.
-EXT_RESEARCH_TRACE_ADVANCED_NAME,Advanced spectrum study,고급 분광 연구
-EXT_RESEARCH_TRACE_ADVANCED_DESC,Open the second spectrum plan.,두 번째 분광 계획을 엽니다.
-EXT_RESEARCH_SWEEP_ADVANCED_NAME,Advanced afterglow study,고급 잔광 연구
-EXT_RESEARCH_SWEEP_ADVANCED_DESC,Open the second afterglow plan.,두 번째 잔광 계획을 엽니다.
-EXT_RESEARCH_LINK_ADVANCED_NAME,Advanced relay study,고급 쌍체 연구
-EXT_RESEARCH_LINK_ADVANCED_DESC,Open the second paired relay plan.,두 번째 쌍체 연계 계획을 엽니다.
-EXT_RESEARCH_SYNTHESIS_NAME,Field synthesis,관측장 합성
-EXT_RESEARCH_SYNTHESIS_DESC,Raise the prepared-field bank from 1 to 2.,준비된 관측장 보관 상한을 1개에서 2개로 늘립니다.
-EXT_RESEARCH_COMBINED_WATCH_NAME,Integrated watch,통합 관측
-EXT_RESEARCH_COMBINED_WATCH_DESC,Open the integrated plan that combines every branch.,모든 가지를 결합하는 통합 계획을 엽니다.
-EXT_RESEARCH_RECORD_COMPLETE_NAME,Close the record,기록 마감
-EXT_RESEARCH_RECORD_COMPLETE_DESC,Complete the integrated plan to close the continuation record.,통합 계획을 완료해 후속 기록을 마감합니다.
+EXT_RESEARCH_PROTOCOL_NAME,Rare meteor observation,특수 유성 관측
+EXT_RESEARCH_PROTOCOL_DESC,Unlock rare meteors and module research.,특수 유성과 모듈 연구를 엽니다.
+EXT_RESEARCH_TRACE_STUDY_NAME,Trail study,궤적 연구
+EXT_RESEARCH_TRACE_STUDY_DESC,Acquire the Trail integrator module. Equip it in the module popup.,궤적 적분 모듈을 얻습니다. 편성창에서 장착할 수 있습니다.
+EXT_RESEARCH_SWEEP_STUDY_NAME,Sweep study,훑기 연구
+EXT_RESEARCH_SWEEP_STUDY_DESC,Acquire the Sweep optics module. Equip it in the module popup.,훑기 광학 모듈을 얻습니다. 편성창에서 장착할 수 있습니다.
+EXT_RESEARCH_LINK_STUDY_NAME,Relay study,연계 연구
+EXT_RESEARCH_LINK_STUDY_DESC,Acquire the Relay bus module. Equip it in the module popup.,연계 버스 모듈을 얻습니다. 편성창에서 장착할 수 있습니다.
+EXT_RESEARCH_TRACE_ADVANCED_NAME,Precise tracking,추적 정밀화
+EXT_RESEARCH_TRACE_ADVANCED_DESC,Rare meteor observation time −25%.,특수 유성의 관측 소요 시간 −25%.
+EXT_RESEARCH_SWEEP_ADVANCED_NAME,Wide survey,광역 탐색
+EXT_RESEARCH_SWEEP_ADVANCED_DESC,Rare meteor arrival interval −20%.,특수 유성의 출현 간격 −20%.
+EXT_RESEARCH_LINK_ADVANCED_NAME,Precise dishes,접시 정밀화
+EXT_RESEARCH_LINK_ADVANCED_DESC,Dish observation speed on rare meteors +25%.,특수 유성에 대한 접시 관측 속도 +25%.
+EXT_RESEARCH_SYNTHESIS_NAME,Specimen recovery,표본 회수
+EXT_RESEARCH_SYNTHESIS_DESC,Samples per rare meteor: 2 → 3.,특수 유성당 표본 2개 → 3개.
+EXT_RESEARCH_COMBINED_WATCH_NAME,Extended watch,지속 관측
+EXT_RESEARCH_COMBINED_WATCH_DESC,Rare meteor visibility +4 seconds.,특수 유성의 관측 가능 시간 +4초.
+EXT_RESEARCH_RECORD_COMPLETE_NAME,Efficient fabrication,제작 효율화
+EXT_RESEARCH_RECORD_COMPLETE_DESC,Module draw cost: 8 → 6 samples.,모듈 뽑기 비용: 표본 8개 → 6개.
 EXT_PLAN_TRACE_1_NAME,Spectrum pass I,분광 관측 I
 EXT_PLAN_TRACE_1_DESC,Follow the spectrum trail and return to M31.,분광 궤적을 따라간 뒤 M31로 돌아갑니다.
 EXT_PLAN_SWEEP_1_NAME,Afterglow pass I,잔광 탐색 I
@@ -90,3 +90,14 @@ PHASE_SUMMARY_PLAN_CHANGED,%.1f DATA/MIN · PLAN CHANGED · COMPARE NEXT ROUND,�
 PHASE_SUMMARY_MODULES_ACQUIRED,MODULES ACQUIRED · %s,모듈 획득 · %s
 PHASE_SUMMARY_RESEARCH_ACQUIRED,RESEARCH INSTALLED · %s,연구 설치 · %s
 PHASE_SUMMARY_MORE_ACQUIRED,+%d more,+%d개 더
+EXT_TARGET_RARE,Rare meteor,특수 유성
+MODX_DRAW,Draw · %d samples,모듈 뽑기 · 표본 %d
+MODX_QUANTITY,Have %d · Use %d,보유 %d · 장착 %d
+MODX_DRAW_RULE,Six modules · Equal odds · Duplicates allowed,모듈 6종 · 같은 확률 · 중복 가능
+MODX_DRAW_RESULT,Acquired %s · Owned %d,%s 획득 · 보유 %d
+MODX_DRAW_ROUTE,Draw with samples from rare meteors. All six have equal odds.,특수 유성 표본으로 뽑기 · 6종이 같은 확률로 나옵니다.
+MODX_DRAW_HINT,Observe rare meteors → Draw modules in the loadout,특수 유성 관측 → 편성창에서 모듈 뽑기
+METEOR_ANOMALY_RARE,RARE METEOR,특수 유성
+MODX_EQUIP_HINT,"Click a module to equip; click a slot to remove.
+Same module bonuses and penalties add.","목록을 눌러 장착 · 장착한 모듈을 눌러 해제
+같은 모듈의 증감분은 합산합니다."

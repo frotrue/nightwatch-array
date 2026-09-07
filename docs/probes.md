@@ -64,12 +64,12 @@ Each file below is under `tests/`. Run one while iterating with:
 | `save_integrity_test.gd` | `SAVE_INTEGRITY_PASS` | Atomic replacement, injected write/rename failures, invalid slots/payloads, prior bytes and summary preservation |
 | `smoke_test.gd` | `SMOKE_TEST_PASS` | Main loop, saves, localization, held tracking/sweep, input/modals/settings, round accounting and legacy ending |
 | `deep_sky_test.gd` | `DEEP_SKY_PASS` | Original 95-node path, real M31 observation/accounting, chart purchases, five-slot pointer/input flow, pause recovery, effects and migration |
-| `expansion_state_test.gd` | `EXPANSION_STATE_PASS` | Research graph, all plan shapes, exposures/evidence, specimen offer determinism and malformed saves |
+| `expansion_state_test.gd` | `EXPANSION_STATE_PASS` | Predecessor research, replacement draw determinism, additive copies and malformed saves |
 | `module_expansion_test.gd` | `MODULE_EXPANSION_PASS` | Conditional new effects, legacy multipliers, trail contact, sweep and contribution eligibility |
 | `module_inventory_test.gd` | `MODULE_INVENTORY_PASS` | Fourteen entries, categories, ownership, acquisition routes and scroll/focus controls |
-| `deep_sky_chart_expansion_test.gd` | `DEEP_SKY_CHART_EXPANSION_PASS` | Auxiliary plans/analysis, pending candidates and constellation return routes |
+| `deep_sky_chart_expansion_test.gd` | `DEEP_SKY_CHART_EXPANSION_PASS` | Integrated popup draws, duplicate equipment, localized controls and chart return |
 | `constellation_extension_test.gd` | `CONSTELLATION_EXTENSION_PASS` | Original geometry preserved, shared Alpheratz, eighteen mapped stars, real hold purchases, module/target unlocks, save compatibility and bilingual navigation |
-| `expansion_integration_test.gd` | `EXPANSION_INTEGRATION_PASS` | Real targets through all 18 fields without specimen modules, duplicate rewards, transactional failure, active save/load, integrated M31 equipment and round context |
+| `expansion_integration_test.gd` | `EXPANSION_INTEGRATION_PASS` | Real rare targets and all research without specimen modules, duplicate rewards, transactional failure, active save/load, integrated M31 equipment and round context |
 | `observation_span_probe.gd` | `OBSERVATION_SPAN_PASS` | Fixed-seed atmospheric equality, screen/world bounds, input/effect scaling, forecast suppression |
 | `galactic_slice_test.gd` | `GALACTIC_SLICE_PASS` | Legacy 12+17 topology, target/phenomenon behavior, lens automation, span and save contracts |
 | `probe_layer2_test.gd` | `PROBE_TEST_PASS` | Independent Layer 2 signals, uncertainty, commitment, abandonment and completion |

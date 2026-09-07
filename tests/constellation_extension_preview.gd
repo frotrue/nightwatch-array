@@ -53,16 +53,12 @@ func _run() -> void:
 		tree._process(tree.HOLD_PURCHASE_SECONDS * 0.5)
 		await _capture(game, locale + "_star_hold")
 		tree._on_node_hold_released("precision")
-		game.deep_sky.state.award_samples(24, game.deep_sky.modules.purchased)
-		tree.deep_sky_chart._set_view(tree.DeepSkyChart.View.PLANS)
-		await _capture(game, locale + "_plans")
-		tree.deep_sky_chart._set_view(tree.DeepSkyChart.View.ANALYSIS)
-		await _capture(game, locale + "_analysis")
-		tree._show_completed_constellations()
-	for id in game.deep_sky.Data.PLAN_ORDER:
-		for field in game.deep_sky.state.records[id]:
-			field.prepared = true
-			field.complete = true
+		game.deep_sky.state.award_samples(24)
+		game.module_popup.open()
+		await _capture(game, locale + "_popup_draw")
+		game.module_popup.draw_button.pressed.emit()
+		await _capture(game, locale + "_popup_result")
+		game.module_popup.close()
 	for id in game.deep_sky.Data.RESEARCH_ORDER:
 		if id not in game.deep_sky.state.research_ids: game.deep_sky.state.research_ids.append(id)
 	for id in game.deep_sky.Modules.DEFINITIONS: game.deep_sky.modules.grant(id)

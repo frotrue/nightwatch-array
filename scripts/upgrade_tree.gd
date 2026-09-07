@@ -9,7 +9,6 @@ const Balance = preload("res://scripts/game_balance.gd")
 const ChartData = preload("res://scripts/research_chart_data.gd")
 const ExtensionChart = preload("res://scripts/constellation_extension_data.gd")
 const UITheme = preload("res://scripts/ui_theme.gd")
-const DeepSkyChart = preload("res://scripts/deep_sky_chart.gd")
 const StarNodeVisual = preload("res://scripts/research_star_visual.gd")
 const ACTION_CHART := &"nw_chart"
 const ACTION_MENU_BACK := &"nw_menu_back"
@@ -138,7 +137,6 @@ var north_label: Label
 var subtitle_label: Label
 var close_button: Button
 var module_popup: CanvasLayer
-var deep_sky_chart: Control
 var hub_return_button: Button
 var controls_label: Label
 var constellation_horizon_hint: Label
@@ -460,10 +458,7 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 		return
 	if close_requested:
-		if is_deep_sky_chart_active():
-			observatory_requested.emit()
-		else:
-			close_tree()
+		close_tree()
 		get_viewport().set_input_as_handled()
 		return
 
@@ -739,8 +734,6 @@ func _node_presentation_alpha(node_id: String) -> float:
 		return 0.0
 	if _is_local_group_node(node_id):
 		return 0.0
-	if is_deep_sky_chart_active():
-		return 0.0
 	if node_id == "galactic_reference_frame" and galactic_unlocked:
 		return 1.0
 	return _legacy_chart_alpha()
@@ -750,8 +743,6 @@ func _node_interaction_ready(node_id: String) -> bool:
 	if _is_extension_node(node_id) and not galactic_unlocked:
 		return false
 	if _is_local_group_node(node_id):
-		return false
-	if is_deep_sky_chart_active():
 		return false
 	if node_id == "galactic_reference_frame" and galactic_unlocked:
 		# The 112-spec-pixel core target owns galactic-scale input. The original
@@ -950,7 +941,7 @@ func _north_label_y() -> float:
 
 
 func _constellation_panel_active() -> bool:
-	return galactic_mode != GALACTIC_MODE_PULLBACK and _galactic_chart_is_readable() and not _galactic_panel_active() and not is_deep_sky_chart_active()
+	return galactic_mode != GALACTIC_MODE_PULLBACK and _galactic_chart_is_readable() and not _galactic_panel_active()
 
 
 func _layout_constellation_overlays() -> void:
@@ -992,40 +983,21 @@ func _galactic_panel_active() -> bool:
 	return false
 
 
-func is_deep_sky_chart_active() -> bool:
-	return deep_sky_chart != null and deep_sky_chart.active_view != DeepSkyChart.View.RESEARCH
-
-
 func _show_completed_constellations() -> void:
 	_cancel_node_hold()
-	if deep_sky_chart != null:
-		deep_sky_chart.active_view = DeepSkyChart.View.RESEARCH
 	_layout_chart()
 	_refresh()
 	_update_galactic_presentation()
 
 
-func _refresh_deep_sky_chart() -> void:
-	if deep_sky_chart == null:
-		return
-	var active := is_deep_sky_chart_active()
-	deep_sky_chart.visible = active
-	content_clip.visible = not active
-	var header := overlay.get_node_or_null("ChartHeader")
-	if header != null:
-		header.visible = not active
-	hub_return_button.visible = false
+func _refresh_atlas_navigation() -> void:
 	if atlas_navigation != null:
-		atlas_navigation.visible = galactic_unlocked and not active
-	for index in range(atlas_actions.size()):
-		atlas_actions[index].visible = galactic_unlocked and not active
-		atlas_actions[index].text = tr(["ATLAS_EXPAND", "ATLAS_PLANS", "ATLAS_ANALYSIS"][index])
+		atlas_navigation.visible = galactic_unlocked
+	for action in atlas_actions:
+		action.visible = galactic_unlocked
+		action.text = tr("ATLAS_EXPAND")
 	if module_popup != null:
 		module_popup.place_launcher()
-	deep_sky_chart.refresh_text()
-	if active:
-		_cancel_node_hold()
-		_cancel_installation_rule()
 
 
 func _layout_galactic_overlays() -> void:
@@ -1126,7 +1098,7 @@ func _refresh_galactic_overlays() -> void:
 	var active := _galactic_panel_active()
 	var constellation_active := _constellation_panel_active()
 	var alpha := _galactic_core_alpha()
-	_refresh_deep_sky_chart()
+	_refresh_atlas_navigation()
 	galactic_panel.visible = active
 	galactic_ledger.visible = active
 	galactic_panel.modulate.a = alpha
@@ -1153,11 +1125,6 @@ func _refresh_galactic_overlays() -> void:
 		reference_visual.visible = not active
 	if constellation_active:
 		_refresh_constellation_overlays()
-	if is_deep_sky_chart_active():
-		constellation_ledger.visible = false
-		tooltip_panel.visible = false
-		completion_detail_label.visible = false
-		return
 	if progression != null:
 		galactic_span_value.text = "×%.4f" % float(progression.get_observation_span())
 		for index in range(GALACTIC_LEDGER_ORDER.size()):
@@ -1646,7 +1613,7 @@ func _is_node_above_horizon(node_id: String) -> bool:
 
 func _on_node_hold_started(node_id: String) -> void:
 	_cancel_node_hold()
-	if _is_local_group_node(node_id) or is_deep_sky_chart_active():
+	if _is_local_group_node(node_id):
 		return
 	if hovered_node_id == node_id and not tooltip_suppressed_until_motion:
 		_show_node_tooltip(node_id)
@@ -1689,7 +1656,7 @@ func _cancel_node_hold() -> void:
 
 
 func _on_node_hovered(node_id: String) -> void:
-	if _is_local_group_node(node_id) or is_deep_sky_chart_active():
+	if _is_local_group_node(node_id):
 		return
 	if node_hold_bars.has(node_id):
 		var star_visual: StarNodeVisual = node_hold_bars[node_id]
@@ -2108,14 +2075,7 @@ func _build_interface() -> void:
 	_build_constellation_ledger()
 	_build_node_tooltip()
 	_build_galactic_overlays()
-	deep_sky_chart = DeepSkyChart.new()
-	deep_sky_chart.name = "DeepSkyChart"
-	deep_sky_chart.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	deep_sky_chart.z_index = 100
-	deep_sky_chart.visible = false
-	overlay.add_child(deep_sky_chart)
-	deep_sky_chart.observatory_requested.connect(func(): observatory_requested.emit())
-	deep_sky_chart.constellations_requested.connect(_show_completed_constellations)
+
 	hub_return_button = Button.new()
 	hub_return_button.flat = true
 	hub_return_button.add_theme_font_override("font", UITheme.sans())
@@ -2131,12 +2091,12 @@ func _build_interface() -> void:
 	overlay.add_child(hub_return_button)
 	atlas_navigation = ColorRect.new()
 	atlas_navigation.position = ATLAS_ACTION_ORIGIN - Vector2(10, 14)
-	atlas_navigation.size = Vector2(192, 200)
+	atlas_navigation.size = Vector2(192, 108)
 	atlas_navigation.color = UITheme.GROUND
 	atlas_navigation.mouse_filter = Control.MOUSE_FILTER_STOP
 	atlas_navigation.z_index = 30
 	overlay.add_child(atlas_navigation)
-	for index in range(3):
+	for index in range(1):
 		var action := Button.new()
 		action.flat = true
 		action.position = ATLAS_ACTION_ORIGIN + ATLAS_ACTION_STEP * (index + 1)
@@ -2510,8 +2470,6 @@ func _cached_node_state(node_id: String) -> String:
 
 
 func _draw_tree() -> void:
-	if is_deep_sky_chart_active():
-		return
 	_draw_chart_background()
 	var structure_alpha := _galactic_structure_alpha()
 	for constellation_id in chart_constellations:
@@ -3049,11 +3007,8 @@ func _constellation_complete(id: String) -> bool:
 		if not String(star.node_id).is_empty() and _research_state(star.node_id) != "purchased": return false
 	return true
 
-func _atlas_action(index: int) -> void:
-	match index:
-		0: focus_outer_constellations()
-		1: deep_sky_chart._set_view(DeepSkyChart.View.PLANS)
-		2: deep_sky_chart._set_view(DeepSkyChart.View.ANALYSIS)
+func _atlas_action(_index: int) -> void:
+	focus_outer_constellations()
 
 func focus_outer_constellations() -> void:
 	if not galactic_unlocked: return

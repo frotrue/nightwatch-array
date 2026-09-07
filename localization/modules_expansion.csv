@@ -26,8 +26,8 @@ MODULE_TRAIL_INTEGRATOR_DESC,"Observe the last 1s of trail at 60% speed; manual 
 MODULE_TRAIL_INTEGRATOR_COMBO,Hold over the recent trail when the moving head leaves your cursor.,움직이는 본체를 놓쳤다면 최근 궤적 위에서 관측을 이어갑니다.
 MODULE_SWEEP_OPTICS_NAME,Sweep optics,훑기 광학
 MODULE_SWEEP_OPTICS_SHORT,Sweep optics,훑기 광학
-MODULE_SWEEP_OPTICS_DESC,Sweep charge ×1.35; afterglow discovery width ×1.50; manual ×0.90.,훑기 충전 ×1.35. 잔광 발견 폭 ×1.50. 수동 ×0.90.
-MODULE_SWEEP_OPTICS_COMBO,Keep moving through blank sky to widen afterglow discovery.,빈 하늘을 움직여 잔광 발견 범위를 넓힙니다.
+MODULE_SWEEP_OPTICS_DESC,Sweep charge ×1.35; rare meteor aim radius ×1.50; manual ×0.90.,훑기 충전 ×1.35. 특수 유성 조준 반경 ×1.50. 수동 ×0.90.
+MODULE_SWEEP_OPTICS_COMBO,Charge sweeps faster and track rare meteors from farther away.,훑기를 빠르게 충전하고 더 넓은 범위에서 특수 유성을 조준합니다.
 MODULE_RELAY_BUS_NAME,Relay bus,연계 버스
 MODULE_RELAY_BUS_SHORT,Relay bus,연계 버스
 MODULE_RELAY_BUS_DESC,Targets with 25% manual work use dish output ×1.75; manual ×0.90.,수동 작업 25%가 들어간 표적은 접시 출력 ×1.75. 수동 ×0.90.
@@ -42,7 +42,7 @@ MODULE_DUAL_PROCESSOR_DESC,Primary and nearest extra target ×1.30; other extra 
 MODULE_DUAL_PROCESSOR_COMBO,The second processor favors a nearby companion without removing range.,두 번째 처리기가 가까운 동반 표적을 우선합니다.
 MODULE_AFTERGLOW_ARCHIVE_NAME,Afterglow archive,잔광 기록고
 MODULE_AFTERGLOW_ARCHIVE_SHORT,Afterglow archive,잔광 기록
-MODULE_AFTERGLOW_ARCHIVE_DESC,"Restore one missed natural common or fast target as an 8s afterglow; 50% Data, no sample or chain.","놓친 자연 common·fast 표적 하나를 8초 잔광으로 복원합니다. 데이터 50%, 표본·연쇄 없음."
+MODULE_AFTERGLOW_ARCHIVE_DESC,Restore one missed natural common or fast meteor as an 8s afterglow. Each installed copy recovers 50% Data; no samples or chain.,놓친 일반·고속 자연 유성 하나를 8초 잔광으로 복원합니다. 장착 1개당 데이터 50% 회수. 표본·연쇄 없음.
 MODULE_AFTERGLOW_ARCHIVE_COMBO,Use the archive to recover one missed ordinary target during a round.,회차 중 놓친 일반 표적 하나를 기록고에서 복원합니다.
 MODULE_WIDE_CORRELATION_NAME,Wide correlation,광역 상관
 MODULE_WIDE_CORRELATION_SHORT,Correlation,광역 상관

@@ -2220,7 +2220,7 @@ func _run() -> void:
 			galactic_background_clear = false
 			break
 	_check(galactic_background_clear, "galactic background stars stay outside the route and node exclusion ellipse")
-	_check(not open_night_game.upgrade_tree.galactic_panel.visible and not open_night_game.upgrade_tree.galactic_ledger.visible and not open_night_game.upgrade_tree.deep_sky_chart.visible and open_night_game.upgrade_tree.constellation_ledger.visible, "the expanded constellation chart keeps its original inspector and ledger")
+	_check(not open_night_game.upgrade_tree.galactic_panel.visible and not open_night_game.upgrade_tree.galactic_ledger.visible and open_night_game.upgrade_tree.constellation_ledger.visible, "the expanded constellation chart keeps its original inspector and ledger")
 	_check(not open_night_game.upgrade_tree.galactic_core_hit.visible and open_night_game.upgrade_tree.galactic_core_hit.mouse_filter == Control.MOUSE_FILTER_IGNORE, "the old galactic core cannot intercept destination input")
 	_check(
 		not Vector2(open_night_game.upgrade_tree.node_positions["galactic_reference_frame"]).is_equal_approx(open_night_game.upgrade_tree.CHART_ORIGIN),

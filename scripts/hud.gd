@@ -721,8 +721,6 @@ func _round_comparison_text(round_rate: float, previous_result: Dictionary, comp
 			return tr("PHASE_SUMMARY_SYSTEMS_CHANGED") % round_rate
 		"equipment_changed":
 			return tr("PHASE_SUMMARY_EQUIPMENT_CHANGED") % round_rate
-		"plan_changed":
-			return tr("PHASE_SUMMARY_PLAN_CHANGED") % round_rate
 		"session_resumed":
 			return tr("PHASE_SUMMARY_SESSION_RESUMED") % round_rate
 		"first_baseline":

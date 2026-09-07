@@ -51,9 +51,9 @@ func _run() -> void:
 	game.upgrade_tree.open_tree()
 	await process_frame
 	await process_frame
-	game.upgrade_tree.deep_sky_chart.select("m31")
+	game.upgrade_tree.select_extension("m31")
 	await _capture(game, "ko_chart_locked")
-	game.upgrade_tree.deep_sky_chart.back_button.pressed.emit()
+	game.upgrade_tree.close_tree()
 	game.deep_sky.target.apply_manual_observation(10.0, 0.0, 52.0)
 	game.effects.reset()
 	game.hud.banner_root.hide()
@@ -61,7 +61,7 @@ func _run() -> void:
 	game.upgrade_tree.open_tree()
 	await process_frame
 	await process_frame
-	game.upgrade_tree.deep_sky_chart.select("focus")
+	game.upgrade_tree.select_extension("focus")
 	for locale in ["en", "ko"]:
 		_set_locale(game, locale)
 		await _capture(game, locale + "_chart_purchase")
@@ -72,7 +72,7 @@ func _run() -> void:
 	game.module_popup.show_module_tooltip("focus")
 	await _capture(game, "ko_popup_over_chart")
 	game.module_popup.close()
-	game.upgrade_tree.deep_sky_chart.back_button.pressed.emit()
+	game.upgrade_tree.close_tree()
 	game.hud.banner_root.hide()
 	game.effects.reset()
 	game.upgrade_tree.open_tree()
@@ -98,14 +98,14 @@ func _run() -> void:
 	for id in ["record"]:
 		if not game.deep_sky.purchase(id):
 			failures.append("expansion purchase failed: " + id)
-	_seed_completed_plans(game.deep_sky, ["plan_trace_1"])
+	game.deep_sky.state.research_ids.append("ext_trace_study")
 	for id in ["slot_3", "revisit"]:
 		if not game.deep_sky.purchase(id):
 			failures.append("first basic-plan expansion purchase failed: " + id)
-	_seed_completed_plans(game.deep_sky, ["plan_sweep_1"])
+	game.deep_sky.state.research_ids.append_array(["ext_sweep_study", "ext_link_study"])
 	if not game.deep_sky.purchase("slot_4"):
 		failures.append("second basic-plan expansion purchase failed: slot_4")
-	_seed_completed_plans(game.deep_sky, ["plan_trace_2", "plan_sweep_2"])
+	game.deep_sky.state.research_ids.append("ext_combined_watch")
 	if not game.deep_sky.purchase("slot_5"):
 		failures.append("advanced-plan expansion purchase failed: slot_5")
 	game.module_popup.open()
@@ -119,7 +119,7 @@ func _run() -> void:
 	game.module_popup._place_tooltip()
 	await _capture(game, "ko_popup_edge_tooltip")
 	game.module_popup.close()
-	game.upgrade_tree.deep_sky_chart.select("slot_5")
+	game.upgrade_tree.select_extension("slot_5")
 	await _capture(game, "ko_chart_five_unlocked")
 	_set_locale(game, "en")
 	await _capture(game, "en_chart_five_unlocked")
@@ -143,7 +143,7 @@ func _run() -> void:
 
 func _set_locale(game: Node, locale: String) -> void:
 	game.settings.set_language(locale, false)
-	game.upgrade_tree.deep_sky_chart.refresh_text()
+	game.upgrade_tree._refresh()
 	game.module_popup.refresh()
 	game.deep_sky.target.queue_redraw()
 
@@ -153,12 +153,6 @@ func _freeze(node: Node) -> void:
 	for child in node.get_children():
 		_freeze(child)
 
-
-func _seed_completed_plans(research: Node, plan_ids: Array[String]) -> void:
-	for id in plan_ids:
-		for field in research.state.records[id]:
-			field.prepared = true
-			field.complete = true
 
 func _capture(game: Node, name: String) -> void:
 	if "popup" in name and (not game.module_popup.is_open() or game.module_popup.layer <= game.upgrade_tree.layer):

@@ -16,10 +16,8 @@ var director: Node
 var _last_available := false
 var samples: int:
 	get: return state.samples
-var pending_offer: Array[String]:
-	get: return state.pending_offer
 var record_complete: bool:
-	get: return state.record_complete
+	get: return "ext_record_complete" in state.research_ids
 
 func setup(controller: Node) -> void:
 	game = controller
@@ -69,11 +67,11 @@ func research_ready(id: String) -> bool:
 	if id not in Modules.RESEARCH_IDS or not modules.research_ready(id):
 		return false
 	if id == "slot_3":
-		return state.completed_count(1) >= 1
+		return research_owned("ext_trace_study")
 	if id == "slot_4":
-		return state.completed_count(1) >= 2
+		return research_owned("ext_sweep_study") and research_owned("ext_link_study")
 	if id == "slot_5":
-		return state.completed_count(2) >= 2
+		return research_owned("ext_combined_watch")
 	return true
 
 func research_cost(id: String) -> float:
@@ -96,12 +94,7 @@ func purchase(id: String) -> bool:
 		var definition: Dictionary = Data.RESEARCH[id]
 		if definition.has("grant"):
 			modules.grant(definition.grant)
-		if id == "ext_record_complete":
-			state.record_complete = true
-		for plan_id in Data.PLAN_ORDER:
-			if Data.PLANS[plan_id].research == id and state.selected_plan.is_empty():
-				state.select_plan(plan_id)
-				director.plan_selected()
+
 	else:
 		if not modules.purchase(id, game.progression):
 			return false
@@ -138,74 +131,21 @@ func _commit_transaction(before: Dictionary, balance: float) -> bool:
 		return false
 	return true
 
-func sample_pool() -> Array[String]:
-	return state.sample_pool(modules.purchased)
-
-func collection_complete() -> bool:
-	return state.collection_complete(modules.purchased)
-
-func begin_analysis() -> bool:
-	if not _chart_action_allowed():
-		return false
+func draw_module() -> String:
+	if not modules_unlocked() or not game.module_popup.is_open() or game.hud.is_settings_open():
+		return ""
 	var before := get_save_data()
-	if not state.start_analysis(modules.purchased):
-		return false
+	var id: String = state.draw_module()
+	if id.is_empty():
+		return ""
+	if not modules.grant_copy(id):
+		state.load_save_data(before.extension)
+		return ""
 	if not _commit_transaction(before, game.progression.observation_data):
-		return false
+		return ""
 	game.sound.play_slot_confirm()
 	changed.emit()
-	return true
-
-func choose_analysis(id: String) -> bool:
-	if not _chart_action_allowed() or id not in state.pending_offer or id in modules.purchased:
-		return false
-	var before := get_save_data()
-	if not modules.grant(id):
-		return false
-	state.pending_offer.clear()
-	if not _commit_transaction(before, game.progression.observation_data):
-		return false
-	game.sound.play_slot_confirm()
-	changed.emit()
-	return true
-
-func direct_analysis(id: String) -> bool:
-	if not _chart_action_allowed() or not state.pending_offer.is_empty() or id not in sample_pool() or state.samples < Data.DIRECT_COST:
-		return false
-	var before := get_save_data()
-	state.samples -= Data.DIRECT_COST
-	state.samples_spent += Data.DIRECT_COST
-	modules.grant(id)
-	if not _commit_transaction(before, game.progression.observation_data):
-		return false
-	game.sound.play_slot_confirm()
-	changed.emit()
-	return true
-
-func plan_available(id: String) -> bool:
-	return modules_unlocked() and state.plan_available(id)
-
-func select_plan(id: String) -> bool:
-	if not _chart_action_allowed() or not plan_available(id):
-		return false
-	var before := get_save_data()
-	state.select_plan(id)
-	director.plan_selected()
-	if not _commit_transaction(before, game.progression.observation_data):
-		return false
-	changed.emit()
-	return true
-
-func active_plan() -> String:
-	return state.selected_plan
-
-func plan_progress(id: String) -> Vector2i:
-	if not Data.PLANS.has(id):
-		return Vector2i.ZERO
-	return Vector2i(state.field_index(id), Data.PLANS[id].fields.size())
-
-func completed_plans() -> int:
-	return state.completed_count()
+	return id
 
 func paid_research_count() -> int:
 	var count := 0
@@ -232,72 +172,23 @@ func research_description(id: String) -> String:
 		return tr("RING_RESEARCH_DESC") % [capacity - 1, capacity]
 	return tr("MODULE_%s_DESC" % id.to_upper())
 
-func plan_name(id: String) -> String:
-	return tr("EXT_PLAN_%s_NAME" % id.trim_prefix("plan_").to_upper())
-
-func plan_detail(id: String) -> String:
-	if not Data.PLANS.has(id):
-		return ""
-	var progress := plan_progress(id)
-	var description := tr("EXT_PLAN_%s_DESC" % id.trim_prefix("plan_").to_upper())
-	if progress.x == progress.y:
-		return description + "\n\n" + tr("EXT_PLAN_DONE")
-	var field: Dictionary = Data.PLANS[id].fields[progress.x]
-	var hints: Array[String] = [tr("EXT_FIELD_LOOP")]
-	var kinds: Array[String] = []
-	for event in field.events:
-		if event.kind not in kinds: kinds.append(event.kind)
-	for kind in kinds:
-		if kind == "pair" and field.get("mode", "manual") != "manual":
-			hints.append(tr("EXT_TASK_%s" % String(field.mode).to_upper()))
-		else:
-			hints.append(tr("EXT_HELP_%s" % kind.to_upper()))
-	if field.get("ordinary", false): hints.append(tr("EXT_HELP_ORDINARY"))
-	return description + "\n\n" + tr("EXT_FIELD_PROGRESS") % [progress.x + 1, progress.y, tr("EXT_FIELD_%s" % String(field.id).to_upper())] + "\n" + "\n".join(hints)
-
 func prerequisite_text(id: String) -> String:
-	if id == "slot_3": return tr("EXT_REQUIRE_BASIC") % 1
-	if id == "slot_4": return tr("EXT_REQUIRE_BASIC") % 2
-	if id == "slot_5": return tr("EXT_REQUIRE_ADVANCED") % 2
-	if Data.RESEARCH.has(id):
-		var definition: Dictionary = Data.RESEARCH[id]
-		if definition.has("plan"):
-			return tr("EXT_REQUIRE_PLAN") % plan_name(definition.plan)
-		if definition.has("tier"):
-			return tr("EXT_REQUIRE_BASIC" if definition.tier == 1 else "EXT_REQUIRE_ADVANCED") % definition.count
-		return tr("DEEP_FIRST_HINT") if not modules_unlocked() else tr("EXT_REQUIRE_PROTOCOL")
-	var definition: Dictionary = Modules.DEFINITIONS.get(id, {})
-	if id == "revisit": return tr("RING_REQUIRES") % tr("RING_RESEARCH_3")
+	var required: Array = []
+	if id == "slot_3": required = ["ext_trace_study"]
+	elif id == "slot_4": required = ["slot_3", "ext_sweep_study", "ext_link_study"]
+	elif id == "slot_5": required = ["slot_4", "ext_combined_watch"]
+	elif id == "revisit": required = ["slot_3"]
+	elif Data.RESEARCH.has(id): required = Data.RESEARCH[id].requires
+	else: required = Modules.DEFINITIONS.get(id, {}).get("requires", [])
 	var names: Array[String] = []
-	for required in definition.get("requires", []):
-		names.append(research_name(required))
-	return tr("RING_REQUIRES") % " + ".join(names)
+	for prerequisite in required:
+		names.append(research_name(prerequisite))
+	return tr("RING_REQUIRES") % " + ".join(names) if not names.is_empty() else tr("DEEP_FIRST_HINT")
 
 func current_objective() -> String:
 	if not modules_unlocked():
 		return tr("DEEP_FIRST_HINT") if available() else ""
-	var field: Dictionary = state.active_field()
-	if field.is_empty():
-		return tr("EXT_RECORD_DONE" if state.record_complete else "EXT_SELECT_PLAN")
-	var prefix := plan_name(state.selected_plan) + " · "
-	if not field.prepared:
-		return prefix + tr("EXT_NEED_EXPOSURE")
-	if state.field_ready():
-		return tr("EXT_READY_SYNTHESIS")
-	var definition: Dictionary = state.field_definition()
-	var mode: String = definition.get("mode", "manual")
-	var events_done := true
-	for event in definition.events:
-		if not field.evidence.get(event.slot, false):
-			events_done = false
-			if event.kind == "pair" and mode != "manual":
-				return prefix + tr("EXT_TASK_%s" % mode.to_upper())
-			return prefix + tr("EXT_NEXT_%s" % String(event.kind).to_upper())
-	if definition.get("parallel", false) and field.parallel_progress < 0.25:
-		return prefix + tr("EXT_TASK_PARALLEL")
-	if events_done and definition.get("ordinary", false) and not field.evidence.get("ordinary", false):
-		return prefix + tr("EXT_TASK_ORDINARY")
-	return prefix + tr("EXT_FIELD_%s" % String(definition.id).to_upper())
+	return tr("MODX_DRAW_HINT")
 
 func record_observation(value_multiplier: float = -1.0) -> void:
 	if value_multiplier < 0.0:
@@ -309,37 +200,14 @@ func record_observation(value_multiplier: float = -1.0) -> void:
 	game.effects.spawn_success(target.global_position, reward, Color("D4DAE5"), 1.0, 1.0, "GOOD", game.hud.get_data_anchor(), 0.4, true)
 	game.sound.play_success(1.0, 1, 0.4)
 	_sync_protocol()
-	var completion: Dictionary = state.record_m31()
-	if not completion.is_empty():
-		if completion.plan_complete and completion.plan not in state.rewarded_plans:
-			state.rewarded_plans.append(completion.plan)
-			if Data.PLANS[completion.plan].tier == 1:
-				var awarded: int = state.award_samples(6, modules.purchased)
-				if awarded > 0:
-					sample_feedback(awarded)
-		game.hud.show_banner(tr("EXT_FIELD_COMPLETED") % plan_name(completion.plan), UITheme.ACCENT_TEXT, 3.0)
-	elif observations == 1:
+	if observations == 1:
 		game.hud.show_banner(tr("DEEP_FIRST_RECORD"), UITheme.ACCENT_TEXT, 4.0)
 	target.queue_redraw()
 	changed.emit()
 	game._autosave_active_slot()
 
-func note_m31_manual_progress(amount: float) -> void:
-	var field: Dictionary = state.active_field()
-	if field.is_empty() or not field.prepared or not state.field_definition().get("parallel", false) or not director.pair_automatic_active():
-		return
-	var before: float = field.parallel_progress
-	field.parallel_progress = minf(0.25, before + maxf(0.0, amount))
-	if before < 0.25 and field.parallel_progress >= 0.25:
-		changed.emit()
-
 func record_ordinary_observation(meteor: Node) -> void:
 	modules.notify_completed(meteor)
-	var definition: Dictionary = state.field_definition()
-	if not definition.get("ordinary", false) or meteor.type_id not in ["common", "fast"] or not meteor.is_natural_observation() or meteor.get_manual_contribution() < 0.25:
-		return
-	if state.record_evidence(state.selected_plan, state.field_index(), "ordinary"):
-		changed.emit()
 
 func award_anomaly_data(anomaly: Node) -> void:
 	var manual: bool = anomaly.get_manual_contribution() >= 0.25 or anomaly.discovered
@@ -356,9 +224,6 @@ func award_anomaly_data(anomaly: Node) -> void:
 func sample_feedback(amount: int) -> void:
 	game.hud.show_banner(tr("EXT_SAMPLES_GAINED") % amount, UITheme.ACCENT_TEXT, 2.2)
 	game.sound.play_slot_confirm()
-
-func record_sweep_segment(from: Vector2, to: Vector2) -> void:
-	director.record_sweep_segment(from, to)
 
 func archive_meteor(meteor: Node) -> void:
 	director.archive_meteor(meteor)
@@ -387,11 +252,11 @@ func reset() -> void:
 	changed.emit()
 
 func get_save_data() -> Dictionary:
-	return {"version": 2, "observations": observations, "modules": modules.get_save_data(), "progress": target.progress, "cooldown": target.cooldown, "value_integral": target.value_integral, "cooldown_integral": target.cooldown_integral, "extension": state.get_save_data(), "anomalies": director.get_save_data()}
+	return {"version": 3, "observations": observations, "modules": modules.get_save_data(), "progress": target.progress, "cooldown": target.cooldown, "value_integral": target.value_integral, "cooldown_integral": target.cooldown_integral, "extension": state.get_save_data(), "anomalies": director.get_save_data()}
 
 static func supports_save(data: Dictionary) -> bool:
 	var version = data.get("version", 1)
-	return (version is int or version is float) and version in [1, 2]
+	return (version is int or version is float) and version in [1, 2, 3]
 
 func load_save_data(data: Dictionary, legacy: Dictionary = {}) -> bool:
 	if not supports_save(data):
@@ -402,22 +267,22 @@ func load_save_data(data: Dictionary, legacy: Dictionary = {}) -> bool:
 	observations = Data.integer(data.get("observations", 0), 1000000000)
 	target.progress = Data.number(data.get("progress", 0), 0.999999)
 	target.integrated_progress = target.progress
-	target.cooldown = Data.number(data.get("cooldown", 0), 8.75)
-	if data.get("version", 1) == 2:
+	target.cooldown = Data.number(data.get("cooldown", 0), 15.75)
+	if data.get("version", 1) >= 2:
 		var extension = data.get("extension", {})
-		state.load_save_data(extension if extension is Dictionary else {}, modules.purchased)
-	else:
-		state.exposures = 1 if observations > 0 else 0
+		state.load_save_data(extension if extension is Dictionary else {}, data.get("version", 1) == 2)
 	for id in state.research_ids:
 		if Data.RESEARCH[id].has("grant"):
 			modules.grant(Data.RESEARCH[id].grant)
 	var value: float = modules.effect("m31_value")
 	var delay: float = modules.effect("m31_cooldown")
 	target.value_integral = Data.number(data.get("value_integral", target.progress * value), target.progress * 1.5)
-	target.cooldown_integral = Data.number(data.get("cooldown_integral", target.progress * delay), target.progress * 1.25)
+	target.cooldown_integral = Data.number(data.get("cooldown_integral", target.progress * delay), target.progress * 2.25)
 	_sync_protocol()
 	var anomalies = data.get("anomalies", {})
-	director.load_save_data(anomalies if anomalies is Dictionary else {})
+	if not anomalies is Dictionary: anomalies = {}
+	if data.get("version", 1) == 2: anomalies = Director.migrate_v2(anomalies)
+	director.load_save_data(anomalies)
 	target.queue_redraw()
 	changed.emit()
 	return true

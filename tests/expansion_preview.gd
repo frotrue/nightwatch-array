@@ -1,7 +1,5 @@
 extends "res://tests/deep_sky_preview.gd"
 
-const Expansion = preload("res://scripts/expansion_data.gd")
-
 func _run() -> void:
 	create_timer(60.0, true, false, true).timeout.connect(func(): push_error("Expansion preview timeout"); quit(1))
 	if DisplayServer.get_name() == "headless":
@@ -9,7 +7,7 @@ func _run() -> void:
 		return
 	root.gui_disable_input = true
 	var source := Capture.source_snapshot(failures)
-	output = "res://build/expansion_review/%d" % int(Time.get_unix_time_from_system())
+	output = "res://build/module_draw_review/%d" % int(Time.get_unix_time_from_system())
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(output))
 	var game: Node = load("res://scenes/main.tscn").instantiate()
 	Fixtures.configure_before_ready(game)
@@ -27,86 +25,63 @@ func _run() -> void:
 	game.deep_sky.target._process(0.0)
 	game.deep_sky.target.apply_manual_observation(10.0, 0.0, 100.0)
 	game.upgrade_tree.open_tree()
-	game.progression.observation_data = 1680000000.0
-	for id in ["ext_trace_study", "ext_sweep_study", "ext_link_study"]:
-		game.deep_sky.purchase(id)
-	game.deep_sky.state.award_samples(24, game.deep_sky.modules.purchased)
-	game.deep_sky.begin_analysis()
+	game.progression.observation_data = 5000000000.0
 	game.effects.reset()
 	_freeze(game)
-	var chart: Control = game.upgrade_tree.deep_sky_chart
 	for locale in ["en", "ko"]:
 		_set_locale(game, locale)
-		chart.select("ext_trace_advanced")
+		game.upgrade_tree.focus_outer_constellations()
+		game.upgrade_tree.select_extension("ext_trace_advanced")
 		await _capture(game, locale + "_research")
-		chart._set_view(chart.View.PLANS)
-		await _capture(game, locale + "_plans")
-		chart._set_view(chart.View.ANALYSIS)
-		await _capture(game, locale + "_analysis_pending")
-	game.deep_sky.state.pending_offer.clear()
-	for id in game.deep_sky.Modules.DEFINITIONS:
-		game.deep_sky.modules.grant(id)
-	game.deep_sky.modules.unlocked_slots = 5
+		game.module_popup.open()
+		await _capture(game, locale + "_popup_empty")
+		game.module_popup.close()
+	game.deep_sky.state.award_samples(80)
+	game.deep_sky.state.acquisition_seed = 314159
 	game.module_popup.open()
-	for id in ["focus", "trail_integrator", "relay_bus", "long_baseline", "reference_bus"]:
-		game.deep_sky.equip(id)
+	game.module_popup.draw_button.pressed.emit()
+	var id: String = game.deep_sky.state.last_draw
+	game.deep_sky.modules.grant_copy(id)
+	game.module_popup.refresh()
+	game.module_popup.owned_buttons[id].pressed.emit()
+	game.module_popup.owned_buttons[id].pressed.emit()
 	for locale in ["en", "ko"]:
 		_set_locale(game, locale)
-		game.module_popup.show_module_tooltip("trail_integrator")
-		await _capture(game, locale + "_popup_full_catalogue")
+		await _capture(game, locale + "_popup_duplicate")
+		game.module_popup.show_module_tooltip(id)
+		await _capture(game, locale + "_popup_duplicate_tooltip")
+		game.module_popup.hide_tooltip()
+	game.module_popup.close()
+	for research_id in game.deep_sky.Data.RESEARCH_ORDER:
+		if not game.deep_sky.research_owned(research_id): game.deep_sky.purchase(research_id)
+	for research_id in game.deep_sky.Modules.RESEARCH_IDS:
+		if not game.deep_sky.research_owned(research_id): game.deep_sky.purchase(research_id)
+	for module_id in game.deep_sky.Modules.DEFINITIONS: game.deep_sky.modules.grant(module_id)
+	game.module_popup.open()
+	for module_id in ["focus", "relay_bus", "reference_bus"]: game.deep_sky.equip(module_id)
 	game.module_popup.inventory_scroll.scroll_vertical = 10000
-	game.module_popup.hide_tooltip()
-	await _capture(game, "ko_popup_catalogue_bottom")
+	for locale in ["en", "ko"]:
+		_set_locale(game, locale)
+		await _capture(game, locale + "_popup_five_slots")
 	game.module_popup.close()
 	game.upgrade_tree.close_tree()
-	game.spawner.reset()
 	game.observation_phase_remaining = 46.0
 	game.hud.set_observation_phase(game.observation_round, 46.0, 60.0)
-	game.deep_sky.state.select_plan("plan_sweep_1")
-	game.deep_sky.state.prepare_from_bank()
 	var director: Node = game.deep_sky.director
-	for index in range(3):
-		var kind: String = ["spectrum", "afterglow", "pair"][index]
-		var id := "n/preview_%d" % index
-		director._ensure_ticket(id, kind, "natural")
-		director._spawn_component({"ticket": id, "event_id": id, "kind": kind, "origin_kind": "natural", "component": 0, "start": Vector2(0.22 + index * 0.25, 0.50), "end": Vector2(0.29 + index * 0.25, 0.56)})
-	for target in director.targets():
-		target.set_process(false)
-		target._process(target.warning_time + 0.2)
-		if target.kind == "spectrum":
-			target.stage = 1
-			target.stage_progress = 0.25
-			target._update_position(0.0)
-			target.queue_redraw()
-	game.hud._refresh_extension()
+	director.end_round()
+	director._ensure_ticket("n/preview", "rare", "natural")
+	director._spawn_component({"ticket": "n/preview", "kind": "rare", "origin_kind": "natural", "component": 0, "start": Vector2(0.3, 0.45), "end": Vector2(0.67, 0.56)})
+	var target: Node = director.targets()[0]
+	target.set_process(false)
+	target._process(3.5)
+	target.stage_progress = 0.4
 	game.effects.reset()
 	for locale in ["en", "ko"]:
 		_set_locale(game, locale)
-		for target in director.targets(): target.queue_redraw()
-		game.hud.set_tracking(0.25, "anomaly_spectrum", 1.0, 1, Vector2(334, 333), 26.0, 0.8)
-		await _capture(game, locale + "_anomaly_sky")
-	game.hud.hide_tracking()
-	director.end_round()
-	for plan in Expansion.PLAN_ORDER:
-		for field in game.deep_sky.state.records[plan]:
-			field.prepared = true
-			field.complete = true
-	for id in Expansion.RESEARCH_ORDER:
-		if id not in game.deep_sky.state.research_ids: game.deep_sky.state.research_ids.append(id)
-	game.deep_sky.state.record_complete = true
-	game.deep_sky.state.selected_plan = "plan_integrated_1"
-	game.deep_sky.target.queue_redraw()
-	game.upgrade_tree.open_tree()
-	for locale in ["en", "ko"]:
-		_set_locale(game, locale)
-		chart.select("ext_record_complete")
-		await _capture(game, locale + "_record_complete")
-	game.upgrade_tree.close_tree()
-	game.hud.set_upgrade_phase(game.observation_round)
-	for locale in ["en", "ko"]:
-		_set_locale(game, locale)
-		game.hud.show_phase_summary({"round": 4, "duration": 60.0, "data": 168000000, "rate": 168000000.0, "observations": 24, "manual": 9, "automatic": 15, "modules_acquired": ["trail_integrator", "sweep_optics", "relay_bus"], "extension_research_acquired": ["ext_protocol", "ext_trace_study", "ext_sweep_study", "ext_link_study"]}, {}, "equipment_changed", true)
-		await _capture(game, locale + "_growth_summary")
+		target.queue_redraw()
+		game.hud._refresh_extension()
+		game.hud.set_tracking(0.4, "anomaly_rare", 1.0, 1, game.observation_view.world_to_screen(target.global_position), 26.0, 0.8)
+		await _capture(game, locale + "_rare_meteor")
 	if source != Capture.source_snapshot(failures): failures.append("source changed during capture")
 	var manifest := FileAccess.open(output.path_join("manifest.json"), FileAccess.WRITE)
 	manifest.store_string(JSON.stringify({"status": "passed" if failures.is_empty() else "failed", "source": source, "frames": records, "failures": failures, "synthetic": true}, "\t"))
@@ -114,8 +89,8 @@ func _run() -> void:
 	game.free()
 	paused = false
 	await process_frame
-	if failures.is_empty() and records.size() == 15:
-		print("EXPANSION_PREVIEW_PASS: 15 frames at " + ProjectSettings.globalize_path(output))
+	if failures.is_empty() and records.size() == 12:
+		print("EXPANSION_PREVIEW_PASS: 12 frames at " + ProjectSettings.globalize_path(output))
 		quit(0)
 	else:
 		push_error(str(failures))

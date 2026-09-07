@@ -71,9 +71,7 @@ var phase_start_upgrade_signature: Array[String] = []
 var phase_start_equipment: Array[String] = []
 var phase_start_owned_modules: Array[String] = []
 var phase_start_extension_research: Array[String] = []
-var phase_start_plan_context := ""
 var phase_build_mutated := false
-var phase_plan_mutated := false
 var _loading_save := false
 var phase_started_with_complete_research: bool = false
 var phase_had_shower: bool = false
@@ -153,7 +151,7 @@ func _ready() -> void:
 	add_child(module_popup)
 	module_popup.setup(self)
 	upgrade_tree.module_popup = module_popup
-	upgrade_tree.deep_sky_chart.bind(deep_sky, upgrade_tree)
+	upgrade_tree.bind_extension(deep_sky)
 	upgrade_tree.observatory_requested.connect(_return_to_observatory)
 
 	spawner.meteor_spawned.connect(_on_meteor_spawned)
@@ -306,9 +304,7 @@ func _begin_observation_phase(advance_round: bool = false, remaining_override: f
 	phase_start_owned_modules = deep_sky.modules.purchased.duplicate()
 	phase_start_extension_research = deep_sky.state.research_ids.duplicate()
 	phase_start_extension_research.sort()
-	phase_start_plan_context = _current_plan_context()
 	phase_build_mutated = false
-	phase_plan_mutated = false
 	phase_started_with_complete_research = progression.is_research_complete()
 	phase_had_shower = false
 	phase_resumed_from_save = false
@@ -344,9 +340,7 @@ func _end_observation_phase() -> void:
 	var build_changed := bool(result.get("build_changed", false))
 	result["systems_since_baseline"] = _systems_since_baseline(result, previous_result)
 	var comparison_state := "comparison"
-	if bool(result.get("plan_changed", false)) or (not previous_result.is_empty() and String(previous_result.get("plan_context", "")) != String(result.plan_context)):
-		comparison_state = "plan_changed"
-	elif bool(result.get("equipment_changed", false)) or (not previous_result.is_empty() and previous_result.get("equipment_signature", []) != result.equipment_signature):
+	if bool(result.get("equipment_changed", false)) or (not previous_result.is_empty() and previous_result.get("equipment_signature", []) != result.equipment_signature):
 		comparison_state = "equipment_changed"
 	elif build_changed:
 		comparison_state = "systems_changed"
@@ -360,7 +354,7 @@ func _end_observation_phase() -> void:
 	# Mixed-build rounds are honest total-output achievements, but they do not
 	# replace the clean before/after baseline. A resumed sample establishes a new
 	# baseline because loading necessarily resets the live sky.
-	if not build_changed and not bool(result.get("plan_changed", false)):
+	if not build_changed:
 		last_clean_round_result = result.duplicate(true)
 	observation_phase_active = false
 	observation_phase_remaining = 0.0
@@ -425,8 +419,6 @@ func _build_round_result() -> Dictionary:
 		"equipment_changed": equipment_changed,
 		"modules_acquired": acquired,
 		"extension_research_acquired": extension_acquired,
-		"plan_context": _current_plan_context(),
-		"plan_changed": phase_plan_mutated or _current_plan_context() != phase_start_plan_context,
 	}
 
 
@@ -436,17 +428,10 @@ func _current_equipment_signature() -> Array[String]:
 	return ids
 
 
-func _current_plan_context() -> String:
-	if deep_sky == null or deep_sky.active_plan().is_empty():
-		return ""
-	return "%s/%d" % [deep_sky.active_plan(), deep_sky.state.field_index()]
-
-
 func _on_deep_sky_changed() -> void:
 	if _loading_save or not observation_phase_active:
 		return
 	phase_build_mutated = phase_build_mutated or _current_equipment_signature() != phase_start_equipment
-	phase_plan_mutated = phase_plan_mutated or _current_plan_context() != phase_start_plan_context
 
 
 func _current_build_signature() -> Array[String]:
@@ -1168,9 +1153,7 @@ func _build_save_data() -> Dictionary:
 		"phase_start_equipment": phase_start_equipment.duplicate(),
 		"phase_start_owned_modules": phase_start_owned_modules.duplicate(),
 		"phase_start_extension_research": phase_start_extension_research.duplicate(),
-		"phase_start_plan_context": phase_start_plan_context,
 		"phase_build_mutated": phase_build_mutated,
-		"phase_plan_mutated": phase_plan_mutated,
 		"phase_started_with_complete_research": phase_started_with_complete_research,
 		"phase_had_shower": phase_had_shower,
 		"canis_major_spawned_this_round": spawner.canis_major_spawned_this_round,
@@ -1263,12 +1246,10 @@ func _apply_save_data(data: Dictionary) -> void:
 		phase_start_automatic_successes = maxi(0, int(data.get("phase_start_automatic_successes", progression.automatic_successes)))
 		phase_start_total_data = maxf(0.0, float(data.get("phase_start_total_data", progression.total_data_earned)))
 		phase_start_upgrade_signature = _validated_signature(data.get("phase_start_upgrade_signature", _current_build_signature()))
-		phase_start_equipment = _validated_module_ids(data.get("phase_start_equipment", _current_equipment_signature()))
+		phase_start_equipment = _validated_module_ids(data.get("phase_start_equipment", _current_equipment_signature()), true)
 		phase_start_owned_modules = _validated_module_ids(data.get("phase_start_owned_modules", deep_sky.modules.purchased))
 		phase_start_extension_research = _validated_extension_ids(data.get("phase_start_extension_research", deep_sky.state.research_ids))
-		phase_start_plan_context = _validated_plan_context(data.get("phase_start_plan_context", _current_plan_context()))
 		phase_build_mutated = bool(data.get("phase_build_mutated", false)) or phase_start_equipment != _current_equipment_signature()
-		phase_plan_mutated = bool(data.get("phase_plan_mutated", false)) or phase_start_plan_context != _current_plan_context()
 		var saved_phase_had_complete_research := (
 			phase_start_upgrade_signature.size() == Balance.research_node_count()
 		)
@@ -1304,11 +1285,11 @@ func _supports_deep_sky_save(data: Dictionary) -> bool:
 	return deep is Dictionary and DeepSkyResearch.supports_save(deep)
 
 
-func _validated_module_ids(value) -> Array[String]:
+func _validated_module_ids(value, allow_copies: bool = false) -> Array[String]:
 	var ids: Array[String] = []
 	if value is Array:
 		for id in value:
-			if id is String and DeepSkyResearch.Modules.DEFINITIONS.has(id) and id not in ids:
+			if id is String and DeepSkyResearch.Modules.DEFINITIONS.has(id) and (ids.size() < 5 if allow_copies else id not in ids):
 				ids.append(id)
 	ids.sort()
 	return ids
@@ -1322,15 +1303,6 @@ func _validated_extension_ids(value) -> Array[String]:
 				ids.append(id)
 	ids.sort()
 	return ids
-
-
-func _validated_plan_context(value) -> String:
-	if not value is String or value.is_empty():
-		return ""
-	var parts: PackedStringArray = value.split("/")
-	if parts.size() != 2 or not DeepSkyResearch.Data.PLANS.has(parts[0]) or not parts[1].is_valid_int():
-		return ""
-	return "%s/%d" % [parts[0], clampi(int(parts[1]), 0, DeepSkyResearch.Data.PLANS[parts[0]].fields.size())]
 
 
 func _sync_galactic_systems() -> void:
@@ -1373,13 +1345,11 @@ func _sanitize_round_result(value) -> Dictionary:
 		"build_changed": bool(value.get("build_changed", false)),
 		"build_signature": _validated_signature(value.get("build_signature", [])),
 		"build_measurement_version": 2,
-		"equipment_signature": _validated_module_ids(value.get("equipment_signature", [])),
+		"equipment_signature": _validated_module_ids(value.get("equipment_signature", []), true),
 		"extension_research_signature": _validated_extension_ids(value.get("extension_research_signature", [])),
 		"equipment_changed": bool(value.get("equipment_changed", false)),
 		"modules_acquired": _validated_module_ids(value.get("modules_acquired", [])),
 		"extension_research_acquired": _validated_extension_ids(value.get("extension_research_acquired", [])),
-		"plan_context": _validated_plan_context(value.get("plan_context", "")),
-		"plan_changed": bool(value.get("plan_changed", false)),
 	}
 
 

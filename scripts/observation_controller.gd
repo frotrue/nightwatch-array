@@ -305,7 +305,7 @@ func _apply_manual_contact(target, delta: float) -> bool:
 		var trail_distance := _trail_cursor_path_distance(target)
 		if trail_distance <= tracking_radius:
 			var trail_scale := _estimate_sweep_contact_scale(tracking_radius, trail_distance)
-			var trail_speed := manual_speed * float(Modules.DEFINITIONS.trail_integrator.trail_progress)
+			var trail_speed: float = manual_speed * modules.stacked_effect("trail_integrator", "trail_progress")
 			target.apply_manual_observation(
 				delta * trail_scale,
 				trail_distance,
@@ -735,19 +735,19 @@ func _module_manual_speed_for_target(target) -> float:
 	var new_multiplier := float(modules.effect("new_speed"))
 	var is_primary: bool = target == (_manual_frame_primary if _manual_frame_active else selected_meteor)
 	if modules.has("long_baseline") and is_primary and primary_tracking_seconds >= 1.0:
-		new_multiplier *= float(Modules.DEFINITIONS.long_baseline.baseline_speed)
+		new_multiplier *= modules.stacked_effect("long_baseline", "baseline_speed")
 	if modules.has("dual_processor"):
 		if is_primary or target == (_manual_frame_secondary if _manual_frame_active else _dual_processor_secondary()):
-			new_multiplier *= float(Modules.DEFINITIONS.dual_processor.primary_speed)
+			new_multiplier *= modules.stacked_effect("dual_processor", "primary_speed")
 		else:
-			new_multiplier *= float(Modules.DEFINITIONS.dual_processor.secondary_speed)
+			new_multiplier *= modules.stacked_effect("dual_processor", "secondary_speed")
 	if modules.has("wide_correlation"):
-		new_multiplier *= float(Modules.DEFINITIONS.wide_correlation.primary_speed if is_primary else Modules.DEFINITIONS.wide_correlation.secondary_speed)
+		new_multiplier *= modules.stacked_effect("wide_correlation", "primary_speed" if is_primary else "secondary_speed")
 	if String(target.get("type_id")) == "andromeda":
 		if modules.has("reference_bus"):
-			new_multiplier *= float(Modules.DEFINITIONS.reference_bus.m31_manual_speed)
+			new_multiplier *= modules.stacked_effect("reference_bus", "m31_manual_speed")
 		if modules.has_method("shutter_active") and modules.shutter_active():
-			new_multiplier *= float(Modules.DEFINITIONS.shutter_weave.shutter_speed)
+			new_multiplier *= modules.stacked_effect("shutter_weave", "shutter_speed")
 	# New mechanics may combine only inside this bounded range. The old module
 	# multiplier remains outside it so existing loadouts retain exact behavior.
 	return legacy_speed * clampf(new_multiplier, 0.25, 2.5)

@@ -15,6 +15,9 @@ func _run() -> void:
 	game = load("res://scenes/main.tscn").instantiate()
 	Fixtures.configure_before_ready(game)
 	root.add_child(game)
+	game.sound.free()
+	game.sound = Fixtures.SilentSound.new()
+	game.add_child(game.sound)
 	await process_frame
 	_freeze(game)
 	research = game.deep_sky
@@ -31,10 +34,10 @@ func _run() -> void:
 	game.upgrade_tree.configure_galactic_state(true, true)
 	_check(game.progression.upgrade_level == 95, "original 95-node economy remains sufficient")
 	_m31()
-	_check(research.observations == 1 and research.state.exposures == 1, "first real M31 grants protocol and one preparation exposure")
+	_check(research.observations == 1 and research.research_owned("ext_protocol"), "first real M31 unlocks special meteors")
 	await _check_transactions()
 	await _check_target_persistence()
-	await _check_full_plan_loop()
+	await _check_research_loop()
 	await _check_archive_and_budget()
 	_check_weighted_exposure()
 	_check_measurement()
@@ -44,7 +47,7 @@ func _run() -> void:
 	paused = false
 	await process_frame
 	if failures.is_empty():
-		print("EXPANSION_INTEGRATION_PASS: real targets, all 18 fields without sample modules, transactional acquisition, persistence, bounded rewards and measurement")
+		print("EXPANSION_INTEGRATION_PASS: real targets, all research without sample modules, transactional acquisition, persistence, bounded rewards and measurement")
 		quit(0)
 	else:
 		for failure in failures: push_error(failure)
@@ -58,7 +61,7 @@ func _freeze(node: Node) -> void:
 func _check_tracking_names() -> void:
 	for locale in ["en", "ko"]:
 		game.settings.set_language(locale, false)
-		for kind in ["spectrum", "afterglow", "pair"]:
+		for kind in ["rare", "afterglow"]:
 			game.hud.set_tracking(0.25, "anomaly_" + kind, 1.0)
 			_check(not game.hud.tracking_target.text.begins_with("METEOR_"), "localized tracking name: " + locale + "/" + kind)
 
@@ -99,25 +102,28 @@ func _check_transactions() -> void:
 	_chart()
 	for id in ["ext_trace_study", "ext_sweep_study", "ext_link_study"]:
 		_check(research.purchase(id), "study purchase succeeds: " + id)
-	_check(research.modules.purchased.size() == 3 and research.modules.installed_ids().is_empty(), "guaranteed modules enter inventory without auto-equipping")
-	research.state.award_samples(24, research.modules.purchased)
+	_check(research.modules.purchased.size() == 3 and research.modules.installed_ids().is_empty(), "guaranteed modules enter inventory")
+	research.state.award_samples(80)
+	_check(research.draw_module().is_empty(), "draw requires the loadout popup")
+	game.module_popup.open()
 	var before: Dictionary = research.get_save_data()
-	game.active_save_slot = 1 # NoSaveSlots rejects writes: this is a real error path.
-	_check(not research.begin_analysis(), "failed persistence rejects analysis")
-	_check(research.samples == 24 and research.pending_offer.is_empty() and research.state.analysis_serial == before.extension.analysis_serial, "failed analysis restores debit, RNG serial and pending state")
+	game.active_save_slot = 1
+	_check(research.draw_module().is_empty(), "failed persistence rejects draw")
+	_check(research.samples == 80 and research.modules.purchased.size() == 3 and research.state.draw_serial == before.extension.draw_serial, "failed draw restores debit, RNG and ownership")
 	game.active_save_slot = 0
-	_check(research.begin_analysis() and research.samples == 16, "successful analysis spends exactly eight")
-	var offered: Array = research.pending_offer.duplicate()
+	var id: String = research.draw_module()
+	_check(not id.is_empty() and research.samples == 72 and research.modules.owned_count(id) == 1, "successful draw spends exactly eight")
 	var saved: Dictionary = JSON.parse_string(JSON.stringify(game._build_save_data()))
+	game.module_popup.close()
 	game._apply_save_data(saved)
 	_chart()
-	_check(research.pending_offer == offered and not research.begin_analysis(), "disk-shaped load keeps exact pending offer and prevents reroll")
-	game.active_save_slot = 1
-	_check(not research.choose_analysis(offered[0]) and research.pending_offer == offered and offered[0] not in research.modules.purchased, "failed choice persistence restores pending ownership")
-	game.active_save_slot = 0
-	_check(research.choose_analysis(offered[0]) and research.pending_offer.is_empty(), "choice grants one owned module")
-	_check(not research.choose_analysis(offered[0]), "candidate cannot be claimed twice")
-	# The independent full-plan fixture deliberately owns no specimen modules.
+	game.module_popup.open()
+	_check(research.state.last_draw == id and research.samples == 72, "disk-shaped save restores paid result")
+	for index in range(8): research.draw_module()
+	var copies := 0
+	for module_id in Data.SAMPLE_MODULES: copies += research.modules.owned_count(module_id)
+	_check(copies == 9 and research.modules.installed_ids().is_empty(), "all draws are copies without auto-equipping")
+	game.module_popup.close()
 	research.load_save_data(before)
 	_sky()
 	await process_frame
@@ -137,116 +143,57 @@ func _spawn_due() -> Array:
 	return targets
 
 func _check_target_persistence() -> void:
-	_chart()
-	research.select_plan("plan_trace_1")
-	_sky()
 	var targets := await _spawn_due()
-	_check(targets.size() == 1, "single field creates one concrete spectrum")
+	_check(targets.size() == 1 and targets[0].kind == "rare", "one conventional special meteor")
 	if targets.is_empty(): return
 	var target: Node = targets[0]
-	_manual(target)
-	var position: Vector2 = target.global_position
-	_manual(target)
-	_check(target.stage == 1 and target.alive and is_equal_approx(target.get_progress(), 0.5), "spectrum requires a second head-to-tail contact frame")
-	var saved: Dictionary = JSON.parse_string(JSON.stringify(game._build_save_data()))
-	var ticket: String = target.reward_ticket_id
-	game._apply_save_data(saved)
-	_sky()
-	targets = research.director.targets()
-	_check(targets.size() == 1, "active component restores once")
-	if targets.is_empty(): return
-	target = targets[0]
-	target.set_process(false)
-	_check(target.reward_ticket_id == ticket and target.stage == 1 and target.global_position.is_equal_approx(position), "save restores ticket, stage, position and work")
-	await process_frame
 	var samples_before: int = research.samples
-	_manual(target)
-	_check(not target.alive and research.state.field_ready() and research.samples == samples_before + 2, "completing restored spectrum records evidence and two samples")
-	var earned: int = research.state.samples_earned
-	var total: float = game.progression.total_data_earned
+	var data_before: float = game.progression.total_data_earned
 	research.director.complete_component(target)
-	_check(research.state.samples_earned == earned and game.progression.total_data_earned == total, "duplicate completion callback cannot duplicate Data or samples")
-	# Check real dish allowlisting, including prior manual-only atmospheric types.
-	for type_id in ["fireball", "major"]:
-		var meteor: Node = game.spawner.spawn_meteor(type_id, Vector2(400, 250), Vector2.ZERO)
-		_check(not game.sky_contacts._dish_can_track(meteor), "dish keeps " + type_id + " manual-only")
-	game.spawner.reset()
-	var serial: int = research.director.scheduler_serial
-	game.events.canis_major_state = "warning"
-	_check(not research.director.try_opportunity() and research.director.scheduler_serial == serial, "major warning defers without consuming RNG")
-	game.events.canis_major_state = "resolved"
-	game.observation_phase_remaining = 10.0
-	_check(not research.director.try_opportunity(), "late opportunities defer to next round")
-	game.observation_phase_remaining = 60.0
+	_check(research.samples == samples_before and game.progression.total_data_earned == data_before, "unfinished target cannot pay")
+	_manual(target, 0.4)
+	_check(target.alive and is_equal_approx(target.get_progress(), 0.4), "partial ordinary tracking")
+	var saved: Dictionary = JSON.parse_string(JSON.stringify(research.get_save_data()))
+	research.load_save_data(saved)
+	research.resume_targets()
+	target = research.director.targets()[0]
+	target.set_process(false)
+	_check(is_equal_approx(target.get_progress(), 0.4), "active target restores progress")
+	_manual(target, 0.6)
+	_check(not target.alive and research.samples == samples_before + 2, "completion grants two samples")
+	var paid: float = game.progression.total_data_earned
+	research.director.complete_component(target)
+	_check(research.samples == samples_before + 2 and game.progression.total_data_earned == paid, "no duplicate samples or Data")
+	targets = await _spawn_due()
+	if not targets.is_empty():
+		target = targets[0]
+		_automatic(target)
+		_check(not target.alive and research.samples == samples_before + 4, "automatic observation grants same samples")
 	research.director.end_round()
 
-func _check_full_plan_loop() -> void:
-	for plan in Data.PLAN_ORDER:
-		_chart()
-		var required: String = Data.PLANS[plan].research
-		if required == "ext_combined_watch":
-			_check(research.purchase("ext_synthesis"), "three basics unlock synthesis")
-		if not research.research_owned(required):
-			_check(research.purchase(required), "completed prerequisite unlocks " + required)
-		_check(research.select_plan(plan), "plan can be selected: " + plan)
-		_sky()
-		var attempts := 0
-		while not research.state.plan_complete(plan) and attempts < 5:
-			attempts += 1
-			if not research.state.active_field().prepared: _m31()
-			var definition: Dictionary = research.state.field_definition()
-			var targets: Array = await _spawn_due() if not research.state.field_ready() else []
-			var mode: String = definition.get("mode", "manual")
-			for target in targets:
-				if target.kind == "afterglow":
-					var point: Vector2 = target.global_position
-					game.survey.cooldown_remaining = 0.0
-					game.survey.set_scanning(true, point)
-					_check(not target.can_be_tracked(), "hidden afterglow does not steal observation input")
-					game.survey.apply_scan_segment(point - Vector2(5, 0), point + Vector2(5, 0), 0.1)
-					_check(target.discovered, "held blank-sky sweep discovers afterglow")
-				if target.kind == "pair" and mode == "split" and target.component_index == 1:
-					_automatic(target)
-				elif target.kind == "pair" and mode == "handoff":
-					_manual(target, 0.3)
-					_automatic(target, 0.71)
-				elif target.kind == "pair" and mode == "parallel":
-					_automatic(target, 0.05)
-					_m31(0.26)
-					_automatic(target)
-				else:
-					_manual(target)
-					if target.kind == "spectrum":
-						await process_frame
-						_manual(target)
-			if definition.get("ordinary", false):
-				var meteor: Node = game.spawner.spawn_meteor("common", Vector2(400, 270), Vector2.ZERO)
-				meteor.apply_manual_observation(100.0, 0.0, 100.0, 1.0)
-				meteor._process(0.0) # Atmospheric completion is evaluated by its process loop.
-			_check(research.state.field_ready(), "real observations satisfy " + String(definition.id))
-			_m31()
-		_check(research.state.plan_complete(plan), "plan completes without specimen modules: " + plan)
-		_check(research.modules.purchased.size() == 3, "random acquisition never gates field progression")
-		_chart()
-		if research.state.completed_count(1) == 1 and research.modules.unlocked_slots == 2:
-			_check(research.purchase("slot_3"), "first basic unlocks third slot")
-		if research.state.completed_count(1) >= 2 and research.modules.unlocked_slots == 3:
-			_check(research.purchase("slot_4"), "second basic unlocks fourth slot")
-		if research.state.completed_count(2) >= 2 and research.modules.unlocked_slots == 4:
-			_check(research.purchase("slot_5"), "second advanced unlocks fifth slot")
-		_sky()
-	var fields := 0
-	for plan in Data.PLAN_ORDER: fields += research.plan_progress(plan).x
-	_check(fields == 18 and research.completed_plans() == 7, "all eighteen fields complete")
+func _check_research_loop() -> void:
 	_chart()
-	_check(research.purchase("ext_record_complete") and research.record_complete, "integrated plan enables optional record closure")
+	for id in Data.RESEARCH_ORDER:
+		if not research.research_owned(id): _check(research.purchase(id), "research needs only predecessors and Data: " + id)
+	for id in research.Modules.RESEARCH_IDS:
+		if not research.research_owned(id): _check(research.purchase(id), "module and slot research reachable: " + id)
+	_check(research.modules.unlocked_slots == 5 and research.state.draw_cost() == 6, "all five slots and final efficiency reachable")
+	_check(research.modules.purchased.size() == 8, "all research completed without random modules")
 	_sky()
-	_check(not game.completed and game.observation_phase_active, "record closure leaves same sky playable")
-	var unique_completed := 0
-	for ticket in research.director.tickets.values():
-		if ticket.completed and ticket.origin_kind in ["plan", "natural"]: unique_completed += 1
-	# 24 are an explicit acquisition fixture grant above, not event earnings.
-	_check(research.state.samples_earned <= unique_completed * 2 + 18 + 24, "event specimen ceiling and once-only basic rewards hold")
+	var targets := await _spawn_due()
+	if not targets.is_empty():
+		var target: Node = targets[0]
+		_check(is_equal_approx(target.required_track_time, 1.65) and is_equal_approx(target.visible_lifetime, 17.5), "research changes actual meteor observation and visibility")
+		_check(is_equal_approx(target.get_assist_rate(1.0), 1.25 / 1.65), "research changes dish rate")
+		research.modules.equip("sweep_optics", 0)
+		_check(is_equal_approx(target.get_tracking_radius(40.0), 60.0), "Sweep Optics widens the real rare meteor aim radius")
+		research.modules.equip("", 0)
+		var samples_before: int = research.samples
+		_manual(target)
+		_check(research.samples == samples_before + 3, "research grants three actual samples")
+	for index in range(10):
+		var interval: float = research.director._next_interval()
+		_check(interval >= 25.6 and interval <= 35.2, "research shortens spawn interval")
 	research.director.end_round()
 
 func _check_archive_and_budget() -> void:
@@ -287,8 +234,8 @@ func _check_archive_and_budget() -> void:
 	game.spawner.reset()
 	await process_frame
 	# Exercise the real dish's spatial acquisition for a recognized anomaly.
-	research.director._ensure_ticket("n/dish_test", "pair", "natural")
-	research.director._spawn_component({"ticket": "n/dish_test", "kind": "pair", "origin_kind": "natural", "component": 0, "start": Vector2(0.4, 0.4), "end": Vector2(0.4, 0.4)})
+	research.director._ensure_ticket("n/dish_test", "rare", "natural")
+	research.director._spawn_component({"ticket": "n/dish_test", "kind": "rare", "origin_kind": "natural", "component": 0, "start": Vector2(0.4, 0.4), "end": Vector2(0.4, 0.4)})
 	var pair: Node = research.director.targets()[0]
 	pair.set_process(false)
 	pair._process(1.6)
@@ -337,11 +284,14 @@ func _check_measurement() -> void:
 	research.changed.emit()
 	_check(game._build_round_result().build_changed, "extension research is part of the build measurement")
 	research.state.research_ids.append(study)
-	research.state.selected_plan = "plan_trace_1"
-	research.changed.emit()
-	research.state.selected_plan = "plan_integrated_1"
-	research.changed.emit()
-	_check(game._build_round_result().plan_changed, "plan switch history survives return to original context")
+	research.modules.grant_copy("long_baseline")
+	research.modules.equip("long_baseline", 0)
+	research.modules.equip("long_baseline", 1)
+	game._begin_observation_phase()
+	var disk_result: Dictionary = JSON.parse_string(JSON.stringify(game._build_round_result()))
+	var clean: Dictionary = game._sanitize_round_result(disk_result)
+	_check(clean.equipment_signature.count("long_baseline") == 2, "round comparison keeps duplicate installed copies")
+	_check(game._validated_module_ids(research.modules.purchased).size() == research.modules.purchased.size(), "ownership history keeps more than five module types")
 
 func _check_migration() -> void:
 	var before: Dictionary = research.get_save_data()
@@ -351,5 +301,24 @@ func _check_migration() -> void:
 	game._apply_save_data(save)
 	_check(research.get_save_data() == before, "whole game rejects future version before applying any mutation")
 	research.load_save_data({"version": 1, "observations": 2, "progress": 0.4, "cooldown": 2.0, "modules": {"purchased": ["record", "revisit"], "slots": ["record", "revisit", "", "", ""], "unlocked_slots": 5}})
-	_check(research.modules.unlocked_slots == 5 and research.state.completed_count() == 0 and research.state.exposures == 1, "v1 preserves capacity without inventing plans")
+	_check(research.modules.unlocked_slots == 5 and research.research_owned("ext_protocol"), "v1 preserves capacity without inventing plans")
 	_check(is_equal_approx(research.target.value_integral, 0.6) and is_equal_approx(research.target.cooldown_integral, 0.24), "v1 partial exposure initializes its existing equipment weights")
+
+	# Two shutter copies preserve the longer M31 cooldown across disk saves.
+	research.modules.load_save_data({"purchased": ["shutter_weave"], "quantities": {"shutter_weave": 2}, "slots": ["shutter_weave", "shutter_weave"]})
+	research.target.progress = 0.0
+	research.target.integrated_progress = 0.0
+	research.target.value_integral = 0.0
+	research.target.cooldown_integral = 0.0
+	_m31()
+	_check(is_equal_approx(research.target.cooldown, 10.5), "two cooldown penalties add on actual completion")
+	research.load_save_data(JSON.parse_string(JSON.stringify(research.get_save_data())))
+	_check(is_equal_approx(research.target.cooldown, 10.5), "duplicate cooldown is not truncated on load")
+	var old: Dictionary = research.get_save_data()
+	old.version = 2
+	old.anomalies = {"active": [{"ticket": "p/old", "kind": "spectrum", "origin_kind": "plan", "stage": 1, "stage_progress": 0.4, "start": [0.3, 0.4], "end": [0.7, 0.5]}], "tickets": {"p/old": {"components": {}, "sample_units": 0, "completed": false}}}
+	research.load_save_data(old)
+	research.resume_targets()
+	var migrated: Array = research.director.targets()
+	_check(migrated.size() == 1 and migrated[0].kind == "rare" and is_equal_approx(migrated[0].get_progress(), 0.7), "v2 active spectrum keeps normalized progress as a rare meteor")
+	research.director.end_round()

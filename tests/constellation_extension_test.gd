@@ -18,7 +18,6 @@ func _run() -> void:
 	await process_frame
 	var tree: Node = game.upgrade_tree
 	var research: Node = game.deep_sky
-	var auxiliary: Control = tree.deep_sky_chart
 	tree.open_tree()
 	await process_frame
 	_check(not tree.node_buttons.ext_trace_study.is_visible_in_tree(), "outer research stays hidden before galaxy unlock")
@@ -49,7 +48,7 @@ func _run() -> void:
 			_check(tree._research_state(id) == "locked", "first M31 observation gates the stars: " + id)
 	for id in Modules.RESEARCH_IDS + Data.RESEARCH_ORDER:
 		_check(seen.has(id), "acquisition remains reachable: " + id)
-	_check(not auxiliary.visible and tree.content_clip.visible and tree.constellation_ledger.visible, "research opens on the constellation chart")
+	_check(tree.content_clip.visible and tree.constellation_ledger.visible, "research opens on the constellation chart")
 	_check(tree.node_positions.better_lens.distance_to(tree.CHART_ORIGIN) > 100.0, "original geometry does not collapse into a miniature")
 	var visible_original := 0
 	for definition in Balance.UPGRADE_NODES:
@@ -72,17 +71,14 @@ func _run() -> void:
 	_check(research.research_owned("ext_trace_study") and research.modules.research_owned("trail_integrator"), "holding Deneb grants its research and module")
 	_check(game.progression.observation_data == balance_before - Data.RESEARCH.ext_trace_study.cost and research.modules.installed_ids().is_empty(), "purchase debits once without auto-equipping")
 	_check(tree.node_hold_bars.ext_trace_study.visual_state == "purchased", "completed research lights the existing star marker")
-	_check(research.plan_available("plan_trace_1") and "spectrum" in research.director.available_kinds(), "research opens the real plan and scheduler")
+	_check(research.research_owned("ext_trace_study") and research.director.available_kinds() == ["rare"], "one rare meteor kind uses the real scheduler")
 	tree.select_extension("focus")
 	tree.node_buttons.focus.button_down.emit()
 	tree._process(tree.HOLD_PURCHASE_SECONDS * 0.3)
-	tree.atlas_actions[1].pressed.emit()
-	_check(tree.held_node_id.is_empty() and not research.research_owned("focus"), "helper navigation cancels partial holds")
-	_check(auxiliary.plans_panel.is_visible_in_tree() and not tree.content_clip.visible and not tree.tooltip_panel.visible, "plans explicitly replace the visible chart while open")
-	var framing := Vector2(tree.rotation_offset, tree.zoom)
-	auxiliary.chart_button.pressed.emit()
-	_check(not auxiliary.visible and tree.content_clip.visible and paused, "helper return restores the paused chart")
-	_check(framing.is_equal_approx(Vector2(tree.rotation_offset, tree.zoom)), "helper return preserves sky framing")
+	tree.atlas_actions[0].pressed.emit()
+	_check(tree.held_node_id.is_empty() and not research.research_owned("focus"), "navigation cancels partial hold")
+	_check(tree.atlas_actions.size() == 1 and tree.content_clip.visible, "chart only offers outer constellation navigation")
+	tree.select_extension("focus")
 	tree.node_buttons.focus.button_down.emit()
 	tree._process(tree.HOLD_PURCHASE_SECONDS)
 	tree.node_buttons.focus.button_up.emit()
@@ -101,7 +97,7 @@ func _run() -> void:
 		_check(not previous.is_equal_approx(tree.node_positions.ext_trace_study), "the chart wheel rotates new stars")
 		var old_zoom: float = tree.zoom
 		tree._zoom_at(Vector2(576, 324), 1.1)
-		_check(tree.zoom > old_zoom and not auxiliary.visible, "Ctrl+wheel enlarges the same chart")
+		_check(tree.zoom > old_zoom, "Ctrl+wheel enlarges the same chart")
 		var button: Button = tree.node_buttons.ext_trace_study
 		var screen_center: Vector2 = tree.tree_canvas.get_global_transform() * tree.node_positions.ext_trace_study
 		_check(button.get_global_rect().has_point(screen_center) and button.get_global_rect().size.x >= 27.0, "star hit area follows rotation and zoom")

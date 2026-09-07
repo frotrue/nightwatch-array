@@ -98,6 +98,7 @@ func _run() -> void:
 	_check_trail_observation_contract()
 	_check_sweep_charge_contract()
 	_check_same_frame_completion()
+	_check_duplicate_effects()
 	if failures.is_empty():
 		print("MODULE_EXPANSION_PASS: 14 module metadata, bounded effects, shutter state, trail/manual provenance and sweep charge")
 		quit(0)
@@ -117,7 +118,7 @@ func _installed(ids: Array[String]) -> RefCounted:
 	var model = Modules.new()
 	model.unlocked_slots = Modules.MAX_SLOTS
 	for id in ids:
-		model.grant(id)
+		model.grant_copy(id)
 		model.equip(id)
 	return model
 
@@ -134,7 +135,7 @@ func _check_definition_contract() -> void:
 	var legacy := Modules.configuration(["focus", "wide", "record"])
 	_check(is_equal_approx(float(legacy.speed), 1.08) and is_equal_approx(float(legacy.radius), 1.65) and is_equal_approx(float(legacy.m31_value), 1.5), "legacy speed, radius and M31 value effects are unchanged")
 	var expanded := Modules.configuration(["sweep_optics", "trail_integrator", "relay_bus", "shutter_weave"])
-	_check(is_equal_approx(float(expanded.new_speed), 0.729) and is_equal_approx(float(expanded.sweep_charge), 1.35) and is_equal_approx(float(expanded.discovery_width), 1.5), "new generic penalties and sweep effects remain separate from legacy speed")
+	_check(is_equal_approx(float(expanded.new_speed), 0.729) and is_equal_approx(float(expanded.sweep_charge), 1.35) and is_equal_approx(float(expanded.rare_radius), 1.5), "new generic penalties and sweep effects remain separate from legacy speed")
 	_check(is_equal_approx(float(expanded.m31_value), 1.0) and is_equal_approx(float(expanded.m31_cooldown), 1.25), "shutter changes cooldown but never M31 data value")
 
 
@@ -266,3 +267,31 @@ func _check_same_frame_completion() -> void:
 	observer.progression.free()
 	observer.hud.free()
 	observer.free()
+
+func _check_duplicate_effects() -> void:
+	var observer = Observer.new()
+	observer.progression = MockProgression.new()
+	var target := MockTarget.new()
+	observer.selected_meteor = target
+	observer.modules = _installed(["long_baseline", "long_baseline"])
+	observer.primary_tracking_seconds = 1.0
+	_check(is_equal_approx(observer._module_manual_speed_for_target(target), 1.54), "two baseline bonuses and two penalties add before composing")
+	observer.modules = _installed(["dual_processor", "dual_processor"])
+	_check(is_equal_approx(observer._module_manual_speed_for_target(target), 1.6), "two dual primary bonuses add")
+	observer.modules = _installed(["wide_correlation", "wide_correlation"])
+	_check(is_equal_approx(observer._module_manual_speed_for_target(target), 0.5), "two correlation primary penalties add")
+	observer.selected_meteor = null
+	_check(is_equal_approx(observer._module_manual_speed_for_target(target), 1.7), "two correlation secondary bonuses add")
+	target.type_id = "andromeda"
+	observer.modules = _installed(["reference_bus", "reference_bus"])
+	_check(is_equal_approx(observer._module_manual_speed_for_target(target), 0.5), "two reference M31 penalties add")
+	target.type_id = "common"
+	observer.modules.set_m31_manual_active(true)
+	_check(is_equal_approx(observer.modules.dish_multiplier(target), 2.2), "two reference dish bonuses add")
+	target.type_id = "andromeda"
+	observer.modules = _installed(["shutter_weave", "shutter_weave"])
+	observer.modules.shutter_remaining = 5.0
+	_check(is_equal_approx(observer._module_manual_speed_for_target(target), 1.7), "two shutter conditional bonuses add")
+	observer.progression.free()
+	observer.free()
+	target.free()

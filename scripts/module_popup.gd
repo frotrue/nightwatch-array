@@ -106,7 +106,7 @@ class InventoryTile:
 		var border := UITheme.ACCENT_LINE if hover else (UITheme.INK_MID if owned else UITheme.INK_LOW)
 		draw_rect(Rect2(Vector2.ZERO, size), fill)
 		draw_rect(Rect2(Vector2.ZERO, size), Color(border, 0.9 if owned or hover else 0.52), false, UITheme.px(1), true)
-		Visual.draw_module(self, Rect2(Vector2.ONE * UITheme.px(13), size - Vector2.ONE * UITheme.px(26)), module_id, owned and not installed)
+		Visual.draw_module(self, Rect2(Vector2.ONE * UITheme.px(13), size - Vector2.ONE * UITheme.px(26)), module_id, owned and owner_popup.model().spare_count(module_id) > 0)
 		var font: Font = UITheme.mono()
 		var definition: Dictionary = Modules.DEFINITIONS.get(module_id, {})
 		var code: String = String(definition.get("code", module_id.to_upper()))
@@ -114,9 +114,9 @@ class InventoryTile:
 		var short_name := owner_popup.tr("MODULE_%s_SHORT" % module_id.to_upper())
 		draw_string(UITheme.sans(), Vector2(UITheme.px(7), size.y - UITheme.px(28)), short_name, HORIZONTAL_ALIGNMENT_LEFT, size.x - UITheme.px(14), UITheme.size_px(POPUP_BODY_SPEC_SIZE), UITheme.INK_HIGH if owned else UITheme.INK_LOW)
 		var state_key := "MODX_OWNED" if owned else "MODX_LOCKED"
-		draw_string(UITheme.mono(), Vector2(UITheme.px(7), size.y - UITheme.px(9)), owner_popup.tr(state_key), HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.size_px(POPUP_META_SPEC_SIZE), UITheme.TOOLTIP_LABEL)
+		draw_string(UITheme.mono(), Vector2(UITheme.px(7), size.y - UITheme.px(9)), (owner_popup.tr("MODX_QUANTITY") % [owner_popup.model().owned_count(module_id), owner_popup.model().installed_count(module_id)] if owned else owner_popup.tr(state_key)), HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.size_px(POPUP_META_SPEC_SIZE), UITheme.TOOLTIP_LABEL)
 		if installed:
-			var mark := Rect2(size - Vector2.ONE * UITheme.px(24), Vector2.ONE * UITheme.px(14))
+			var mark := Rect2(Vector2(size.x - UITheme.px(18), UITheme.px(6)), Vector2.ONE * UITheme.px(10))
 			draw_rect(mark, UITheme.TOOLTIP_LABEL, false, UITheme.px(1), true)
 			draw_rect(mark.grow(-UITheme.px(3)), UITheme.TOOLTIP_LABEL)
 
@@ -129,6 +129,9 @@ var overlay: Control
 var surface: Control
 var launcher: Button
 var close_button: Button
+var draw_button: Button
+var draw_balance: Label
+var draw_result: Label
 var heading: Label
 var inventory_heading: Label
 var inventory_count: Label
@@ -242,6 +245,10 @@ func _ready() -> void:
 	instructions.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hint = _label(surface, Vector2(1180, 908), 600, POPUP_BODY_SPEC_SIZE, UITheme.TOOLTIP_VALUE)
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	draw_balance = _label(surface, Vector2(1180, 806), 255, POPUP_BODY_SPEC_SIZE, UITheme.TOOLTIP_VALUE)
+	draw_button = _text_action(surface, Vector2(1450, 795), Vector2(340, 44), _draw_module)
+	draw_result = _label(surface, Vector2(1180, 849), 610, POPUP_BODY_SPEC_SIZE, UITheme.ACCENT_TEXT)
+	draw_result.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_build_tooltip()
 	overlay.hide()
 	set_process(false)
@@ -308,9 +315,16 @@ func _process(_delta: float) -> void:
 		_place_tooltip()
 
 func equip_from_inventory(id: String) -> void:
-	if id not in model().purchased or id in model().installed_ids() or model().first_empty_slot() < 0:
+	if id not in model().purchased or model().spare_count(id) <= 0 or model().first_empty_slot() < 0:
 		return
 	game.deep_sky.equip(id)
+
+func _draw_module() -> void:
+	var id: String = game.deep_sky.draw_module()
+	if id.is_empty(): return
+	if not _matches_filter(id, _definition(id)):
+		set_inventory_filter("owned")
+	inventory_scroll.ensure_control_visible.call_deferred(owned_buttons[id])
 
 func remove_module(index: int) -> void:
 	if index < 0 or index >= model().unlocked_slots or model().slots[index].is_empty():
@@ -363,8 +377,13 @@ func refresh(animate: bool = true) -> void:
 	summary.text = _format_translation("MODX_STATIC_SUMMARY", [manual_speed, _effect_number("radius", 1.0), _effect_number("m31_value", 1.0), _effect_number("m31_cooldown", 1.0)], "Manual ×%.2f · Radius ×%.2f · M31 ×%.2f · Wait ×%.2f" % [manual_speed, _effect_number("radius", 1.0), _effect_number("m31_value", 1.0), _effect_number("m31_cooldown", 1.0)])
 	summary_details.text = _conditional_summary(installed_ids)
 	capacity_label.text = tr("RING_CAPACITY") % [model().unlocked_slots, Modules.MAX_SLOTS - model().unlocked_slots]
-	instructions.text = tr("DEEP_NO_MODULES") if model().purchased.is_empty() else tr("RING_INSTRUCTIONS")
-	hint.text = tr("DEEP_FREE_EQUIP") if not game.hud.autosave_failed else tr("AUTOSAVE_FAILURE") % game.active_save_slot
+	instructions.text = tr("MODX_DRAW_RULE")
+	draw_balance.text = tr("EXT_SAMPLES_COUNT") % game.deep_sky.samples
+	draw_button.text = tr("MODX_DRAW") % game.deep_sky.state.draw_cost()
+	draw_button.disabled = game.deep_sky.samples < game.deep_sky.state.draw_cost()
+	var drawn: String = game.deep_sky.state.last_draw
+	draw_result.text = "" if drawn.is_empty() else tr("MODX_DRAW_RESULT") % [tr("MODULE_%s_SHORT" % drawn.to_upper()), model().owned_count(drawn)]
+	hint.text = tr("MODX_EQUIP_HINT") if not game.hud.autosave_failed else tr("AUTOSAVE_FAILURE") % game.active_save_slot
 	if inventory_scroll != null:
 		inventory_scroll.queue_redraw()
 	surface.queue_redraw()
@@ -432,7 +451,7 @@ func _update_tooltip() -> void:
 			tooltip_action.text = tr("RING_REMOVE_ACTION")
 		elif is_catalog_tile and id not in model().purchased:
 			tooltip_action.text = tr("MODX_LOCKED_ACTION")
-		elif id in model().installed_ids():
+		elif model().spare_count(id) <= 0:
 			tooltip_action.text = tr("RING_EQUIPPED_ACTION")
 		elif model().first_empty_slot() < 0:
 			tooltip_action.text = tr("RING_FULL_ACTION")
@@ -503,21 +522,22 @@ func _acquisition_route(id: String, definition: Dictionary) -> String:
 		"research":
 			var research_id := String(definition.get("research_id", definition.get("research", "")))
 			if not research_id.is_empty():
-				var research_key := "UPGRADE_%s_NAME" % research_id.to_upper()
+				var research_key := "EXT_RESEARCH_%s_NAME" % research_id.trim_prefix("ext_").to_upper()
 				var research_name := _translation_or_empty(research_key)
 				if not research_name.is_empty():
 					return _format_translation("MODX_ACQUIRE_RESEARCH", [research_name], "Research grant · %s" % research_name)
 			return _format_translation("MODX_ACQUIRE_RESEARCH", [category_label], "Research grant · %s" % category_label)
 		"sample":
-			var pool := String(definition.get("pool", category)).to_lower()
-			var pool_label := _category_label(pool)
-			return _format_translation("MODX_ACQUIRE_SAMPLE", [pool_label], "Sample pool · %s" % pool_label)
+			return tr("MODX_DRAW_ROUTE")
 		_:
 			return tr("MODX_ACQUIRE_PURCHASE")
 
 func _conditional_summary(installed_ids: Array[String]) -> String:
 	var lines: Array[String] = []
+	var seen: Array[String] = []
 	for id in installed_ids:
+		if id in seen: continue
+		seen.append(id)
 		var definition := _definition(id)
 		var text := String(definition.get("conditional_desc", definition.get("conditional", "")))
 		var is_conditional := not text.is_empty() or id in ["trail_integrator", "sweep_optics", "relay_bus", "long_baseline", "dual_processor", "afterglow_archive", "wide_correlation", "reference_bus", "shutter_weave"]
@@ -525,7 +545,7 @@ func _conditional_summary(installed_ids: Array[String]) -> String:
 			var short_name := _translation_or_empty("MODULE_%s_SHORT" % id.to_upper())
 			if short_name.is_empty():
 				short_name = id.replace("_", " ").capitalize()
-			lines.append("· " + short_name)
+			lines.append("· " + short_name + (" ×%d" % installed_ids.count(id) if installed_ids.count(id) > 1 else ""))
 	return tr("MODX_CONDITIONAL_NONE") if lines.is_empty() else tr("MODX_CONDITIONAL") + "  " + "  ".join(lines)
 
 func set_inventory_filter(filter_id: String) -> void:
@@ -648,7 +668,6 @@ func _text_action(parent: Control, p: Vector2, dimensions: Vector2, callback: Ca
 
 func place_launcher() -> void:
 	if launcher == null or game == null: return
-	var auxiliary: bool = game.upgrade_tree.is_deep_sky_chart_active()
-	launcher.position = Vector2(38, 588) if auxiliary else game.upgrade_tree.ATLAS_ACTION_ORIGIN
-	launcher.size = Vector2(164, 30) if auxiliary else game.upgrade_tree.ATLAS_ACTION_SIZE
-	launcher.alignment = HORIZONTAL_ALIGNMENT_CENTER if auxiliary else HORIZONTAL_ALIGNMENT_LEFT
+	launcher.position = game.upgrade_tree.ATLAS_ACTION_ORIGIN
+	launcher.size = game.upgrade_tree.ATLAS_ACTION_SIZE
+	launcher.alignment = HORIZONTAL_ALIGNMENT_LEFT

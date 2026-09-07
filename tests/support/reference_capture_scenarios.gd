@@ -215,7 +215,6 @@ func inspect(game: Node, id: String) -> Dictionary:
 		overlays.append("chart")
 		if game.upgrade_tree.tooltip_panel.is_visible_in_tree(): overlays.append("constellation_inspector")
 		if game.upgrade_tree.galactic_panel.is_visible_in_tree(): overlays.append("galactic_inspector")
-		if game.upgrade_tree.deep_sky_chart.is_visible_in_tree(): overlays.append("deep_sky_chart")
 	if game.hud.end_overlay.is_visible_in_tree(): overlays.append("ending")
 	if game.hud.settings_overlay.is_visible_in_tree(): overlays.append("settings")
 	if game.hud.startup_overlay.is_visible_in_tree(): overlays.append("startup")
@@ -242,7 +241,7 @@ func inspect(game: Node, id: String) -> Dictionary:
 		"cursor": _point(game.observer.cursor_position), "survey_charge": game.survey.get_charge_progress(),
 		"chart_mode": game.upgrade_tree.galactic_mode, "chart_rotation": game.upgrade_tree.rotation_offset,
 		"chart_selection": game.upgrade_tree.selected_node_id, "galaxy_selection": game.upgrade_tree.galactic_inspector_node_id,
-		"deep_sky_selection": game.upgrade_tree.deep_sky_chart.selected_id,
+		"deep_sky_selection": game.upgrade_tree.selected_node_id,
 		"hosts": hosts, "phenomena": phenomena, "phenomena_recorded": game.galactic_phenomena.get_completed_record_count(),
 		"ending_complete": game.hud.end_reveal_complete, "ending_debug_preview": game.catalogue_ending_debug_preview,
 		"ending_map_progress": [game.hud.end_coda.constellation_progress, game.hud.end_coda.pullback_progress, game.hud.end_coda.route_progress, game.hud.end_coda.illumination_progress, game.hud.end_coda.settle_progress],
@@ -283,7 +282,7 @@ func inspect(game: Node, id: String) -> Dictionary:
 		_check(not hosts.is_empty() and hosts[0].state == "transiting" and is_equal_approx(float(hosts[0].transit_phase), 0.48), id, "primary transit must be at exactly 48%")
 	if id == "deep_sky_chart":
 		var chart: Node = game.upgrade_tree
-		_check(state.chart_mode == chart.GALACTIC_MODE_FINAL and state.chart_selection == "ext_trace_study" and chart.content_clip.is_visible_in_tree() and not chart.deep_sky_chart.is_visible_in_tree(), id, "extended constellation chart not active")
+		_check(state.chart_mode == chart.GALACTIC_MODE_FINAL and state.chart_selection == "ext_trace_study" and chart.content_clip.is_visible_in_tree(), id, "extended constellation chart not active")
 		_check(chart.chart_constellations.size() == 16 and chart.extension_definitions.size() == 18, id, "four outer figures and eighteen research stars must be present")
 		for research in chart.extension_definitions:
 			_check(chart.node_buttons[research.id].get_parent() == chart.tree_canvas, id, "extension research must share the original star canvas")

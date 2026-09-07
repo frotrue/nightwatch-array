@@ -246,7 +246,7 @@ func _dish_can_track(target) -> bool:
 		return true
 	# Meteor's generic lane-assist API also exists on manual-only major targets.
 	# Only these explicitly introduced anomaly types expand the dish allowlist.
-	return String(target.type_id) in ["anomaly_spectrum", "anomaly_afterglow", "anomaly_pair"] and target.has_method("allows_automatic_assist") and target.allows_automatic_assist()
+	return String(target.type_id) in ["anomaly_rare", "anomaly_afterglow"] and target.has_method("allows_automatic_assist") and target.allows_automatic_assist()
 
 
 func _dish_can_track_type(type_id: String) -> bool:

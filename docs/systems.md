@@ -34,10 +34,9 @@ All script names below are under `scripts/`.
 | Research layout, selection, purchase and chart input | `upgrade_tree.gd` |
 | Shared astronomical records; marker rendering | `research_chart_data.gd`; `research_star_visual.gd` |
 | M31 lifecycle, first record, module validation and accounting | `deep_sky_research.gd`, `andromeda_target.gd` |
-| Stable extension catalogue, research graph, plans and acquisition state | `expansion_data.gd`, `expansion_state.gd` |
+| Stable extension catalogue, research graph, currency and draw state | `expansion_data.gd`, `expansion_state.gd` |
 | Independent anomaly scheduler, persistent tickets and concrete targets | `anomaly_director.gd`, `anomaly_target.gd` |
 | Outer figure geometry and stable research/star mapping | `constellation_extension_data.gd` |
-| Auxiliary field plans and specimen analysis; return to the same chart | `deep_sky_chart.gd` |
 | Module definitions, ownership, five slots, capacity and effect cache | `observation_modules.gd` |
 | Research-only equipment popup and shared glyphs | `module_popup.gd`, `module_visual.gd` |
 | Palette, fonts, spec coordinates and integer formatting | `ui_theme.gd` |
@@ -64,7 +63,7 @@ star buttons, hold controller, renderer, ledger and inspector. It dispatches
 outer purchases to DeepSkyResearch while preserving the original progression owner.
 Alpheratz is one shared coordinate/state at the Andromeda/Pegasus corner.
 The original 95-star geometry stays intact when the wider sky is revealed.
-Plans and analysis are explicit auxiliary views; returning preserves rotation/zoom.
+ModulePopup owns draws and equipment; closing preserves chart rotation/zoom.
 
 ## Signal wiring
 
@@ -74,7 +73,7 @@ Plans and analysis are explicit auxiliary views; returning preserves rotation/zo
 | `meteor.observed` / `expired` / `fragment_requested` | Accounting and feedback / expiry / child spawning |
 | `spawner.contact_announced` / `contact_resolved` | SkyContacts forecast lifecycle |
 | `progression.upgrade_purchased` | Game refreshes features, dispatches installation feedback and autosaves |
-| `deep_sky.changed` | HUD objective/specimens and ready notice; sticky round equipment/plan history; chart/popup refresh |
+| `deep_sky.changed` | HUD objective/specimens and ready notice; sticky round equipment history; chart/popup refresh |
 | `effects.packet_landed` | Game's packet feedback |
 | `events.banner_requested` / `sky_activity_changed` | Game updates HUD and background |
 | `events.forecast_requested` / `shower_started` | Game's shower presentation |
@@ -157,16 +156,18 @@ Record and revisit are integrated by actual M31 exposure progress; completion
 uses those accumulated weights for income and the next cooldown.
 Definitions, prerequisites and placement behavior are in [module details](design-details.md#m31과-모듈).
 
-The expansion catalogue separates research, ownership, installed modules and plan
-context. Analysis spends eight specimens for up to three distinct unowned choices;
-direct acquisition spends twelve. Active-slot transactions persist the debit and
-result together, rolling back ownership, candidates and RNG on failure.
-`AnomalyDirector` prioritizes missing plan evidence and reserves up to three
-components beside the existing important-target reservation. It defers around
-Major warnings and insufficient round time. Tickets survive attempts, while
-Data and specimen payment flags prevent duplicate rewards. Anomalies are direct
-DeepSkyResearch children for observer, sweep and dish discovery, and do not enter
-the atmospheric proc/fragment path. The full contract is [expansion-design.md](expansion-design.md).
+The expansion catalogue separates research, quantities and installed copies. A draw
+spends eight specimens (six after efficiency research) for one uniformly selected
+module from six, with replacement. Transactions persist currency, quantity and RNG
+together, restoring all three on failure. Same-ID bonuses/penalties add; different
+IDs retain multiplicative composition. The loadout displays owned/installed counts.
+`AnomalyDirector` schedules one conventional rare meteor kind after the first M31.
+It reserves three components including module-created archive afterglows, defers
+around Major warnings and insufficient round time, and awards 2/3 samples per
+completed natural rare meteor for both manual and automatic work. Persistent tickets
+prevent duplicate Data/samples. Targets are direct DeepSkyResearch children for
+observer/dish acquisition and do not enter the atmospheric proc/fragment path.
+The full contract is [expansion-design.md](expansion-design.md).
 
 ## Save format
 
@@ -180,18 +181,19 @@ Nested payloads belong to progression, host targets, phenomena and deep sky.
 Validate version, containers, numbers and IDs before applying state; restore target
 progress/clocks rather than rerolling them. A resumed round becomes its own comparison baseline.
 
-Deep sky saves purchases, five slots, capacity, records, M31 partial progress and cooldown.
-Its nested version is 2; the outer slot version remains 1. Version 1 migrates its
-existing equipment weights into partial M31 progress, with no inferred completed
-plans. Version 2 adds research IDs, plan records/exposures, specimens/pending
-offers, acquisition and scheduling RNG, event tickets, partial components and
-their live positions. Unknown nested versions are rejected before game mutation
-or active-slot replacement. Load restores extension state before starting a round,
-then resumes active anomaly components. Mid-round equipment and plan changes are
-sticky, including A→B→A; uninstalled acquisition has a separate growth field.
+Deep sky saves unique module IDs plus quantities, five slots, research, specimens,
+M31 partial progress/weighted reward/cooldown and live rare targets. Its nested version
+is 3; the outer slot version stays 1. Version 1 keeps its existing equipment and
+capacity. Version 2 preserves research/currency/modules, refunds paid pending offers
+once, and converts in-flight legacy events to one rare meteor per ticket while
+preserving normalized progress and payment flags. Unknown nested versions are
+rejected before mutation or replacement. Duplicate slots are accepted up to owned
+quantity; missing quantities mean one. Load restores research before the round and
+then resumes targets. Mid-round equipment changes are sticky, including A→B→A;
+uninstalled acquisition has a separate growth field.
 Legacy `equipped`/`secondary` or two-slot arrays restore the first two slots;
 the old `andromeda.modules` payload is a fallback, and its active-stage flag is ignored.
-Invalid/duplicate/unowned entries are sanitized; missing data grants no purchases.
+Invalid/excess-copy/unowned entries are sanitized; missing data grants no purchases.
 Popup-open state is never persisted.
 
 Autosave runs every 60 observation seconds, on purchases, round end and slot changes.
