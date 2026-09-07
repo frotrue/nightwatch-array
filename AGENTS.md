@@ -1,5 +1,29 @@
 # Nightwatch Array Project Instructions
 
+## Working Style
+
+Adapted from [OpenAI's GPT-6 Astra prompting guidance](https://developers.openai.com/api/docs/guides/latest-model?model=gpt-6-astra#prompting-best-practices), reviewed 2026-09-07.
+
+- Finish action requests within their scope. Infer routine details, retain prior
+  approvals, and incorporate corrections without losing the original task.
+- Ask for missing decisions affecting scope, design, or irreversible actions.
+  Prepare authorized work first; continue independent work while awaiting answers.
+- Explicit user instructions override skill guidelines. If a file blocks work,
+  link it, quote the rule, and distinguish the requirement from your interpretation.
+- Lead with the result in concise, plain prose. Use lists where useful; report
+  verification and material limitations.
+- Keep simple edits and CodeGraph exploration local. When delegation is
+  authorized, give agents independent tasks, clear ownership, and readable handoffs.
+- Complete required checks; repeat or broaden them only for changes, failures,
+  or unresolved concerns. Add tests for meaningful behavior, avoiding duplication
+  of implementation details.
+
+These defaults supplement the project contracts below. In particular, routine
+implementation choices do not need a design meeting, but a conflict with
+`docs/design.md` still follows Orientation. Test calibration does not waive the
+Windows export or commit requirements. Agent Room turn boundaries apply only
+while participating in a room meeting.
+
 ## Orientation
 
 Read before changing anything:
