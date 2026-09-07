@@ -13,7 +13,9 @@ Adapted from [OpenAI's GPT-6 Astra prompting guidance](https://developers.openai
 - Lead with the result in concise, plain prose. Use lists where useful; report
   verification and material limitations.
 - Autonomously use subagents for independent work when this is expected to save
-  time or improve quality. Start with 1-2; add more only when independent work
+  time or improve quality after startup, handoff, and review costs. Keep quick
+  or tightly coupled work local when delegation delays the next decision.
+  Start with 1-2; add more only when independent work
   justifies the coordination and usage cost. Delegate only with clear file
   ownership or a read-only remit, completion criteria, and useful independent
   work for the primary agent. Handle an isolated small edit directly.
@@ -28,8 +30,9 @@ Adapted from [OpenAI's GPT-6 Astra prompting guidance](https://developers.openai
   keeps context-dependent decisions, difficult judgement, and final integration.
   If the selected model/effort is unavailable, handle the work directly and
   report the limitation instead of silently inheriting Astra or substituting.
-- Give each agent a concrete goal, relevant context, owned files or a read-only
-  remit, and completion criteria. Use fresh context by default
+- Give each agent one outcome, exact cwd, relevant context, owned files or
+  commands, constraints, completion evidence, and a stop condition. Include
+  before/after behavior for implementation. Use fresh context by default
   (`fork_turns: "none"` where supported), with necessary instructions and evidence rather
   than the full conversation. Prefer independent regression, save
   compatibility, and documentation checks; parallelize implementation when file
@@ -43,13 +46,56 @@ Adapted from [OpenAI's GPT-6 Astra prompting guidance](https://developers.openai
   results against the actual changes and owns integration and final validation.
   Use readable handoffs; delegation does not expand approved design scope or
   waive the completion requirements below.
-- Assign validation responsibility in the handoff: subagents run focused checks;
+- Assign validation responsibility in the handoff: editors run focused checks;
   the primary agent owns integration tests, visual review, build, commit, and
-  requested push. Preserve required independent verification without having
+  requested push. Command execution may be delegated without transferring final
+  responsibility. Preserve required independent verification without having
   every agent repeat the full validation suite.
-- Complete required checks; repeat or broaden them only for changes, failures,
-  or unresolved concerns. Add tests for meaningful behavior, avoiding duplication
-  of implementation details.
+- Give shared result files one writer; serialize work sharing mutable outputs,
+  ports, or services. Avoid duplicate jobs and automatic agent chains; nested
+  delegation requires an explicit assignment.
+
+### Verification efficiency
+
+- Batch independent searches and reads with focused output; inspect every result.
+  Keep dependent edits/checks sequential and review the completed diff without
+  repeatedly rereading it. Expand only to resolve a specific gap.
+- For reversible, low-impact copy/style/docs/config edits, use diff review and
+  useful existing or visual checks. Add tests for meaningful behavior and concrete
+  risks, not copied formulas or tunable style values. Do not create test
+  infrastructure merely for a small edit. Required repository gates still apply.
+- Skip checks covered by a planned aggregate unless an earlier result is needed.
+  Reuse passes only when relevant inputs are unchanged, preserving required
+  independent verification. After failure, fix the cause and rerun affected checks
+  first; broaden only for integration needs or a specific unresolved concern.
+  Stop when selected checks and required gates pass.
+- Do not change unrelated product code or weaken assertions for an environment
+  or fixture failure. Establish the contract or environment difference; workers
+  return scope or acceptance changes to the primary agent.
+
+### Execution-only assignments
+
+Apply these restrictions only when a worker is explicitly assigned command
+execution and result collection. Existing Luna implementation work is permitted.
+
+- Keep the model policy above. Delegate supplied commands/scripts only when
+  runtime or output justifies it; do not create scripts or elaborate handoffs
+  merely to use a runner. Include cwd, prerequisites, whole-job completion
+  evidence, time limits, and cancellation ownership in the assignment.
+- The runner does not edit source/config/tests, install dependencies, change
+  acceptance criteria, commit/push, clean/reset/checkout, or spawn agents.
+  Expected command artifacts and concise reports are allowed.
+- One owner executes and monitors each job, preserving handles, logs, and exit
+  status. Resume existing jobs; transfer monitoring ownership explicitly.
+  Phase success or 100% progress is not completion. Failed prerequisites block
+  dependent checks; safe independent checks may continue. Do not use stale builds.
+- Use completion signals or bounded waits within tool limits. Retry only after
+  a concrete fix or explicit bounded policy; report any in-scope correction of
+  a demonstrated invocation/collection error. Cancel only the authorized job.
+- Report PASS, FAIL, BLOCKED, or TIMEOUT with exit codes, decisive output, logs,
+  skipped checks, and running jobs. Missing or stale evidence is not a pass.
+  Send actionable blockers promptly and final evidence once; the primary agent
+  handles diagnosis and scope changes.
 
 These defaults supplement the project contracts below. In particular, routine
 implementation choices do not need a design meeting, but a conflict with
