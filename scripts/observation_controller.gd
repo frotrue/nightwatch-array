@@ -1,6 +1,7 @@
 extends Node2D
 
 const UITheme = preload("res://scripts/ui_theme.gd")
+const Modules = preload("res://scripts/observation_modules.gd")
 
 const TRACKING_BREAK_MULTIPLIER := 1.72
 const TRACKING_GRACE_SECONDS := 0.14
@@ -35,6 +36,11 @@ var perseid_target_count_last_frame: int = -1
 var native_cursor_visible: bool = false
 var interaction_mode: InteractionMode = InteractionMode.NONE
 var pending_blank_distance: float = 0.0
+var primary_tracking_id := 0
+var primary_tracking_seconds := 0.0
+var _manual_frame_active := false
+var _manual_frame_primary = null
+var _manual_frame_secondary = null
 
 
 func setup(target_layer: Node2D, progression_controller: Node, hud_layer: CanvasLayer, survey_controller: Node2D = null, view: Camera2D = null, extra_target_layer = null) -> void:
@@ -66,6 +72,11 @@ func _exit_tree() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PAUSED:
+		_set_m31_manual_contact(false)
+
+
 func reset() -> void:
 	selected_meteor = null
 	hovered_meteor = null
@@ -77,6 +88,8 @@ func reset() -> void:
 	perseid_target_count_last_frame = -1
 	interaction_mode = InteractionMode.NONE
 	pending_blank_distance = 0.0
+	_reset_primary_tracking()
+	_set_m31_manual_contact(false)
 	if survey != null:
 		survey.set_scanning(false, cursor_position)
 	if hud != null:
@@ -96,6 +109,10 @@ func _process(delta: float) -> void:
 		previous_cursor_position = cursor_position
 		cursor_position = sampled_cursor
 	var holding: bool = Input.is_action_pressed(&"nw_observe")
+	# The flag describes this rendered input frame, never a past M31 selection.
+	# Resetting it before contact evaluation also prevents paused/modal state from
+	# leaving Reference Bus eligible after input has stopped.
+	_set_m31_manual_contact(false)
 	var cursor_on_ui := _cursor_is_on_ui()
 	_set_native_cursor_visible(cursor_on_ui)
 	if holding and not cursor_on_ui:
@@ -183,6 +200,8 @@ func _clear_interaction_mode() -> void:
 	tracking_grace_remaining = 0.0
 	interaction_mode = InteractionMode.NONE
 	pending_blank_distance = 0.0
+	_reset_primary_tracking()
+	_set_m31_manual_contact(false)
 	if survey != null:
 		survey.set_scanning(false, cursor_position)
 
@@ -196,9 +215,17 @@ func _update_manual_tracking(delta: float, keep_primary: bool = false) -> bool:
 		if _selection_is_valid():
 			tracking_grace_remaining = TRACKING_GRACE_SECONDS
 	if not _selection_is_valid():
+		_reset_primary_tracking()
 		return false
 
 	var primary = selected_meteor
+	# Synchronous completion can release selected_meteor during this pass. Keep
+	# the two boosted recipients stable so successive completions cannot promote
+	# every additional target into Dual Processor's second position.
+	_manual_frame_active = true
+	_manual_frame_primary = primary
+	_manual_frame_secondary = _dual_processor_secondary() if modules != null and modules.has("dual_processor") else null
+	_sync_primary_tracking(primary)
 	var tracking_radius: float = primary.get_tracking_radius(_world_px(_module_tracking_radius()))
 	var current_distance: float = _target_contact_distance(primary, cursor_position)
 	if _apply_manual_contact(primary, delta):
@@ -211,12 +238,16 @@ func _update_manual_tracking(delta: float, keep_primary: bool = false) -> bool:
 		tracking_grace_remaining -= delta
 		if tracking_grace_remaining <= 0.0:
 			selected_meteor = null
+			_reset_primary_tracking()
 
 	if progression.has_upgrade("multi_target_analysis") or (modules != null and int(modules.effect("targets")) > 1):
 		_observe_additional_targets(delta, primary)
 		var closest_tracked = _closest_valid_tracked_target()
 		if closest_tracked != null and (not keep_primary or not _selection_is_valid()):
 			selected_meteor = closest_tracked
+	_manual_frame_active = false
+	_manual_frame_primary = null
+	_manual_frame_secondary = null
 	return true
 
 
@@ -235,22 +266,27 @@ func _apply_manual_contact(target, delta: float) -> bool:
 	if not _target_is_valid(target):
 		return false
 	var tracking_radius: float = target.get_tracking_radius(_world_px(_module_tracking_radius()))
+	var manual_speed := _module_manual_speed_for_target(target)
 	if target.has_method("apply_manual_cursor_path"):
-		return target.apply_manual_cursor_path(
+		var path_contact: bool = target.apply_manual_cursor_path(
 			delta,
 			previous_cursor_position,
 			cursor_position,
 			tracking_radius,
-			_module_manual_speed()
+			manual_speed
 		)
+		if path_contact:
+			_note_manual_contact(target, delta)
+		return path_contact
 	var current_distance: float = _target_contact_distance(target, cursor_position)
 	if current_distance <= tracking_radius:
 		target.apply_manual_observation(
 			delta,
 			current_distance,
 			tracking_radius,
-			_module_manual_speed()
+			manual_speed
 		)
+		_note_manual_contact(target, delta)
 		return true
 	var swept_distance := _target_cursor_path_distance(target)
 	if swept_distance <= tracking_radius:
@@ -261,10 +297,51 @@ func _apply_manual_contact(target, delta: float) -> bool:
 			delta * contact_scale,
 			swept_distance,
 			tracking_radius,
-			_module_manual_speed()
+			manual_speed
 		)
+		_note_manual_contact(target, delta * contact_scale)
 		return true
+	if _trail_integrator_eligible(target):
+		var trail_distance := _trail_cursor_path_distance(target)
+		if trail_distance <= tracking_radius:
+			var trail_scale := _estimate_sweep_contact_scale(tracking_radius, trail_distance)
+			var trail_speed := manual_speed * float(Modules.DEFINITIONS.trail_integrator.trail_progress)
+			target.apply_manual_observation(
+				delta * trail_scale,
+				trail_distance,
+				tracking_radius,
+				trail_speed
+			)
+			_note_manual_contact(target, delta * trail_scale)
+			return true
 	return false
+
+
+func _note_manual_contact(target, effective_delta: float) -> void:
+	# Completion handlers can release a target synchronously from the observation
+	# call above. Do not recreate a live-contact flag after that release.
+	if not _target_is_valid(target):
+		return
+	if target == selected_meteor:
+		primary_tracking_seconds += maxf(0.0, effective_delta)
+	if String(target.get("type_id")) == "andromeda":
+		_set_m31_manual_contact(true)
+
+
+func _trail_integrator_eligible(target) -> bool:
+	if modules == null or not modules.has("trail_integrator"):
+		return false
+	if not target.has_method("get_recent_observation_trail"):
+		return false
+	return String(target.get("type_id")) not in ["andromeda", "fireball", "major"]
+
+
+func _trail_cursor_path_distance(target) -> float:
+	var closest := INF
+	var trail: PackedVector2Array = target.get_recent_observation_trail()
+	for point in trail:
+		closest = minf(closest, _distance_to_cursor_path(point))
+	return closest
 
 
 func _append_tracked_if_valid(target) -> void:
@@ -300,6 +377,8 @@ func release_target(target = null) -> void:
 			hovered_meteor = null
 	if target == null or selected_meteor == target:
 		selected_meteor = null
+		_reset_primary_tracking()
+		_set_m31_manual_contact(false)
 		if target == null:
 			tracked_meteors.clear()
 			interaction_mode = InteractionMode.NONE
@@ -321,6 +400,8 @@ func _find_target_under_cursor():
 		# Swept point-to-segment distance prevents fast mouse movement from
 		# tunnelling straight through a target between two rendered frames.
 		var distance: float = _target_cursor_path_distance(child)
+		if _trail_integrator_eligible(child):
+			distance = minf(distance, _trail_cursor_path_distance(child))
 		if distance <= tracking_radius and distance < closest_distance:
 			closest = child
 			closest_distance = distance
@@ -374,6 +455,26 @@ func _selection_is_valid() -> bool:
 
 func _target_is_valid(target) -> bool:
 	return is_instance_valid(target) and not target.is_queued_for_deletion() and target.has_method("can_be_tracked") and target.can_be_tracked()
+
+
+func _sync_primary_tracking(target) -> void:
+	if target == null or not is_instance_valid(target):
+		_reset_primary_tracking()
+		return
+	var target_id: int = target.get_instance_id()
+	if primary_tracking_id != target_id:
+		primary_tracking_id = target_id
+		primary_tracking_seconds = 0.0
+
+
+func _reset_primary_tracking() -> void:
+	primary_tracking_id = 0
+	primary_tracking_seconds = 0.0
+
+
+func _set_m31_manual_contact(active: bool) -> void:
+	if modules != null and modules.has_method("set_m31_manual_active"):
+		modules.set_m31_manual_active(active)
 
 
 func _cursor_is_on_ui() -> bool:
@@ -622,4 +723,44 @@ func _module_tracking_radius() -> float:
 	return progression.get_tracking_radius() * (float(modules.effect("radius")) if modules != null and progression.galaxy_unlocked() else 1.0)
 
 func _module_manual_speed() -> float:
+	# Compatibility helper retained for existing callers/tests. Conditional module
+	# effects require a live target and are evaluated below.
 	return progression.get_manual_analysis_speed_multiplier() * (float(modules.effect("speed")) if modules != null and progression.galaxy_unlocked() else 1.0)
+
+
+func _module_manual_speed_for_target(target) -> float:
+	var legacy_speed := _module_manual_speed()
+	if modules == null or progression == null or not progression.galaxy_unlocked():
+		return legacy_speed
+	var new_multiplier := float(modules.effect("new_speed"))
+	var is_primary: bool = target == (_manual_frame_primary if _manual_frame_active else selected_meteor)
+	if modules.has("long_baseline") and is_primary and primary_tracking_seconds >= 1.0:
+		new_multiplier *= float(Modules.DEFINITIONS.long_baseline.baseline_speed)
+	if modules.has("dual_processor"):
+		if is_primary or target == (_manual_frame_secondary if _manual_frame_active else _dual_processor_secondary()):
+			new_multiplier *= float(Modules.DEFINITIONS.dual_processor.primary_speed)
+		else:
+			new_multiplier *= float(Modules.DEFINITIONS.dual_processor.secondary_speed)
+	if modules.has("wide_correlation"):
+		new_multiplier *= float(Modules.DEFINITIONS.wide_correlation.primary_speed if is_primary else Modules.DEFINITIONS.wide_correlation.secondary_speed)
+	if String(target.get("type_id")) == "andromeda":
+		if modules.has("reference_bus"):
+			new_multiplier *= float(Modules.DEFINITIONS.reference_bus.m31_manual_speed)
+		if modules.has_method("shutter_active") and modules.shutter_active():
+			new_multiplier *= float(Modules.DEFINITIONS.shutter_weave.shutter_speed)
+	# New mechanics may combine only inside this bounded range. The old module
+	# multiplier remains outside it so existing loadouts retain exact behavior.
+	return legacy_speed * clampf(new_multiplier, 0.25, 2.5)
+
+
+func _dual_processor_secondary():
+	var closest = null
+	var closest_distance := INF
+	for target in _target_children():
+		if target == selected_meteor or not _target_is_valid(target):
+			continue
+		var distance := _target_contact_distance(target, cursor_position)
+		if distance < closest_distance:
+			closest_distance = distance
+			closest = target
+	return closest

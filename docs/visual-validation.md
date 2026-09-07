@@ -55,12 +55,15 @@ Run without `--headless`; the same renderer flags above can be used.
 | Script under `tests/` | Output and coverage | Marker |
 |---|---|---|
 | `deep_sky_preview.gd` | Sixteen stable frames in `build/deep_sky_review/<timestamp>/`: original sky/M31, chart gates/purchases, module popup, locked/equipped/full states and edge tooltips in en/ko | `DEEP_SKY_PREVIEW_PASS` |
+| `expansion_preview.gd` | Fifteen stable frames in `build/expansion_review/<timestamp>/`: bilingual research, plans, persisted analysis offer, full 14-module catalogue, three anomaly types, record closure and acquisition summary; Korean catalogue scroll end | `EXPANSION_PREVIEW_PASS` |
 | `effect_feedback_preview.gd` | Six PNG/JSON pairs in `build/effect_feedback_review/`: routine/accent poses, visible installation-rule start/mid/end, continuation selection | `EFFECT_PREVIEW_PASS` |
 | `research_chart_preview.gd` | `build/research_chart_preview.png`; synthetic 81/107 research, 1,284,000 Data, fifth-round/80s pose | `PREVIEW_SAVED` |
 | `hud_preview.gd` | `build/hud_preview.png` or selected diagnostic pose below | `PREVIEW_SAVED` |
 
 Deep-sky capture has a 45s watchdog and validates frozen fixtures, source/image hashes
 and stable frames. The effect preview checks real production purchase/completion routes.
+The extension preview uses the same source/image checks with a 60s watchdog. Its
+grants, completed fields, balances and frozen targets are synthetic layout poses.
 Preview marker semantics differ: legacy `PREVIEW_SAVED` only confirms a file write.
 The chart's 80s diagnostic label does not change playable round duration.
 

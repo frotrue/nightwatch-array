@@ -1,0 +1,58 @@
+keys,en,ko
+MODX_INVENTORY,Module catalogue,모듈 목록
+MODX_COUNT,%d / %d owned,%d / %d종 보유
+MODX_FILTER_ALL,All,전체
+MODX_FILTER_OWNED,Owned,보유
+MODX_FILTER_TRACE,Tracking,추적
+MODX_FILTER_SWEEP,Survey,탐색
+MODX_FILTER_LINK,Relay,연계
+MODX_OWNED,OWNED,보유
+MODX_LOCKED,LOCKED,미보유
+MODX_CATEGORY_TRACE,Tracking,추적
+MODX_CATEGORY_SWEEP,Survey,탐색
+MODX_CATEGORY_LINK,Relay,연계
+MODX_CATEGORY_OTHER,Other,기타
+MODX_ACQUIRE_RESEARCH,Research grant · %s,연구 보상 · %s
+MODX_ACQUIRE_SAMPLE,Sample pool · %s,표본 풀 · %s
+MODX_ACQUIRE_PURCHASE,Purchase in the Andromeda chart,안드로메다 성도에서 구매
+MODX_LOCKED_ACTION,View the acquisition path; this module cannot be equipped yet.,획득 경로를 확인하세요. 아직 장착할 수 없습니다.
+MODX_CURRENT,CURRENT LOADOUT,현재 편성
+MODX_STATIC_SUMMARY,Manual speed ×%.2f · Radius ×%.2f · M31 Data ×%.2f · M31 wait ×%.2f,수동 속도 ×%.2f · 반경 ×%.2f · M31 데이터 ×%.2f · M31 대기 ×%.2f
+MODX_CONDITIONAL,Conditional effects,조건부 효과
+MODX_CONDITIONAL_NONE,No conditional effects active.,활성 조건부 효과 없음
+MODULE_TRAIL_INTEGRATOR_NAME,Trail integrator,궤적 적분기
+MODULE_TRAIL_INTEGRATOR_SHORT,Trail integrator,궤적 적분
+MODULE_TRAIL_INTEGRATOR_DESC,"Observe the last 1s of trail at 60% speed; manual ×0.90. Excludes M31, fireballs and major events.",최근 1초의 궤적을 속도 ×0.60으로 관측합니다. 수동 ×0.90. M31·화구·주요 사건 제외.
+MODULE_TRAIL_INTEGRATOR_COMBO,Hold over the recent trail when the moving head leaves your cursor.,움직이는 본체를 놓쳤다면 최근 궤적 위에서 관측을 이어갑니다.
+MODULE_SWEEP_OPTICS_NAME,Sweep optics,훑기 광학
+MODULE_SWEEP_OPTICS_SHORT,Sweep optics,훑기 광학
+MODULE_SWEEP_OPTICS_DESC,Sweep charge ×1.35; afterglow discovery width ×1.50; manual ×0.90.,훑기 충전 ×1.35. 잔광 발견 폭 ×1.50. 수동 ×0.90.
+MODULE_SWEEP_OPTICS_COMBO,Keep moving through blank sky to widen afterglow discovery.,빈 하늘을 움직여 잔광 발견 범위를 넓힙니다.
+MODULE_RELAY_BUS_NAME,Relay bus,연계 버스
+MODULE_RELAY_BUS_SHORT,Relay bus,연계 버스
+MODULE_RELAY_BUS_DESC,Targets with 25% manual work use dish output ×1.75; manual ×0.90.,수동 작업 25%가 들어간 표적은 접시 출력 ×1.75. 수동 ×0.90.
+MODULE_RELAY_BUS_COMBO,Hand off a partly observed target to the array.,부분 관측한 표적을 접시에 인계합니다.
+MODULE_LONG_BASELINE_NAME,Long baseline,장기선
+MODULE_LONG_BASELINE_SHORT,Long baseline,장기선
+MODULE_LONG_BASELINE_DESC,"After 1s on the primary target, effective work ×1.60; manual ×0.85. Resets on target switch.",주 표적 1초 후 유효 작업 ×1.60. 수동 ×0.85. 주 표적 전환 시 초기화.
+MODULE_LONG_BASELINE_COMBO,Stay on one primary target to build the baseline.,주 표적 하나를 계속 관측해 기준선을 만듭니다.
+MODULE_DUAL_PROCESSOR_NAME,Dual processor,이중 처리기
+MODULE_DUAL_PROCESSOR_SHORT,Dual processor,이중 처리
+MODULE_DUAL_PROCESSOR_DESC,Primary and nearest extra target ×1.30; other extra targets ×0.55.,주 표적과 가장 가까운 추가 표적 ×1.30. 나머지 추가 표적 ×0.55.
+MODULE_DUAL_PROCESSOR_COMBO,The second processor favors a nearby companion without removing range.,두 번째 처리기가 가까운 동반 표적을 우선합니다.
+MODULE_AFTERGLOW_ARCHIVE_NAME,Afterglow archive,잔광 기록고
+MODULE_AFTERGLOW_ARCHIVE_SHORT,Afterglow archive,잔광 기록
+MODULE_AFTERGLOW_ARCHIVE_DESC,"Restore one missed natural common or fast target as an 8s afterglow; 50% Data, no sample or chain.","놓친 자연 common·fast 표적 하나를 8초 잔광으로 복원합니다. 데이터 50%, 표본·연쇄 없음."
+MODULE_AFTERGLOW_ARCHIVE_COMBO,Use the archive to recover one missed ordinary target during a round.,회차 중 놓친 일반 표적 하나를 기록고에서 복원합니다.
+MODULE_WIDE_CORRELATION_NAME,Wide correlation,광역 상관
+MODULE_WIDE_CORRELATION_SHORT,Correlation,광역 상관
+MODULE_WIDE_CORRELATION_DESC,Extra targets ×1.35; primary target ×0.75.,추가 표적 ×1.35. 주 표적 ×0.75.
+MODULE_WIDE_CORRELATION_COMBO,Spread work across the available field instead of concentrating on one target.,한 표적에 집중하는 대신 보이는 영역 전체에 작업을 분산합니다.
+MODULE_REFERENCE_BUS_NAME,Reference bus,기준 버스
+MODULE_REFERENCE_BUS_SHORT,Reference bus,기준 버스
+MODULE_REFERENCE_BUS_DESC,"During manual M31 observation, dish output ×1.60; manual M31 ×0.75.",M31 수동 관측 중 접시 출력 ×1.60. M31 수동 ×0.75.
+MODULE_REFERENCE_BUS_COMBO,Manually observe M31 while your dishes work on other targets.,M31을 직접 관측하는 동안 접시가 다른 표적을 더 빠르게 관측합니다.
+MODULE_SHUTTER_WEAVE_NAME,Shutter weave,셔터 직조
+MODULE_SHUTTER_WEAVE_SHORT,Shutter weave,셔터 직조
+MODULE_SHUTTER_WEAVE_DESC,"After direct completion, M31 for 5s ×1.35; M31 waiting ×1.25. Refresh only.",자격 표적 직접 완료 후 5초 M31 ×1.35. M31 대기 ×1.25. 갱신만 허용.
+MODULE_SHUTTER_WEAVE_COMBO,Finish a qualifying target directly before the next M31 window.,다음 M31 창 전에 자격 표적을 직접 완료합니다.

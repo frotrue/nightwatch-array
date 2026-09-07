@@ -14,6 +14,7 @@ signal tutorial_replay_requested
 const Balance = preload("res://scripts/game_balance.gd")
 const UITheme = preload("res://scripts/ui_theme.gd")
 const CatalogueEndingCoda = preload("res://scripts/catalogue_ending_coda.gd")
+const ExtensionData = preload("res://scripts/expansion_data.gd")
 const END_REVEAL_TOTAL_SECONDS := 8.0
 const END_REVEAL_SKIP_DELAY_MSEC := 2000
 const OBSERVATION_CLOCK_WIDTH := 140.0
@@ -95,6 +96,10 @@ var phase_summary_split: Label
 var phase_summary_comparison: Label
 var phase_summary_badges: Label
 var phase_summary_button: Button
+var extension_readout: Control
+var extension_objective_label: Label
+var extension_samples_label: Label
+var extension_should_show: bool = false
 var settings_button: Button
 var settings_overlay: Control
 var settings_panel: Control
@@ -288,6 +293,7 @@ func set_observation_phase(round_number: int, seconds_remaining: float, phase_du
 	set_phase_window(float(whole_seconds) / maxf(1.0, float(phase_window_seconds)))
 	if phase_changed:
 		_refresh_phase_time_label()
+	_refresh_extension()
 
 
 func set_upgrade_phase(completed_round: int) -> void:
@@ -296,6 +302,7 @@ func set_upgrade_phase(completed_round: int) -> void:
 	observation_phase_round = maxi(1, completed_round)
 	observation_phase_second = 0
 	_refresh_phase_time_label()
+	_refresh_extension()
 	if progression != null:
 		_refresh_progression()
 
@@ -589,21 +596,29 @@ func is_end_open() -> bool:
 # Live readouts that belong to the round that just ended. The summary is
 # typeset straight onto the sky now, so there is no panel in front of them and
 # they would sit inside the summary's own column.
-const IN_ROUND_GROUPS := ["DataReadout", "PhaseClock", "ReadySystems", "TrackingCluster", "EventBanner"]
+const IN_ROUND_GROUPS := ["DataReadout", "PhaseClock", "ExtensionReadout", "ReadySystems", "TrackingCluster", "EventBanner"]
 
 
 func _refresh_in_round_readouts() -> void:
 	# Any of the three overlays owns the screen while it is up, and none of them
 	# has a panel to hide the live readouts behind any more.
-	var covered := is_phase_summary_open()
-	covered = covered or (end_overlay != null and end_overlay.visible)
-	covered = covered or (settings_overlay != null and settings_overlay.visible)
-	covered = covered or is_controls_open()
-	covered = covered or (startup_overlay != null and startup_overlay.visible)
+	var covered := _in_round_readouts_covered()
 	if covered:
 		_stash_in_round_readouts()
 	else:
 		_restore_in_round_readouts()
+		if extension_readout != null:
+			extension_readout.visible = extension_should_show
+
+
+func _in_round_readouts_covered() -> bool:
+	return (
+		is_phase_summary_open()
+		or (end_overlay != null and end_overlay.visible)
+		or (settings_overlay != null and settings_overlay.visible)
+		or is_controls_open()
+		or (startup_overlay != null and startup_overlay.visible)
+	)
 
 
 func _stash_in_round_readouts() -> void:
@@ -628,6 +643,8 @@ func _restore_in_round_readouts() -> void:
 		if group != null:
 			group.visible = bool(in_round_visibility[group_name_variant])
 	in_round_visibility.clear()
+	if extension_readout != null:
+		extension_readout.visible = extension_should_show
 
 
 func show_phase_summary(
@@ -663,6 +680,32 @@ func show_phase_summary(
 		badge_texts.append(tr("PHASE_SUMMARY_BADGE_SHOWER"))
 	if new_best:
 		badge_texts.append(tr("PHASE_SUMMARY_BADGE_BEST"))
+	var modules_acquired = result.get("modules_acquired", [])
+	if modules_acquired is Array and not modules_acquired.is_empty():
+		var module_names: Array[String] = []
+		for module_variant in modules_acquired:
+			var module_id := String(module_variant)
+			if module_id.is_empty():
+				continue
+			var module_name := module_id
+			if deep_sky != null and deep_sky.has_method("research_name"):
+				module_name = String(deep_sky.research_name(module_id))
+			module_names.append(module_name)
+		if not module_names.is_empty():
+			badge_texts.append(tr("PHASE_SUMMARY_MODULES_ACQUIRED") % _bounded_acquired_names(module_names))
+	var extension_research_acquired = result.get("extension_research_acquired", [])
+	if extension_research_acquired is Array and not extension_research_acquired.is_empty():
+		var research_names: Array[String] = []
+		for research_variant in extension_research_acquired:
+			var research_id := String(research_variant)
+			if research_id.is_empty():
+				continue
+			var research_name := research_id
+			if deep_sky != null and deep_sky.has_method("research_name"):
+				research_name = String(deep_sky.research_name(research_id))
+			research_names.append(research_name)
+		if not research_names.is_empty():
+			badge_texts.append(tr("PHASE_SUMMARY_RESEARCH_ACQUIRED") % _bounded_acquired_names(research_names))
 	phase_summary_badges.text = "  •  ".join(badge_texts)
 	phase_summary_badges.visible = not badge_texts.is_empty()
 	phase_summary_button.text = tr("PHASE_SUMMARY_CONTINUE")
@@ -676,6 +719,10 @@ func _round_comparison_text(round_rate: float, previous_result: Dictionary, comp
 	match comparison_state:
 		"systems_changed":
 			return tr("PHASE_SUMMARY_SYSTEMS_CHANGED") % round_rate
+		"equipment_changed":
+			return tr("PHASE_SUMMARY_EQUIPMENT_CHANGED") % round_rate
+		"plan_changed":
+			return tr("PHASE_SUMMARY_PLAN_CHANGED") % round_rate
 		"session_resumed":
 			return tr("PHASE_SUMMARY_SESSION_RESUMED") % round_rate
 		"first_baseline":
@@ -689,6 +736,12 @@ func _round_comparison_text(round_rate: float, previous_result: Dictionary, comp
 		return tr("PHASE_SUMMARY_COMPARE_DELTA") % [round_rate, signed_delta]
 	var percent_delta := int(round(delta * 100.0 / previous_rate))
 	return tr("PHASE_SUMMARY_COMPARE") % [round_rate, signed_delta, _signed_round_value(percent_delta)]
+
+
+func _bounded_acquired_names(names: Array[String]) -> String:
+	if names.size() <= 2:
+		return ", ".join(names)
+	return "%s, %s %s" % [names[0], names[1], tr("PHASE_SUMMARY_MORE_ACQUIRED") % (names.size() - 2)]
 
 
 func _signed_round_value(value: int) -> String:
@@ -952,6 +1005,9 @@ func _refresh_ready_notice() -> void:
 		for id in deep_sky.modules.RESEARCH_IDS:
 			if deep_sky.can_purchase(id):
 				ready += 1
+		for id in ExtensionData.RESEARCH_ORDER:
+			if deep_sky.can_purchase(id):
+				ready += 1
 	if ready == last_ready_count:
 		return
 	last_ready_count = ready
@@ -962,6 +1018,26 @@ func _refresh_ready_notice() -> void:
 		_ensure_ready_pulse()
 	elif ready_pulse_tween != null and ready_pulse_tween.is_valid():
 		ready_pulse_tween.kill()
+
+
+func _refresh_extension() -> void:
+	if extension_readout == null:
+		return
+	var objective := ""
+	var modules_visible := false
+	if observation_phase_active and deep_sky != null and deep_sky.has_method("current_objective"):
+		objective = String(deep_sky.current_objective()).strip_edges()
+		modules_visible = deep_sky.has_method("modules_unlocked") and bool(deep_sky.modules_unlocked())
+	extension_objective_label.text = objective
+	extension_objective_label.visible = not objective.is_empty()
+	extension_samples_label.visible = modules_visible
+	if modules_visible:
+		extension_samples_label.text = tr("EXT_SAMPLES_COUNT") % maxi(0, int(deep_sky.get("samples")))
+	extension_should_show = extension_objective_label.visible or extension_samples_label.visible
+	if not _in_round_readouts_covered():
+		extension_readout.visible = extension_should_show
+	_layout_extension_readout()
+	_refresh_in_round_readouts()
 
 
 func _ensure_ready_pulse() -> void:
@@ -1490,6 +1566,7 @@ func _apply_locale() -> void:
 	_refresh_save_status()
 	if progression != null:
 		_refresh_progression()
+	_refresh_extension()
 	_refresh_save_slot_views()
 
 
@@ -1504,6 +1581,7 @@ func _build_interface() -> void:
 
 	_build_data_readout()
 	_build_phase_clock()
+	_build_extension_readout()
 	_build_ready_notice()
 
 	banner_root = Control.new()
@@ -1686,6 +1764,37 @@ func _layout_phase_clock() -> void:
 	phase_window_fill.position = phase_window_track.position
 	phase_window_fill.size = Vector2(width if last_phase_window_width < 0.0 else last_phase_window_width, 1.0)
 	save_mode_label.position.y = line_y + UITheme.px(12.0)
+
+
+func _build_extension_readout() -> void:
+	extension_readout = Control.new()
+	extension_readout.name = "ExtensionReadout"
+	extension_readout.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	extension_readout.offset_left = UITheme.px(64.0)
+	extension_readout.offset_top = UITheme.px(166.0)
+	extension_readout.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	extension_readout.visible = false
+	root_control.add_child(extension_readout)
+
+	extension_objective_label = _spec_label("", UITheme.sans(), 20.0, UITheme.INK_HIGH, 0.01)
+	extension_objective_label.size = Vector2(UITheme.px(900.0), UITheme.px(30.0))
+	extension_objective_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	extension_objective_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	extension_readout.add_child(extension_objective_label)
+
+	extension_samples_label = _spec_label("", UITheme.sans(), 20.0, UITheme.ACCENT_TEXT, 0.12)
+	extension_samples_label.position = Vector2(0.0, UITheme.px(34.0))
+	extension_samples_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	extension_samples_label.visible = false
+	extension_readout.add_child(extension_samples_label)
+
+
+func _layout_extension_readout() -> void:
+	if extension_readout == null:
+		return
+	var width := UITheme.px(900.0)
+	extension_objective_label.size = Vector2(width, UITheme.px(30.0))
+	extension_samples_label.size.x = width
 
 
 func _build_ready_notice() -> void:
@@ -2079,7 +2188,7 @@ func _build_phase_summary_overlay() -> void:
 	phase_summary_data.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(phase_summary_data)
 
-	phase_summary_comparison = _spec_label("", UITheme.sans(), 17.0, UITheme.INK_MID, 0.02)
+	phase_summary_comparison = _spec_label("", UITheme.sans(), 20.0, UITheme.INK_MID, 0.02)
 	phase_summary_comparison.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	phase_summary_comparison.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(phase_summary_comparison)
@@ -2092,7 +2201,7 @@ func _build_phase_summary_overlay() -> void:
 	phase_summary_split.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(phase_summary_split)
 
-	phase_summary_badges = _spec_label("", UITheme.sans(), 15.0, UITheme.ACCENT_TEXT, 0.12)
+	phase_summary_badges = _spec_label("", UITheme.sans(), 20.0, UITheme.ACCENT_TEXT, 0.12)
 	phase_summary_badges.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	phase_summary_badges.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(phase_summary_badges)

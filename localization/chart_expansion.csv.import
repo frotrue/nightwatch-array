@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://bxt2urf7n3xs4"
+
+[deps]
+
+files=["res://localization/chart_expansion.en.translation", "res://localization/chart_expansion.ko.translation"]
+
+source_file="res://localization/chart_expansion.csv"
+dest_files=["res://localization/chart_expansion.en.translation", "res://localization/chart_expansion.ko.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

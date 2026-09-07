@@ -14,6 +14,12 @@ const CHANGE_SECONDS := 0.28
 const POPUP_BODY_SPEC_SIZE := 20 # 12px at UITheme.SCALE
 const POPUP_ACTION_SPEC_SIZE := 24 # 14px at UITheme.SCALE
 const POPUP_META_SPEC_SIZE := 16 # 10px at UITheme.SCALE
+const INVENTORY_COLUMNS := 3
+const INVENTORY_TILE_SPEC_SIZE := Vector2(188, 104)
+const INVENTORY_GAP_SPEC := 10.0
+const INVENTORY_SCROLL_SPEC_RECT := Rect2(1174, 414, 620, 338)
+const INVENTORY_GRID_SPEC_WIDTH := 600.0
+const INVENTORY_FILTERS := ["all", "owned", "trace", "sweep", "link"]
 
 class RingSlot:
 	extends Button
@@ -79,19 +85,36 @@ class RingSlot:
 		if has_focus() and not locked:
 			draw_arc(center, radius + UITheme.px(5), 0, TAU, 48, Color(UITheme.ACCENT_LINE, 0.55), UITheme.px(1), true)
 
+
 class InventoryTile:
 	extends Button
 	var owner_popup: CanvasLayer
 	var module_id := ""
+	var owned := false
+	var installed := false
+	var category := ""
+
+	func update_state(is_owned: bool, is_installed: bool, module_category: String) -> void:
+		owned = is_owned
+		installed = is_installed
+		category = module_category
+		queue_redraw()
+
 	func _draw() -> void:
-		var installed: bool = module_id in owner_popup.model().installed_ids()
 		var hover: bool = is_hovered() or has_focus()
-		draw_rect(Rect2(Vector2.ZERO, size), UITheme.GROUND)
-		draw_rect(Rect2(Vector2.ZERO, size), Color(UITheme.ACCENT_LINE, 0.9) if hover else Color(UITheme.INK_LOW, 0.6), false, UITheme.px(1), true)
-		Visual.draw_module(self, Rect2(Vector2.ONE * UITheme.px(13), size - Vector2.ONE * UITheme.px(26)), module_id, not installed)
+		var fill := UITheme.GROUND if owned else Color(UITheme.GROUND, 0.68)
+		var border := UITheme.ACCENT_LINE if hover else (UITheme.INK_MID if owned else UITheme.INK_LOW)
+		draw_rect(Rect2(Vector2.ZERO, size), fill)
+		draw_rect(Rect2(Vector2.ZERO, size), Color(border, 0.9 if owned or hover else 0.52), false, UITheme.px(1), true)
+		Visual.draw_module(self, Rect2(Vector2.ONE * UITheme.px(13), size - Vector2.ONE * UITheme.px(26)), module_id, owned and not installed)
 		var font: Font = UITheme.mono()
-		var code: String = Modules.DEFINITIONS[module_id].code
-		draw_string(font, Vector2(UITheme.px(6), UITheme.px(14)), code, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.size_px(POPUP_META_SPEC_SIZE), UITheme.INK_LOW if installed else UITheme.INK_MID)
+		var definition: Dictionary = Modules.DEFINITIONS.get(module_id, {})
+		var code: String = String(definition.get("code", module_id.to_upper()))
+		draw_string(font, Vector2(UITheme.px(7), UITheme.px(16)), code, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.size_px(POPUP_META_SPEC_SIZE), UITheme.INK_LOW if not owned else UITheme.INK_MID)
+		var short_name := owner_popup.tr("MODULE_%s_SHORT" % module_id.to_upper())
+		draw_string(UITheme.sans(), Vector2(UITheme.px(7), size.y - UITheme.px(28)), short_name, HORIZONTAL_ALIGNMENT_LEFT, size.x - UITheme.px(14), UITheme.size_px(POPUP_BODY_SPEC_SIZE), UITheme.INK_HIGH if owned else UITheme.INK_LOW)
+		var state_key := "MODX_OWNED" if owned else "MODX_LOCKED"
+		draw_string(UITheme.mono(), Vector2(UITheme.px(7), size.y - UITheme.px(9)), owner_popup.tr(state_key), HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.size_px(POPUP_META_SPEC_SIZE), UITheme.TOOLTIP_LABEL)
 		if installed:
 			var mark := Rect2(size - Vector2.ONE * UITheme.px(24), Vector2.ONE * UITheme.px(14))
 			draw_rect(mark, UITheme.TOOLTIP_LABEL, false, UITheme.px(1), true)
@@ -109,8 +132,13 @@ var close_button: Button
 var heading: Label
 var inventory_heading: Label
 var inventory_count: Label
+var inventory_scroll: ScrollContainer
+var inventory_grid: GridContainer
+var filter_buttons: Dictionary = {}
+var inventory_filter := "all"
 var summary_heading: Label
 var summary: Label
+var summary_details: Label
 var capacity_label: Label
 var instructions: Label
 var hint: Label
@@ -169,28 +197,51 @@ func _ready() -> void:
 	inventory_heading = _label(surface, Vector2(1180, 344), 420, POPUP_BODY_SPEC_SIZE, UITheme.INK_MID, true)
 	inventory_count = _label(surface, Vector2(1640, 344), 140, POPUP_BODY_SPEC_SIZE, UITheme.INK_MID, true)
 	inventory_count.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	for filter_index in range(INVENTORY_FILTERS.size()):
+		var filter_id: String = INVENTORY_FILTERS[filter_index]
+		var filter := _filter_action(surface, Vector2(1180 + filter_index * 117, 376), Vector2(108, 30), filter_id)
+		filter_buttons[filter_id] = filter
+	inventory_scroll = ScrollContainer.new()
+	inventory_scroll.position = Vector2(INVENTORY_SCROLL_SPEC_RECT.position) * UITheme.SCALE
+	inventory_scroll.size = Vector2(INVENTORY_SCROLL_SPEC_RECT.size) * UITheme.SCALE
+	inventory_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	inventory_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	inventory_scroll.focus_mode = Control.FOCUS_NONE
+	surface.add_child(inventory_scroll)
+	inventory_grid = GridContainer.new()
+	inventory_grid.columns = INVENTORY_COLUMNS
+	inventory_grid.custom_minimum_size = Vector2(UITheme.px(INVENTORY_GRID_SPEC_WIDTH), 0)
+	inventory_grid.add_theme_constant_override("h_separation", UITheme.px(INVENTORY_GAP_SPEC))
+	inventory_grid.add_theme_constant_override("v_separation", UITheme.px(INVENTORY_GAP_SPEC))
+	inventory_scroll.add_child(inventory_grid)
 	for id in Modules.DEFINITIONS:
 		var tile := InventoryTile.new()
 		tile.module_id = id
 		tile.owner_popup = self
-		tile.size = Vector2.ONE * UITheme.px(120)
+		tile.custom_minimum_size = INVENTORY_TILE_SPEC_SIZE * UITheme.SCALE
+		tile.size = INVENTORY_TILE_SPEC_SIZE * UITheme.SCALE
 		_empty_button_style(tile)
 		tile.pressed.connect(equip_from_inventory.bind(id))
 		tile.mouse_entered.connect(show_module_tooltip.bind(id))
 		tile.mouse_exited.connect(hide_tooltip)
-		tile.focus_entered.connect(show_module_tooltip.bind(id))
+		tile.focus_entered.connect(_on_tile_focus.bind(id))
 		tile.focus_exited.connect(hide_tooltip)
-		surface.add_child(tile)
+		inventory_grid.add_child(tile)
 		owned_buttons[id] = tile
-	summary_heading = _label(surface, Vector2(400, 832), 600, POPUP_BODY_SPEC_SIZE, UITheme.TOOLTIP_LABEL, true)
+	summary_heading = _label(surface, Vector2(400, 842), 600, POPUP_BODY_SPEC_SIZE, UITheme.TOOLTIP_LABEL, true)
 	summary_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	summary = _label(surface, Vector2(335, 860), 730, POPUP_BODY_SPEC_SIZE, UITheme.TOOLTIP_VALUE)
+	summary = _label(surface, Vector2(250, 872), 900, POPUP_BODY_SPEC_SIZE, UITheme.TOOLTIP_VALUE)
 	summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	capacity_label = _label(surface, Vector2(400, 888), 600, POPUP_BODY_SPEC_SIZE, UITheme.INK_MID, true)
+	summary_details = _label(surface, Vector2(250, 902), 900, POPUP_BODY_SPEC_SIZE, UITheme.TOOLTIP_BODY)
+	summary_details.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	summary_details.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	summary_details.size.y = UITheme.px(24)
+	capacity_label = _label(surface, Vector2(400, 944), 600, POPUP_BODY_SPEC_SIZE, UITheme.INK_MID, true)
 	capacity_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	instructions = _label(surface, Vector2(1180, 764), 600, POPUP_BODY_SPEC_SIZE, UITheme.TOOLTIP_BODY)
+	instructions = _label(surface, Vector2(1180, 766), 600, POPUP_BODY_SPEC_SIZE, UITheme.TOOLTIP_BODY)
 	instructions.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	hint = _label(surface, Vector2(1180, 864), 600, POPUP_BODY_SPEC_SIZE, UITheme.TOOLTIP_VALUE)
+	hint = _label(surface, Vector2(1180, 908), 600, POPUP_BODY_SPEC_SIZE, UITheme.TOOLTIP_VALUE)
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_build_tooltip()
 	overlay.hide()
 	set_process(false)
@@ -279,8 +330,14 @@ func refresh(animate: bool = true) -> void:
 		return
 	heading.text = tr("DEEP_MODULES")
 	close_button.text = tr("RING_CLOSE")
-	inventory_heading.text = tr("DEEP_OWNED")
-	inventory_count.text = tr("RING_MODULE_COUNT") % model().purchased.size()
+	inventory_heading.text = tr("MODX_INVENTORY")
+	inventory_count.text = _format_translation("MODX_COUNT", [model().purchased.size(), Modules.DEFINITIONS.size()], "%d / %d" % [model().purchased.size(), Modules.DEFINITIONS.size()])
+	for filter_id in filter_buttons:
+		var filter: Button = filter_buttons[filter_id]
+		filter.text = _filter_label(filter_id)
+		filter.add_theme_color_override("font_color", UITheme.ACCENT_TEXT if inventory_filter == filter_id else UITheme.INK_MID)
+		filter.add_theme_color_override("font_hover_color", UITheme.ACCENT_TEXT)
+		filter.add_theme_color_override("font_focus_color", UITheme.ACCENT_TEXT)
 	for index in range(Modules.MAX_SLOTS):
 		var id: String = model().slots[index]
 		var locked: bool = index >= model().unlocked_slots
@@ -289,28 +346,43 @@ func refresh(animate: bool = true) -> void:
 		slots[index].update_module(id, animate)
 		slot_captions[index].text = tr("RING_LOCKED") if locked else (tr("RING_EMPTY") if id.is_empty() else tr("MODULE_%s_SHORT" % id.to_upper()))
 		slot_captions[index].add_theme_color_override("font_color", UITheme.INK_LOW if locked else UITheme.INK_HIGH)
-	var placed := 0
+	var installed_ids: Array[String] = model().installed_ids()
 	for id in owned_buttons:
 		var tile: InventoryTile = owned_buttons[id]
-		tile.visible = id in model().purchased
-		if tile.visible:
-			tile.position = Vector2(1180 + (placed % 4) * 138, 410 + (placed / 4) * 138) * UITheme.SCALE
-			placed += 1
-			tile.queue_redraw()
-	summary_heading.text = tr("RING_CURRENT")
-	summary.text = tr("RING_SUMMARY") % [model().effect("speed"), model().effect("radius"), model().effect("targets")]
+		var definition: Dictionary = _definition(id)
+		tile.visible = _matches_filter(id, definition)
+		tile.update_state(id in model().purchased, id in installed_ids, _category_for(id, definition))
+		# A filtered grid keeps its original child order, so keyboard focus remains
+		# stable as modules are added to the catalog later.
+		tile.focus_mode = Control.FOCUS_ALL if tile.visible else Control.FOCUS_NONE
+	summary_heading.text = tr("MODX_CURRENT")
+	var old_speed := _effect_number("speed", 1.0)
+	var new_speed := _effect_number("new_speed", 1.0)
+	var manual_speed := old_speed * new_speed
+	summary.text = _format_translation("MODX_STATIC_SUMMARY", [manual_speed, _effect_number("radius", 1.0), _effect_number("m31_value", 1.0), _effect_number("m31_cooldown", 1.0)], "Manual ×%.2f · Radius ×%.2f · M31 ×%.2f · Wait ×%.2f" % [manual_speed, _effect_number("radius", 1.0), _effect_number("m31_value", 1.0), _effect_number("m31_cooldown", 1.0)])
+	summary_details.text = _conditional_summary(installed_ids)
 	capacity_label.text = tr("RING_CAPACITY") % [model().unlocked_slots, Modules.MAX_SLOTS - model().unlocked_slots]
 	instructions.text = tr("DEEP_NO_MODULES") if model().purchased.is_empty() else tr("RING_INSTRUCTIONS")
 	hint.text = tr("DEEP_FREE_EQUIP") if not game.hud.autosave_failed else tr("AUTOSAVE_FAILURE") % game.active_save_slot
+	if inventory_scroll != null:
+		inventory_scroll.queue_redraw()
 	surface.queue_redraw()
 	_update_tooltip()
 
 func show_module_tooltip(id: String) -> void:
+	if not owned_buttons.has(id):
+		return
 	hover_kind = "module"
 	hover_id = id
 	hover_slot = -1
 	tooltip_pointer = owned_buttons[id].get_global_rect().get_center()
 	_update_tooltip()
+
+func _on_tile_focus(id: String) -> void:
+	show_module_tooltip(id)
+	var tile: InventoryTile = owned_buttons.get(id)
+	if tile != null and inventory_scroll != null:
+		inventory_scroll.ensure_control_visible(tile)
 
 func show_slot_tooltip(index: int) -> void:
 	hover_kind = "slot"
@@ -343,12 +415,22 @@ func _update_tooltip() -> void:
 		tooltip_combo.text = ""
 		tooltip_action.text = tr("RING_EMPTY_ACTION")
 	else:
+		var definition: Dictionary = _definition(id)
+		var is_catalog_tile := hover_kind == "module"
 		tooltip_name.text = tr("MODULE_%s_NAME" % id.to_upper())
-		tooltip_code.text = String(Modules.DEFINITIONS[id].code) + " · " + (tr("RING_SLOT_SHORT") % (hover_slot + 1) if hover_kind == "slot" else tr("RING_MODULE_TYPE"))
+		var category := _category_for(id, definition)
+		var category_label := _category_label(category)
+		tooltip_code.text = String(definition.get("code", id.to_upper())) + " · " + (tr("RING_SLOT_SHORT") % (hover_slot + 1) if hover_kind == "slot" else category_label)
 		tooltip_effect.text = tr("RING_EFFECT") + "  " + tr("MODULE_%s_DESC" % id.to_upper())
-		tooltip_combo.text = tr("RING_COMBO") + "  " + tr("MODULE_%s_COMBO" % id.to_upper())
+		if is_catalog_tile and id not in model().purchased:
+			tooltip_combo.text = _acquisition_route(id, definition)
+		else:
+			var combo := _translation_or_empty("MODULE_%s_COMBO" % id.to_upper())
+			tooltip_combo.text = (tr("RING_COMBO") + "  " + combo) if not combo.is_empty() else _acquisition_route(id, definition)
 		if hover_kind == "slot":
 			tooltip_action.text = tr("RING_REMOVE_ACTION")
+		elif is_catalog_tile and id not in model().purchased:
+			tooltip_action.text = tr("MODX_LOCKED_ACTION")
 		elif id in model().installed_ids():
 			tooltip_action.text = tr("RING_EQUIPPED_ACTION")
 		elif model().first_empty_slot() < 0:
@@ -359,6 +441,117 @@ func _update_tooltip() -> void:
 	tooltip_panel.show()
 	tooltip_panel.size = Vector2(UITheme.px(400), 0)
 	_place_tooltip.call_deferred()
+
+func _definition(id: String) -> Dictionary:
+	var definition = Modules.DEFINITIONS.get(id, {})
+	return definition if definition is Dictionary else {}
+
+func _effect_number(key: String, fallback: float) -> float:
+	var value = model().effect(key)
+	return fallback if value == null or not is_finite(float(value)) else float(value)
+
+func _category_for(id: String, definition: Dictionary = {}) -> String:
+	var category := String(definition.get("category", definition.get("pool", ""))).to_lower()
+	if category in ["trace", "sweep", "link"]:
+		return category
+	# Legacy definitions predate category metadata. Their fallback keeps filters
+	# useful while preserving the five original IDs and their visual order.
+	if id in ["focus", "precision", "trail_integrator", "long_baseline", "dual_processor"]:
+		return "trace"
+	if id in ["wide", "afterglow_archive", "sweep_optics", "wide_correlation"]:
+		return "sweep"
+	if id in ["record", "revisit", "relay_bus", "reference_bus", "shutter_weave"]:
+		return "link"
+	return ""
+
+func _source_for(id: String, definition: Dictionary = {}) -> String:
+	var source := String(definition.get("source", "")).to_lower()
+	if source in ["purchase", "research", "sample"]:
+		return source
+	return "purchase" if id in ["focus", "wide", "precision", "record", "revisit"] else "research"
+
+func _matches_filter(id: String, definition: Dictionary) -> bool:
+	match inventory_filter:
+		"owned":
+			return id in model().purchased
+		"trace", "sweep", "link":
+			return _category_for(id, definition) == inventory_filter
+		_:
+			return true
+
+func _filter_label(filter_id: String) -> String:
+	return tr("MODX_FILTER_%s" % filter_id.to_upper())
+
+func _category_label(category: String) -> String:
+	if category.is_empty():
+		return tr("MODX_CATEGORY_OTHER")
+	return tr("MODX_CATEGORY_%s" % category.to_upper())
+
+func _translation_or_empty(key: String) -> String:
+	var translated := TranslationServer.translate(key)
+	return "" if translated == key else String(translated)
+
+func _format_translation(key: String, arguments: Array, fallback: String) -> String:
+	var template := _translation_or_empty(key)
+	return fallback if template.is_empty() else template % arguments
+
+func _acquisition_route(id: String, definition: Dictionary) -> String:
+	var category := _category_for(id, definition)
+	var category_label := _category_label(category)
+	match _source_for(id, definition):
+		"research":
+			var research_id := String(definition.get("research_id", definition.get("research", "")))
+			if not research_id.is_empty():
+				var research_key := "UPGRADE_%s_NAME" % research_id.to_upper()
+				var research_name := _translation_or_empty(research_key)
+				if not research_name.is_empty():
+					return _format_translation("MODX_ACQUIRE_RESEARCH", [research_name], "Research grant · %s" % research_name)
+			return _format_translation("MODX_ACQUIRE_RESEARCH", [category_label], "Research grant · %s" % category_label)
+		"sample":
+			var pool := String(definition.get("pool", category)).to_lower()
+			var pool_label := _category_label(pool)
+			return _format_translation("MODX_ACQUIRE_SAMPLE", [pool_label], "Sample pool · %s" % pool_label)
+		_:
+			return tr("MODX_ACQUIRE_PURCHASE")
+
+func _conditional_summary(installed_ids: Array[String]) -> String:
+	var lines: Array[String] = []
+	for id in installed_ids:
+		var definition := _definition(id)
+		var text := String(definition.get("conditional_desc", definition.get("conditional", "")))
+		var is_conditional := not text.is_empty() or id in ["trail_integrator", "sweep_optics", "relay_bus", "long_baseline", "dual_processor", "afterglow_archive", "wide_correlation", "reference_bus", "shutter_weave"]
+		if is_conditional:
+			var short_name := _translation_or_empty("MODULE_%s_SHORT" % id.to_upper())
+			if short_name.is_empty():
+				short_name = id.replace("_", " ").capitalize()
+			lines.append("· " + short_name)
+	return tr("MODX_CONDITIONAL_NONE") if lines.is_empty() else tr("MODX_CONDITIONAL") + "  " + "  ".join(lines)
+
+func set_inventory_filter(filter_id: String) -> void:
+	if filter_id not in INVENTORY_FILTERS:
+		return
+	inventory_filter = filter_id
+	if is_open():
+		refresh(false)
+
+func _filter_action(parent: Control, p: Vector2, dimensions: Vector2, filter_id: String) -> Button:
+	var button := Button.new()
+	button.position = p * UITheme.SCALE
+	button.size = dimensions * UITheme.SCALE
+	_empty_button_style(button)
+	button.focus_mode = Control.FOCUS_ALL
+	button.add_theme_font_override("font", UITheme.sans())
+	button.add_theme_font_size_override("font_size", UITheme.size_px(POPUP_META_SPEC_SIZE))
+	button.add_theme_color_override("font_color", UITheme.INK_MID)
+	button.add_theme_color_override("font_hover_color", UITheme.ACCENT_TEXT)
+	button.add_theme_color_override("font_focus_color", UITheme.ACCENT_TEXT)
+	button.pressed.connect(set_inventory_filter.bind(filter_id))
+	button.draw.connect(func():
+		var color := UITheme.ACCENT_LINE if inventory_filter == filter_id else Color(UITheme.INK_LOW, 0.55)
+		button.draw_line(Vector2(0, button.size.y - UITheme.px(2)), button.size - Vector2(0, UITheme.px(2)), color, UITheme.px(1), true)
+	)
+	parent.add_child(button)
+	return button
 
 func _place_tooltip() -> void:
 	var margin := UITheme.px(16)
@@ -422,7 +615,7 @@ func _draw_surface() -> void:
 	surface.draw_circle(center, UITheme.px(2.2), UITheme.INSTRUMENT_ARC)
 	for direction in [Vector2.UP, Vector2.DOWN, Vector2.LEFT, Vector2.RIGHT]:
 		surface.draw_line(center + direction * UITheme.px(22), center + direction * UITheme.px(28), Color(UITheme.INSTRUMENT_ARC, 0.45), UITheme.px(1), true)
-	for y in [382, 748]:
+	for y in [402, 760]:
 		surface.draw_line(Vector2(1180, y) * UITheme.SCALE, Vector2(1780, y) * UITheme.SCALE, Color(UITheme.INK_MID, 0.22), UITheme.px(1), true)
 
 func _label(parent: Control, p: Vector2, width: float, spec_size: int, ink: Color, mono: bool = false) -> Label:

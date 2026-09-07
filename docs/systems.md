@@ -34,6 +34,8 @@ All script names below are under `scripts/`.
 | Research layout, selection, purchase and chart input | `upgrade_tree.gd` |
 | Shared astronomical records; marker rendering | `research_chart_data.gd`; `research_star_visual.gd` |
 | M31 lifecycle, first record, module validation and accounting | `deep_sky_research.gd`, `andromeda_target.gd` |
+| Stable extension catalogue, research graph, plans and acquisition state | `expansion_data.gd`, `expansion_state.gd` |
+| Independent anomaly scheduler, persistent tickets and concrete targets | `anomaly_director.gd`, `anomaly_target.gd` |
 | Continuation nodes and cached constellation miniature | `deep_sky_chart.gd` |
 | Module definitions, ownership, five slots, capacity and effect cache | `observation_modules.gd` |
 | Research-only equipment popup and shared glyphs | `module_popup.gd`, `module_visual.gd` |
@@ -65,7 +67,7 @@ ModulePopup receives the game and is exposed to the chart for input/modal owners
 | `meteor.observed` / `expired` / `fragment_requested` | Accounting and feedback / expiry / child spawning |
 | `spawner.contact_announced` / `contact_resolved` | SkyContacts forecast lifecycle |
 | `progression.upgrade_purchased` | Game refreshes features, dispatches installation feedback and autosaves |
-| `deep_sky.changed` | HUD ready notice; dedicated record/equipment/unlock changes |
+| `deep_sky.changed` | HUD objective/specimens and ready notice; sticky round equipment/plan history; chart/popup refresh |
 | `effects.packet_landed` | Game's packet feedback |
 | `events.banner_requested` / `sky_activity_changed` | Game updates HUD and background |
 | `events.forecast_requested` / `shower_started` | Game's shower presentation |
@@ -144,8 +146,20 @@ The chart yields first-refusal input while the popup is active.
 `observation_modules.gd` caches effects against all slots, ownership and capacity.
 Reads detect direct fixture mutation, duplicate/unowned slots and capacity changes.
 Manual speed/radius can have positive penalties below one; dishes keep their own rules.
-Record affects M31 income; revisit chooses the next cooldown on completion.
+Record and revisit are integrated by actual M31 exposure progress; completion
+uses those accumulated weights for income and the next cooldown.
 Definitions, prerequisites and placement behavior are in [module details](design-details.md#m31과-모듈).
+
+The expansion catalogue separates research, ownership, installed modules and plan
+context. Analysis spends eight specimens for up to three distinct unowned choices;
+direct acquisition spends twelve. Active-slot transactions persist the debit and
+result together, rolling back ownership, candidates and RNG on failure.
+`AnomalyDirector` prioritizes missing plan evidence and reserves up to three
+components beside the existing important-target reservation. It defers around
+Major warnings and insufficient round time. Tickets survive attempts, while
+Data and specimen payment flags prevent duplicate rewards. Anomalies are direct
+DeepSkyResearch children for observer, sweep and dish discovery, and do not enter
+the atmospheric proc/fragment path. The full contract is [expansion-design.md](expansion-design.md).
 
 ## Save format
 
@@ -160,6 +174,14 @@ Validate version, containers, numbers and IDs before applying state; restore tar
 progress/clocks rather than rerolling them. A resumed round becomes its own comparison baseline.
 
 Deep sky saves purchases, five slots, capacity, records, M31 partial progress and cooldown.
+Its nested version is 2; the outer slot version remains 1. Version 1 migrates its
+existing equipment weights into partial M31 progress, with no inferred completed
+plans. Version 2 adds research IDs, plan records/exposures, specimens/pending
+offers, acquisition and scheduling RNG, event tickets, partial components and
+their live positions. Unknown nested versions are rejected before game mutation
+or active-slot replacement. Load restores extension state before starting a round,
+then resumes active anomaly components. Mid-round equipment and plan changes are
+sticky, including A→B→A; uninstalled acquisition has a separate growth field.
 Legacy `equipped`/`secondary` or two-slot arrays restore the first two slots;
 the old `andromeda.modules` payload is a fallback, and its active-stage flag is ignored.
 Invalid/duplicate/unowned entries are sanitized; missing data grants no purchases.

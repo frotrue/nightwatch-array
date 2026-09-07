@@ -13,6 +13,7 @@ const FAST_TYPE_CHANCE := 0.35
 var progression: Node
 var spawner: Node
 var meteor_layer: Node2D
+var modules: RefCounted
 var discovery_layers: Array[Node2D] = []
 var observation_view: Camera2D
 var rng := RandomNumberGenerator.new()
@@ -115,7 +116,10 @@ func apply_scan_segment(from: Vector2, to: Vector2, _active_delta: float = 0.0) 
 	for discovery_layer in discovery_layers:
 		if discovery_layer != null and discovery_layer.has_method("record_sweep_segment"):
 			discovery_layer.record_sweep_segment(from, to)
-	charge_distance += path_length
+	# Sweep Optics changes the charge earned by the held blank-sky gesture. The
+	# empty-sky exclusion radius remains an input/readability contract.
+	var charge_multiplier := float(modules.effect("sweep_charge")) if modules != null else 1.0
+	charge_distance += path_length * charge_multiplier
 	var required_distance: float = _world_px(progression.get_survey_required_distance())
 	var spawned_count := 0
 	while charge_distance >= required_distance and cooldown_remaining <= 0.0:

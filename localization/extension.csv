@@ -1,0 +1,92 @@
+keys,en,ko
+EXT_RESEARCH_PROTOCOL_NAME,Continuation protocol,후속 관측 프로토콜
+EXT_RESEARCH_PROTOCOL_DESC,Open continuation research and field plans.,후속 연구와 관측장을 엽니다.
+EXT_RESEARCH_TRACE_STUDY_NAME,Spectrum tracing,분광 추적 연구
+EXT_RESEARCH_TRACE_STUDY_DESC,"Unlock spectrum targets, Spectrum pass I, the Trail integrator module and its specimen pool.",분광 표적·분광 관측 I·궤적 적분 모듈과 표본 풀을 엽니다.
+EXT_RESEARCH_SWEEP_STUDY_NAME,Afterglow survey,잔광 탐색 연구
+EXT_RESEARCH_SWEEP_STUDY_DESC,"Unlock afterglow targets, Afterglow pass I, the Sweep optics module and its specimen pool.",잔광 표적·잔광 탐색 I·훑기 광학 모듈과 표본 풀을 엽니다.
+EXT_RESEARCH_LINK_STUDY_NAME,Paired relay,쌍체 연계 연구
+EXT_RESEARCH_LINK_STUDY_DESC,"Unlock paired targets, Paired relay I, the Relay bus module and its specimen pool.",쌍체 표적·쌍체 연계 I·연계 버스 모듈과 표본 풀을 엽니다.
+EXT_RESEARCH_TRACE_ADVANCED_NAME,Advanced spectrum study,고급 분광 연구
+EXT_RESEARCH_TRACE_ADVANCED_DESC,Open the second spectrum plan.,두 번째 분광 계획을 엽니다.
+EXT_RESEARCH_SWEEP_ADVANCED_NAME,Advanced afterglow study,고급 잔광 연구
+EXT_RESEARCH_SWEEP_ADVANCED_DESC,Open the second afterglow plan.,두 번째 잔광 계획을 엽니다.
+EXT_RESEARCH_LINK_ADVANCED_NAME,Advanced relay study,고급 쌍체 연구
+EXT_RESEARCH_LINK_ADVANCED_DESC,Open the second paired relay plan.,두 번째 쌍체 연계 계획을 엽니다.
+EXT_RESEARCH_SYNTHESIS_NAME,Field synthesis,관측장 합성
+EXT_RESEARCH_SYNTHESIS_DESC,Raise the prepared-field bank from 1 to 2.,준비된 관측장 보관 상한을 1개에서 2개로 늘립니다.
+EXT_RESEARCH_COMBINED_WATCH_NAME,Integrated watch,통합 관측
+EXT_RESEARCH_COMBINED_WATCH_DESC,Open the integrated plan that combines every branch.,모든 가지를 결합하는 통합 계획을 엽니다.
+EXT_RESEARCH_RECORD_COMPLETE_NAME,Close the record,기록 마감
+EXT_RESEARCH_RECORD_COMPLETE_DESC,Complete the integrated plan to close the continuation record.,통합 계획을 완료해 후속 기록을 마감합니다.
+EXT_PLAN_TRACE_1_NAME,Spectrum pass I,분광 관측 I
+EXT_PLAN_TRACE_1_DESC,Follow the spectrum trail and return to M31.,분광 궤적을 따라간 뒤 M31로 돌아갑니다.
+EXT_PLAN_SWEEP_1_NAME,Afterglow pass I,잔광 탐색 I
+EXT_PLAN_SWEEP_1_DESC,Sweep the sky to reveal afterglows and return to M31.,하늘을 훑어 잔광을 발견한 뒤 M31로 돌아갑니다.
+EXT_PLAN_LINK_1_NAME,Paired relay I,쌍체 연계 I
+EXT_PLAN_LINK_1_DESC,Coordinate a paired target and return to M31.,쌍체 표적을 연계한 뒤 M31로 돌아갑니다.
+EXT_PLAN_TRACE_2_NAME,Spectrum pass II,분광 관측 II
+EXT_PLAN_TRACE_2_DESC,Trace two spectrum components in sequence.,두 분광 구성체를 순서대로 추적합니다.
+EXT_PLAN_SWEEP_2_NAME,Afterglow pass II,잔광 탐색 II
+EXT_PLAN_SWEEP_2_DESC,Find afterglows across the field and include an ordinary meteor.,관측장 곳곳의 잔광과 일반 유성을 기록합니다.
+EXT_PLAN_LINK_2_NAME,Paired relay II,쌍체 연계 II
+EXT_PLAN_LINK_2_DESC,"Use split work at 25% manual and 75% automatic, or give one handoff component at least 25% of each.","분담은 한 구성체 수동 25%·다른 구성체 자동 75%로, 인계는 한 구성체에 수동·자동을 각각 25% 이상 넣습니다."
+EXT_PLAN_INTEGRATED_1_NAME,Integrated watch,통합 관측
+EXT_PLAN_INTEGRATED_1_DESC,"Combine spectrum, afterglow and paired observations.",분광·잔광·쌍체 관측을 결합합니다.
+EXT_FIELD_PROGRESS,Field %d / %d · %s,관측장 %d / %d · %s
+EXT_PLAN_DONE,Plan complete,계획 완료
+EXT_FIELD_LOOP,M31 preparation → field evidence → M31 synthesis,M31 준비 → 현장 증거 → M31 합성
+EXT_HELP_SPECTRUM,Observe the body then the rear spectrum; manual work ≥25%.,본체 다음 후방 분광을 관측하세요. 수동 작업 ≥25%.
+EXT_HELP_AFTERGLOW,Hold LMB and sweep to reveal the afterglow; then complete it.,좌클릭을 누른 채 훑어 잔광을 발견하고 관측을 완료하세요.
+EXT_HELP_PAIR,Complete both components; mean manual work ≥25%.,두 구성체를 완료하세요. 쌍체의 평균 수동 작업 ≥25%.
+EXT_HELP_ORDINARY,Also complete a natural ordinary or fast meteor with ≥25% manual work.,자연 일반·빠른 유성도 수동 작업 ≥25%로 완료하세요.
+EXT_NEXT_SPECTRUM,Observe the body → rear spectrum,본체 → 후방 분광을 관측하세요
+EXT_NEXT_AFTERGLOW,Sweep to reveal the afterglow → complete it,훑어 잔광을 발견 → 관측을 완료하세요
+EXT_NEXT_PAIR,Complete both components of the pair,쌍체의 두 구성체를 모두 관측하세요
+EXT_FIELD_TRACE_SINGLE,Single spectrum,단독 분광
+EXT_FIELD_TRACE_DIAGONAL,Diagonal spectrum,사선 분광
+EXT_FIELD_SWEEP_CENTER,Central afterglow,중앙 잔광
+EXT_FIELD_SWEEP_OUTER,Outer afterglow,외곽 잔광
+EXT_FIELD_LINK_CLOSE,Close pair,가까운 쌍체
+EXT_FIELD_LINK_DIVERGING,Diverging pair,벌어지는 쌍체
+EXT_FIELD_TRACE_PARALLEL,Parallel spectra,평행 분광
+EXT_FIELD_TRACE_CROSSING,Crossing spectra,교차 분광
+EXT_FIELD_TRACE_STAGGERED,Staggered spectra,시차 분광
+EXT_FIELD_SWEEP_HORIZONTAL,Horizontal afterglows,좌우 잔광
+EXT_FIELD_SWEEP_VERTICAL,Vertical afterglows,상하 잔광
+EXT_FIELD_SWEEP_MIXED,Afterglow and ordinary meteor,잔광과 일반 유성
+EXT_FIELD_LINK_SPLIT,Manual and automatic pair,수동과 자동 쌍체
+EXT_FIELD_LINK_HANDOFF,Pair handoff,쌍체 인계
+EXT_FIELD_LINK_PARALLEL,Parallel paired watch,쌍체 병행 관측
+EXT_FIELD_INTEGRATED_TRACE,Spectrum and pair,분광과 쌍체
+EXT_FIELD_INTEGRATED_SWEEP,Two afterglows and ordinary meteor,잔광 2개와 일반 유성
+EXT_FIELD_INTEGRATED_LINK,"M31, pair and afterglow","M31, 쌍체와 잔광"
+EXT_REQUIRE_BASIC,Complete %d basic plan(s),기초 계획 %d개 완료
+EXT_REQUIRE_ADVANCED,Complete %d advanced plan(s),응용 계획 %d개 완료
+EXT_REQUIRE_PLAN,Complete %s,계획 %s 완료
+EXT_REQUIRE_PROTOCOL,Install the continuation protocol,후속 관측 프로토콜 설치
+EXT_SELECT_PLAN,Choose a plan to continue,계속할 계획을 선택하세요
+EXT_RECORD_DONE,Record complete · more observations remain optional,기록 완료 · 추가 관측은 선택 사항
+EXT_NEED_EXPOSURE,Observe M31 to prepare the next field,M31을 관측해 다음 관측장을 준비하세요
+EXT_READY_SYNTHESIS,Return to M31 to synthesize the field,M31로 돌아가 관측장을 합성하세요
+EXT_TASK_SPLIT,Complete one component with ≥25% manual work and the other with ≥75% automatic work,한 구성체는 수동 작업 ≥25%·다른 구성체는 자동 작업 ≥75%로 완성하세요
+EXT_TASK_HANDOFF,Give the same component ≥25% manual and ≥25% automatic work,같은 구성체에 수동·자동 작업을 각각 ≥25% 넣으세요
+EXT_TASK_PARALLEL,Record 25% of M31 while automatic pair progress continues,쌍체 자동 진행을 유지하며 M31을 25% 기록하세요
+EXT_TASK_ORDINARY,Record one ordinary meteor as well,일반 유성도 하나 기록하세요
+EXT_FIELD_COMPLETED,Field complete · %s,관측장 완료 · %s
+EXT_SAMPLES_GAINED,+%d specimen(s),+%d개 표본
+EXT_SAMPLES_COUNT,SPECIMENS %d,표본 %d개
+EXT_TARGET_SPECTRUM,SPECTRUM,분광
+EXT_TARGET_AFTERGLOW,AFTERGLOW,잔광
+EXT_TARGET_PAIR,PAIR,쌍체
+METEOR_ANOMALY_SPECTRUM,SPECTRUM,분광 표적
+METEOR_ANOMALY_AFTERGLOW,AFTERGLOW,잔광 표적
+METEOR_ANOMALY_PAIR,PAIR,쌍체 표적
+EXT_TARGET_SWEEP,SWEEP TO REVEAL,훑어서 발견
+EXT_TARGET_TAIL,TAIL PASS,후방 분광
+EXT_SAVE_NEWER_VERSION,This save uses a newer version of the extension,이 저장은 더 새로운 확장 버전입니다
+PHASE_SUMMARY_EQUIPMENT_CHANGED,%.1f DATA/MIN · EQUIPMENT CHANGED · COMPARE NEXT ROUND,분당 데이터 %.1f · 장비 변경 · 다음 회차부터 비교
+PHASE_SUMMARY_PLAN_CHANGED,%.1f DATA/MIN · PLAN CHANGED · COMPARE NEXT ROUND,분당 데이터 %.1f · 계획 변경 · 다음 회차부터 비교
+PHASE_SUMMARY_MODULES_ACQUIRED,MODULES ACQUIRED · %s,모듈 획득 · %s
+PHASE_SUMMARY_RESEARCH_ACQUIRED,RESEARCH INSTALLED · %s,연구 설치 · %s
+PHASE_SUMMARY_MORE_ACQUIRED,+%d more,+%d개 더

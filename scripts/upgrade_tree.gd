@@ -673,6 +673,27 @@ func _is_local_group_node(node_id: String) -> bool:
 	return local_group_node_positions.has(node_id)
 
 
+# The retained Local Group records still exist for save/diagnostic compatibility,
+# but the visible constellation path ends at its original 95 research nodes.
+func _visible_base_research_count() -> int:
+	var count := 0
+	for definition in Balance.UPGRADE_NODES:
+		if not _is_local_group_node(String(definition.id)):
+			count += 1
+	return count
+
+
+func _visible_base_owned_count() -> int:
+	if progression == null:
+		return 0
+	var count := 0
+	for definition in Balance.UPGRADE_NODES:
+		var node_id := String(definition.id)
+		if not _is_local_group_node(node_id) and progression.has_upgrade(node_id):
+			count += 1
+	return count
+
+
 func _galactic_route_progress() -> float:
 	if galactic_mode == GALACTIC_MODE_PULLBACK:
 		# A linear clock moves the route head at a stable speed. Node-local easing
@@ -884,7 +905,7 @@ func _layout_chart_header() -> void:
 	progress_fill.position = progress_track.position
 	var ratio := 0.0
 	if progression != null:
-		ratio = float(progression.upgrade_level) / maxf(1.0, float(Balance.research_node_count()))
+		ratio = float(_visible_base_owned_count()) / maxf(1.0, float(_visible_base_research_count()))
 	progress_fill.size = Vector2(line_width * clampf(ratio, 0.0, 1.0), UITheme.px(2.0))
 	tree_status.position.y = progress_track.position.y + progress_track.size.y + UITheme.px(10.0)
 	completion_detail_label.position.y = tree_status.position.y + tree_status.get_combined_minimum_size().y + UITheme.px(10.0)
@@ -1730,9 +1751,11 @@ func _refresh() -> void:
 		return
 	refresh_pending = false
 	data_readout.text = _grouped(int(floor(progression.observation_data)))
-	systems_readout.text = tr("TREE_PROGRESS_COUNT") % [progression.upgrade_level, Balance.research_node_count()]
-	galactic_progress_installed.text = "%03d" % progression.upgrade_level
-	galactic_progress_total.text = "%03d" % Balance.research_node_count()
+	var visible_owned := _visible_base_owned_count()
+	var visible_total := _visible_base_research_count()
+	systems_readout.text = tr("TREE_PROGRESS_COUNT") % [visible_owned, visible_total]
+	galactic_progress_installed.text = "%03d" % visible_owned
+	galactic_progress_total.text = "%03d" % visible_total
 	_layout_chart_header()
 	var available_count := 0
 	var affordable_count := 0

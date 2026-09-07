@@ -68,6 +68,13 @@ var phase_start_manual_successes: int = 0
 var phase_start_automatic_successes: int = 0
 var phase_start_total_data: float = 0.0
 var phase_start_upgrade_signature: Array[String] = []
+var phase_start_equipment: Array[String] = []
+var phase_start_owned_modules: Array[String] = []
+var phase_start_extension_research: Array[String] = []
+var phase_start_plan_context := ""
+var phase_build_mutated := false
+var phase_plan_mutated := false
+var _loading_save := false
 var phase_started_with_complete_research: bool = false
 var phase_had_shower: bool = false
 var phase_resumed_from_save: bool = false
@@ -132,9 +139,15 @@ func _ready() -> void:
 	deep_sky.setup(self)
 	hud.deep_sky = deep_sky
 	deep_sky.changed.connect(hud._refresh_ready_notice)
+	deep_sky.changed.connect(hud._refresh_extension)
+	deep_sky.changed.connect(_on_deep_sky_changed)
 	observer.additional_target_layers.append(deep_sky)
 	survey.discovery_layers.append(deep_sky)
 	observer.modules = deep_sky.modules
+	sky_contacts.modules = deep_sky.modules
+	sky_contacts.additional_target_layers.append(deep_sky)
+	survey.modules = deep_sky.modules
+	spawner.extension_owner = deep_sky
 	module_popup = ModulePopup.new()
 	module_popup.name = "ModulePopup"
 	add_child(module_popup)
@@ -289,6 +302,13 @@ func _begin_observation_phase(advance_round: bool = false, remaining_override: f
 	phase_start_automatic_successes = progression.automatic_successes
 	phase_start_total_data = progression.total_data_earned
 	phase_start_upgrade_signature = _current_build_signature()
+	phase_start_equipment = _current_equipment_signature()
+	phase_start_owned_modules = deep_sky.modules.purchased.duplicate()
+	phase_start_extension_research = deep_sky.state.research_ids.duplicate()
+	phase_start_extension_research.sort()
+	phase_start_plan_context = _current_plan_context()
+	phase_build_mutated = false
+	phase_plan_mutated = false
 	phase_started_with_complete_research = progression.is_research_complete()
 	phase_had_shower = false
 	phase_resumed_from_save = false
@@ -314,6 +334,7 @@ func _begin_observation_phase(advance_round: bool = false, remaining_override: f
 func _end_observation_phase() -> void:
 	if completed or not observation_phase_active:
 		return
+	deep_sky.end_round()
 	host_stars.end_round()
 	galactic_phenomena.end_round()
 	progression.reset_manual_combo()
@@ -323,7 +344,11 @@ func _end_observation_phase() -> void:
 	var build_changed := bool(result.get("build_changed", false))
 	result["systems_since_baseline"] = _systems_since_baseline(result, previous_result)
 	var comparison_state := "comparison"
-	if build_changed:
+	if bool(result.get("plan_changed", false)) or (not previous_result.is_empty() and String(previous_result.get("plan_context", "")) != String(result.plan_context)):
+		comparison_state = "plan_changed"
+	elif bool(result.get("equipment_changed", false)) or (not previous_result.is_empty() and previous_result.get("equipment_signature", []) != result.equipment_signature):
+		comparison_state = "equipment_changed"
+	elif build_changed:
 		comparison_state = "systems_changed"
 	elif phase_resumed_from_save:
 		comparison_state = "session_resumed"
@@ -335,7 +360,7 @@ func _end_observation_phase() -> void:
 	# Mixed-build rounds are honest total-output achievements, but they do not
 	# replace the clean before/after baseline. A resumed sample establishes a new
 	# baseline because loading necessarily resets the live sky.
-	if not build_changed:
+	if not build_changed and not bool(result.get("plan_changed", false)):
 		last_clean_round_result = result.duplicate(true)
 	observation_phase_active = false
 	observation_phase_remaining = 0.0
@@ -368,6 +393,18 @@ func _end_observation_phase() -> void:
 
 func _build_round_result() -> Dictionary:
 	var current_signature := _current_build_signature()
+	var extension_signature: Array[String] = deep_sky.state.research_ids.duplicate()
+	extension_signature.sort()
+	var equipment := _current_equipment_signature()
+	var equipment_changed := phase_build_mutated or equipment != phase_start_equipment
+	var acquired: Array[String] = []
+	for id in deep_sky.modules.purchased:
+		if id not in phase_start_owned_modules:
+			acquired.append(id)
+	var extension_acquired: Array[String] = []
+	for id in deep_sky.state.research_ids:
+		if id not in phase_start_extension_research:
+			extension_acquired.append(id)
 	var duration := maxf(0.05, observation_phase_duration)
 	var data_earned := maxi(0, int(round(progression.total_data_earned - phase_start_total_data)))
 	return {
@@ -380,9 +417,36 @@ func _build_round_result() -> Dictionary:
 		"automatic": maxi(0, progression.automatic_successes - phase_start_automatic_successes),
 		"systems_installed": maxi(0, current_signature.size() - phase_start_upgrade_signature.size()),
 		"shower": phase_had_shower,
-		"build_changed": current_signature != phase_start_upgrade_signature,
+		"build_changed": current_signature != phase_start_upgrade_signature or equipment_changed or extension_signature != phase_start_extension_research,
 		"build_signature": current_signature,
+		"build_measurement_version": 2,
+		"equipment_signature": equipment,
+		"extension_research_signature": extension_signature,
+		"equipment_changed": equipment_changed,
+		"modules_acquired": acquired,
+		"extension_research_acquired": extension_acquired,
+		"plan_context": _current_plan_context(),
+		"plan_changed": phase_plan_mutated or _current_plan_context() != phase_start_plan_context,
 	}
+
+
+func _current_equipment_signature() -> Array[String]:
+	var ids: Array[String] = deep_sky.modules.installed_ids()
+	ids.sort()
+	return ids
+
+
+func _current_plan_context() -> String:
+	if deep_sky == null or deep_sky.active_plan().is_empty():
+		return ""
+	return "%s/%d" % [deep_sky.active_plan(), deep_sky.state.field_index()]
+
+
+func _on_deep_sky_changed() -> void:
+	if _loading_save or not observation_phase_active:
+		return
+	phase_build_mutated = phase_build_mutated or _current_equipment_signature() != phase_start_equipment
+	phase_plan_mutated = phase_plan_mutated or _current_plan_context() != phase_start_plan_context
 
 
 func _current_build_signature() -> Array[String]:
@@ -647,6 +711,7 @@ func _on_meteor_spawned(meteor) -> void:
 
 
 func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: bool, quality_grade: String) -> void:
+	deep_sky.record_ordinary_observation(meteor)
 	observer.release_target(meteor)
 	# Observation technique belongs to feedback and the end-of-run manual stat;
 	# research value growth belongs only to the economy. Keeping the two values
@@ -844,6 +909,7 @@ func _on_packet_landed(amount: float) -> void:
 
 
 func _on_meteor_expired(meteor, _was_major: bool) -> void:
+	deep_sky.archive_meteor(meteor)
 	observer.release_target(meteor)
 
 
@@ -967,6 +1033,9 @@ func _on_load_slot_requested(slot: int) -> void:
 	if data.is_empty():
 		hud.show_save_feedback(tr("LOAD_FAILURE") % slot, UITheme.ALERT)
 		return
+	if not _supports_deep_sky_save(data):
+		hud.show_save_feedback(tr("EXT_SAVE_NEWER_VERSION"), UITheme.ALERT)
+		return
 	active_save_slot = slot
 	autosave_elapsed = 0.0
 	hud.set_active_save_slot(slot)
@@ -983,16 +1052,15 @@ func _on_startup_slot_selected(slot: int) -> void:
 	var valid := bool(summary.get("valid", false))
 	if exists and not valid:
 		return
+	var slot_data: Dictionary = save_games.load_slot(slot) if exists else {}
+	if exists and (slot_data.is_empty() or not _supports_deep_sky_save(slot_data)):
+		hud.show_banner(tr("EXT_SAVE_NEWER_VERSION"), UITheme.ALERT, 5.0)
+		return
 	active_save_slot = slot
 	autosave_elapsed = 0.0
 	hud.set_active_save_slot(slot)
 	if exists:
-		var data: Dictionary = save_games.load_slot(slot)
-		if data.is_empty():
-			active_save_slot = 0
-			hud.set_active_save_slot(0)
-			return
-		_apply_save_data(data)
+		_apply_save_data(slot_data)
 	else:
 		_start_fresh_slot()
 		_autosave_active_slot()
@@ -1097,6 +1165,12 @@ func _build_save_data() -> Dictionary:
 		"phase_start_automatic_successes": phase_start_automatic_successes,
 		"phase_start_total_data": phase_start_total_data,
 		"phase_start_upgrade_signature": phase_start_upgrade_signature.duplicate(),
+		"phase_start_equipment": phase_start_equipment.duplicate(),
+		"phase_start_owned_modules": phase_start_owned_modules.duplicate(),
+		"phase_start_extension_research": phase_start_extension_research.duplicate(),
+		"phase_start_plan_context": phase_start_plan_context,
+		"phase_build_mutated": phase_build_mutated,
+		"phase_plan_mutated": phase_plan_mutated,
 		"phase_started_with_complete_research": phase_started_with_complete_research,
 		"phase_had_shower": phase_had_shower,
 		"canis_major_spawned_this_round": spawner.canis_major_spawned_this_round,
@@ -1113,6 +1187,11 @@ func _build_save_data() -> Dictionary:
 
 
 func _apply_save_data(data: Dictionary) -> void:
+	var deep_data = data.get("deep_sky", {})
+	if not _supports_deep_sky_save(data):
+		hud.show_banner(tr("EXT_SAVE_NEWER_VERSION"), UITheme.ALERT, 5.0)
+		return
+	_loading_save = true
 	module_popup.close()
 	sound.reset_streak_audio()
 	_close_upgrade_tree_without_transition()
@@ -1134,6 +1213,8 @@ func _apply_save_data(data: Dictionary) -> void:
 	observation_round = maxi(1, int(data.get("observation_round", 1)))
 	var progression_data = data.get("progression", {})
 	progression.load_save_data(progression_data if progression_data is Dictionary else {})
+	var legacy_stage = data.get("andromeda", {})
+	deep_sky.load_save_data(deep_data if deep_data is Dictionary else {}, legacy_stage if legacy_stage is Dictionary else {})
 	galactic_pullback_seen = progression.galaxy_unlocked() and bool(data.get("galactic_pullback_seen", false))
 	upgrade_tree.configure_galactic_state(progression.galaxy_unlocked(), galactic_pullback_seen)
 	last_clean_round_result = _sanitize_round_result(data.get(
@@ -1172,6 +1253,7 @@ func _apply_save_data(data: Dictionary) -> void:
 			_observation_duration()
 		))
 		_begin_observation_phase(false, saved_remaining)
+		deep_sky.resume_targets()
 		if bool(data.get("canis_major_spawned_this_round", false)):
 			spawner.canis_major_spawned_this_round = true
 			events.canis_major_state = "resolved"
@@ -1181,6 +1263,12 @@ func _apply_save_data(data: Dictionary) -> void:
 		phase_start_automatic_successes = maxi(0, int(data.get("phase_start_automatic_successes", progression.automatic_successes)))
 		phase_start_total_data = maxf(0.0, float(data.get("phase_start_total_data", progression.total_data_earned)))
 		phase_start_upgrade_signature = _validated_signature(data.get("phase_start_upgrade_signature", _current_build_signature()))
+		phase_start_equipment = _validated_module_ids(data.get("phase_start_equipment", _current_equipment_signature()))
+		phase_start_owned_modules = _validated_module_ids(data.get("phase_start_owned_modules", deep_sky.modules.purchased))
+		phase_start_extension_research = _validated_extension_ids(data.get("phase_start_extension_research", deep_sky.state.research_ids))
+		phase_start_plan_context = _validated_plan_context(data.get("phase_start_plan_context", _current_plan_context()))
+		phase_build_mutated = bool(data.get("phase_build_mutated", false)) or phase_start_equipment != _current_equipment_signature()
+		phase_plan_mutated = bool(data.get("phase_plan_mutated", false)) or phase_start_plan_context != _current_plan_context()
 		var saved_phase_had_complete_research := (
 			phase_start_upgrade_signature.size() == Balance.research_node_count()
 		)
@@ -1207,9 +1295,42 @@ func _apply_save_data(data: Dictionary) -> void:
 		upgrade_tree.set_intermission_context(next_round, int(_observation_duration()))
 		call_deferred("_resume_upgrade_intermission")
 	_sync_catalogue_ending_presentation()
-	var deep_data = data.get("deep_sky", {})
-	var legacy_stage = data.get("andromeda", {})
-	deep_sky.load_save_data(deep_data if deep_data is Dictionary else {}, legacy_stage if legacy_stage is Dictionary else {})
+	_loading_save = false
+	hud._refresh_extension()
+
+
+func _supports_deep_sky_save(data: Dictionary) -> bool:
+	var deep = data.get("deep_sky", {})
+	return deep is Dictionary and DeepSkyResearch.supports_save(deep)
+
+
+func _validated_module_ids(value) -> Array[String]:
+	var ids: Array[String] = []
+	if value is Array:
+		for id in value:
+			if id is String and DeepSkyResearch.Modules.DEFINITIONS.has(id) and id not in ids:
+				ids.append(id)
+	ids.sort()
+	return ids
+
+
+func _validated_extension_ids(value) -> Array[String]:
+	var ids: Array[String] = []
+	if value is Array:
+		for id in value:
+			if id is String and DeepSkyResearch.Data.RESEARCH.has(id) and id not in ids:
+				ids.append(id)
+	ids.sort()
+	return ids
+
+
+func _validated_plan_context(value) -> String:
+	if not value is String or value.is_empty():
+		return ""
+	var parts: PackedStringArray = value.split("/")
+	if parts.size() != 2 or not DeepSkyResearch.Data.PLANS.has(parts[0]) or not parts[1].is_valid_int():
+		return ""
+	return "%s/%d" % [parts[0], clampi(int(parts[1]), 0, DeepSkyResearch.Data.PLANS[parts[0]].fields.size())]
 
 
 func _sync_galactic_systems() -> void:
@@ -1251,6 +1372,14 @@ func _sanitize_round_result(value) -> Dictionary:
 		"shower": bool(value.get("shower", false)),
 		"build_changed": bool(value.get("build_changed", false)),
 		"build_signature": _validated_signature(value.get("build_signature", [])),
+		"build_measurement_version": 2,
+		"equipment_signature": _validated_module_ids(value.get("equipment_signature", [])),
+		"extension_research_signature": _validated_extension_ids(value.get("extension_research_signature", [])),
+		"equipment_changed": bool(value.get("equipment_changed", false)),
+		"modules_acquired": _validated_module_ids(value.get("modules_acquired", [])),
+		"extension_research_acquired": _validated_extension_ids(value.get("extension_research_acquired", [])),
+		"plan_context": _validated_plan_context(value.get("plan_context", "")),
+		"plan_changed": bool(value.get("plan_changed", false)),
 	}
 
 

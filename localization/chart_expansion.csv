@@ -1,0 +1,50 @@
+keys,en,ko
+CHX_TITLE,Andromeda field programme,안드로메다 관측 계획
+CHX_TAB_RESEARCH,Research,연구
+CHX_TAB_PLANS,Plans,계획
+CHX_TAB_ANALYSIS,Analysis,분석
+CHX_PROGRESS,Base array %d / %d · Continuation %d / %d · Modules %d / %d,기초 성도 %d / %d · 후속 연구 %d / %d · 모듈 %d / %d
+CHX_BASE_PROGRESS,Base array %d / %d,기초 성도 %d / %d
+CHX_CONTINUATION_PROGRESS,Continuation %d / %d,후속 연구 %d / %d
+CHX_MODULE_PROGRESS,Modules %d / %d,모듈 %d / %d
+CHX_FREE,No Data cost,데이터 소모 없음
+CHX_PURCHASE,Install research,연구 설치
+CHX_OWNED,Installed,설치됨
+CHX_READY,Ready to install,설치 가능
+CHX_MODULES_TITLE,Module catalogue,모듈 보관함
+CHX_MODULES_SHORT,Modules,모듈
+CHX_MODULES_BODY,Equipment is permanent once acquired. Open the catalogue to inspect and equip it; selecting an analysis result never equips it automatically.,획득한 장비는 영구 보유합니다. 보관함에서 확인하고 직접 장착하세요. 분석 결과는 자동 장착되지 않습니다.
+CHX_MODULES_STATUS,%d / %d modules acquired,%d / %d종 모듈 획득
+CHX_PLAN_GATE,plan records required,계획 기록 필요
+CHX_NODE_PROTOCOL,Protocol,프로토콜
+CHX_NODE_TRACE_STUDY,Spectrum study,분광 연구
+CHX_NODE_SWEEP_STUDY,Survey study,훑기 연구
+CHX_NODE_LINK_STUDY,Relay study,연계 연구
+CHX_NODE_TRACE_ADVANCED,Spectrum II,분광 II
+CHX_NODE_SWEEP_ADVANCED,Survey II,훑기 II
+CHX_NODE_LINK_ADVANCED,Relay II,연계 II
+CHX_NODE_SYNTHESIS,Synthesis,종합
+CHX_NODE_COMBINED_WATCH,Combined watch,통합 관측
+CHX_NODE_RECORD_COMPLETE,Record closure,기록 마감
+CHX_RECORDED_OBJECTIVE,%d M31 records · %s,M31 관측 %d회 · %s
+CHX_PLAN_PROGRESS,%d / %d fields,%d / %d 관측장
+CHX_PLAN_SELECT,Choose an available plan,가능한 계획을 선택하세요
+CHX_PLAN_UNAVAILABLE,This plan is still locked by its research or field record.,이 계획은 연구 또는 관측장 기록으로 아직 잠겨 있습니다.
+CHX_ACTIVE_PLAN,Active · %s,활성 계획 · %s
+CHX_PLAN_NONE,No active plan,활성 계획 없음
+CHX_CURRENT_OBJECTIVE,Next observation,다음 관측
+CHX_RECORD_LAYERS,M31 record layers,M31 기록 층
+CHX_CATEGORY_TRACE,Tracking,추적
+CHX_CATEGORY_SWEEP,Survey,훑기
+CHX_CATEGORY_LINK,Relay,연계
+CHX_ANALYSIS_TITLE,Specimen analysis,표본 분석
+CHX_SAMPLES,%d samples · random analysis 8 · targeted analysis 12,표본 %d개 · 후보 분석 8 · 지정 분석 12
+CHX_COLLECTION_DONE,All specimen modules have been acquired.,표본 모듈을 모두 획득했습니다.
+CHX_POOL_REMAINING,%d unowned specimen modules remain.,미보유 표본 모듈 %d종이 남았습니다.
+CHX_ANALYSIS_IDLE,Spend samples only when you want another module choice.,원하는 새 모듈이 있을 때만 표본을 사용하세요.
+CHX_DRAW_ANALYSIS,Analyze 8 samples,표본 8개 분석
+CHX_PENDING,Choose one saved candidate. Closing this chart keeps the same offer and does not charge again.,저장된 후보 하나를 고르세요. 성도를 닫아도 같은 후보가 남고 다시 차감하지 않습니다.
+CHX_CHOOSE,Acquire %s,%s 획득
+CHX_DIRECT_ANALYSIS,Target 12 samples,표본 12개 지정
+CHX_ACQUIRED,%s acquired. It is available in the catalogue; equip it separately.,%s을(를) 획득했습니다. 보관함에서 직접 장착하세요.
+CHX_OPEN_CATALOGUE,Open module catalogue,모듈 보관함 열기

@@ -21,6 +21,8 @@ const GALACTIC_MUTED_FORECAST_TYPES := ["common", "fast"]
 
 var progression: Node
 var meteor_layer: Node2D
+var additional_target_layers: Array[Node2D] = []
+var modules: RefCounted
 var observation_view: Camera2D
 var contacts: Array[Dictionary] = []
 var dishes: Array[Dictionary] = []
@@ -179,7 +181,7 @@ func _update_dishes(delta: float) -> void:
 			if Vector2(dish.position).distance_to(locked.global_position) > _world_px(COVERAGE_RADIUS):
 				dish.locked_id = 0
 			else:
-				locked.set_dish_assist_rate(locked.get_assist_rate(DISH_TIME_MULTIPLIER))
+				locked.set_dish_assist_rate(_dish_assist_rate(locked))
 			dishes[index] = dish
 			continue
 
@@ -204,16 +206,23 @@ func _update_dishes(delta: float) -> void:
 			var acquired = _acquire_target(dish, index)
 			if acquired != null:
 				dish.locked_id = acquired.get_instance_id()
-				acquired.set_dish_assist_rate(acquired.get_assist_rate(DISH_TIME_MULTIPLIER))
+				acquired.set_dish_assist_rate(_dish_assist_rate(acquired))
 		dishes[index] = dish
 
 
 func _clear_dish_assists() -> void:
-	if meteor_layer == null:
-		return
-	for child in meteor_layer.get_children():
+	for child in _target_children():
 		if child.has_method("set_dish_assist_rate"):
 			child.set_dish_assist_rate(0.0)
+
+
+func _dish_assist_rate(target) -> float:
+	if target == null or not target.has_method("get_assist_rate"):
+		return 0.0
+	var multiplier := 1.0
+	if modules != null and modules.has_method("dish_multiplier"):
+		multiplier = float(modules.dish_multiplier(target))
+	return target.get_assist_rate(DISH_TIME_MULTIPLIER) * multiplier
 
 
 func _locked_target(dish: Dictionary):
@@ -231,7 +240,13 @@ func _locked_target(dish: Dictionary):
 
 
 func _dish_can_track(target) -> bool:
-	return is_instance_valid(target) and _dish_can_track_type(String(target.type_id))
+	if not is_instance_valid(target):
+		return false
+	if _dish_can_track_type(String(target.type_id)):
+		return true
+	# Meteor's generic lane-assist API also exists on manual-only major targets.
+	# Only these explicitly introduced anomaly types expand the dish allowlist.
+	return String(target.type_id) in ["anomaly_spectrum", "anomaly_afterglow", "anomaly_pair"] and target.has_method("allows_automatic_assist") and target.allows_automatic_assist()
 
 
 func _dish_can_track_type(type_id: String) -> bool:
@@ -241,8 +256,7 @@ func _dish_can_track_type(type_id: String) -> bool:
 func _acquire_target(dish: Dictionary, own_index: int):
 	var closest = null
 	var closest_distance := INF
-	for child_index in range(meteor_layer.get_child_count()):
-		var meteor = meteor_layer.get_child(child_index)
+	for meteor in _target_children():
 		if not meteor.has_method("can_be_tracked") or not meteor.can_be_tracked():
 			continue
 		if not _dish_can_track(meteor):
@@ -259,6 +273,16 @@ func _acquire_target(dish: Dictionary, own_index: int):
 			closest = meteor
 			closest_distance = distance
 	return closest
+
+
+func _target_children() -> Array:
+	var targets: Array = []
+	if meteor_layer != null:
+		targets.append_array(meteor_layer.get_children())
+	for layer in additional_target_layers:
+		if layer != null:
+			targets.append_array(layer.get_children())
+	return targets
 
 
 # Deliberately literal: a nearer busy dish wins over a farther idle dish. This

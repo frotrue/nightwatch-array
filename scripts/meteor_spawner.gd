@@ -62,6 +62,8 @@ enum LaneSelectionOrder {
 
 var meteor_layer: Node2D
 var progression: Node
+var extension_reserved_slots := 0
+var extension_owner: Node
 var observation_view: Camera2D
 var rng := RandomNumberGenerator.new()
 var forecast_rng := RandomNumberGenerator.new()
@@ -178,7 +180,8 @@ func spawn_meteor(type_id: String = "common", custom_start := Vector2.INF, custo
 	# Shower and fragment paths intentionally bypass the regular progression cap.
 	# Keep one reserved slot for the final major target while bounding all burst
 	# paths so a missed frame cannot turn into an ever-growing render workload.
-	var instance_limit := MAX_TOTAL_METEORS if type_id == "major" else MAX_TOTAL_METEORS - 1
+	var extension_objects: int = extension_owner.director.object_count() if extension_owner != null else 0
+	var instance_limit: int = MAX_TOTAL_METEORS - extension_objects if type_id == "major" else MAX_TOTAL_METEORS - 1 - maxi(extension_reserved_slots, extension_objects)
 	if meteor_layer == null or meteor_layer.get_child_count() >= instance_limit:
 		return null
 	var spec := Balance.meteor_spec(type_id)
@@ -243,7 +246,7 @@ func _spawn_observation_echo_burst(trigger_meteor = null) -> int:
 	var scheduled := 0
 	for index in count:
 		var reserved_objects := meteor_layer.get_child_count() + pending_contacts.size() + pending_echoes.size()
-		if reserved_objects >= MAX_TOTAL_METEORS - 1:
+		if reserved_objects >= MAX_TOTAL_METEORS - 1 - extension_reserved_slots:
 			break
 		var type_id := _echo_type_for_trigger(trigger)
 		var entry := _plan_echo_entry(type_id, index, count, trigger)
@@ -1033,7 +1036,7 @@ func _on_fragment_requested(origin: Vector2, parent_velocity: Vector2, parent_ty
 	# inheriting the parent's near-stall. Major fragments keep the fireball speed.
 	if parent_type != "major":
 		burst_speed = maxf(burst_speed, float(Balance.meteor_spec("fragment").speed))
-	var available_slots := maxi(0, (MAX_TOTAL_METEORS - 1) - meteor_layer.get_child_count())
+	var available_slots := maxi(0, (MAX_TOTAL_METEORS - 1 - extension_reserved_slots) - meteor_layer.get_child_count())
 	for index in range(mini(piece_count, available_slots)):
 		var centered := float(index) - float(piece_count - 1) * 0.5
 		var direction := burst_direction.rotated(centered * spread)

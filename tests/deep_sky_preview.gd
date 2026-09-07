@@ -95,9 +95,19 @@ func _run() -> void:
 	game.module_popup.show_module_tooltip("precision")
 	await _capture(game, "ko_popup_full_two")
 	game.module_popup.close()
-	for id in ["record", "slot_3", "revisit", "slot_4", "slot_5"]:
+	for id in ["record"]:
 		if not game.deep_sky.purchase(id):
 			failures.append("expansion purchase failed: " + id)
+	_seed_completed_plans(game.deep_sky, ["plan_trace_1"])
+	for id in ["slot_3", "revisit"]:
+		if not game.deep_sky.purchase(id):
+			failures.append("first basic-plan expansion purchase failed: " + id)
+	_seed_completed_plans(game.deep_sky, ["plan_sweep_1"])
+	if not game.deep_sky.purchase("slot_4"):
+		failures.append("second basic-plan expansion purchase failed: slot_4")
+	_seed_completed_plans(game.deep_sky, ["plan_trace_2", "plan_sweep_2"])
+	if not game.deep_sky.purchase("slot_5"):
+		failures.append("advanced-plan expansion purchase failed: slot_5")
 	game.module_popup.open()
 	for id in ["precision", "record", "revisit"]:
 		game.module_popup.owned_buttons[id].pressed.emit()
@@ -143,6 +153,13 @@ func _freeze(node: Node) -> void:
 	for child in node.get_children():
 		_freeze(child)
 
+
+func _seed_completed_plans(research: Node, plan_ids: Array[String]) -> void:
+	for id in plan_ids:
+		for field in research.state.records[id]:
+			field.prepared = true
+			field.complete = true
+
 func _capture(game: Node, name: String) -> void:
 	if "popup" in name and (not game.module_popup.is_open() or game.module_popup.layer <= game.upgrade_tree.layer):
 		failures.append("popup missing or obscured by research: " + name)
@@ -153,6 +170,8 @@ func _capture(game: Node, name: String) -> void:
 	for tween in get_processed_tweens():
 		tween.kill()
 	await process_frame
+	await process_frame
+	_redraw_capture_items(game)
 	await process_frame
 	RenderingServer.force_draw()
 	RenderingServer.force_sync()
@@ -167,3 +186,9 @@ func _capture(game: Node, name: String) -> void:
 	if second.save_png(path) != OK:
 		failures.append("write failed: " + name)
 	records.append({"file": path, "sha256": FileAccess.get_sha256(path), "deep_sky": game.deep_sky.get_save_data(), "chart": game.upgrade_tree.is_open(), "popup": game.module_popup.is_open()})
+
+func _redraw_capture_items(node: Node) -> void:
+	# Locale switches add glyphs to dynamic font atlases. Refresh frozen canvas
+	# commands after layout has settled before comparing the captured frames.
+	if node is CanvasItem: node.queue_redraw()
+	for child in node.get_children(): _redraw_capture_items(child)
