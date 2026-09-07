@@ -12,8 +12,18 @@ Adapted from [OpenAI's GPT-6 Astra prompting guidance](https://developers.openai
   link it, quote the rule, and distinguish the requirement from your interpretation.
 - Lead with the result in concise, plain prose. Use lists where useful; report
   verification and material limitations.
-- Keep simple edits and CodeGraph exploration local. When delegation is
-  authorized, give agents independent tasks, clear ownership, and readable handoffs.
+- Autonomously use subagents for independent work when this is expected to save
+  time or improve quality. Start with 1-2; add more only when independent work
+  justifies the coordination and usage cost.
+- Give each agent a concrete goal, relevant context, owned files or a read-only
+  remit, and completion criteria. Prefer independent regression, save
+  compatibility, and documentation checks; parallelize implementation when file
+  ownership is separate. Avoid overlapping edits.
+- Keep simple edits and CodeGraph exploration local and avoid duplicate work.
+  Continue useful independent work while agents run. The primary agent reviews
+  results against the actual changes and owns integration and final validation.
+  Use readable handoffs; delegation does not expand approved design scope or
+  waive the completion requirements below.
 - Complete required checks; repeat or broaden them only for changes, failures,
   or unresolved concerns. Add tests for meaningful behavior, avoiding duplication
   of implementation details.
