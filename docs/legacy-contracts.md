@@ -61,8 +61,8 @@
 새 기능 연구 12개를 자동 지급하지 않는다. 기존 별자리 95개 ID 기반 호환성은 유지한다.
 구체적인 저장 필드와 복원 경계는 [systems.md](systems.md#save-format)에 있다.
 
-[107노드 경제 기준선](full-tree-economy-baseline.md)은 3전략×3시드의 과거 활성 관측
+[107노드 경제 기준선](history/full-tree-economy-baseline.md)은 3전략×3시드의 과거 활성 관측
 약 50~55분을 보고한다. 사람의 완주 시간이나 현재 M31·모듈 구간의 합격선이 아니다.
 기존 경제 게이트의 120초 연구 도착 간격 검사와 측정 한계는
-[probes.md](probes.md#full-tree-economy-gate--full_tree_economy_testgd)를 따른다.
+[probes.md](performance-probes.md#full-tree-economy)를 따른다.
 관련 구현을 바꿀 때 호환 검사도 함께 확인하며 테스트 통과를 새 설계 승인으로 해석하지 않는다.

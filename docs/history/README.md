@@ -1,0 +1,50 @@
+# 아카이브 지도
+
+완료 작업·승인 근거·시점별 계측·폐기안을 보존한다. 현행 문서는 [문서 지도](../README.md)에서 찾는다.
+기록의 `현재`, `승인 대기`, `다음 단계`는 작성 당시 상태다. 옛 지시나 수치를 재승인으로 읽지 않는다.
+
+## 결정과 완료된 계획
+
+| 기록 | 상태와 용도 |
+|---|---|
+| [설계 원문 — 9월 3일](design-through-2026-09-03.md) | 이전 3층·경제·국부은하군을 포함한 승인 원문 |
+| [설계 원문 — 9월 7일](design-through-2026-09-07.md) | 모듈 다섯 자리까지의 승인과 소규모 조정 자율 진행 결정 |
+| [모듈 고리 편성](module-loadout-plan.md) | 다섯 자리·초기 두 자리·연구 해금이 승인·구현된 당시 계획 |
+| [설정·접근성 v2.1 계획](settings-accessibility-plan.md) | 완료된 설정 개편과 당시 수정 이유. 현행 계약은 [설정 참조](../settings.md) |
+| [별도 안드로메다 스테이지](andromeda-stage-experiment.md) | 폐기한 독립 무대·작업대의 변경 이력 |
+| [캠페인 프로토타입](campaign-prototype.md) | 제거 이유·옛 구현 위치. 재도입은 새 콘텐츠 결정이 필요 |
+| [이전 은하 렌더러](galactic-renderer-reference.md) | 현재 숨긴 29개 표식·경로의 과거 구현 참고 |
+
+## 조사와 리뷰
+
+| 기록 | 범위 |
+|---|---|
+| [설정 UI 27종 조사](settings-reference-study.md) | 2026-09-04의 출처·채택·보류 기록 |
+| [모듈 UI 조사](module-workbench-reference-study.md) | 12종 기능 조사와 폐기·수정한 시각 방향 |
+| [AM-V3QP 완료 기록](agent-room-feedback-checkpoint.md) | 사운드·효과·캡처·계열색 네 단계 결과와 후속 검토 |
+| [AM-V3QP 원문](agent-room-feedback-through-2026-09-03.md) | 당시 WIP·리뷰·합의 원문. 회의 재개 지시가 아님 |
+| [9월 7일 유지보수](maintenance-2026-09-07.md) | 저장 실패 보호·모듈 조회·화면 동일성의 당시 검증 |
+
+## 계측 기준선
+
+| 기록 | 비교할 수 있는 범위 |
+|---|---|
+| [107노드 경제](full-tree-economy-baseline.md) | 2026-08-30 이전 경로, 3전략×3시드 활성 관측 시간. 현재 M31·모듈 페이싱 기준이 아님 |
+| [9월 4일 성능](performance-baseline-2026-09-04.md) | 당시 동일 화면·고정 부하 A/B. 소스·제외 표본·악화 지표도 보존 |
+| [관측 시간 사다리](duration-ladder-baseline.md) | 2026-08-26 경제 개편 전 21노드 가격·선행관계 |
+| [별자리 연구](constellation-research-baseline.md) | 역사적 41노드 스냅샷. 이후 언급된 옛 live 수치도 현행 기준이 아님 |
+| [레거시 밀도](legacy-density-be11e42.md) | `be11e42`의 동결된 환경·생성량·자동화 계측 |
+
+이 수치들은 사람의 재미·완주 시간이나 현재 버전의 합격선을 대신하지 않는다.
+새 측정은 [성능·경제 계측](../performance-probes.md)의 현재 방법으로 수행하고 별도 기록한다.
+
+## 정리 전 참조
+
+| 원문 | 현행 대체 문서 |
+|---|---|
+| [시스템 — 9월 7일](systems-through-2026-09-07.md) | [시스템](../systems.md), [설정](../settings.md), [호환 계약](../legacy-contracts.md) |
+| [테스트·프로브 — 9월 7일](probes-through-2026-09-07.md) | [테스트](../probes.md), [시각·청취](../visual-validation.md), [성능·경제](../performance-probes.md) |
+
+`ORIGINAL-BEGIN` 영역이 있는 문서는 기록된 Git blob의 원문을 보존한다. 그 안의 상대 링크는
+표시된 원래 위치 기준이며 현행 탐색에는 위 지도를 쓴다. 이번에 이동한 일반 기록은 내용·수치를
+유지하고 상대 링크만 새 위치에 맞췄다. 새 결정은 별도 기록으로 남기며 과거 원문을 덮어쓰지 않는다.

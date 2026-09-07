@@ -107,7 +107,7 @@ per rendered frame, fixed seed 20260904 and exactly 18 or 32 live meteors.
 The 32-object workload includes one Major. `sweep` is **unpressed cursor hover**,
 not the game's Sky Sweep summon mechanic. The single synthetic multi-target
 feature, bounded ages and in-place replenishment are documented in
-[probes.md](probes.md#synthetic-observation-ab-workload--observation_performance_probegd).
+[probes.md](../performance-probes.md#synthetic-observation-ab-workload).
 These workloads are not a legal fully researched playthrough or normal spawn
 density. The same three-run median convention applies.
 
@@ -153,7 +153,7 @@ phenomena, expiry and completion linger are outside this probe's scope.
 
 ## Final validation and Windows build
 
-The [routine validation command](probes.md#routine-validation) completed with
+The [routine validation command](../probes.md#routine-validation) completed with
 `-FullEconomy -Build`: all 12 fast gates, the full-tree economy test, and the
 Windows export passed. The economy run used the `cheapest` strategy and seeds
 `20260821,20260837,20260853`; all 107 research systems and five galactic

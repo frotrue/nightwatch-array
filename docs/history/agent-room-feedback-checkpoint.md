@@ -16,7 +16,7 @@ Fable 리뷰를 거쳐 완료됐고, `ef769ee`로 main에 병합됐다.
 병합 커밋 `ef769eec3b6ce84b1099d173350a0e203b341f07`의 두 번째 부모가
 `b4409eb4480f6af058ae1849de51b19c81a06552`다.
 표의 승인 번호·당시 검증·중간 보류는
-[원래 체크포인트 전체](history/agent-room-feedback-through-2026-09-03.md)에 보존한다.
+[원래 체크포인트 전체](agent-room-feedback-through-2026-09-03.md)에 보존한다.
 이 정리는 코드·경제·연구 ID·저장 형식을 바꾸지 않는다.
 
 ## 검증이 뜻하는 것
@@ -33,9 +33,9 @@ Fable 리뷰를 거쳐 완료됐고, `ef769ee`로 main에 병합됐다.
   매번 manifest의 통과 상태·소스·실제 파일 해시를 대조한다. 로컬 `build/` 산출물은
   저장소에 포함되지 않고 재생성이 필요할 수 있다.
 
-현행 재현 명령과 검증 범위는 [probes.md](probes.md),
-현재 표현 방향은 [design.md](design.md#화면소리피드백), 값과 동작은
-[상세 기준](design-details.md#표현과-설명)에 있다.
+현행 재현 명령과 검증 범위는 [probes.md](../probes.md),
+현재 표현 방향은 [design.md](../design.md#화면소리피드백), 값과 동작은
+[상세 기준](../design-details.md#표현과-설명)에 있다.
 
 ## 남겨 둔 후속 검토
 
@@ -46,4 +46,4 @@ Fable 리뷰를 거쳐 완료됐고, `ef769ee`로 main에 병합됐다.
 
 과거 문서의 `Stage 2 — NOT approved`, `Stages 3 and 4 unstarted`,
 `No merge to main` 및 종료/재개 지시는 당시 상태로만 보존한다.
-[이전 기록](history/agent-room-feedback-through-2026-09-03.md)을 현재 승인 상태로 읽지 않는다.
+[이전 기록](agent-room-feedback-through-2026-09-03.md)을 현재 승인 상태로 읽지 않는다.
