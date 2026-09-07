@@ -15,8 +15,21 @@ Adapted from [OpenAI's GPT-6 Astra prompting guidance](https://developers.openai
 - Autonomously use subagents for independent work when this is expected to save
   time or improve quality. Start with 1-2; add more only when independent work
   justifies the coordination and usage cost.
+- Explicitly select both model and reasoning effort for every subagent,
+  including reviewers: `gpt-5.6-luna` / `max` for clear, bounded work or
+  `gpt-5.6-terra` / `xhigh` for broader implementation and investigation. Choose
+  directly by task; a Luna attempt is not required before using Terra.
+- Use `gpt-5.6-sol` / `xhigh` only when genuinely needed, either from the outset
+  or after evidence that Luna/Terra cannot resolve the task. Pass along failed
+  approaches and remaining questions to avoid repeating the same work.
+- Never use GPT-6 Astra as a subagent, including for review. The primary agent
+  keeps context-dependent decisions, difficult judgement, and final integration.
+  If the selected model/effort is unavailable, handle the work directly and
+  report the limitation instead of silently inheriting Astra or substituting.
 - Give each agent a concrete goal, relevant context, owned files or a read-only
-  remit, and completion criteria. Prefer independent regression, save
+  remit, and completion criteria. Use fresh context by default
+  (`fork_turns: "none"` where supported), with necessary instructions and evidence rather
+  than the full conversation. Prefer independent regression, save
   compatibility, and documentation checks; parallelize implementation when file
   ownership is separate. Avoid overlapping edits.
 - Keep simple edits and CodeGraph exploration local and avoid duplicate work.
