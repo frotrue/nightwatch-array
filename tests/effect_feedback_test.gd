@@ -49,6 +49,7 @@ func _run() -> void:
 	game.spawner.running = false
 	game.events.running = false
 	_test_particle_categories(game.effects)
+	_test_completion_grade_text(game.effects)
 	_test_meteor_routing(game)
 	_test_distant_and_event_paths(game)
 	_test_caps(game.effects)
@@ -84,6 +85,21 @@ func _test_particle_categories(effects) -> void:
 	effects.reset()
 	effects.spawn_success(CENTRE, 1.0, Color.WHITE, 1.0, 1.0, "PERFECT", Vector2.ZERO, 0.0, true)
 	_check(effects.rings.size() == 1 and is_zero_approx(effects.flash_strength), "explicit zero flash scale retains an accented ring without viewport flash")
+
+
+func _test_completion_grade_text(effects) -> void:
+	var previous_locale := TranslationServer.get_locale()
+	for locale in ["en", "ko"]:
+		TranslationServer.set_locale(locale)
+		for grade in ["GOOD", "EXCELLENT", "PERFECT"]:
+			effects.reset()
+			effects.spawn_success(CENTRE, 12.0, Color.WHITE, 1.0, 0.0, grade)
+			_check(String(effects.popups[0].text).begins_with(TranslationServer.translate("QUALITY_%s" % grade) + "  +12"), "even a quiet manual completion displays its real localized grade: %s/%s" % [locale, grade])
+		effects.reset()
+		effects.spawn_success(CENTRE, 12.0, Color.WHITE, 1.0, 0.0, "AUTOMATIC")
+		_check(String(effects.popups[0].text).is_empty(), "routine automation retains its silent packet")
+	TranslationServer.set_locale(previous_locale)
+	effects.reset()
 
 
 func _test_meteor_routing(game) -> void:

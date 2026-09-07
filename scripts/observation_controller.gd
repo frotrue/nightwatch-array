@@ -116,7 +116,8 @@ func _process(delta: float) -> void:
 			predicted_multiplier,
 			maxi(1, _valid_tracked_count()),
 			_world_to_screen(cursor_position),
-			_screen_length(_software_cursor_radius())
+			_screen_length(_software_cursor_radius()),
+			clampf(1.0 - _target_contact_distance(selected_meteor, cursor_position) / maxf(_software_cursor_radius(), 1.0), 0.0, 1.0)
 		)
 	else:
 		hud.hide_tracking()
@@ -474,13 +475,22 @@ func _draw_manual_combo(observation_radius: float) -> void:
 		1.3 * visual_scale,
 		true
 	)
-	var font: Font = UITheme.mono_tabular(true)
+	var font: Font = UITheme.sans("medium")
 	var font_size := int(round(float(UITheme.size_px(22.0)) * visual_scale))
+	var label := tr("HUD_STREAK_COUNT") % streak_count
+	var label_width := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size).x
 	var label_position := cursor_position + Vector2(timer_radius + 7.0 * visual_scale, float(font_size) * 0.35)
+	var screen_size := get_viewport().get_visible_rect().size
+	if _world_to_screen(label_position).x + _screen_length(label_width) > screen_size.x - 8.0:
+		label_position.x = cursor_position.x - timer_radius - 7.0 * visual_scale - label_width
+	var screen_position := _world_to_screen(label_position)
+	screen_position.x = clampf(screen_position.x, 8.0, maxf(8.0, screen_size.x - _screen_length(label_width) - 8.0))
+	screen_position.y = clampf(screen_position.y, _screen_length(font_size) + 8.0, screen_size.y - 8.0)
+	label_position = _screen_to_world(screen_position)
 	draw_string(
 		font,
 		label_position,
-		"×%d" % streak_count,
+		label,
 		HORIZONTAL_ALIGNMENT_LEFT,
 		-1.0,
 		font_size,

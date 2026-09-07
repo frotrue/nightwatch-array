@@ -7,6 +7,13 @@ const RING_CENTER := Vector2(700, 590)
 const RING_RADIUS := 180.0
 const SLOT_RADIUS := 38.0
 const CHANGE_SECONDS := 0.28
+# The popup is authored against the 1920x1080 spec frame and rendered at 0.6x
+# in the shared 1152x648 viewport. Keep readable prose and actions above the
+# resulting 12px/14px output thresholds instead of inheriting the tiny chart
+# metadata sizes.
+const POPUP_BODY_SPEC_SIZE := 20 # 12px at UITheme.SCALE
+const POPUP_ACTION_SPEC_SIZE := 24 # 14px at UITheme.SCALE
+const POPUP_META_SPEC_SIZE := 16 # 10px at UITheme.SCALE
 
 class RingSlot:
 	extends Button
@@ -84,7 +91,7 @@ class InventoryTile:
 		Visual.draw_module(self, Rect2(Vector2.ONE * UITheme.px(13), size - Vector2.ONE * UITheme.px(26)), module_id, not installed)
 		var font: Font = UITheme.mono()
 		var code: String = Modules.DEFINITIONS[module_id].code
-		draw_string(font, Vector2(UITheme.px(6), UITheme.px(14)), code, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.size_px(10), UITheme.INK_LOW if installed else UITheme.INK_MID)
+		draw_string(font, Vector2(UITheme.px(6), UITheme.px(14)), code, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.size_px(POPUP_META_SPEC_SIZE), UITheme.INK_LOW if installed else UITheme.INK_MID)
 		if installed:
 			var mark := Rect2(size - Vector2.ONE * UITheme.px(24), Vector2.ONE * UITheme.px(14))
 			draw_rect(mark, UITheme.TOOLTIP_LABEL, false, UITheme.px(1), true)
@@ -156,11 +163,11 @@ func _ready() -> void:
 		slots.append(button)
 		var center := button.position / UITheme.SCALE + Vector2.ONE * SLOT_RADIUS
 		var label_pos := center + Vector2(-95, -65 if index == 0 else 50)
-		var caption := _label(surface, label_pos, 190, 15, UITheme.INK_HIGH)
+		var caption := _label(surface, label_pos, 190, POPUP_BODY_SPEC_SIZE, UITheme.INK_HIGH)
 		caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		slot_captions.append(caption)
-	inventory_heading = _label(surface, Vector2(1180, 344), 420, 11, UITheme.INK_MID, true)
-	inventory_count = _label(surface, Vector2(1640, 344), 140, 11, UITheme.INK_LOW, true)
+	inventory_heading = _label(surface, Vector2(1180, 344), 420, POPUP_BODY_SPEC_SIZE, UITheme.INK_MID, true)
+	inventory_count = _label(surface, Vector2(1640, 344), 140, POPUP_BODY_SPEC_SIZE, UITheme.INK_MID, true)
 	inventory_count.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	for id in Modules.DEFINITIONS:
 		var tile := InventoryTile.new()
@@ -175,15 +182,15 @@ func _ready() -> void:
 		tile.focus_exited.connect(hide_tooltip)
 		surface.add_child(tile)
 		owned_buttons[id] = tile
-	summary_heading = _label(surface, Vector2(400, 832), 600, 10, UITheme.TOOLTIP_LABEL, true)
+	summary_heading = _label(surface, Vector2(400, 832), 600, POPUP_BODY_SPEC_SIZE, UITheme.TOOLTIP_LABEL, true)
 	summary_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	summary = _label(surface, Vector2(335, 860), 730, 16, UITheme.TOOLTIP_VALUE)
+	summary = _label(surface, Vector2(335, 860), 730, POPUP_BODY_SPEC_SIZE, UITheme.TOOLTIP_VALUE)
 	summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	capacity_label = _label(surface, Vector2(400, 888), 600, 10, UITheme.INK_LOW, true)
+	capacity_label = _label(surface, Vector2(400, 888), 600, POPUP_BODY_SPEC_SIZE, UITheme.INK_MID, true)
 	capacity_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	instructions = _label(surface, Vector2(1180, 764), 600, 12, UITheme.TOOLTIP_LABEL)
+	instructions = _label(surface, Vector2(1180, 764), 600, POPUP_BODY_SPEC_SIZE, UITheme.TOOLTIP_BODY)
 	instructions.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	hint = _label(surface, Vector2(1180, 864), 600, 11, UITheme.INK_LOW)
+	hint = _label(surface, Vector2(1180, 864), 600, POPUP_BODY_SPEC_SIZE, UITheme.TOOLTIP_VALUE)
 	_build_tooltip()
 	overlay.hide()
 	set_process(false)
@@ -375,16 +382,22 @@ func _build_tooltip() -> void:
 	style.set_border_width_all(1)
 	style.content_margin_left = UITheme.px(26)
 	style.content_margin_right = UITheme.px(26)
-	style.content_margin_top = UITheme.px(20)
-	style.content_margin_bottom = UITheme.px(20)
+	style.content_margin_top = UITheme.px(18)
+	style.content_margin_bottom = UITheme.px(18)
 	tooltip_panel.add_theme_stylebox_override("panel", style)
 	overlay.add_child(tooltip_panel)
 	var column := VBoxContainer.new()
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	column.add_theme_constant_override("separation", UITheme.size_px(10))
+	column.add_theme_constant_override("separation", UITheme.size_px(9))
 	tooltip_panel.add_child(column)
 	var list: Array[Label] = []
-	for spec in [[19, UITheme.TOOLTIP_NAME], [11, UITheme.TOOLTIP_LABEL], [14, UITheme.TOOLTIP_BODY], [14, UITheme.TOOLTIP_BODY], [13, UITheme.TOOLTIP_ACTION]]:
+	for spec in [
+		[POPUP_ACTION_SPEC_SIZE, UITheme.TOOLTIP_NAME],
+		[POPUP_META_SPEC_SIZE, UITheme.INK_MID],
+		[POPUP_BODY_SPEC_SIZE, UITheme.TOOLTIP_BODY],
+		[POPUP_BODY_SPEC_SIZE, UITheme.TOOLTIP_BODY],
+		[POPUP_ACTION_SPEC_SIZE, UITheme.TOOLTIP_ACTION],
+	]:
 		var label := UITheme.spec_label("", UITheme.sans(), spec[0], spec[1])
 		# Give wrapping its final width before the first container layout.
 		label.custom_minimum_size.x = UITheme.px(348)
@@ -398,6 +411,7 @@ func _build_tooltip() -> void:
 	tooltip_effect = list[2]
 	tooltip_combo = list[3]
 	tooltip_action = list[4]
+	tooltip_action.add_theme_font_override("font", UITheme.sans("medium"))
 	tooltip_panel.hide()
 
 func _draw_surface() -> void:
@@ -429,11 +443,11 @@ func _text_action(parent: Control, p: Vector2, dimensions: Vector2, callback: Ca
 	button.size = dimensions * UITheme.SCALE
 	_empty_button_style(button)
 	button.add_theme_font_override("font", UITheme.sans())
-	button.add_theme_font_size_override("font_size", UITheme.size_px(14))
-	button.add_theme_color_override("font_color", UITheme.INK_MID)
+	button.add_theme_font_size_override("font_size", UITheme.size_px(POPUP_ACTION_SPEC_SIZE))
+	button.add_theme_color_override("font_color", UITheme.TOOLTIP_ACTION)
 	button.add_theme_color_override("font_hover_color", UITheme.ACCENT_TEXT)
 	button.add_theme_color_override("font_focus_color", UITheme.ACCENT_TEXT)
 	button.pressed.connect(callback)
-	button.draw.connect(func(): button.draw_line(Vector2(0, button.size.y - 1), button.size - Vector2(0, 1), Color(UITheme.INK_MID, 0.55), UITheme.px(1), true))
+	button.draw.connect(func(): button.draw_line(Vector2(0, button.size.y - 1), button.size - Vector2(0, 1), Color(UITheme.TOOLTIP_ACTION, 0.7), UITheme.px(1), true))
 	parent.add_child(button)
 	return button

@@ -336,7 +336,7 @@ func _track(game: Node, target, progress: float) -> void:
 	game.observer.previous_cursor_position = target.global_position
 	game.observer.was_holding = true
 	game.observer.interaction_mode = game.observer.InteractionMode.TRACKING
-	game.hud.set_tracking(progress, String(target.type_id), target.get_predicted_multiplier(), 1, target.global_position, game.progression.get_tracking_radius())
+	game.hud.set_tracking(progress, String(target.type_id), target.get_predicted_multiplier(), 1, target.global_position, game.progression.get_tracking_radius(), 1.0)
 
 
 func _buy_nodes(game: Node, requested: Array) -> void:

@@ -376,7 +376,8 @@ func set_tracking(
 	multiplier: float,
 	target_count: int = 1,
 	cursor_position: Vector2 = Vector2.ZERO,
-	ring_radius: float = -1.0
+	ring_radius: float = -1.0,
+	aim_quality: float = 0.0
 ) -> void:
 	if not tracking_cluster.visible:
 		tracking_cluster.visible = true
@@ -397,7 +398,7 @@ func set_tracking(
 		tracking_target.text = tr("METEOR_%s" % target_type.to_upper())
 		last_tracking_text = tracking_target.text
 		tracking_metrics_dirty = true
-	var quality_key := _tracking_quality_key(progress)
+	var quality_key := _tracking_aim_key(aim_quality)
 	if quality_key != last_tracking_quality_key:
 		last_tracking_quality_key = quality_key
 		tracking_quality.text = tr(quality_key)
@@ -418,16 +419,15 @@ func set_tracking(
 		_layout_tracking_cluster()
 
 
-func _tracking_quality_key(progress: float) -> String:
-	# The cluster names the grade the player is currently earning; the ring colour
-	# used to be the only channel for it.
-	if progress >= 0.99:
-		return "QUALITY_PERFECT"
-	if progress >= 0.75:
-		return "QUALITY_EXCELLENT"
-	if progress >= 0.45:
-		return "QUALITY_GOOD"
-	return "QUALITY_PARTIAL"
+func _tracking_aim_key(quality: float) -> String:
+	# Live alignment is independent of completion and the accumulated final grade.
+	if quality >= 0.8:
+		return "HUD_AIM_CENTER"
+	if quality >= 0.4:
+		return "HUD_AIM_INNER"
+	if quality > 0.0:
+		return "HUD_AIM_EDGE"
+	return "HUD_AIM_LOST"
 
 
 func hide_tracking() -> void:

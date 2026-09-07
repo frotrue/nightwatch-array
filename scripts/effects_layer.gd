@@ -144,14 +144,15 @@ func spawn_success(world_position: Vector2, amount: float, color: Color, multipl
 			"color": color
 		})
 
-	# Below the text threshold a packet ships as a silent mote. At observation
+	# Ungraded/automatic packets below the text threshold ship as silent motes. At observation
 	# rates past a few per second the numbers overlap into an unreadable stack,
 	# and the flow toward the counter is the part that has to stay legible.
 	var label := ""
-	if power >= PACKET_TEXT_STRENGTH or multiplier > 1.01:
+	var has_manual_grade := grade in ["GOOD", "EXCELLENT", "PERFECT"]
+	if has_manual_grade or power >= PACKET_TEXT_STRENGTH or multiplier > 1.01:
 		var prefix := ""
-		if grade == "PERFECT" or grade == "EXCELLENT":
-			prefix = "%s  " % grade
+		if has_manual_grade:
+			prefix = "%s  " % tr("QUALITY_%s" % grade)
 		var suffix := "  x%.2f" % multiplier if multiplier > 1.01 else ""
 		label = "%s+%d%s" % [prefix, int(amount), suffix]
 	if popups.size() >= MAX_POPUPS:
@@ -390,7 +391,7 @@ func _draw() -> void:
 			draw_circle(popup.p, mote * 2.4 * visual_scale, Color(popup.color, alpha * 0.16))
 			draw_circle(popup.p, mote * visual_scale, Color(popup.color, alpha * 0.92))
 			continue
-		var font := ThemeDB.fallback_font
+		var font := UITheme.sans()
 		draw_string(font, popup.p, text, HORIZONTAL_ALIGNMENT_CENTER, -1.0, int(round(float(popup.font_size) * visual_scale)), Color(popup.color, alpha))
 	for marker in incoming_markers:
 		var alpha := clampf(float(marker.life) / 0.4, 0.0, 1.0)
