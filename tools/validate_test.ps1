@@ -51,6 +51,8 @@ public static class FakeGodot {
         string marker;
         switch (script) {
             case "research_contract_test": marker = "RESEARCH_CONTRACT_PASS"; break;
+            case "save_integrity_test": marker = "SAVE_INTEGRITY_PASS"; break;
+            case "deep_sky_test": marker = "DEEP_SKY_PASS"; break;
             case "smoke_test": marker = "SMOKE_TEST_PASS"; break;
             case "observation_span_probe": marker = "OBSERVATION_SPAN_PASS"; break;
             case "galactic_slice_test": marker = "GALACTIC_SLICE_PASS"; break;
@@ -143,7 +145,7 @@ $sentinel = $null
 try {
     $success = Invoke-RunnerCase 'success'
     Assert-Check ($success.exit_code -eq 0 -and $success.summary.status -eq 'passed') 'Success case failed.'
-    Assert-Check ($success.summary.results.Count -eq 12) 'The default suite must run exactly twelve gates.'
+    Assert-Check ($success.summary.results.Count -eq 14) 'The default suite must run exactly fourteen gates.'
     Assert-Check ($success.summary.project_root -eq $projectRoot) 'Runner did not resolve the repository root.'
     foreach ($result in $success.summary.results) {
         Assert-Check ($result.pass_marker_found -and $result.exit_code -eq 0) ('Missing success evidence for ' + $result.name)
@@ -154,8 +156,8 @@ try {
     Assert-Check ((Get-Content -LiteralPath $referenceErrorLog -Raw).Contains('nonexistent-reference-capture-git.exe -C ')) 'Expected native-error fixture was not exercised.'
 
     $economy = Invoke-RunnerCase 'economy' -Economy
-    Assert-Check ($economy.exit_code -eq 0 -and $economy.summary.results.Count -eq 13) 'FullEconomy did not append the economy gate.'
-    Assert-Check ($economy.summary.results[12].name -eq 'full_tree_economy_test') 'Wrong economy gate order.'
+    Assert-Check ($economy.exit_code -eq 0 -and $economy.summary.results.Count -eq 15) 'FullEconomy did not append the economy gate.'
+    Assert-Check ($economy.summary.results[14].name -eq 'full_tree_economy_test') 'Wrong economy gate order.'
     Assert-Check ($economy.path -ne $success.path) 'Separate invocations reused a summary path.'
 
     foreach ($mode in @('no_marker', 'nonzero', 'script_error', 'parse_error', 'native_error', 'git_error_wrong_gate')) {
@@ -175,8 +177,8 @@ try {
 
     $wrongGitPath = Invoke-RunnerCase 'git_error_wrong_path'
     Assert-Check ($wrongGitPath.exit_code -ne 0 -and $wrongGitPath.summary.status -eq 'failed') 'Accepted a different missing executable in the reference gate.'
-    Assert-Check ($wrongGitPath.summary.results.Count -eq 8 -and $wrongGitPath.summary.results[7].name -eq 'reference_capture_test') 'Wrong-path fixture did not reach and stop at the reference gate.'
-    Assert-Check ($wrongGitPath.summary.results[7].pass_marker_found -and ($wrongGitPath.summary.results[7].failures -like 'Unexpected Godot engine error:*').Count -gt 0) 'Reference exception was not restricted to the exact expected path.'
+    Assert-Check ($wrongGitPath.summary.results.Count -eq 10 -and $wrongGitPath.summary.results[9].name -eq 'reference_capture_test') 'Wrong-path fixture did not reach and stop at the reference gate.'
+    Assert-Check ($wrongGitPath.summary.results[9].pass_marker_found -and ($wrongGitPath.summary.results[9].failures -like 'Unexpected Godot engine error:*').Count -gt 0) 'Reference exception was not restricted to the exact expected path.'
 
     # Keep a separate fake executable alive to catch unsafe name-based timeout cleanup.
     $sentinel = New-Object Diagnostics.Process

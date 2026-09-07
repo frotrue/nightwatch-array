@@ -23,7 +23,8 @@
 
 | 문서 | 상태와 해석 |
 |---|---|
-| [107노드 전체 경제](full-tree-economy-baseline.md) | 현행 콘텐츠 구조의 2026-08-30 기준선. 3전략×3시드의 활성 관측 시간이며 사람의 완주 시간·최종 가격 승인이 아님 |
+| [107노드 전체 경제](full-tree-economy-baseline.md) | 이전 107노드 경로의 2026-08-30 기준선. 현재 M31·모듈 구간의 기준선이 아님. 3전략×3시드의 활성 관측 시간이며 사람의 완주 시간·최종 가격 승인이 아님 |
+| [코드·문서 정리 검증](maintenance-2026-09-07.md) | 저장 실패 보호, 모듈 조회 계산 비교, 동일 화면 검증과 검사 범위 |
 | [1차 성능 최적화](performance-baseline-2026-09-04.md) | 2026-09-04 동일 화면·고정 부하 비교. 연구 목록 CPU와 32개 관측 성능, 개선되지 않은 구간·측정 제외 사유를 함께 기록 |
 | [관측 시간 사다리](duration-ladder-baseline.md) | 역사 자료. 2026-08-26 경제 개편 전 21노드의 가격·선행관계와 계측을 보존 |
 | [별자리 연구 기준선](constellation-research-baseline.md) | 역사 자료. 41노드 시점의 수치이며 문서 안의 옛 `live graph`도 현행 수치가 아님 |
@@ -39,6 +40,9 @@
 | [AM-V3QP 1~4단계 완료 기록](agent-room-feedback-checkpoint.md) | 사운드·효과·캡처·계열색의 승인/커밋과 검증 한계, 남은 후속 검토 |
 | [정리 전 설계 원문](history/design-through-2026-09-03.md) | `ef769ee`의 전체 설계 기록. 유효한 승인과 이미 대체된 3층·이전 경제·국부은하군 계획을 모두 보존 |
 | [정리 전 회의 체크포인트 원문](history/agent-room-feedback-through-2026-09-03.md) | `ef769ee`의 중단·재개·WIP·단계별 리뷰 원문. 옛 보류나 재개 지시는 현재 작업 지시가 아님 |
+| [안드로메다 별도 스테이지 실험](history/andromeda-stage-experiment.md) | 폐기한 전용 관측 무대·작업대의 승인 이력 |
+| [모듈 UI 조사와 수정 기록](module-workbench-reference-study.md) | Steam 기능 조사와 DEFRAG 방향 검토. 현행 UI 계약은 설계 문서가 우선 |
+| [이전 은하 연구 렌더러](history/galactic-renderer-reference.md) | 현재 표시하지 않는 29개 표식·경로 렌더러의 구현 참고 |
 | [캠페인 프로토타입](campaign-prototype.md) | 제거된 캠페인의 이유와 재도입 전 조건. 옛 30~45분 목표는 대체됐으며 캠페인 재도입 승인이 아님 |
 
 기존 기준선·프로토타입 경로는 참조를 보존하기 위해 옮기지 않았다.

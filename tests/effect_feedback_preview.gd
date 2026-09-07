@@ -14,7 +14,7 @@ const SOURCE_FILES := [
 	"scripts/game.gd", "scripts/effects_layer.gd", "scripts/hud.gd",
 	"scripts/upgrade_tree.gd", "tests/effect_feedback_preview.gd",
 	"tests/support/game_fixture.gd", "scripts/research_star_visual.gd",
-	"scripts/ui_theme.gd", "scripts/galaxy_hub.gd",
+	"scripts/ui_theme.gd", "scripts/deep_sky_chart.gd",
 ]
 
 var game: Node
@@ -73,10 +73,10 @@ func _run() -> void:
 	game.upgrade_tree.configure_galactic_state(true, true)
 	game.upgrade_tree.open_tree()
 	await _settle_layout()
-	if not game.upgrade_tree.galaxy_hub.is_visible_in_tree() or game.upgrade_tree.galactic_panel.is_visible_in_tree():
+	if not game.upgrade_tree.deep_sky_chart.is_visible_in_tree() or game.upgrade_tree.galactic_panel.is_visible_in_tree():
 		_fail("Galaxy hub must replace the retired purchase inspector.")
 		return
-	if not await _save_frame("04_galaxy_hub", {"kind": "galaxy_destination", "destination": "andromeda", "purchase_feedback": false}):
+	if not await _save_frame("04_deep_sky_chart", {"kind": "chart_continuation", "selection": "m31", "purchase_feedback": false}):
 		return
 	if source.files_sha256 != _source_hashes():
 		_fail("Source files changed during capture; do not treat this image set as one revision.")

@@ -16,6 +16,7 @@ enum InteractionMode {
 
 var meteor_layer: Node2D
 var additional_target_layers: Array[Node2D] = []
+var modules: RefCounted
 var progression: Node
 var hud: CanvasLayer
 var survey: Node2D
@@ -197,7 +198,7 @@ func _update_manual_tracking(delta: float, keep_primary: bool = false) -> bool:
 		return false
 
 	var primary = selected_meteor
-	var tracking_radius: float = primary.get_tracking_radius(_world_px(progression.get_tracking_radius()))
+	var tracking_radius: float = primary.get_tracking_radius(_world_px(_module_tracking_radius()))
 	var current_distance: float = _target_contact_distance(primary, cursor_position)
 	if _apply_manual_contact(primary, delta):
 		tracking_grace_remaining = TRACKING_GRACE_SECONDS
@@ -210,7 +211,7 @@ func _update_manual_tracking(delta: float, keep_primary: bool = false) -> bool:
 		if tracking_grace_remaining <= 0.0:
 			selected_meteor = null
 
-	if progression.has_upgrade("multi_target_analysis"):
+	if progression.has_upgrade("multi_target_analysis") or (modules != null and int(modules.effect("targets")) > 1):
 		_observe_additional_targets(delta, primary)
 		var closest_tracked = _closest_valid_tracked_target()
 		if closest_tracked != null and (not keep_primary or not _selection_is_valid()):
@@ -219,7 +220,10 @@ func _update_manual_tracking(delta: float, keep_primary: bool = false) -> bool:
 
 
 func _observe_additional_targets(delta: float, primary) -> void:
+	var limit := 100000 if progression.has_upgrade("multi_target_analysis") else int(modules.effect("targets"))
 	for child in _target_children():
+		if tracked_meteors.size() >= limit:
+			break
 		if child == primary or not _target_is_valid(child):
 			continue
 		if _apply_manual_contact(child, delta):
@@ -229,14 +233,14 @@ func _observe_additional_targets(delta: float, primary) -> void:
 func _apply_manual_contact(target, delta: float) -> bool:
 	if not _target_is_valid(target):
 		return false
-	var tracking_radius: float = target.get_tracking_radius(_world_px(progression.get_tracking_radius()))
+	var tracking_radius: float = target.get_tracking_radius(_world_px(_module_tracking_radius()))
 	if target.has_method("apply_manual_cursor_path"):
 		return target.apply_manual_cursor_path(
 			delta,
 			previous_cursor_position,
 			cursor_position,
 			tracking_radius,
-			progression.get_manual_analysis_speed_multiplier()
+			_module_manual_speed()
 		)
 	var current_distance: float = _target_contact_distance(target, cursor_position)
 	if current_distance <= tracking_radius:
@@ -244,7 +248,7 @@ func _apply_manual_contact(target, delta: float) -> bool:
 			delta,
 			current_distance,
 			tracking_radius,
-			progression.get_manual_analysis_speed_multiplier()
+			_module_manual_speed()
 		)
 		return true
 	var swept_distance := _target_cursor_path_distance(target)
@@ -256,7 +260,7 @@ func _apply_manual_contact(target, delta: float) -> bool:
 			delta * contact_scale,
 			swept_distance,
 			tracking_radius,
-			progression.get_manual_analysis_speed_multiplier()
+			_module_manual_speed()
 		)
 		return true
 	return false
@@ -312,7 +316,7 @@ func _find_target_under_cursor():
 	for child in _target_children():
 		if not _target_is_valid(child):
 			continue
-		var tracking_radius: float = child.get_tracking_radius(_world_px(progression.get_tracking_radius()))
+		var tracking_radius: float = child.get_tracking_radius(_world_px(_module_tracking_radius()))
 		# Swept point-to-segment distance prevents fast mouse movement from
 		# tunnelling straight through a target between two rendered frames.
 		var distance: float = _target_cursor_path_distance(child)
@@ -525,14 +529,14 @@ func _active_atmospheric_target_count() -> int:
 
 
 func _software_cursor_radius() -> float:
-	return _world_px(progression.get_tracking_radius() if progression != null else DEFAULT_TRACKING_RADIUS)
+	return _world_px(_module_tracking_radius() if progression != null else DEFAULT_TRACKING_RADIUS)
 
 
 func _draw_tracking_ring(target, is_primary: bool) -> void:
 	if target.has_method("get_manual_contact_distance"):
 		return
 	var visual_scale := _world_px(1.0)
-	var tracking_radius: float = target.get_tracking_radius(_world_px(progression.get_tracking_radius()))
+	var tracking_radius: float = target.get_tracking_radius(_world_px(_module_tracking_radius()))
 	var quality: float = target.get_quality()
 	# Quality rides brightness inside the palette: a poorly centred track sits
 	# at the accent line, a perfectly centred one climbs to the brightest ink.
@@ -566,7 +570,7 @@ func _draw_hover_ring(target) -> void:
 	if target.has_method("get_manual_contact_distance"):
 		return
 	var visual_scale := _world_px(1.0)
-	var tracking_radius: float = target.get_tracking_radius(_world_px(progression.get_tracking_radius()))
+	var tracking_radius: float = target.get_tracking_radius(_world_px(_module_tracking_radius()))
 	# A hint, not a gauge, so it stays below the tracking ring.
 	var ring_color := UITheme.INK_MID
 	var pulse := 1.0 + sin(Time.get_ticks_msec() * 0.006) * 0.06
@@ -603,3 +607,9 @@ func _world_to_screen(point: Vector2) -> Vector2:
 	if observation_view != null:
 		return observation_view.world_to_screen(point)
 	return point
+
+func _module_tracking_radius() -> float:
+	return progression.get_tracking_radius() * (float(modules.effect("radius")) if modules != null and progression.galaxy_unlocked() else 1.0)
+
+func _module_manual_speed() -> float:
+	return progression.get_manual_analysis_speed_multiplier() * (float(modules.effect("speed")) if modules != null and progression.galaxy_unlocked() else 1.0)

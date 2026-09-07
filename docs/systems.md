@@ -64,7 +64,7 @@ content.
 | `game_input_bindings.gd` | The six `nw_*` action definitions, fixed/editable slot metadata, active conflict contexts, descriptor validation/labels, project-default restoration, and editable override application. |
 | `observation_view.gd` | The fixed atmospheric playfield, laterally expanding meteor-activity rectangle, dynamic camera-visible world rectangle, screen/world point conversion, interaction-length conversion, partial meteor visual scaling, and the Camera2D feedback offset. Four Local Group chapter milestones expand its span from 1.0 to the 1.4774554 ceiling. |
 | `progression_controller.gd` | Data balance, purchased nodes, discovery gates, transient manual Observation Streak, the Perseid three-target predicate, persistent Leo storm charge, and systemic derived upgrade effects. Single source of truth: consumers ask it, not `game_balance.gd`. |
-| `game_balance.gd` | Static data: 107 installable research definitions, their immutable ID index, four simple Local Group observation profiles, the meteor/long-watch-target spec table, and the final galactic observation-span ceiling. `RefCounted`, no mutable progression state. |
+| `game_balance.gd` | Static data: 95 active plus 12 compatibility research definitions, their immutable ID index, four simple Local Group observation profiles, the meteor/long-watch-target spec table, and the final galactic observation-span ceiling. `RefCounted`, no mutable progression state. |
 | `meteor_spawner.gd` | Spawn cadence, type rolls (including same-round satellites, variable stars, comets, binary stars, and distant galaxies), delayed/forecast Gemini observation echoes, paced Leo meteor-storm queues, sky-wide burnout endpoint planning, forecast contact announcements, fragment spawning, survey-requested custom-start spawns, shower and round-guarded Canis Major spawns, support-lane assignment. |
 | `meteor.gd` | One object's burn-progress motion, optional fixed-endpoint quadratic lens curve, explicit in-zone lensed state, trail and terminal fade, observation progress, quality grading, split behaviour, and passive spectral calibration result. |
 | `galactic_phenomena_controller.gd` | Persistent supernova and black-hole target lifecycle, semantic five-record completion queries, active-observation-time phase advancement, save/load, lens-zone rendering, and lensed-meteor curve assignment. |
@@ -80,6 +80,10 @@ content.
 | `research_chart_data.gd` | Shared constellation records, shape edges, Local Group records, and galaxy-disc projection used by both the interactive research chart and the ending plate. |
 | `upgrade_tree.gd` | Research Chart rendering and purchase interaction, chart/back first-refusal input, binding-labelled close actions, and the final-watch-pending and ending-ready completion detail shown at galaxy scale. |
 | `research_star_visual.gd` | One star, cluster, or galaxy research marker: state/branch ink, pulse, hover and hold drawing. The chart retains `StarNodeVisual` as a compatibility alias. |
+| `deep_sky_research.gd` / `andromeda_target.gd` | M31 first-record gate, target lifecycle, ordinary round income, module purchase/equip validation and save migration. |
+| `deep_sky_chart.gd` | Continuation research UI, cached original constellation miniature and visible selected-node details. |
+| `observation_modules.gd` | Permanent module ownership, two unique slots and cached derived effects with ownership/slot validation. |
+| `module_popup.gd` / `module_visual.gd` | Research-only equipment popup, modal layer/input/pause restoration and shared compact glyphs. |
 | `ui_theme.gd` | Shared palette, embedded font selection, 1920-spec coordinate conversion, spec-label construction, and grouped integer formatting for the HUD and chart. |
 | `tutorial_controller.gd` | Four-step first-run guidance, including the public modal-step query and focus-owned welcome/completion cards. |
 | `save_game_controller.gd` | Three save slots under `user://saves`, versioned at `SAVE_VERSION = 1`. |
@@ -87,32 +91,43 @@ content.
 
 ## Setup calls
 
-The final galaxy scale now displays `galaxy_hub.gd`, a destination selector.
-Its data-driven destination list currently contains only the playable Andromeda
-stage. Selection never spends Data or requests research purchases. The old
-Local Group markers have zero presentation alpha and reject interaction;
-their routes, orbits, labels and decorative shapes are no longer submitted to
-the chart renderer. The research header, install ledger, inspector, and core
-hitbox are hidden. A dedicated action returns to the completed constellation
-chart, which has a return-to-hub action. Old research definitions/save IDs and
-legacy ending data remain storage compatibility concerns, not destination UI.
+The final chart scale displays `deep_sky_chart.gd`, a continuation of the existing
+constellation progression. Its miniature uses the original `base_star_positions`
+and actual constellation segments, not the collapsed presentation coordinates.
+Selecting the miniature expands the original chart. The first branch is the M31
+observation milestone, module research, and the two module purchases. The retired
+29 Local Group nodes remain invisible and non-interactive. The old destination
+selector and independent Andromeda stage have been removed.
 
-`game.gd` also instantiates `AndromedaStage` at runtime. The galaxy chart's
-`andromeda_requested` signal opens its independent observation surface after
-Galaxy Map is installed. It suspends the atmospheric scene, owns its own round
-timer, and adds actual observation time to the shared run. On return, the chart
-resumes its previous atmospheric/intermission lifecycle. Stage earnings are
-excluded from the suspended atmospheric round's baseline statistics.
+`deep_sky_research.gd` is a Node2D additional target layer registered with the
+existing observer and survey discovery guards. Its `andromeda_target.gd` child
+appears after `galactic_reference_frame`, uses the same aim-and-hold observer,
+and contributes income and successes to the ordinary observation round. It has
+no separate clock, scene, camera, or reward accounting. First observation unlocks
+module research; no additional purchase is needed to unlock the equipment UI.
 
-`observation_modules.gd` owns permanent purchases and one equipped slot.
-Andromeda consumes its focus/wide effects, the existing lens/analysis/value
-research, and basic-star support from the existing dishes. The three target
-groups use deterministic authored positions; observations recur after seven
-seconds. `andromeda_sky.gd` owns procedural drawing only. Shared settings remain
-above the new surface and stop its simulation. `andromeda` is an optional run
-save section; old saves receive empty module ownership, and malformed module
-IDs or unowned equipped values are discarded. Loading/reset cancels stale
-deferred stage restoration.
+`observation_modules.gd` retains permanent ownership and two unique slots.
+`deep_sky_research.gd` validates chart-only purchases and popup-only equipment
+changes. Purchases do not auto-equip. `module_popup.gd` contains only owned items,
+slots, equip/unequip and close actions. It remembers pause, cursor and focus
+ownership within the research chart. The launcher belongs to the chart overlay,
+not the observation HUD, and opening outside research is rejected. Closing the
+chart dismisses its popup first. The popup canvas is one layer above the
+research canvas, so it is both visible and receives pointer input. The chart's
+first-refusal input yields while that popup is open. The HUD ready notice counts
+purchasable modules and excludes the retired Local Group nodes.
+
+The existing observer multiplies manual speed/radius by module effects. Target
+manual-speed clamps allow positive multipliers below one so wide's penalty is
+real, without reducing the existing multi-target research capacity or affecting
+automatic dishes. Glyphs come from `module_visual.gd`; the workbench and synthetic
+trial runtime were removed.
+
+A new optional `deep_sky` save section stores ownership, both slots, first-record
+count, M31 partial progress and cooldown. An old `andromeda.modules` section is
+read as a migration fallback; its active-stage flag is ignored. Unknown, duplicate
+and unowned slots are sanitized. Missing records grant no purchases. Opening a
+popup is presentation state and is never restored from a save.
 
 `game.gd::_ready()` performs dependency injection by hand. There are no
 autoloads.
@@ -404,46 +419,11 @@ active, the chart reverts to ordinary close/resume copy. Once the qualified
 watch has ended, the same line and both close actions say that they will seal
 the record. The chart does not derive completion from node counts itself.
 
-### Retired galaxy research presentation (compatibility reference)
+### Retired galaxy renderer
 
-The following describes the former 29-marker renderer. Its selection surface,
-routes, labels and inspector are retired in favor of the destination hub above.
-The data and saved progression remain available for compatibility; this is not
-the current player-facing galaxy screen.
-
-Installing the 86 non-Draco systems reveals Draco's root; installing all 95
-original systems opens the saved Galactic Reference Frame state. The open chart
-also performs one saved 3.6-second
-pull-back: constellation structure and decorative background stars fade while
-the 95-node chart collapses into the interactive Galactic Reference Frame node
-at the Milky Way centre. Before that collapse completes, a constant-speed route
-head traces the installed Local Group path; each real node lights near its final
-screen position when the route reaches it and settles over only the last few
-percent of its radius. Its radial chart position compensates for the live camera
-zoom, so the revealed map does not contract after it appears. There is no
-centre-only hold or second expanding-map beat. The installed curved route and
-current frontier are the only research lines retained there. It is a
-non-terminal presentation state by itself: it does not interrupt an active
-observation round, and Ctrl+wheel travels between the galaxy and completed
-chart scales after the one-time sequence. Only the separate catalogue-ending
-predicate can turn a later chart close into the ending. At galaxy scale, a non-interactive
-104-spec-pixel miniature of the twelve completed constellations remains at the
-Milky Way centre; one 112-spec-pixel core target replaces the overlapping legacy
-buttons. The 29 Local Group positions preserve the data angles and normalized
-distance order while remapping into a 0.52-tilted 124–548-spec-pixel disc. Their
-Catmull-Rom route has a glow underlay, two dashed reference orbits, two cached
-radial halo textures, edge-on rotated galaxy markers, and permanent code labels.
-Seventy-four deterministic, non-interactive blue-grey background points occupy
-the area outside the route ellipse. Both scales use fixed information columns:
-constellation scale owns a 13-row install ledger and a selected-star inspector
-with state legend, while galaxy scale swaps in its completion record and
-galaxy-profile inspector. Hover changes the persistent selection instead of moving a
-cursor tooltip; the constellation sky itself stays free of node-name text, and
-the fixed right inspector alone identifies the selection. The Local Group disc
-contains 12 functional research nodes and 17 non-interactive astronomical
-records, bringing the installable total to 107. Sirius Bloom still schedules one warned Major Fireball at a randomized
-viable time in each subsequent round. Observing or losing it does not stop the
-night.
+The old 29-marker presentation is retained only as compatibility code/data.
+Its historical description is in [the renderer archive](history/galactic-renderer-reference.md).
+Current continuation and module ownership are described in Setup calls above.
 
 ### Time invariants
 
@@ -718,15 +698,23 @@ shrink it, and adding or exchanging an id requires an explicit test diff.
 
 ## Save format
 
+Save version remains 1. The controller writes and flushes a same-directory
+`slot_N.cfg.tmp.<pid>` file and then renames it over the destination. Neither a
+staging-write failure nor a rename failure replaces the last committed record
+or its cached summary. Load ignores uncommitted staging files. Existing parse
+failures are occupied invalid slots, not empty slots available for new games.
+Version, payload containers and known top-level/progression numeric fields are
+validated before loading. Read and write summaries share the same builder.
+
 `game.gd::_build_save_data()` writes a flat dictionary containing run timing,
 round bookkeeping, the clean-round baseline, and nested progression, host-star,
-and galactic-phenomena payloads. Each saved distant target retains its stable id,
+galactic-phenomena and deep-sky payloads. Each saved distant target retains its stable id,
 visual profile, position, observation progress, transit/respawn clocks, accumulated
 quality, and measurements, so active windows
 resume rather than being rerolled and completed evidence is not lost. The loader
 also accepts the previous single-host payload. Loading routes through
 `_apply_save_data`, which
-sanitizes every field: unknown upgrade ids are dropped by
+validates selected fields and delegates nested payload validation: unknown upgrade ids are dropped by
 `_validated_signature`, and `_sanitize_round_result` clamps a restored round
 result into legal ranges.
 
@@ -809,3 +797,24 @@ Tests can inject a path before `_ready()` with `GameSettings.new(path)` or
 the settings equivalent of replacing save services before startup: a fixture
 that changes the path after `_ready()` has already allowed the real player file
 to be read.
+
+### Resuming observation after research and save loading
+
+Game reconciles the pause when a live save replaces an intermission, and when
+research closes during an ongoing round. It resumes only if settings, controls,
+startup slots, summary, ending, tutorial and module popup are all absent. This
+repairs the stale summary pause without stealing a visible modal's pause.
+
+## Repeated-work boundaries
+
+Module effects cache their combined dictionary by the two effective owned ids.
+Each read checks current ownership and slots, including direct fixture mutation;
+there is no stale cache after equip, ownership removal or save load. Existing
+research values and effects are unchanged.
+
+The deep-sky controller emits its own changes for unlock/equipment/records;
+ordinary Data updates use the already-existing progression signal. Hidden module
+and deep-sky panels do not rebuild their contents. Opening or locale changes
+refresh visible content. The constellation miniature caches immutable base
+geometry at bind time. M31 transforms/cooldown remain live but redraw its static
+art only for observation, language, load/reset and cooldown visibility changes.

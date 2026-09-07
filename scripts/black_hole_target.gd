@@ -79,7 +79,7 @@ func apply_manual_observation(delta: float, cursor_distance: float, tracking_rad
 	last_quality = quality
 	manual_tracking_time += maxf(0.0, delta)
 	quality_integral += quality * maxf(0.0, delta)
-	var tracking_speed := lerpf(0.70, 1.35, quality) * maxf(1.0, manual_speed_multiplier)
+	var tracking_speed := lerpf(0.70, 1.35, quality) * maxf(0.01, manual_speed_multiplier)
 	observation_progress += maxf(0.0, delta) * tracking_speed / REQUIRED_HOLD_TIME
 	if observation_progress >= 1.0:
 		_finish_observation()

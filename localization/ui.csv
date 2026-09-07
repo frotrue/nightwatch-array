@@ -1,4 +1,33 @@
 key,en,ko
+MODULE_WORKBENCH,Observation modules,관측 모듈
+MODULE_WORKBENCH_CONTEXT,Andromeda · Observation paused,안드로메다 · 관측 일시정지
+MODULE_DATA,Data,데이터
+MODULE_LIBRARY,AVAILABLE MODULES,모듈 보관함
+MODULE_LOADOUT,LOADOUT  %d / %d,관측 편성  %d / %d
+MODULE_EMPTY_SLOT,Slot %d · Empty,슬롯 %d · 비어 있음
+MODULE_SLOT_CHOICE,Select slot %d,슬롯 %d 선택
+MODULE_FIT_SLOT,Equip in slot %d,슬롯 %d에 장착
+MODULE_CURRENT,Current loadout,현재 편성
+MODULE_CANDIDATE,Preview selection,선택 반영
+MODULE_TRIAL_TITLE,TEST OBSERVATION,시험 관측
+MODULE_FOCUS_SHORT,Focus,집중 관측
+MODULE_WIDE_SHORT,Wide field,광역 관측
+MODULE_DRAG_HINT,Choose a slot then a module. Owned modules can also be dragged into a slot.,슬롯과 모듈을 선택하세요. 보유 모듈은 슬롯으로 끌어 장착할 수도 있습니다.
+MODULE_OWNED,Owned,보유 중
+MODULE_NOT_OWNED,Not owned,미보유
+MODULE_FREE_FIT,Free to equip,무료 장착
+MODULE_TRIAL_HINT,Hold on a target to test,시험 표적을 누른 채 관측
+MODULE_TRIAL_RESET,Reset trial,다시 시험
+MODULE_TRIAL_COUNT,Test observations: %d,시험 관측: %d회
+MODULE_COMPARE,CURRENT → PREVIEW · BASE UPGRADES INCLUDED,현재 편성 → 선택 반영 · 기존 강화 포함
+MODULE_STAT_SPEED,Analysis speed,분석 속도
+MODULE_STAT_RADIUS,Field radius,관측 반경
+MODULE_STAT_TARGETS,Simultaneous targets,동시 관측
+MODULE_BUY_FIT,Purchase and equip,구매 후 장착
+MODULE_INSUFFICIENT,Not enough Data,데이터 부족
+MODULE_FREE_TRIAL,Free trial · No Data earned or spent,구매 전 무료 시험 · 데이터 증감 없음
+MODULE_RETURN_TO_SKY,Return to observation  →,관측으로 돌아가기  →
+ANDROMEDA_TRACKING_DETAIL,%s · %d%% · %d targets,%s · %d%% · %d개 대상
 GALAXY_HUB_TITLE,Select a galaxy,은하 선택
 GALAXY_HUB_SUBTITLE,Choose a destination for your next observation.,관측할 은하를 선택하세요.
 GALAXY_HUB_DESTINATION,OBSERVATION DESTINATION,관측 목적지
@@ -24,16 +53,16 @@ MODULE_NONE,No module,미장착
 MODULE_SLOT,Observation module · %s,관측 모듈 · %s
 MODULE_OPEN,Modules  [%s],모듈 구매 / 편성  [%s]
 MODULE_TITLE,Observation modules,관측 모듈
-MODULE_INTRO,Observation paused. Buy with existing Data; keep all earlier research. One slot. Free changes.,관측 일시정지. 기존 데이터로 구매하며 이전 연구는 유지됩니다. 슬롯 1개 · 편성 변경 무료.
+MODULE_INTRO,Two slots. Combine modules and change them for free.,슬롯 2개. 모듈을 조합하고 무료로 편성을 바꿀 수 있습니다.
 MODULE_BALANCE,Data %s   ·   Equipped: %s,보유 데이터 %s   ·   장착: %s
 MODULE_FOCUS_NAME,Focused observation,집중 관측
-MODULE_FOCUS_DESC,Observe one target at 1.8× speed. Best suited to the large globular cluster.,한 표적의 수동 관측 속도 1.8배. 오래 걸리는 구상성단 관측에 적합합니다.
+MODULE_FOCUS_DESC,Manual observation speed +80%. Also applies to wide-field targets.,수동 관측 속도 +80%. 광역 모듈과 조합 가능.
 MODULE_WIDE_NAME,Wide-field observation,광역 관측
-MODULE_WIDE_DESC,Radius +65%. Observe up to 3 nearby targets at 75% speed each.,관측 반경 +65%. 주변 표적 최대 3개를 각각 기본 속도의 75%로 동시 관측합니다.
+MODULE_WIDE_DESC,Observation radius +65%. Manual speed -25%. Keeps existing multi-target research.,관측 반경 +65%. 수동 분석 속도 -25%. 기존 다중 관측 유지.
 MODULE_BUY,Buy · %s Data,구매 · %s 데이터
 MODULE_EQUIP,Equip,장착
 MODULE_EQUIPPED,Equipped,장착 중
-MODULE_UNEQUIP,Observe without module,모듈 장착 해제
+MODULE_UNEQUIP,Unequip,장착 해제
 SETTINGS_BUTTON,SETTINGS  [ESC],설정  [ESC]
 SETTINGS_TITLE,SETTINGS,설정
 SETTINGS_SUBTITLE,GENERAL / AUDIO / DISPLAY / ACCESSIBILITY / CONTROLS / SAVE,일반 / 소리 / 화면 / 접근성 / 조작 / 저장
@@ -792,3 +821,24 @@ UPGRADE_LEO_A_LENSED_SUPERNOVA_NAME,Leo A Lensed Supernova,사자자리 A 렌즈
 UPGRADE_LEO_A_LENSED_SUPERNOVA_DESC,Unlocks a lensed supernova. Observe its bright arc; peak-brightness reward ×1.5.,렌즈 초신성을 관측할 수 있습니다. 밝은 호를 조준하며 최대 밝기 보상 ×1.5.
 UPGRADE_AQUARIUS_LOCAL_GROUP_RECORD_NAME,Local Group Record,국부은하군 기록
 UPGRADE_AQUARIUS_LOCAL_GROUP_RECORD_DESC,Completes Local Group research. Visible field +10.25% (final expansion).,국부은하군 연구를 완성합니다. 관측 화면 범위 +10.25%(최종 확장).
+
+DEEP_CHART_TITLE,Extended observation chart,확장 관측 성도
+DEEP_M31_NAME,Andromeda Galaxy · M31,안드로메다은하 · M31
+DEEP_M31_SHORT,Andromeda,안드로메다 관측
+DEEP_M31_DESC,Your array can now observe M31 in the same sky. Aim and hold to record it.,기존 하늘에서 안드로메다를 관측할 수 있습니다. 커서를 맞추고 누른 채 첫 기록을 남기세요.
+DEEP_FIRST_HINT,Record Andromeda once to reveal module research.,안드로메다를 한 번 관측하면 모듈 연구가 열립니다.
+DEEP_FIRST_RECORD,Andromeda recorded · Module research is now available in the chart,안드로메다 첫 기록 · 성도에서 모듈 연구가 열렸습니다
+DEEP_RECORDED,Observations recorded: %d,관측 기록 %d회
+DEEP_MODULE_RESEARCH,Observation modules,관측 모듈 연구
+DEEP_RESEARCH_DESC,Purchase modules in the chart. Equip owned modules in a separate popup to change how you observe.,성도에서 모듈을 구매하고 별도 편성창에서 장착합니다. 기존 관측 방식에 효과가 더해집니다.
+DEEP_UNLOCKED,Unlocked by first observation,첫 관측으로 해금됨
+DEEP_TO_INVENTORY,Purchases go to your inventory. Equip them in the module popup.,구매한 모듈은 보관함에 추가됩니다. 모듈 편성창에서 장착하세요.
+DEEP_BUY_MODULE,Purchase module,모듈 구매
+DEEP_MODULES,Module loadout,모듈 편성
+DEEP_SLOTS,Equipped slots,장착 슬롯
+DEEP_OWNED,Owned modules,보유 모듈
+DEEP_NO_MODULES,No modules yet. Purchase them in the research chart.,보유 모듈이 없습니다. 연구 성도에서 구매할 수 있습니다.
+DEEP_FREE_EQUIP,Free equipment changes · Observation paused,편성 변경 무료 · 관측 일시정지
+DEEP_OLD_CHART,Established constellations,완성한 별자리
+DEEP_EXPAND_OLD,Select to expand the constellation chart,선택해서 기존 성도 확대
+METEOR_ANDROMEDA,ANDROMEDA GALAXY,안드로메다은하
