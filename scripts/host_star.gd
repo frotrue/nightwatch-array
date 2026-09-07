@@ -197,7 +197,7 @@ func apply_manual_observation(
 	if not can_be_tracked():
 		return
 	if state == "idle":
-		harvest_progress += maxf(0.0, delta) * maxf(1.0, manual_speed_multiplier) / HARVEST_HOLD_TIME
+		harvest_progress += maxf(0.0, delta) * maxf(0.01, manual_speed_multiplier) / HARVEST_HOLD_TIME
 		last_quality = clampf(1.0 - cursor_distance / maxf(tracking_radius, 1.0), 0.0, 1.0)
 		if harvest_progress >= 1.0:
 			_finish_harvest()
@@ -212,7 +212,7 @@ func apply_manual_observation(
 	last_quality = quality
 	manual_tracking_time += delta
 	quality_integral += quality * delta
-	var tracking_speed := lerpf(0.72, 1.42, quality) * maxf(1.0, manual_speed_multiplier)
+	var tracking_speed := lerpf(0.72, 1.42, quality) * maxf(0.01, manual_speed_multiplier)
 	var required_time := REQUIRED_TRACK_TIME * maxf(0.1, float(profile.get("tracking_time_multiplier", 1.0)))
 	observation_progress += delta * tracking_speed / required_time
 	if observation_progress >= 1.0:

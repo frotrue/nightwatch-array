@@ -109,24 +109,35 @@ input behavior, not a human verdict on comfort.
 
 ## Gates
 
-### Andromeda stage and modules
+### Deep-sky continuation and module popup
 
-`andromeda_stage_test.gd` exercises the real galaxy-chart entry button, existing
-research effects, shared Data purchases, exact debit/duplicate rejection,
-single-slot equip, focus speed, wide target count/radius/per-target speed,
-automatic dish support, pause/settings layering, round rollover, suspended
-atmospheric accounting, and real game save/load/reset. It uses the isolated
-fixture and does not write player saves. Pass: `ANDROMEDA_STAGE_PASS`.
+`deep_sky_test.gd` follows the original 95-node path without the retired research,
+records M31 using the existing observer, and verifies ordinary round accounting.
+It checks first-observation gating, chart-only debit, no automatic equipment,
+owned-only two-slot equipment, duplicate rejection, popup Escape precedence and
+research-only popup entry and pause restoration after closing research. A live
+engine-frame regression loads an active snapshot from intermission settings,
+sends real U key events, and verifies the clock advances and the next round
+starts. It also checks recovery from an orphan pause and preservation of an
+open Settings pause. A SubViewport exercises actual pointer clicks on the
+research launcher, equip, popup close and chart return; the popup must draw
+above research. Real meteor progress verifies
+1.8x / 0.75x / 1.35x module speed, plus the real tracking radius. Save/load tests
+cover M31 partial progress, inventory and legacy active-stage migration back to
+the original sky. Pass: `DEEP_SKY_PASS`.
 
-`andromeda_stage_preview.gd` requires the real Windows/OpenGL renderer. It writes
-seven stable English/Korean destination/observation/module frames, including actual wide
-tracking, to a unique `build/andromeda_review/<timestamp>/` directory. Its manifest
-records source hashes and PNG hashes. The 45-second watchdog makes a failed
-capture terminate. Pass: `ANDROMEDA_PREVIEW_PASS`. These are synthetic fixed
-poses, not an assessment of player comfort or long-term economy.
+`deep_sky_preview.gd` uses the real Windows/OpenGL renderer and writes seven
+stable 1152x648 frames under `build/deep_sky_review/<timestamp>/`: the original
+sky with M31, chart before first observation, English/Korean module purchase,
+popup over the chart, and English/Korean research-only popup views. Fixtures isolate
+player saves/settings, freeze the scene and tweens, and preserve source and image
+hashes in a manifest with explicit pass/fail status. The 45-second watchdog bounds
+capture failures. Pass: `DEEP_SKY_PREVIEW_PASS`. These are synthetic layout poses,
+not a human playtest or a claim about long-term economy.
 
-The existing full-tree economy gate still measures the original research path.
-It does not claim coverage of Andromeda's new module economy.
+The full-tree economy gate still checks the legacy research path. M31's first
+module loop is separately checked in the deep-sky integration gate; later branches
+and new endgame pacing remain outside the current implementation.
 
 ### UI presentation gate
 
@@ -254,8 +265,8 @@ a routine completion. It verifies directional particle cones, ring/flash/motion
 thresholds, shared capacity caps, distant-target events, galaxy-stage flash
 suppression and the pause-safe, replaceable installation-rule tween. The fixture
 uses actual constellation purchases and checks that the visible
-inspector rule survives deferred container layout while paused. The galaxy
-destination hub rejects old research holds and never emits purchase feedback. Selection,
+inspector rule survives deferred container layout while paused. The continuation
+chart rejects old research holds; selecting its nodes does not emit purchase feedback. Selection,
 context, close and scale changes cancel stale tweens; Reference Frame keeps its
 pull-back without a hidden pulse. Save storage and settings are replaced before
 startup. A mechanical pass is not a visual verdict.
@@ -275,7 +286,7 @@ For a narrow rendered stage-2 check, run without `--headless`:
 This creates six uniquely named PNG/JSON pairs in
 `build/effect_feedback_review`: routine/accented observation poses, the
 constellation inspector at installation-tween start/midpoint/end, and the
-galaxy destination hub without purchase feedback. The fixture
+extended chart selection without purchase feedback. The fixture
 uses real completion/purchase routes without reading or writing saves/settings,
 then freezes animation after deferred layout settles. Each sidecar records
 viewport, renderer, base HEAD, dirty status, relevant source hashes and measured
@@ -730,11 +741,11 @@ events than a frame should commit; `layout_passes` should stay at roughly one
 per rendered frame rather than eight. The candidate pull-back accepts only a
 windowed `galactic_transition` and `galactic_final` p95 below 16.7 ms. The ENV
 line identifies the old 12 research/17 decorative/74 background records as
-retired compatibility data. The final phase now renders the destination hub
-with one playable galaxy, without those markers, orbits, ledger or inspector.
+retired compatibility data. The final phase now renders the continuation chart with its miniature and four
+extension nodes, without the retired markers, orbits, ledger or inspector.
 Do not compare its `galactic_final` result to older galaxy-research frames as
-the same workload. Frame times include hub rendering; the chart subclass's
-`draw` CPU metric does not include the hub's separate draw callback.
+the same workload. Frame times include the extension rendering; the chart subclass's
+`draw` CPU metric does not include the extension's separate draw callback.
 
 The probe uses the no-persistence fixture and scripted input with hardware
 events disabled. `inspector_selection` alternates two real node selections;

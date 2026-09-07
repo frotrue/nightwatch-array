@@ -72,15 +72,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			settings.call("toggle_fullscreen")
 		_mark_input_handled()
 		return
-	if game != null and game.get("andromeda") != null and game.andromeda.is_open() and not _hud_blocks_game_navigation():
-		if _action_pressed(event, ACTION_CHART):
-			game.andromeda.toggle_modules()
-			_mark_input_handled()
-		elif _action_pressed(event, ACTION_MENU_BACK):
-			if game.andromeda.modules_open:
-				game.andromeda.toggle_modules()
-			else:
-				game.andromeda.open_settings()
+	if game != null and game.get("module_popup") != null and game.module_popup.is_open():
+		if _action_pressed(event, ACTION_CHART) or _action_pressed(event, ACTION_MENU_BACK):
+			game.module_popup.close()
 			_mark_input_handled()
 		return
 	if _action_pressed(event, ACTION_MENU_BACK):

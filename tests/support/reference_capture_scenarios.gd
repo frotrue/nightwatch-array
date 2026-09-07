@@ -56,7 +56,7 @@ const SCENARIOS := [
 	{"id": "research_chart", "stage": "constellation", "density": "81_of_107_research", "overlays": ["chart", "constellation_inspector"], "note": "Existing reference build: ten completed constellations plus three Canis nodes; canis_capacity_ii selected.", "expected": {"meteors": 0, "installed": 81, "tracking": false, "span": 1.0}},
 	{"id": "galactic_sky", "stage": "galactic", "density": "two_hosts_two_phenomena", "overlays": [], "note": "Full research, two idle hosts and two supernovae at six explicit seconds; no atmospheric specimens.", "expected": {"meteors": 0, "installed": 107, "tracking": false, "span": 1.477455443789063}},
 	{"id": "exoplanet_transit", "stage": "galactic", "density": "two_hosts_two_phenomena", "overlays": [], "note": "Full research; first host's first transit window at exactly 48%, without a simulated completion.", "expected": {"meteors": 0, "installed": 107, "tracking": false, "span": 1.477455443789063}},
-	{"id": "galaxy_hub", "stage": "galaxy_selection", "density": "one_playable_destination", "overlays": ["chart", "galaxy_hub"], "note": "An existing completed save opens the destination hub. Only Andromeda is playable; old research/decorative markers and install panels are not rendered.", "expected": {"meteors": 0, "installed": 107, "tracking": false, "span": 1.477455443789063}},
+	{"id": "deep_sky_chart", "stage": "chart_continuation", "density": "first_branch", "overlays": ["chart", "deep_sky_chart"], "note": "A completed save opens the extended chart. Original constellation shapes connect to M31 and module research; retired nodes remain invisible.", "expected": {"meteors": 0, "installed": 107, "tracking": false, "span": 1.477455443789063}},
 	{"id": "catalogue_ending", "stage": "ending_preview", "density": "completed_catalogue", "overlays": ["ending"], "note": "Synthetic completed-run statistics through the non-persistent production debug reveal, stepped 8.1 seconds.", "expected": {"meteors": 0, "installed": 107, "tracking": false, "span": 1.477455443789063}},
 	{"id": "palette_active", "stage": "synthetic_palette", "density": "117_visuals_13_branches", "overlays": ["palette_diagnostic"], "note": "Synthetic13-branch input matrix using real StarNodeVisual draws: star/cluster/galaxy in purchased, affordable and unaffordable available states. Not a gameplay chart.", "expected": {"meteors": 0, "installed": 0, "tracking": false, "span": 1.0}},
 	{"id": "palette_inactive", "stage": "synthetic_palette", "density": "117_visuals_13_branches", "overlays": ["palette_diagnostic"], "note": "Synthetic13-branch input matrix using real StarNodeVisual draws: star/cluster/galaxy in locked, hidden and teaser states. Inactive silhouettes are intentionally shown as test specimens.", "expected": {"meteors": 0, "installed": 0, "tracking": false, "span": 1.0}},
@@ -132,7 +132,7 @@ func prepare(tree: SceneTree, id: String) -> Node:
 			game.upgrade_tree.open_tree()
 		"palette_active", "palette_inactive":
 			_build_palette_plate(game, id)
-		"galactic_sky", "exoplanet_transit", "galaxy_hub", "catalogue_ending":
+		"galactic_sky", "exoplanet_transit", "deep_sky_chart", "catalogue_ending":
 			var all_nodes: Array[String] = []
 			for definition in Balance.UPGRADE_NODES:
 				all_nodes.append(String(definition.id))
@@ -142,7 +142,7 @@ func prepare(tree: SceneTree, id: String) -> Node:
 			if id == "exoplanet_transit":
 				game.host_stars.advance_time(game.host_stars.next_transit_remaining)
 				game.host_stars.advance_time(game.host_stars.TRANSIT_WINDOW * 0.48)
-			elif id == "galaxy_hub":
+			elif id == "deep_sky_chart":
 				game.upgrade_tree.open_tree()
 			elif id == "catalogue_ending":
 				for target_id in game.galactic_phenomena.TARGET_SPECS:
@@ -163,9 +163,9 @@ func prepare(tree: SceneTree, id: String) -> Node:
 		game.upgrade_tree.rotation_offset = 0.0
 		game.upgrade_tree._layout_chart()
 		game.upgrade_tree._on_node_hovered("canis_capacity_ii")
-	elif id == "galaxy_hub":
+	elif id == "deep_sky_chart":
 		game.upgrade_tree._finish_galactic_pullback()
-		game.upgrade_tree.galaxy_hub.select_destination("andromeda")
+		game.upgrade_tree.deep_sky_chart.select("m31")
 	elif id == "catalogue_ending":
 		var reveal: Tween = game.hud.end_reveal_tween
 		if reveal == null or not reveal.is_valid():
@@ -215,7 +215,7 @@ func inspect(game: Node, id: String) -> Dictionary:
 		overlays.append("chart")
 		if game.upgrade_tree.tooltip_panel.is_visible_in_tree(): overlays.append("constellation_inspector")
 		if game.upgrade_tree.galactic_panel.is_visible_in_tree(): overlays.append("galactic_inspector")
-		if game.upgrade_tree.galaxy_hub.is_visible_in_tree(): overlays.append("galaxy_hub")
+		if game.upgrade_tree.deep_sky_chart.is_visible_in_tree(): overlays.append("deep_sky_chart")
 	if game.hud.end_overlay.is_visible_in_tree(): overlays.append("ending")
 	if game.hud.settings_overlay.is_visible_in_tree(): overlays.append("settings")
 	if game.hud.startup_overlay.is_visible_in_tree(): overlays.append("startup")
@@ -242,7 +242,7 @@ func inspect(game: Node, id: String) -> Dictionary:
 		"cursor": _point(game.observer.cursor_position), "survey_charge": game.survey.get_charge_progress(),
 		"chart_mode": game.upgrade_tree.galactic_mode, "chart_rotation": game.upgrade_tree.rotation_offset,
 		"chart_selection": game.upgrade_tree.selected_node_id, "galaxy_selection": game.upgrade_tree.galactic_inspector_node_id,
-		"galaxy_destination": game.upgrade_tree.galaxy_hub.selected_id,
+		"deep_sky_selection": game.upgrade_tree.deep_sky_chart.selected_id,
 		"hosts": hosts, "phenomena": phenomena, "phenomena_recorded": game.galactic_phenomena.get_completed_record_count(),
 		"ending_complete": game.hud.end_reveal_complete, "ending_debug_preview": game.catalogue_ending_debug_preview,
 		"ending_map_progress": [game.hud.end_coda.constellation_progress, game.hud.end_coda.pullback_progress, game.hud.end_coda.route_progress, game.hud.end_coda.illumination_progress, game.hud.end_coda.settle_progress],
@@ -275,14 +275,14 @@ func inspect(game: Node, id: String) -> Dictionary:
 		_check(is_equal_approx(float(state.survey_charge), 210.0 / 460.0) and game.survey.roll_count == 0, id, "sweep charge or roll count differs")
 	if id == "research_chart":
 		_check(state.chart_selection == "canis_capacity_ii" and is_zero_approx(float(state.chart_rotation)), id, "reference inspector/rotation differs")
-	if id in ["galactic_sky", "exoplanet_transit", "galaxy_hub"]:
+	if id in ["galactic_sky", "exoplanet_transit", "deep_sky_chart"]:
 		_check(hosts.size() == 2 and phenomena.size() == 2, id, "full research must expose two hosts and two phenomena")
 		for target in phenomena:
 			_check(is_zero_approx(float(target.visual_time_msec)), id, "supernova visual clock must be deterministic")
 	if id == "exoplanet_transit":
 		_check(not hosts.is_empty() and hosts[0].state == "transiting" and is_equal_approx(float(hosts[0].transit_phase), 0.48), id, "primary transit must be at exactly 48%")
-	if id == "galaxy_hub":
-		_check(state.chart_mode == game.upgrade_tree.GALACTIC_MODE_FINAL and state.galaxy_destination == "andromeda" and game.upgrade_tree.galaxy_hub.is_visible_in_tree(), id, "Andromeda destination hub not active")
+	if id == "deep_sky_chart":
+		_check(state.chart_mode == game.upgrade_tree.GALACTIC_MODE_FINAL and state.deep_sky_selection == "m31" and game.upgrade_tree.deep_sky_chart.is_visible_in_tree(), id, "M31 continuation chart not active")
 	if id == "catalogue_ending":
 		_check(state.ending_complete and state.ending_debug_preview and state.phenomena_recorded == 5, id, "completed catalogue reveal is missing")
 		for value in state.ending_map_progress:

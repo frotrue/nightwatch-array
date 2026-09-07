@@ -68,7 +68,7 @@ func apply_manual_observation(delta: float, cursor_distance: float, tracking_rad
 	last_quality = quality
 	manual_tracking_time += delta
 	quality_integral += quality * delta
-	observation_progress += delta * lerpf(0.70, 1.35, quality) * maxf(1.0, manual_speed_multiplier) / 1.25
+	observation_progress += delta * lerpf(0.70, 1.35, quality) * maxf(0.01, manual_speed_multiplier) / 1.25
 	if observation_progress >= 1.0:
 		_finish_observation()
 	queue_redraw()

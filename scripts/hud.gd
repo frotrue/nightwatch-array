@@ -43,6 +43,7 @@ class TrackingCluster:
 var progression: Node
 var settings_controller: Node
 var save_game_controller: Node
+var deep_sky: Node
 var root_control: Control
 var data_caption_label: Label
 var data_label: Label
@@ -943,8 +944,14 @@ func _refresh_ready_notice() -> void:
 		return
 	var ready := 0
 	for definition in Balance.UPGRADE_NODES:
+		if deep_sky != null and definition.branch == "local_group":
+			continue
 		if progression.can_purchase(String(definition.id)):
 			ready += 1
+	if deep_sky != null and deep_sky.modules_unlocked():
+		for id in deep_sky.modules.DEFINITIONS:
+			if id not in deep_sky.modules.purchased and progression.observation_data >= deep_sky.modules.DEFINITIONS[id].cost:
+				ready += 1
 	if ready == last_ready_count:
 		return
 	last_ready_count = ready

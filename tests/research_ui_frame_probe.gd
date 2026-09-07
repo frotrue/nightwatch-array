@@ -14,7 +14,7 @@ const SOURCE_FILES := [
 	"scenes/main.tscn", "tests/research_ui_frame_probe.gd", "tests/support/game_fixture.gd",
 	"scripts/upgrade_tree.gd", "scripts/research_star_visual.gd", "scripts/research_chart_data.gd",
 	"scripts/game_balance.gd", "scripts/progression_controller.gd", "scripts/ui_theme.gd",
-	"scripts/game.gd", "scripts/hud.gd", "scripts/galaxy_hub.gd",
+	"scripts/game.gd", "scripts/hud.gd", "scripts/deep_sky_chart.gd",
 ]
 
 # The same small timing wrapper is used on both sides of a comparison. It
@@ -94,7 +94,7 @@ func _run() -> void:
 	for definition in Balance.UPGRADE_NODES:
 		if String(definition.branch) == "local_group":
 			galactic_research_nodes += 1
-	print("RESEARCH_UI_PROBE_ENV engine=%s renderer=%s display=%s viewport=%s window=%s refresh_hz=%.2f vsync=%d wheel_events_per_frame=%d phase_seconds=%.1f retired_research_records=%d retired_decorative_records=%d retired_background_points=%d pullback_seconds=%.1f target_p95_ms=16.7 isolated=true input=scripted cpu_timing=inclusive_subclass final_surface=galaxy_hub destinations=1 chart_layer=%d hud_layer=%d" % [
+	print("RESEARCH_UI_PROBE_ENV engine=%s renderer=%s display=%s viewport=%s window=%s refresh_hz=%.2f vsync=%d wheel_events_per_frame=%d phase_seconds=%.1f retired_research_records=%d retired_decorative_records=%d retired_background_points=%d pullback_seconds=%.1f target_p95_ms=16.7 isolated=true input=scripted cpu_timing=inclusive_subclass final_surface=deep_sky_chart extension_nodes=4 chart_layer=%d hud_layer=%d" % [
 		Engine.get_version_info(),
 		RenderingServer.get_current_rendering_method(),
 		DisplayServer.get_name(),

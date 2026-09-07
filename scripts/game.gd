@@ -4,7 +4,8 @@ const UITheme = preload("res://scripts/ui_theme.gd")
 const Balance = preload("res://scripts/game_balance.gd")
 const SoundSynth = preload("res://scripts/sound_synth.gd")
 const GameInputRouter = preload("res://scripts/game_input_router.gd")
-const AndromedaStage = preload("res://scripts/andromeda_stage.gd")
+const DeepSkyResearch = preload("res://scripts/deep_sky_research.gd")
+const ModulePopup = preload("res://scripts/module_popup.gd")
 const AUTOSAVE_INTERVAL_SECONDS := 60.0
 const HITSTOP_TIME_SCALE := 0.06
 const HITSTOP_COOLDOWN_MSEC := 400
@@ -45,8 +46,8 @@ const SHAKE_TRAUMA_CEILING := 0.88
 
 var sound: Node
 var input_router: Node
-var andromeda: CanvasLayer
-var stage_load_generation := 0
+var deep_sky: Node2D
+var module_popup: CanvasLayer
 var elapsed_time: float = 0.0
 var completed: bool = false
 var catalogue_ending_seen: bool = false
@@ -125,12 +126,21 @@ func _ready() -> void:
 	survey.setup(progression, spawner, meteor_layer, observation_view, [host_stars, galactic_phenomena])
 	observer.setup(meteor_layer, progression, hud, survey, observation_view, [host_stars, galactic_phenomena])
 	events.setup(spawner, progression, observation_view)
-	andromeda = AndromedaStage.new()
-	andromeda.name = "AndromedaStage"
-	add_child(andromeda)
-	andromeda.setup(self)
-	andromeda.return_requested.connect(_return_from_andromeda)
-	upgrade_tree.andromeda_requested.connect(_enter_andromeda)
+	deep_sky = DeepSkyResearch.new()
+	deep_sky.name = "DeepSkyResearch"
+	add_child(deep_sky)
+	deep_sky.setup(self)
+	hud.deep_sky = deep_sky
+	deep_sky.changed.connect(hud._refresh_ready_notice)
+	observer.additional_target_layers.append(deep_sky)
+	survey.discovery_layers.append(deep_sky)
+	observer.modules = deep_sky.modules
+	module_popup = ModulePopup.new()
+	module_popup.name = "ModulePopup"
+	add_child(module_popup)
+	module_popup.setup(self)
+	upgrade_tree.module_popup = module_popup
+	upgrade_tree.deep_sky_chart.bind(deep_sky, upgrade_tree)
 	upgrade_tree.observatory_requested.connect(_return_to_observatory)
 
 	spawner.meteor_spawned.connect(_on_meteor_spawned)
@@ -186,8 +196,8 @@ func _preferred_startup_slot() -> int:
 
 
 func start_run() -> void:
-	stage_load_generation += 1
-	andromeda.reset()
+	module_popup.close()
+	deep_sky.reset()
 	elapsed_time = 0.0
 	autosave_elapsed = 0.0
 	completed = false
@@ -212,7 +222,7 @@ func start_run() -> void:
 
 
 func reset_run() -> void:
-	andromeda.close_stage()
+	module_popup.close()
 	completed = false
 	_release_hitstop()
 	hitstop_cooldown_until_msec = 0
@@ -539,7 +549,10 @@ func _on_phase_summary_continue_requested() -> void:
 
 
 func _on_upgrade_tree_closed() -> void:
-	if suppress_phase_transition or completed or observation_phase_active:
+	if suppress_phase_transition or completed:
+		return
+	if observation_phase_active:
+		_resume_observation_if_unblocked()
 		return
 	if _catalogue_ending_ready():
 		_show_catalogue_ending()
@@ -547,26 +560,21 @@ func _on_upgrade_tree_closed() -> void:
 	_begin_observation_phase(true, -1.0, true)
 
 
+func _resume_observation_if_unblocked() -> void:
+	# Loading a live round can remove a summary that originally owned the pause.
+	# Reconcile against visible owners instead of retaining that obsolete pause.
+	if not observation_phase_active or completed or upgrade_tree.is_open() or module_popup.is_open():
+		return
+	if hud.is_settings_open() or hud.is_controls_open() or hud.is_startup_slots_open() or hud.is_phase_summary_open() or hud.is_end_open() or tutorial.is_modal_step():
+		return
+	get_tree().paused = false
+	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
+
+
 func _close_upgrade_tree_without_transition() -> void:
 	suppress_phase_transition = true
 	upgrade_tree.close_tree()
 	suppress_phase_transition = false
-
-
-func _enter_andromeda() -> void:
-	if not progression.galaxy_unlocked() or andromeda.is_open() or hud.is_settings_open() or hud.is_startup_slots_open():
-		return
-	_release_hitstop()
-	_close_upgrade_tree_without_transition()
-	hud.hide_phase_summary()
-	observer.reset()
-	andromeda.open_stage()
-	_autosave_active_slot()
-
-
-func _return_from_andromeda() -> void:
-	upgrade_tree.open_tree()
-	_autosave_active_slot()
 
 
 func _return_to_observatory() -> void:
@@ -578,11 +586,6 @@ func _return_to_observatory() -> void:
 	else:
 		get_tree().paused = false
 	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
-
-
-func _restore_andromeda_if_current(generation: int) -> void:
-	if generation == stage_load_generation:
-		_enter_andromeda()
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
@@ -969,6 +972,7 @@ func _on_load_slot_requested(slot: int) -> void:
 	hud.set_active_save_slot(slot)
 	_apply_save_data(data)
 	hud.close_settings()
+	_resume_observation_if_unblocked()
 	hud.show_banner(tr("BANNER_SLOT_LOADED") % slot, UITheme.BANNER_TITLE, 2.2)
 	sound.play_slot_confirm()
 
@@ -996,6 +1000,7 @@ func _on_startup_slot_selected(slot: int) -> void:
 	if exists:
 		hud.show_banner(tr("BANNER_SLOT_LOADED") % slot, UITheme.BANNER_TITLE, 2.2)
 	_start_tutorial_after_slot_if_needed()
+	_resume_observation_if_unblocked()
 
 
 func _on_new_game_slot_requested(slot: int) -> void:
@@ -1004,6 +1009,7 @@ func _on_new_game_slot_requested(slot: int) -> void:
 		return
 	_on_startup_slot_selected(slot)
 	hud.close_settings()
+	_resume_observation_if_unblocked()
 
 
 func _on_reset_slot_requested(slot: int) -> void:
@@ -1030,7 +1036,7 @@ func _on_reset_slot_requested(slot: int) -> void:
 
 
 func _start_fresh_slot() -> void:
-	andromeda.close_stage()
+	module_popup.close()
 	completed = false
 	_close_upgrade_tree_without_transition()
 	observer.reset()
@@ -1067,7 +1073,7 @@ func _autosave_active_slot() -> bool:
 
 
 func _on_tutorial_replay_requested() -> void:
-	if andromeda.is_open():
+	if module_popup.is_open():
 		return
 	# The round summary already owns the intermission pause. Starting a modal
 	# tutorial on top would leave that pause owner behind when the tutorial moves
@@ -1102,13 +1108,12 @@ func _build_save_data() -> Dictionary:
 		"host_stars": host_stars.get_save_data(),
 		"galactic_phenomena": galactic_phenomena.get_save_data(),
 		"progression": progression.get_save_data(),
-		"andromeda": andromeda.get_save_data(),
+		"deep_sky": deep_sky.get_save_data(),
 	}
 
 
 func _apply_save_data(data: Dictionary) -> void:
-	stage_load_generation += 1
-	andromeda.close_stage()
+	module_popup.close()
 	sound.reset_streak_audio()
 	_close_upgrade_tree_without_transition()
 	observer.reset()
@@ -1202,10 +1207,9 @@ func _apply_save_data(data: Dictionary) -> void:
 		upgrade_tree.set_intermission_context(next_round, int(_observation_duration()))
 		call_deferred("_resume_upgrade_intermission")
 	_sync_catalogue_ending_presentation()
-	var stage_data = data.get("andromeda", {})
-	andromeda.load_save_data(stage_data if stage_data is Dictionary else {})
-	if stage_data is Dictionary and bool(stage_data.get("active", false)) and progression.galaxy_unlocked():
-		call_deferred("_restore_andromeda_if_current", stage_load_generation)
+	var deep_data = data.get("deep_sky", {})
+	var legacy_stage = data.get("andromeda", {})
+	deep_sky.load_save_data(deep_data if deep_data is Dictionary else {}, legacy_stage if legacy_stage is Dictionary else {})
 
 
 func _sync_galactic_systems() -> void:

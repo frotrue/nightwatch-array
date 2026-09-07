@@ -249,11 +249,11 @@ func _test_chart_installation_rule(game) -> void:
 	chart._on_node_hold_started("lmc_transit_watch")
 	chart._process(1.0)
 	chart.pulse_installation_rule()
-	_check(chart.galaxy_hub.is_visible_in_tree(), "galaxy scale is a destination hub")
-	_check(chart.installation_rule == null and not chart.galactic_panel.is_visible_in_tree(), "destination navigation never animates the retired purchase inspector")
+	_check(chart.deep_sky_chart.is_visible_in_tree(), "galaxy scale continues the constellation research")
+	_check(chart.installation_rule == null and not chart.galactic_panel.is_visible_in_tree(), "extension selection never animates the retired purchase inspector")
 	_check(not game.progression.has_upgrade("lmc_transit_watch") and game.progression.observation_data == old_balance, "retired Local Group holds cannot buy research")
-	chart.galaxy_hub.select_destination("andromeda")
-	_check(game.hud.installation_tween == old_hud_tween, "selecting a destination does not dispatch purchase feedback")
+	chart.deep_sky_chart.select("m31")
+	_check(game.hud.installation_tween == old_hud_tween, "selecting a research node does not dispatch purchase feedback")
 	chart.close_tree()
 
 	# Galactic Reference Frame owns the existing pull-back, where neither

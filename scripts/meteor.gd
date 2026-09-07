@@ -272,7 +272,7 @@ func apply_manual_observation(
 	tracking_speed *= (
 		analysis_speed_multiplier
 		* get_spectral_speed_multiplier()
-		* maxf(1.0, manual_speed_multiplier)
+		* maxf(0.01, manual_speed_multiplier)
 	)
 	observation_progress += delta * tracking_speed / required_track_time
 	precision_focus += delta * quality

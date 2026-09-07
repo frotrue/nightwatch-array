@@ -176,7 +176,7 @@ function Invoke-ValidationProcess {
 $gates = @(
     @('research_contract_test', 'RESEARCH_CONTRACT_PASS'),
     @('smoke_test', 'SMOKE_TEST_PASS'),
-    @('andromeda_stage_test', 'ANDROMEDA_STAGE_PASS'),
+    @('deep_sky_test', 'DEEP_SKY_PASS'),
     @('observation_span_probe', 'OBSERVATION_SPAN_PASS'),
     @('galactic_slice_test', 'GALACTIC_SLICE_PASS'),
     @('probe_layer2_test', 'PROBE_TEST_PASS'),
