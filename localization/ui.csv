@@ -842,3 +842,50 @@ DEEP_FREE_EQUIP,Free equipment changes · Observation paused,편성 변경 무�
 DEEP_OLD_CHART,Established constellations,완성한 별자리
 DEEP_EXPAND_OLD,Select to expand the constellation chart,선택해서 기존 성도 확대
 METEOR_ANDROMEDA,ANDROMEDA GALAXY,안드로메다은하
+
+RING_CLOSE,[ESC] Close,[ESC] 닫기
+RING_CURRENT,CURRENT LOADOUT,현재 편성
+RING_SUMMARY,Speed ×%.2f · Radius ×%.2f · Targets %d,속도 ×%.2f · 반경 ×%.2f · 동시 %d
+RING_CAPACITY,Open %d · Locked %d,열린 자리 %d · 잠긴 자리 %d
+RING_MODULE_COUNT,%d types,%d 종
+RING_LOCKED,Locked slot,잠긴 자리
+RING_EMPTY,Empty slot,비어 있음
+RING_SLOT_CODE,Slot %d · %d total,자리 %d · 전체 %d자리
+RING_SLOT_SHORT,Slot %d,자리 %d
+RING_MODULE_TYPE,Observation module,관측 모듈
+RING_EFFECT,EFFECT,효과
+RING_COMBO,COMBINATION,조합
+RING_UNLOCK_BY,Unlocked by %s.,%s 연구로 열립니다.
+RING_RESEARCH_LOCATION,Research in the Andromeda chart.,안드로메다 성도에서 연구할 수 있습니다.
+RING_LOCKED_ACTION,Cannot equip until this slot is researched.,연구 전에는 장착할 수 없습니다.
+RING_EMPTY_HINT,Choose an owned module from the inventory.,보관함에서 보유 모듈을 선택하세요.
+RING_EMPTY_ACTION,Inventory clicks fill the first open slot clockwise.,보관함 클릭은 시계 방향 첫 빈 자리에 장착합니다.
+RING_REMOVE_ACTION,Click to unequip · return to inventory,클릭하면 해제 · 보관함으로
+RING_EQUIPPED_ACTION,Already equipped · click its ring slot to remove,이미 장착 중 · 고리에서 클릭하면 해제
+RING_FULL_ACTION,No open space · remove a ring module first,빈 열린 자리가 없습니다 · 고리에서 먼저 해제하세요
+RING_EQUIP_ACTION,Click to equip in slot %d,클릭하면 자리 %d에 장착
+RING_INSTRUCTIONS,"Click inventory to fill the first open slot.
+Click a ring module to remove it.
+Locked slots cannot be used.","보관함 클릭으로 첫 빈 열린 자리에 장착합니다.
+고리의 모듈을 누르면 해제됩니다.
+잠긴 자리는 사용할 수 없습니다."
+RING_RESEARCH_3,Third slot,세 번째 자리
+RING_RESEARCH_4,Fourth slot,네 번째 자리
+RING_RESEARCH_5,Fifth slot,다섯 번째 자리
+RING_RESEARCH_DESC,Open loadout slots: %d → %d.,열린 모듈 자리: %d → %d.
+RING_RESEARCH_BUY,Research slot,자리 연구
+RING_REQUIRES,Requires: %s,선행 조건: %s
+MODULE_PRECISION_NAME,Precision tracking,정밀 추적
+MODULE_PRECISION_SHORT,Precision,정밀 추적
+MODULE_PRECISION_DESC,Manual speed ×1.50. Observation radius ×0.70.,수동 속도 ×1.50. 관측 반경 ×0.70.
+MODULE_PRECISION_COMBO,Combine with wide to offset the smaller radius.,광역과 조합하면 줄어든 반경을 보완합니다.
+MODULE_RECORD_NAME,Deep record,심층 기록
+MODULE_RECORD_SHORT,Record,심층 기록
+MODULE_RECORD_DESC,M31 Data ×1.50. Manual speed ×0.80.,M31 데이터 ×1.50. 수동 속도 ×0.80.
+MODULE_RECORD_COMBO,Focus offsets the speed penalty.,집중과 조합하면 속도 감소를 보완합니다.
+MODULE_REVISIT_NAME,Repeat observation,재관측
+MODULE_REVISIT_SHORT,Revisit,재관측
+MODULE_REVISIT_DESC,M31 cooldown after completion ×0.60.,M31 관측 완료 후 대기 ×0.60.
+MODULE_REVISIT_COMBO,Deep record increases the reward per repeat.,심층 기록과 조합하면 재관측 수입이 증가합니다.
+MODULE_FOCUS_COMBO,With wide: manual speed ×1.35.,광역과 함께 장착하면 수동 속도 ×1.35.
+MODULE_WIDE_COMBO,With focus: manual speed ×1.35.,집중과 함께 장착하면 수동 속도 ×1.35.

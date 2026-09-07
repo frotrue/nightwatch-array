@@ -949,8 +949,8 @@ func _refresh_ready_notice() -> void:
 		if progression.can_purchase(String(definition.id)):
 			ready += 1
 	if deep_sky != null and deep_sky.modules_unlocked():
-		for id in deep_sky.modules.DEFINITIONS:
-			if id not in deep_sky.modules.purchased and progression.observation_data >= deep_sky.modules.DEFINITIONS[id].cost:
+		for id in deep_sky.modules.RESEARCH_IDS:
+			if deep_sky.can_purchase(id):
 				ready += 1
 	if ready == last_ready_count:
 		return

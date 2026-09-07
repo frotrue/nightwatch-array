@@ -122,31 +122,39 @@ detached reads and explicit reset. Pass: `SAVE_INTEGRITY_PASS`.
 `deep_sky_test.gd` follows the original 95-node path without the retired research,
 records M31 using the existing observer, and verifies ordinary round accounting.
 It checks first-observation gating, chart-only debit, no automatic equipment,
-owned-only two-slot equipment, duplicate rejection, popup Escape precedence and
+owned-only five-position equipment with two initially open, duplicate/full/locked
+rejection, first-clockwise-gap placement, popup Escape precedence and
 research-only popup entry and pause restoration after closing research. A live
 engine-frame regression loads an active snapshot from intermission settings,
 sends real U key events, and verifies the clock advances and the next round
 starts. It also checks recovery from an orphan pause and preservation of an
 open Settings pause. A SubViewport exercises actual pointer clicks on the
-research launcher, equip, popup close and chart return; the popup must draw
-above research. Real meteor progress verifies
+research launcher, inventory equip, ring removal, locked hover, popup close and
+chart return. Real meteor progress verifies
 1.8x / 0.75x / 1.35x module speed, plus the real tracking radius. Save/load tests
 cover M31 partial progress, inventory and legacy active-stage migration back to
 the original sky. The module cache checks direct slot/ownership mutations,
-duplicate suppression, reset/legacy load and unchanged numeric results. Pass: `DEEP_SKY_PASS`.
+duplicate suppression, reset/legacy load and unchanged numeric results. Five-slot
+JSON round trips preserve capacity and sanitize malformed data. Sequential chart
+purchases enforce prerequisites, exact debits and duplicate refusal; actual M31
+completions verify record income and revisit cooldown, including no retroactive
+cooldown change. Korean/English tooltips must fit their fixed width and remain
+inside the viewport at the bottom-right edge. Pass: `DEEP_SKY_PASS`.
 
-`deep_sky_preview.gd` uses the real Windows/OpenGL renderer and writes seven
+`deep_sky_preview.gd` uses the real Windows/OpenGL renderer and writes sixteen
 stable 1152x648 frames under `build/deep_sky_review/<timestamp>/`: the original
 sky with M31, chart before first observation, English/Korean module purchase,
-popup over the chart, and English/Korean research-only popup views. Fixtures isolate
+the research-launched popup, English/Korean popup views, locked/mounted hovers,
+two-open full inventory, all-five loadout, record hover, edge tooltip and the
+fully researched chart in both languages. Fixtures isolate
 player saves/settings, freeze the scene and tweens, and preserve source and image
 hashes in a manifest with explicit pass/fail status. The 45-second watchdog bounds
 capture failures. Pass: `DEEP_SKY_PREVIEW_PASS`. These are synthetic layout poses,
 not a human playtest or a claim about long-term economy.
 
 The full-tree economy gate still checks the legacy research path. M31's first
-module loop is separately checked in the deep-sky integration gate; later branches
-and new endgame pacing remain outside the current implementation.
+module and capacity progression is separately checked in the deep-sky integration
+gate. This checks behavior, not full-run pacing; new endgame pacing remains undecided.
 
 ### UI presentation gate
 

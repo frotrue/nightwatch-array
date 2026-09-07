@@ -33,6 +33,9 @@ func available() -> bool:
 func modules_unlocked() -> bool:
 	return available() and (observations > 0 or not modules.purchased.is_empty())
 
+func can_purchase(id: String) -> bool:
+	return modules_unlocked() and modules.research_ready(id) and game.progression.observation_data >= modules.research_cost(id)
+
 func purchase(id: String) -> bool:
 	if not modules_unlocked() or not game.upgrade_tree.is_open() or game.module_popup.is_open() or game.hud.is_settings_open():
 		return false
@@ -43,7 +46,7 @@ func purchase(id: String) -> bool:
 	game._autosave_active_slot()
 	return true
 
-func equip(id: String, slot: int) -> bool:
+func equip(id: String, slot: int = -1) -> bool:
 	if not modules_unlocked() or not game.module_popup.is_open() or not modules.equip(id, slot):
 		return false
 	game.observer.reset()
@@ -55,7 +58,7 @@ func equip(id: String, slot: int) -> bool:
 func record_observation() -> void:
 	observations += 1
 	game.observer.release_target(target)
-	var reward: float = 8000.0 * game.progression.get_observation_value_multiplier("common", 1)
+	var reward: float = 8000.0 * game.progression.get_observation_value_multiplier("common", 1) * float(modules.effect("m31_value"))
 	reward = game.progression.add_galactic_observation(reward)
 	game.effects.spawn_success(target.global_position, reward, Color("D4DAE5"), 1.0, 1.0, "GOOD", game.hud.get_data_anchor(), 0.4, true)
 	game.sound.play_success(1.0, 1, 0.4)

@@ -1,6 +1,9 @@
 extends Control
 
 # A small observation glyph shared by library, slots and live sky.
+const UITheme = preload("res://scripts/ui_theme.gd")
+const Modules = preload("res://scripts/observation_modules.gd")
+
 var module_id := "focus"
 var owned := true
 
@@ -17,10 +20,11 @@ func configure(id: String, active: bool = true) -> void:
 func _draw() -> void:
 	draw_module(self, Rect2(Vector2.ZERO, size), module_id, owned)
 
-static func draw_module(canvas: CanvasItem, rect: Rect2, id: String, active: bool = true) -> void:
+static func draw_module(canvas: CanvasItem, rect: Rect2, id: String, active: bool = true, opacity: float = 1.0) -> void:
 	var c := rect.get_center()
 	var r := minf(rect.size.x, rect.size.y) * 0.28
-	var ink := Color("E6DDD5", 0.95 if active else 0.45)
+	id = String(Modules.DEFINITIONS.get(id, {}).get("glyph", id))
+	var ink := Color(UITheme.TOOLTIP_NAME, (0.95 if active else 0.45) * opacity)
 	if id == "focus":
 		canvas.draw_arc(c, r * 0.62, 0, TAU, 32, ink, 1.0, true)
 		canvas.draw_circle(c, 2.2, ink)

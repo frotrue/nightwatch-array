@@ -69,8 +69,7 @@ func _run() -> void:
 	game.deep_sky.purchase("wide")
 	game.module_popup.open()
 	game.deep_sky.equip("wide", 0)
-	game.module_popup.select_slot(1)
-	game.module_popup.select_module("focus")
+	game.module_popup.show_module_tooltip("focus")
 	await _capture(game, "ko_popup_over_chart")
 	game.module_popup.close()
 	game.upgrade_tree.deep_sky_chart.back_button.pressed.emit()
@@ -80,11 +79,43 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	game.module_popup.open()
-	game.module_popup.select_slot(1)
-	game.module_popup.select_module("focus")
+	game.module_popup.show_module_tooltip("focus")
 	for locale in ["en", "ko"]:
 		_set_locale(game, locale)
 		await _capture(game, locale + "_module_popup")
+	game.module_popup.show_slot_tooltip(2)
+	await _capture(game, "ko_popup_locked_hover")
+	game.module_popup.show_slot_tooltip(0)
+	await _capture(game, "ko_popup_mounted_hover")
+	game.module_popup.close()
+	game.progression.observation_data = 5000000000.0
+	game.deep_sky.purchase("precision")
+	game.module_popup.open()
+	game.module_popup.owned_buttons.focus.pressed.emit()
+	game.module_popup.show_module_tooltip("precision")
+	await _capture(game, "ko_popup_full_two")
+	game.module_popup.close()
+	for id in ["record", "slot_3", "revisit", "slot_4", "slot_5"]:
+		if not game.deep_sky.purchase(id):
+			failures.append("expansion purchase failed: " + id)
+	game.module_popup.open()
+	for id in ["precision", "record", "revisit"]:
+		game.module_popup.owned_buttons[id].pressed.emit()
+	game.module_popup.hide_tooltip()
+	await _capture(game, "ko_popup_full_five")
+	game.module_popup.show_slot_tooltip(3)
+	await _capture(game, "ko_popup_record_hover")
+	game.module_popup.tooltip_pointer = Vector2(1148, 644)
+	game.module_popup._place_tooltip()
+	await _capture(game, "ko_popup_edge_tooltip")
+	game.module_popup.close()
+	game.upgrade_tree.deep_sky_chart.select("slot_5")
+	await _capture(game, "ko_chart_five_unlocked")
+	_set_locale(game, "en")
+	await _capture(game, "en_chart_five_unlocked")
+	game.module_popup.open()
+	game.module_popup.show_module_tooltip("record")
+	await _capture(game, "en_popup_full_five")
 	if source != Capture.source_snapshot(failures):
 		failures.append("source changed during capture")
 	var manifest := FileAccess.open(output.path_join("manifest.json"), FileAccess.WRITE)
@@ -93,8 +124,8 @@ func _run() -> void:
 	game.free()
 	paused = false
 	await process_frame
-	if failures.is_empty() and records.size() == 7:
-		print("DEEP_SKY_PREVIEW_PASS: 7 frames at " + ProjectSettings.globalize_path(output))
+	if failures.is_empty() and records.size() == 16:
+		print("DEEP_SKY_PREVIEW_PASS: 16 frames at " + ProjectSettings.globalize_path(output))
 		quit(0)
 	else:
 		push_error(str(failures))
@@ -115,6 +146,8 @@ func _freeze(node: Node) -> void:
 func _capture(game: Node, name: String) -> void:
 	if "popup" in name and (not game.module_popup.is_open() or game.module_popup.layer <= game.upgrade_tree.layer):
 		failures.append("popup missing or obscured by research: " + name)
+	game.module_popup.finish_animations()
+	game.module_popup.set_process(false)
 	game.hud.data_gain_label.hide()
 	game.hud.banner_root.hide()
 	for tween in get_processed_tweens():

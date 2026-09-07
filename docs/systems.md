@@ -82,7 +82,7 @@ content.
 | `research_star_visual.gd` | One star, cluster, or galaxy research marker: state/branch ink, pulse, hover and hold drawing. The chart retains `StarNodeVisual` as a compatibility alias. |
 | `deep_sky_research.gd` / `andromeda_target.gd` | M31 first-record gate, target lifecycle, ordinary round income, module purchase/equip validation and save migration. |
 | `deep_sky_chart.gd` | Continuation research UI, cached original constellation miniature and visible selected-node details. |
-| `observation_modules.gd` | Permanent module ownership, two unique slots and cached derived effects with ownership/slot validation. |
+| `observation_modules.gd` | Five module definitions, sequential capacity research, five unique positions (two initially open) and cached derived effects. |
 | `module_popup.gd` / `module_visual.gd` | Research-only equipment popup, modal layer/input/pause restoration and shared compact glyphs. |
 | `ui_theme.gd` | Shared palette, embedded font selection, 1920-spec coordinate conversion, spec-label construction, and grouped integer formatting for the HUD and chart. |
 | `tutorial_controller.gd` | Four-step first-run guidance, including the public modal-step query and focus-owned welcome/completion cards. |
@@ -95,7 +95,7 @@ The final chart scale displays `deep_sky_chart.gd`, a continuation of the existi
 constellation progression. Its miniature uses the original `base_star_positions`
 and actual constellation segments, not the collapsed presentation coordinates.
 Selecting the miniature expands the original chart. The first branch is the M31
-observation milestone, module research, and the two module purchases. The retired
+observation milestone, module research, five module purchases and three capacity research nodes. The retired
 29 Local Group nodes remain invisible and non-interactive. The old destination
 selector and independent Andromeda stage have been removed.
 
@@ -106,27 +106,44 @@ and contributes income and successes to the ordinary observation round. It has
 no separate clock, scene, camera, or reward accounting. First observation unlocks
 module research; no additional purchase is needed to unlock the equipment UI.
 
-`observation_modules.gd` retains permanent ownership and two unique slots.
+`observation_modules.gd` retains permanent ownership, a five-element typed
+`slots` array and `unlocked_slots` (initially two). Module prerequisites expand
+the available choices before the third and fourth positions open. Effect-cache
+keys compare the full slots/ownership arrays and capacity; reads allocate only
+when those inputs change. Locked, duplicate and unowned entries have no effects.
 `deep_sky_research.gd` validates chart-only purchases and popup-only equipment
 changes. Purchases do not auto-equip. `module_popup.gd` contains only owned items,
-slots, equip/unequip and close actions. It remembers pause, cursor and focus
+ring positions and an underlined close action. Inventory clicks fill the first
+clockwise open gap; mounted ring clicks remove; full/already-equipped clicks do
+nothing. Locked positions only show their research requirement on hover. A fixed
+400-spec-pixel tooltip flips and clamps to the viewport. Glyph fades and border
+brightness use the existing 0.28-second installation duration.
+It remembers pause, cursor, chart canvas visibility and focus
 ownership within the research chart. The launcher belongs to the chart overlay,
 not the observation HUD, and opening outside research is rejected. Closing the
 chart dismisses its popup first. The popup canvas is one layer above the
-research canvas, so it is both visible and receives pointer input. The chart's
+research canvas. While the popup is open it hides only that canvas (the chart's
+logical open state remains true), showing the dimmed paused sky underneath;
+closing restores the canvas before focus. The chart's
 first-refusal input yields while that popup is open. The HUD ready notice counts
-purchasable modules and excludes the retired Local Group nodes.
+purchasable modules/capacity research and excludes the retired Local Group nodes.
 
 The existing observer multiplies manual speed/radius by module effects. Target
 manual-speed clamps allow positive multipliers below one so wide's penalty is
 real, without reducing the existing multi-target research capacity or affecting
 automatic dishes. Glyphs come from `module_visual.gd`; the workbench and synthetic
-trial runtime were removed.
+trial runtime were removed. Precision and record reuse the focus glyph; revisit
+reuses the wide glyph, distinguished by module names and inventory codes.
+Record multiplies ordinary M31 reward accounting; revisit sets the next target
+cooldown on completion. Neither changes a cooldown already in progress.
 
-A new optional `deep_sky` save section stores ownership, both slots, first-record
+A new optional `deep_sky` save section stores ownership, five slots, open capacity, first-record
 count, M31 partial progress and cooldown. An old `andromeda.modules` section is
 read as a migration fallback; its active-stage flag is ignored. Unknown, duplicate
-and unowned slots are sanitized. Missing records grant no purchases. Opening a
+and unowned slots are sanitized. Legacy `equipped`/`secondary` fields and two-item
+`slots` arrays restore the first two positions with three locked empty positions.
+Capacity accepts integral JSON numbers; malformed values fall back to two.
+Missing records grant no purchases. Opening a
 popup is presentation state and is never restored from a save.
 
 `game.gd::_ready()` performs dependency injection by hand. There are no

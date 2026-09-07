@@ -1,6 +1,7 @@
 extends SceneTree
 const Fixtures = preload("res://tests/support/game_fixture.gd")
 const Balance = preload("res://scripts/game_balance.gd")
+const Modules = preload("res://scripts/observation_modules.gd")
 const Meteor = preload("res://scripts/meteor.gd")
 var failures: Array[String] = []
 
@@ -9,6 +10,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	_check_module_effect_cache()
+	_check_slot_saves()
 	create_timer(35.0, true, false, true).timeout.connect(func(): push_error("Deep sky watchdog"); quit(1))
 	var game: Node = load("res://scenes/main.tscn").instantiate()
 	Fixtures.configure_before_ready(game)
@@ -45,7 +47,7 @@ func _run() -> void:
 	await process_frame
 	_check(forwarded[0] == 0, "ordinary income does not broadcast duplicate module-state changes")
 	_check(chart.balance.text.begins_with(game.UITheme.grouped_integer(int(game.progression.observation_data))), "visible research still updates its balance through progression changes")
-	_check(chart.visible and chart.nodes.keys() == ["m31", "modules", "focus", "wide"], "one compact continuation replaces the destination hub")
+	_check(chart.visible and chart.nodes.keys() == ["m31", "modules", "focus", "wide", "precision", "record", "slot_3", "revisit", "slot_4", "slot_5"], "one compact continuation replaces the destination hub")
 	chart.select("focus")
 	game.progression.observation_data = 240000000.0
 	chart.buy_button.pressed.emit()
@@ -84,13 +86,11 @@ func _run() -> void:
 	var popup = game.module_popup
 	popup.launcher.pressed.emit()
 	_check(popup.is_open() and tree.is_open() and paused, "equipment popup overlays the chart while retaining its pause")
+	_check(not tree.visible, "popup hides chart rendering while retaining its logical open state")
 	_check(popup.layer > tree.layer, "the visible popup and its hit testing are above the research canvas")
 	_check(not research.purchase("focus"), "purchase path is blocked while the popup owns input")
-	popup.select_module("focus")
-	popup.equip_button.pressed.emit()
-	popup.select_slot(1)
-	popup.select_module("wide")
-	popup.equip_button.pressed.emit()
+	popup.owned_buttons.focus.pressed.emit()
+	popup.owned_buttons.wide.pressed.emit()
 	_check(research.modules.installed_ids() == ["focus", "wide"], "both owned modules can be equipped through real popup controls")
 	_check(not research.equip("focus", 1), "duplicate slot rejected")
 	var escape := InputEventAction.new()
@@ -100,6 +100,7 @@ func _run() -> void:
 	_check(tree.is_open(), "underlying chart does not consume popup Escape")
 	popup._input(escape)
 	_check(not popup.is_open() and tree.is_open() and paused, "Escape closes only the popup and keeps the chart paused")
+	_check(tree.visible, "closing popup restores the same chart canvas")
 	chart.back_button.pressed.emit()
 	popup.open()
 	_check(not popup.is_open() and not popup.launcher.is_visible_in_tree(), "equipment popup cannot open outside research")
@@ -147,7 +148,8 @@ func _run() -> void:
 	snapshot.andromeda = {"active": true, "modules": {"purchased": ["focus"], "equipped": "focus"}}
 	game._apply_save_data(snapshot)
 	await process_frame
-	_check(research.modules.equipped == "focus" and research.modules.secondary.is_empty() and game.hud.visible and not popup.is_open(), "legacy stage save restores equipment into the ordinary sky without re-entering a stage")
+	_check(research.modules.slots == ["focus", "", "", "", ""] and research.modules.unlocked_slots == 2 and game.hud.visible and not popup.is_open(), "legacy stage save restores equipment into the ordinary sky without re-entering a stage")
+	await _check_ring_research(game)
 	game.reset_run()
 	_check(research.modules.purchased.is_empty() and research.observations == 0 and not target.can_be_tracked(), "reset clears the extension and hides its target")
 	game.free()
@@ -244,8 +246,15 @@ func _check_popup_pointer_routing() -> void:
 	_click_in_viewport(viewport, launcher.get_global_rect().get_center())
 	await _frames(2)
 	_check(game.module_popup.is_open(), "real pointer click on research launcher opens the popup")
-	_click_in_viewport(viewport, game.module_popup.equip_button.get_global_rect().get_center())
-	_check(game.deep_sky.modules.equipped == "focus", "visible popup receives equip clicks above the research canvas")
+	_click_in_viewport(viewport, game.module_popup.owned_buttons.focus.get_global_rect().get_center())
+	_check(game.deep_sky.modules.slots[0] == "focus", "visible popup receives equip clicks above the research canvas")
+	_click_in_viewport(viewport, game.module_popup.slots[2].get_global_rect().get_center())
+	_check(game.module_popup.tooltip_panel.visible and game.module_popup.tooltip_action.text == tr("RING_LOCKED_ACTION"), "real pointer reaches locked-slot hover without equipping")
+	_check(game.deep_sky.modules.installed_ids() == ["focus"], "locked slot click leaves equipment intact")
+	_click_in_viewport(viewport, game.module_popup.slots[0].get_global_rect().get_center())
+	_check(game.deep_sky.modules.installed_ids().is_empty(), "real ring click removes the mounted module")
+	_click_in_viewport(viewport, game.module_popup.owned_buttons.focus.get_global_rect().get_center())
+	_check(game.deep_sky.modules.slots[0] == "focus", "removed module stays in inventory and refills the first clockwise gap")
 	_click_in_viewport(viewport, game.module_popup.close_button.get_global_rect().get_center())
 	_check(not game.module_popup.is_open() and game.upgrade_tree.is_open() and paused, "visible popup close click returns to research without passing through")
 	_click_in_viewport(viewport, game.upgrade_tree.deep_sky_chart.back_button.get_global_rect().get_center())
@@ -274,13 +283,118 @@ func _check_module_effect_cache() -> void:
 	_check(is_equal_approx(model.effect("speed"), 1.35) and model.effect("targets") == 3, "combined cached effects match the existing contract")
 	for index in range(20):
 		_check(is_equal_approx(model.effect("radius"), 1.65), "repeated cached reads remain stable")
-	model.secondary = ""
+	model.slots[1] = ""
 	_check(is_equal_approx(model.effect("speed"), 1.8) and model.effect("targets") == 1, "direct slot change invalidates cached effects")
 	model.purchased.clear()
 	_check(is_equal_approx(model.effect("speed"), 1.0), "direct ownership removal invalidates cached effects")
 	model.purchased.append("focus")
 	_check(is_equal_approx(model.effect("speed"), 1.8), "ownership restoration is reflected without an equip call")
-	model.secondary = "focus"
+	model.slots[1] = "focus"
 	_check(is_equal_approx(model.effect("speed"), 1.8), "duplicate direct slots do not stack cached effects")
 	model.load_save_data({"purchased": ["wide"], "equipped": "wide"})
 	_check(is_equal_approx(model.effect("speed"), 0.75) and model.effect("missing") == null, "legacy load invalidates cache and unknown effect lookup remains null")
+
+func _check_slot_saves() -> void:
+	var model = Modules.new()
+	for old in [
+		{"purchased": ["focus", "wide"], "equipped": "focus", "secondary": "wide"},
+		{"purchased": ["focus", "wide"], "slots": ["focus", "wide"]},
+	]:
+		model.load_save_data(old)
+		_check(model.slots == ["focus", "wide", "", "", ""] and model.unlocked_slots == 2, "both legacy save formats restore the first two of five positions")
+		_check(not model.equip("focus", 2) and not model.equip("", 4), "locked model positions reject equip and clear")
+	model.load_save_data({"purchased": Modules.DEFINITIONS.keys(), "slots": Modules.DEFINITIONS.keys(), "unlocked_slots": 5})
+	var encoded: Dictionary = JSON.parse_string(JSON.stringify(model.get_save_data()))
+	model.load_save_data(encoded)
+	_check(model.unlocked_slots == 5 and model.slots == ["focus", "wide", "precision", "record", "revisit"], "five positions and researched capacity survive real JSON serialization")
+	_check(is_equal_approx(model.effect("speed"), 1.62) and is_equal_approx(model.effect("radius"), 1.155), "all five effects compose without losing original multipliers")
+	model.unlocked_slots = 2
+	_check(is_equal_approx(model.effect("speed"), 1.35), "capacity changes invalidate cache and exclude locked equipment")
+	model.load_save_data({"purchased": ["focus", "focus", "wide", "bad", 7], "slots": ["focus", "focus", "wide", "record", "bad", "wide"], "unlocked_slots": 5})
+	_check(model.purchased == ["focus", "wide"] and model.slots == ["focus", "", "wide", "", ""], "load sanitizes duplicate, unowned, unknown and extra positions")
+	for invalid in ["5", null, 3.5, NAN]:
+		model.load_save_data({"purchased": ["focus", "wide", "record"], "slots": ["focus", "wide", "record"], "unlocked_slots": invalid})
+		_check(model.unlocked_slots == 2 and model.slots[2].is_empty(), "invalid capacity does not activate locked save contents")
+
+func _check_ring_research(game: Node) -> void:
+	var research = game.deep_sky
+	var popup = game.module_popup
+	var chart = game.upgrade_tree.deep_sky_chart
+	research.modules.load_save_data({})
+	research.observations = 1
+	game.progression.observation_data = 5000000000.0
+	game.upgrade_tree.open_tree()
+	await _frames(2)
+	popup.open()
+	_check(popup.instructions.text == tr("DEEP_NO_MODULES"), "newly unlocked empty inventory explains where to buy modules")
+	popup.close()
+	_check(not research.purchase("slot_5") and not research.purchase("precision") and not research.purchase("revisit"), "Andromeda research enforces module and slot prerequisites")
+	for id in ["focus", "wide", "precision", "record"]:
+		chart.select(id)
+		var before: float = game.progression.observation_data
+		chart.buy_button.pressed.emit()
+		_check(research.modules.research_owned(id) and is_equal_approx(before - game.progression.observation_data, research.modules.research_cost(id)), "chart buys and charges once: " + id)
+	_check(research.modules.unlocked_slots == 2 and research.modules.purchased.size() == 4, "module choices expand before the third position")
+	popup.open()
+	popup.owned_buttons.focus.pressed.emit()
+	popup.owned_buttons.wide.pressed.emit()
+	popup.show_module_tooltip("precision")
+	_check(popup.tooltip_action.text == tr("RING_FULL_ACTION"), "full inventory tooltip explains why the click cannot equip")
+	popup.owned_buttons.precision.pressed.emit()
+	popup.owned_buttons.focus.pressed.emit()
+	_check(research.modules.slots == ["focus", "wide", "", "", ""], "full and already-mounted tile clicks never replace equipment")
+	_check(not research.equip("record", 2) and not research.purchase("slot_3"), "popup cannot equip locked positions or purchase their research")
+	popup.show_module_tooltip("focus")
+	_check(popup.tooltip_action.text == tr("RING_EQUIPPED_ACTION"), "mounted inventory tile explains its no-op")
+	popup.slots[0].pressed.emit()
+	popup.owned_buttons.precision.pressed.emit()
+	_check(research.modules.slots == ["precision", "wide", "", "", ""], "click removal leaves a gap that the next inventory click fills first")
+	popup.set_process(false)
+	for locale in ["ko", "en"]:
+		game.settings.set_language(locale, false)
+		popup.show_module_tooltip("record")
+		await _frames(3)
+		popup.tooltip_pointer = popup.overlay.size - Vector2.ONE
+		popup._place_tooltip()
+		_check(absf(popup.tooltip_panel.size.x - 240.0) <= 1.0 and Rect2(Vector2.ZERO, popup.overlay.size).encloses(popup.tooltip_panel.get_rect()), "tooltip maintains spec width and flips within viewport: " + locale + " " + str(popup.tooltip_panel.get_rect()))
+	popup.close()
+	for id in ["slot_3", "revisit", "slot_4", "slot_5"]:
+		chart.select(id)
+		var before: float = game.progression.observation_data
+		chart.buy_button.pressed.emit()
+		_check(research.modules.research_owned(id) and is_equal_approx(before - game.progression.observation_data, research.modules.research_cost(id)), "chart unlocks each sequential expansion: " + id)
+		_check(not research.purchase(id) and game.progression.observation_data == before - research.modules.research_cost(id), "duplicate expansion cannot charge again: " + id)
+	_check(research.modules.unlocked_slots == 5 and research.modules.purchased.size() == 5, "final expansion stops at exactly five modules and five positions")
+	popup.open()
+	for index in range(5):
+		popup.remove_module(index)
+	for id in Modules.DEFINITIONS:
+		popup.owned_buttons[id].pressed.emit()
+	_check(research.modules.slots == ["focus", "wide", "precision", "record", "revisit"], "all unlocked ring positions fill clockwise through popup controls")
+	var snapshot: Dictionary = JSON.parse_string(JSON.stringify(game._build_save_data()))
+	popup.close()
+	game.upgrade_tree.close_tree()
+	game._apply_save_data(snapshot)
+	await _frames(2)
+	_check(research.modules.unlocked_slots == 5 and research.modules.installed_ids().size() == 5 and not paused, "full game JSON save restores researched capacity and observation")
+	# Measure target reward and cooldown through actual completion, with a frozen
+	# simulation so ordinary income cannot contaminate the comparison.
+	game.set_process(false)
+	game.spawner.set_process(false)
+	game.events.set_process(false)
+	research.target.set_process(false)
+	var full_slots: Array = research.modules.slots.duplicate()
+	research.modules.slots.fill("")
+	research.target.cooldown = 0
+	research.target.progress = 0
+	var before: float = game.progression.total_data_earned
+	research.target.apply_manual_observation(100, 0, 52)
+	var base_reward: float = game.progression.total_data_earned - before
+	_check(is_equal_approx(research.target.cooldown, 7.0), "base M31 cooldown remains seven seconds")
+	research.modules.slots.assign(full_slots)
+	_check(is_equal_approx(research.target.cooldown, 7.0), "equipping revisit does not shorten an already running cooldown")
+	research.target.cooldown = 0
+	before = game.progression.total_data_earned
+	research.target.apply_manual_observation(100, 0, 52)
+	_check(base_reward > 0 and is_equal_approx((game.progression.total_data_earned - before) / base_reward, 1.5), "record module increases actual M31 income")
+	_check(is_equal_approx(research.target.cooldown, 4.2), "revisit changes the next actual completion cooldown")

@@ -38,7 +38,7 @@ func apply_manual_observation(delta: float, distance: float, radius: float, spee
 	progress = minf(1.0, progress + delta * lerpf(0.8, 1.2, quality) * speed * research.game.progression.get_analysis_speed_multiplier("galaxy") / 10.0)
 	if progress >= 1.0:
 		progress = 0.0
-		cooldown = 7.0
+		cooldown = 7.0 * float(research.modules.effect("m31_cooldown"))
 		research.record_observation()
 	queue_redraw()
 
