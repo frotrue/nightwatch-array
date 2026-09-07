@@ -14,7 +14,9 @@ Adapted from [OpenAI's GPT-6 Astra prompting guidance](https://developers.openai
   verification and material limitations.
 - Autonomously use subagents for independent work when this is expected to save
   time or improve quality. Start with 1-2; add more only when independent work
-  justifies the coordination and usage cost.
+  justifies the coordination and usage cost. Delegate only with clear file
+  ownership or a read-only remit, completion criteria, and useful independent
+  work for the primary agent. Handle an isolated small edit directly.
 - Explicitly select both model and reasoning effort for every subagent,
   including reviewers: `gpt-5.6-luna` / `max` for clear, bounded work or
   `gpt-5.6-terra` / `xhigh` for broader implementation and investigation. Choose
@@ -32,11 +34,19 @@ Adapted from [OpenAI's GPT-6 Astra prompting guidance](https://developers.openai
   than the full conversation. Prefer independent regression, save
   compatibility, and documentation checks; parallelize implementation when file
   ownership is separate. Avoid overlapping edits.
+- After required orientation, start with the supplied files and evidence.
+  Expand into historical documents, old commits, or repository-wide searches
+  only to resolve missing or conflicting information. Read focused sections;
+  avoid repeated whole-file reads and unnecessarily large tool outputs.
 - Keep simple edits and CodeGraph exploration local and avoid duplicate work.
   Continue useful independent work while agents run. The primary agent reviews
   results against the actual changes and owns integration and final validation.
   Use readable handoffs; delegation does not expand approved design scope or
   waive the completion requirements below.
+- Assign validation responsibility in the handoff: subagents run focused checks;
+  the primary agent owns integration tests, visual review, build, commit, and
+  requested push. Preserve required independent verification without having
+  every agent repeat the full validation suite.
 - Complete required checks; repeat or broaden them only for changes, failures,
   or unresolved concerns. Add tests for meaningful behavior, avoiding duplication
   of implementation details.
