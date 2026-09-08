@@ -425,12 +425,17 @@ func _draw_dish(dish: Dictionary) -> void:
 	# Parked and covering reads as the actionable accent; still slewing stays
 	# neutral, because it is not yet doing anything.
 	var color := UITheme.ACCENT_LINE if arrived else UITheme.INK_MID
-	draw_circle(position, coverage_radius, Color(color, 0.05 if arrived else 0.02))
-	draw_arc(position, coverage_radius, 0.0, TAU, 56, Color(color, 0.42 if arrived else 0.20),
-		(1.8 if arrived else 1.1) * visual_scale, true)
+	# Coverage guides manual placement; predictive control no longer needs a
+	# permanent ring over the sky. Keep the hardware dot and movement feedback.
+	var show_coverage := not _auto_assignment_enabled()
+	if show_coverage:
+		draw_circle(position, coverage_radius, Color(color, 0.05 if arrived else 0.02))
+		draw_arc(position, coverage_radius, 0.0, TAU, 56, Color(color, 0.42 if arrived else 0.20),
+			(1.8 if arrived else 1.1) * visual_scale, true)
 	if not arrived and assignment_visual_visible:
 		draw_line(position, Vector2(dish.target), Color(color, 0.34), 1.2 * visual_scale, true)
-		draw_arc(Vector2(dish.target), coverage_radius, 0.0, TAU, 56, Color(color, 0.14), 1.0 * visual_scale, true)
+		if show_coverage:
+			draw_arc(Vector2(dish.target), coverage_radius, 0.0, TAU, 56, Color(color, 0.14), 1.0 * visual_scale, true)
 	if not assigned_contact.is_empty() and assignment_visual_visible:
 		var estimate := _estimate_of(assigned_contact)
 		draw_line(position, estimate, Color(UITheme.ACCENT_TEXT, 0.72), 1.6 * visual_scale, true)
