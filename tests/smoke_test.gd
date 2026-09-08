@@ -2415,7 +2415,7 @@ func _run() -> void:
 	var blocked_end_u := InputEventKey.new()
 	blocked_end_u.keycode = KEY_U
 	blocked_end_u.pressed = true
-	open_night_game._unhandled_key_input(blocked_end_u)
+	open_night_game.get_viewport().push_input(blocked_end_u)
 	_check(not open_night_game.upgrade_tree.is_open(), "ending ownership blocks research-chart input behind the overlay")
 	open_night_game._on_catalogue_continue_requested()
 	_check(
@@ -2893,6 +2893,39 @@ func _run_input_routing_regressions(packed: PackedScene) -> void:
 	)
 	routing_game.tutorial._on_primary_pressed()
 	routing_game._close_upgrade_tree_without_transition()
+
+	# Dispatch through the viewport: direct method calls miss paused-node input loss.
+	var debug_data_before: float = routing_game.progression.observation_data
+	await _push_key_event(routing_game.get_viewport(), KEY_D, true, true)
+	_check(is_equal_approx(routing_game.progression.observation_data, debug_data_before + 100.0), "live debug data chord fires exactly once")
+	routing_game.upgrade_tree.open_tree()
+	await process_frame
+	_check(paused and not routing_game.can_process(), "chart pauses the gameplay root during debug input regression")
+	debug_data_before = routing_game.progression.observation_data
+	await _push_key_event(routing_game.get_viewport(), KEY_D, true, true)
+	_check(is_equal_approx(routing_game.progression.observation_data, debug_data_before + 100.0), "debug data chord works while the chart pauses gameplay")
+	var debug_hud_before: bool = hud.is_debug_visible()
+	await _push_key_event(routing_game.get_viewport(), KEY_F9)
+	_check(hud.is_debug_visible() != debug_hud_before, "F9 toggles the debug HUD while the chart is paused")
+	var debug_research_before: int = routing_game.progression.upgrade_level
+	await _push_key_event(routing_game.get_viewport(), KEY_N, true, true)
+	_check(routing_game.progression.upgrade_level == debug_research_before + 1, "debug next-research chord works in the chart")
+	await _push_key_event(routing_game.get_viewport(), KEY_A, true, true)
+	_check(routing_game.progression.upgrade_level == Balance.research_node_count(), "debug all-research chord works in the chart")
+	_check(paused and routing_game.upgrade_tree.is_open(), "debug commands preserve the chart and gameplay pause")
+	debug_data_before = routing_game.progression.observation_data
+	await _push_key_event(routing_game.get_viewport(), KEY_D)
+	var repeated_debug := _key_event(KEY_D, true, true, true)
+	repeated_debug.echo = true
+	routing_game.get_viewport().push_input(repeated_debug)
+	_check(is_equal_approx(routing_game.progression.observation_data, debug_data_before), "plain keys and auto-repeat cannot trigger debug commands")
+	routing_game._close_upgrade_tree_without_transition()
+	hud.open_settings()
+	hud._begin_rebind(&"nw_chart")
+	await _push_key_event(routing_game.get_viewport(), KEY_D, true, true)
+	_check(is_equal_approx(routing_game.progression.observation_data, debug_data_before), "key rebinding consumes reserved debug chords before game commands")
+	hud._cancel_rebind(false)
+	hud.close_settings()
 
 	# Defensive cleanup and restoration even when an assertion above failed.
 	if routing_game.hud.is_end_open():

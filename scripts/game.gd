@@ -641,7 +641,7 @@ func _return_to_observatory() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
 
 
-func _unhandled_key_input(event: InputEvent) -> void:
+func handle_debug_key_input(event: InputEvent) -> void:
 	if not (event is InputEventKey) or not event.pressed or event.echo:
 		return
 	if completed:

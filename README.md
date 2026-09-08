@@ -68,7 +68,7 @@ Windows 기본 위치는 `%APPDATA%\Godot\app_userdata\Nightwatch Array\`다.
 
 ### 디버그 단축키
 
-다음 키는 Ctrl+Shift 조합이며 릴리스에서도 동작한다.
+다음 키는 Ctrl+Shift 조합이며 릴리스와 성도의 일시정지 중에도 동작한다.
 
 | 키 | 동작 |
 |---|---|

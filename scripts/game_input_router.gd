@@ -56,6 +56,17 @@ func _input(event: InputEvent) -> void:
 		_mark_input_handled()
 
 
+func _unhandled_key_input(event: InputEvent) -> void:
+	if not _is_raw_debug_input(event) or _hud_state(&"is_rebind_capture_active"):
+		return
+	if _hud_state(&"is_startup_slots_open") or _tutorial_is_modal():
+		return
+	# The gameplay root stops receiving input while the chart pauses the tree.
+	# Keep debug dispatch here without allowing gameplay simulation to run paused.
+	if game != null:
+		game.handle_debug_key_input(event)
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if _hud_state(&"is_rebind_capture_active"):
 		# The capture path above normally consumes candidate presses. Keep any
@@ -64,8 +75,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			_mark_input_handled()
 		return
 	if _is_raw_debug_input(event):
-		# F9 and Ctrl+Shift debug chords remain owned by Game, even if a user
-		# binding otherwise shares their base key.
+		# Reserved debug chords never fall through to editable navigation bindings.
 		return
 	if _action_pressed(event, ACTION_FULLSCREEN):
 		if settings != null and settings.has_method("toggle_fullscreen"):

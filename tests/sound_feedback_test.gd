@@ -241,21 +241,21 @@ func _test_debug_event_routing(game, synth: Recorder) -> void:
 	game.events.reset()
 	game.spawner.phase_time_remaining = 60.0
 	key.keycode = KEY_S
-	game._unhandled_key_input(key)
+	game.handle_debug_key_input(key)
 	_check(game.events.shower_state == "warning", "Ctrl+Shift+S enters the real shower warning path")
 	_expect_streams(synth, [synth.environment_stream], "Ctrl+Shift+S produces exactly one environment cue with no layered warning")
 	synth.calls.clear()
-	game._unhandled_key_input(key)
+	game.handle_debug_key_input(key)
 	_check(synth.calls.is_empty(), "a rejected repeated shower key does not emit feedback")
 
 	game.events.reset()
 	game.progression.purchased_nodes["sirius_fireball"] = true
 	key.keycode = KEY_F
-	game._unhandled_key_input(key)
+	game.handle_debug_key_input(key)
 	_check(game.events.canis_major_state == "warning", "Ctrl+Shift+F enters the real Canis warning path")
 	_expect_streams(synth, [synth.environment_stream], "Ctrl+Shift+F produces exactly one environment cue with no layered warning")
 	synth.calls.clear()
-	game._unhandled_key_input(key)
+	game.handle_debug_key_input(key)
 	_check(synth.calls.is_empty(), "a rejected repeated Canis key does not emit feedback")
 
 	game.events.reset()
