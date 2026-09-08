@@ -12,6 +12,9 @@ func _run() -> void:
 	var game: Node = load("res://scenes/main.tscn").instantiate()
 	Fixtures.configure_before_ready(game)
 	root.add_child(game)
+	game.sound.free()
+	game.sound = Fixtures.SilentSound.new()
+	game.add_child(game.sound)
 	await process_frame
 	await process_frame
 	game.set_process(false)
@@ -112,6 +115,7 @@ func _run() -> void:
 	popup.close()
 	_check(not popup.is_open() and game.upgrade_tree.visible and paused, "closing the modal restores the chart pause")
 	_check(game.get_viewport().gui_get_focus_owner() == popup.launcher, "closing the modal restores the previous focus")
+	await _verify_information_hierarchy(game)
 	game.free()
 
 	if failures.is_empty():
@@ -125,3 +129,71 @@ func _check(value: bool, message: String) -> void:
 	if not value:
 		failures.append(message)
 		push_error("MODULE_INVENTORY: " + message)
+
+func _activate_focused_control() -> void:
+	for pressed in [true, false]:
+		var event := InputEventKey.new()
+		event.keycode = KEY_SPACE
+		event.physical_keycode = KEY_SPACE
+		event.pressed = pressed
+		root.push_input(event, true)
+		await process_frame
+
+func _verify_information_hierarchy(game: Node) -> void:
+	var chart = game.upgrade_tree
+	var popup = game.module_popup
+	var hud = game.hud
+	var data_before: float = game.progression.observation_data
+	# Outer chart fixture: explicitly install one displayed research star.
+	game.deep_sky.state.research_ids.append("ext_trace_study")
+	chart.select_extension("ext_trace_study")
+	_check(not chart.inspector_details.visible and not chart.tooltip_star.is_visible_in_tree(), "star reference details start collapsed")
+	_check(chart.tooltip_state.visible and not chart.tooltip_action.visible and not chart.tooltip_cost.visible, "installed research states completion once without a live purchase cost: %s / %s / %s / %s" % [chart.tooltip_state.text, chart.tooltip_state.visible, chart.tooltip_action.visible, chart.tooltip_cost.visible])
+	chart.inspector_details_button.grab_focus()
+	await _activate_focused_control()
+	_check(chart.inspector_details.visible and chart.tooltip_star.is_visible_in_tree(), "keyboard opens star identity and legend without buying research")
+	_check(game.progression.observation_data == data_before, "opening research help never spends Data")
+	await _activate_focused_control()
+	_check(not chart.inspector_details.visible, "keyboard closes star help")
+
+	popup.open()
+	_check(not popup.hint.visible and not popup.help_button.button_pressed, "loadout instructions start collapsed")
+	_check(not hud.data_label.is_visible_in_tree(), "loadout suppresses the underlying observation readouts")
+	popup.help_button.grab_focus()
+	await _activate_focused_control()
+	_check(popup.hint.visible and popup.help_button.button_pressed and popup.summary.text.contains("1.00"), "keyboard reveals loadout instructions and neutral full stats")
+	popup.close()
+	_check(not hud.external_readouts_covered, "closing loadout releases its HUD visibility ownership")
+	_check(game.deep_sky.current_objective().is_empty(), "learned module acquisition route is absent from the observation HUD")
+	hud._refresh_extension()
+	_check(not hud.extension_samples_label.visible, "sample balance belongs beside the draw action")
+	chart.close_tree()
+
+	hud.reset_tutorial()
+	game.tutorial.start_tutorial(false)
+	game.tutorial._on_primary_pressed()
+	_check(not hud.tutorial_label.visible and not game.tutorial.hint_label.visible, "guided observation shows one instruction surface")
+	game.tutorial.skip_tutorial()
+	_check(hud.tutorial_label.visible, "skipping guidance restores the first-observation fallback")
+	hud.banner_root.hide()
+	hud.show_discovery_banner("test_quality", "First quality", Color.WHITE, 1.5)
+	_check(hud.banner_label.text == "First quality", "first routine event may introduce its meaning")
+	hud.banner_root.hide()
+	hud.show_discovery_banner("test_quality", "Repeated quality", Color.WHITE, 1.5)
+	_check(not hud.banner_root.visible, "repeated routine success does not reopen the global banner")
+	hud.show_banner("Save warning", Color.WHITE, 3.0)
+	hud.show_discovery_banner("test_echo", "Echo", Color.WHITE, 1.5)
+	_check(hud.banner_label.text == "Save warning", "routine discoveries never overwrite an active warning")
+	hud.banner_root.hide()
+
+	paused = true
+	hud.show_phase_summary({"round": 3, "duration": 60.0, "data": 120, "rate": 120.0, "observations": 7, "manual": 5, "automatic": 2}, {"rate": 100.0}, "comparison", true)
+	_check(not hud.summary_details.visible and hud.summary_lead.text.contains("+20%"), "summary starts with a comparable rate change and collapsed breakdown")
+	hud.summary_details_button.grab_focus()
+	await _activate_focused_control()
+	_check(hud.is_phase_summary_open() and hud.summary_details.visible, "Space opens summary details instead of accidentally continuing")
+	_check(hud.phase_summary_split.is_visible_in_tree() and not hud.summary_lead.visible, "expanded result exposes manual/automatic work without repeating the compact comparison")
+	hud.show_phase_summary({"round": 4, "rate": 130.0}, {"rate": 100.0}, "systems_changed", false)
+	_check(not hud.summary_details.visible and not hud.summary_details_button.button_pressed and not hud.summary_lead.text.contains("%"), "next round collapses details and preserves non-comparable build context")
+	hud.hide_phase_summary()
+	paused = false

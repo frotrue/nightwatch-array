@@ -128,6 +128,7 @@ func _set_step(step: int) -> void:
 			body_label.text = tr("TUTORIAL_COMPLETE_BODY")
 			hint_label.text = _binding_text("TUTORIAL_COMPLETE_HINT", "nw_chart")
 			primary_button.text = tr("TUTORIAL_FINISH")
+	hint_label.visible = modal
 	skip_button.text = tr("TUTORIAL_SKIP")
 	primary_button.focus_mode = Control.FOCUS_ALL if modal else Control.FOCUS_NONE
 	skip_button.focus_mode = Control.FOCUS_ALL if modal and skip_button.visible else Control.FOCUS_NONE

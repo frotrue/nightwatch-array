@@ -116,6 +116,9 @@ var galactic_progress_installed: Label
 var galactic_progress_separator: Label
 var galactic_progress_total: Label
 var tree_status: Label
+var inspector_details: VBoxContainer
+var inspector_details_button: Button
+var inspector_scroll: ScrollContainer
 var tooltip_panel: PanelContainer
 var tooltip_branch: Label
 var tooltip_name: Label
@@ -872,7 +875,7 @@ func _layout_chart_header() -> void:
 	galactic_progress_installed.size = installed_size
 	galactic_progress_separator.position = Vector2(
 		counter_x + installed_size.x + counter_gap,
-		count_y + UITheme.mono_tabular().get_ascent(UITheme.size_px(64.0)) - UITheme.mono().get_ascent(UITheme.size_px(26.0))
+		count_y + UITheme.mono_tabular().get_ascent(UITheme.size_px(38.0)) - UITheme.mono().get_ascent(UITheme.size_px(26.0))
 	)
 	galactic_progress_separator.size = separator_size
 	galactic_progress_total.position = Vector2(
@@ -956,6 +959,7 @@ func _layout_constellation_overlays() -> void:
 	var frame := overlay.size
 	constellation_ledger.position = Vector2(UITheme.px(56.0), UITheme.px(206.0))
 	constellation_ledger.size = Vector2(UITheme.px(288.0), maxf(0.0, frame.y - constellation_ledger.position.y - UITheme.px(70.0)))
+	_set_inspector_details(inspector_details_button.button_pressed)
 	var ledger_title: Label = constellation_ledger.get_node("LedgerTitle")
 	ledger_title.position = Vector2.ZERO
 	ledger_title.size.x = constellation_ledger.size.x
@@ -1286,6 +1290,21 @@ func _refresh_galactic_panel(node_id: String) -> void:
 	UITheme.data_tooltip(galactic_panel_cost, definition.cost)
 	galactic_panel_effect.text = _upgrade_description(definition)
 	_layout_galactic_panel_content()
+
+
+func _set_inspector_details(expanded: bool) -> void:
+	inspector_details.visible = expanded
+	inspector_details_button.text = tr("UI_DETAILS_HIDE" if expanded else "TREE_DETAILS_SHOW")
+	# Only expanded help owns the scroll surface. The ordinary inspector stays
+	# transparent to star hits, apart from its explicit disclosure button.
+	inspector_scroll.mouse_filter = Control.MOUSE_FILTER_STOP if expanded else Control.MOUSE_FILTER_IGNORE
+
+
+func _set_inspector_purchase_state(state: String) -> void:
+	# Installed state is stated once; there is no longer a purchase to price.
+	tooltip_action.visible = state != "purchased"
+	tooltip_cost.visible = state != "purchased"
+	tooltip_panel.find_child("FieldCostLabel", true, false).visible = state != "purchased"
 
 
 func _refresh_constellation_static_text() -> void:
@@ -1905,6 +1924,7 @@ func _refresh_constellation_inspector(node_id: String) -> void:
 					var prerequisite := Balance.upgrade_definition(prerequisite_id)
 					prerequisite_names.append(_upgrade_name(prerequisite))
 				tooltip_action.text = tr("TREE_REQUIRES") % ", ".join(prerequisite_names)
+	_set_inspector_purchase_state(visual_state)
 	tooltip_branch.add_theme_color_override("font_color", UITheme.TOOLTIP_LABEL)
 	var state_tone := UITheme.INK_MAX if visual_state == "purchased" else (UITheme.ACCENT_PIP if visual_state == "available" and progression.can_purchase(node_id) else (UITheme.STAR_SHORT_BORDER if visual_state == "available" else UITheme.TOOLTIP_LABEL))
 	tooltip_state.add_theme_color_override("font_color", state_tone)
@@ -2004,19 +2024,19 @@ func _build_interface() -> void:
 	systems_readout = _spec_label(
 		tr("TREE_PROGRESS_COUNT") % [0, Balance.research_node_count()],
 		UITheme.mono_tabular(),
-		64.0,
-		UITheme.INK_MAX
+		38.0,
+		UITheme.INK_MID
 	)
 	systems_readout.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	systems_readout.visible = false
 	header.add_child(systems_readout)
-	galactic_progress_installed = _spec_label("000", UITheme.mono_tabular(), 64.0, UITheme.INK_MAX)
+	galactic_progress_installed = _spec_label("000", UITheme.mono_tabular(), 38.0, UITheme.INK_HIGH)
 	galactic_progress_installed.name = "GalacticProgressInstalled"
 	header.add_child(galactic_progress_installed)
 	galactic_progress_separator = _spec_label("/", UITheme.mono(), 26.0, UITheme.INK_LOW)
 	galactic_progress_separator.name = "GalacticProgressSeparator"
 	header.add_child(galactic_progress_separator)
-	galactic_progress_total = _spec_label("%03d" % Balance.research_node_count(), UITheme.mono_tabular(), 64.0, UITheme.INK_MID)
+	galactic_progress_total = _spec_label("%03d" % Balance.research_node_count(), UITheme.mono_tabular(), 38.0, UITheme.INK_MID)
 	galactic_progress_total.name = "GalacticProgressTotal"
 	header.add_child(galactic_progress_total)
 	progress_track = ColorRect.new()
@@ -2224,10 +2244,16 @@ func _build_node_tooltip() -> void:
 	tooltip_panel.visible = false
 	tooltip_panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	overlay.add_child(tooltip_panel)
+	var scroll := ScrollContainer.new()
+	inspector_scroll = scroll
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.follow_focus = true
+	tooltip_panel.add_child(scroll)
 	var column := VBoxContainer.new()
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_theme_constant_override("separation", UITheme.size_px(11.0))
-	tooltip_panel.add_child(column)
+	scroll.add_child(column)
 	tooltip_branch = _spec_label("", UITheme.mono(), 17.0, UITheme.INK_MID)
 	tooltip_branch.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(tooltip_branch)
@@ -2236,7 +2262,7 @@ func _build_node_tooltip() -> void:
 	column.add_child(tooltip_name)
 	tooltip_star = _spec_label("", UITheme.mono(), 17.0, UITheme.TOOLTIP_VALUE)
 	tooltip_star.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	column.add_child(tooltip_star)
+	# Attached to the optional details below, after the decision information.
 	# The VBox owns the slot's geometry, not the animated rule's transform.
 	# Otherwise its deferred sort resets the in-flight scale after a purchase.
 	var divider_slot := Control.new()
@@ -2275,18 +2301,33 @@ func _build_node_tooltip() -> void:
 	column.add_child(effect_label)
 	tooltip_description = _spec_label("", UITheme.sans(), 20.0, UITheme.TOOLTIP_VALUE)
 	tooltip_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	tooltip_description.custom_minimum_size.x = UITheme.px(292.0)
+	tooltip_description.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	column.add_child(tooltip_description)
 	tooltip_action = _spec_label("", UITheme.sans("medium"), 24.0, UITheme.TOOLTIP_ACTION)
 	tooltip_action.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(tooltip_action)
+	inspector_details_button = Button.new()
+	inspector_details_button.flat = true
+	inspector_details_button.toggle_mode = true
+	inspector_details_button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	inspector_details_button.add_theme_font_override("font", UITheme.sans())
+	inspector_details_button.add_theme_font_size_override("font_size", UITheme.size_px(20))
+	for state in ["font_color", "font_hover_color", "font_focus_color"]:
+		inspector_details_button.add_theme_color_override(state, UITheme.TOOLTIP_ACTION)
+	inspector_details_button.toggled.connect(_set_inspector_details)
+	column.add_child(inspector_details_button)
+	inspector_details = VBoxContainer.new()
+	inspector_details.add_theme_constant_override("separation", UITheme.size_px(11.0))
+	column.add_child(inspector_details)
+	inspector_details.add_child(tooltip_star)
+	_set_inspector_details(false)
 	var legend_spacer := Control.new()
 	legend_spacer.custom_minimum_size.y = UITheme.px(7.0)
 	legend_spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	column.add_child(legend_spacer)
+	inspector_details.add_child(legend_spacer)
 	var legend_title := _spec_label(tr("TREE_CONSTELLATION_STAR_STATES"), UITheme.mono(), 17.0, UITheme.INK_MID)
 	legend_title.name = "LegendTitle"
-	column.add_child(legend_title)
+	inspector_details.add_child(legend_title)
 	var legend_rows := [
 		["●", UITheme.STAR_INSTALLED, "TREE_CONSTELLATION_LEGEND_INSTALLED"],
 		["●", UITheme.STAR_READY_FILL, "TREE_CONSTELLATION_LEGEND_READY"],
@@ -2299,7 +2340,7 @@ func _build_node_tooltip() -> void:
 		var legend_row := HBoxContainer.new()
 		legend_row.add_theme_constant_override("separation", UITheme.size_px(11.0))
 		legend_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		column.add_child(legend_row)
+		inspector_details.add_child(legend_row)
 		var marker := _spec_label(String(row[0]), UITheme.mono(), 20.0, Color(row[1]))
 		marker.custom_minimum_size.x = UITheme.px(12.0)
 		legend_row.add_child(marker)
@@ -3093,6 +3134,7 @@ func _refresh_extension_inspector(id: String) -> void:
 	elif not extension_research.modules_unlocked(): tooltip_action.text = tr("ATLAS_FIRST_M31")
 	elif state == "available": tooltip_action.text = tr("TREE_NEED_MORE") % [_data_number(floor(progression.observation_data)), _data_number(cost)]
 	else: tooltip_action.text = extension_research.prerequisite_text(id)
+	_set_inspector_purchase_state(state)
 	tooltip_state.add_theme_color_override("font_color", UITheme.ACCENT_PIP if _can_research(id) else UITheme.INK_MID)
 	tooltip_action.add_theme_color_override("font_color", UITheme.TOOLTIP_ACTION)
 	tooltip_panel.visible = _constellation_panel_active()

@@ -163,7 +163,7 @@ func prerequisite_text(id: String) -> String:
 func current_objective() -> String:
 	if not modules_unlocked():
 		return tr("DEEP_FIRST_HINT") if available() else ""
-	return tr("MODX_DRAW_HINT")
+	return "" # The acquisition route is introduced once when M31 unlocks modules.
 
 func m31_value_multiplier() -> float:
 	return float(modules.effect("m31_value")) * state.effect("m31_data")
@@ -182,7 +182,7 @@ func record_observation(value_multiplier: float = -1.0) -> void:
 	game.sound.play_success(1.0, 1, 0.4)
 	_sync_protocol()
 	if observations == 1:
-		game.hud.show_banner(tr("DEEP_FIRST_RECORD"), UITheme.ACCENT_TEXT, 4.0)
+		game.hud.show_banner(tr("DEEP_FIRST_RECORD") + "\n" + tr("MODX_DRAW_HINT"), UITheme.ACCENT_TEXT, 4.0)
 	target.queue_redraw()
 	changed.emit()
 	game._autosave_active_slot()

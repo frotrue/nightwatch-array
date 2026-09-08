@@ -105,6 +105,8 @@ func _ready() -> void:
 	if startup_slot_prompt_enabled:
 		tutorial.auto_start_enabled = false
 	tutorial.setup(settings, progression)
+	tutorial.tutorial_started.connect(hud.set_guided_tutorial_active.bind(true))
+	tutorial.tutorial_completed.connect(hud.set_guided_tutorial_active.bind(false))
 	settings.language_changed.connect(_on_language_changed)
 	settings.number_notation_changed.connect(_on_language_changed)
 	if settings.has_signal("accessibility_changed"):
@@ -325,7 +327,7 @@ func _begin_observation_phase(advance_round: bool = false, remaining_override: f
 	# only after a full-research observation, its summary, and the completed chart.
 	var pending_leonid_count := _try_start_leonid_storm()
 	if pending_leonid_count > 0:
-		hud.show_banner(tr("BANNER_LEONID_STORM") % pending_leonid_count, UITheme.INK_MAX, 1.8)
+		hud.show_discovery_banner("leonid_storm", tr("BANNER_LEONID_STORM") % pending_leonid_count, UITheme.INK_MAX, 1.8)
 	spawner.refresh_active_features()
 	if resume_game:
 		get_tree().paused = false
@@ -791,11 +793,11 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 			var freeze_weight := clampf((strength - HITSTOP_STRENGTH_FLOOR) / (1.0 - HITSTOP_STRENGTH_FLOOR), 0.0, 1.0)
 			_apply_hitstop(lerpf(0.05, 0.11, freeze_weight))
 	if progression.has_upgrade("perfect_observation") and was_manual and quality_grade in ["EXCELLENT", "PERFECT"]:
-		hud.show_banner(tr("BANNER_QUALITY") % [tr("QUALITY_%s" % quality_grade), intrinsic_multiplier], meteor.get_visual_color(), 1.5)
+		hud.show_discovery_banner("quality", tr("BANNER_QUALITY") % [tr("QUALITY_%s" % quality_grade), intrinsic_multiplier], meteor.get_visual_color(), 1.5)
 	if echo_spawn_count > 0:
-		hud.show_banner(tr("BANNER_GEMINI_ECHO") % echo_spawn_count, UITheme.INK_MAX, 1.5)
+		hud.show_discovery_banner("gemini_echo", tr("BANNER_GEMINI_ECHO") % echo_spawn_count, UITheme.INK_MAX, 1.5)
 	if leonid_spawn_count > 0:
-		hud.show_banner(tr("BANNER_LEONID_STORM") % leonid_spawn_count, UITheme.INK_MAX, 1.8)
+		hud.show_discovery_banner("leonid_storm", tr("BANNER_LEONID_STORM") % leonid_spawn_count, UITheme.INK_MAX, 1.8)
 	if progression.success_count == 1:
 		hud.mark_first_success()
 	tutorial.notify_observation_completed()

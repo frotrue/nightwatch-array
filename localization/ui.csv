@@ -168,13 +168,13 @@ TUTORIAL_START,START TUTORIAL,튜토리얼 시작
 TUTORIAL_SKIP,SKIP,건너뛰기
 TUTORIAL_CONTINUE,CONTINUE,계속
 TUTORIAL_OBSERVE_TITLE,TRACK A METEOR,유성을 추적하세요
-TUTORIAL_OBSERVE_BODY,Hold the left mouse button and keep the cursor close to a meteor until the observation ring fills.,마우스 왼쪽 버튼을 누른 채 커서를 유성 가까이에 유지해 관측 게이지를 채우세요.
+TUTORIAL_OBSERVE_BODY,Hold the left mouse button and follow a meteor until the ring fills.,왼쪽 버튼을 누른 채 유성을 따라가 게이지를 채우세요.
 TUTORIAL_OBSERVE_HINT,Complete one observation to continue.,관측을 한 번 완료하면 계속됩니다.
 TUTORIAL_TREE_TITLE,OPEN THE RESEARCH CHART,연구 성도를 여세요
-TUTORIAL_TREE_BODY,Your first observation awarded enough Data for an opening system. Press [%s] to open the Research Chart.,첫 관측으로 첫 시스템을 설치할 만큼 데이터가 모였습니다. [%s]를 눌러 연구 성도를 여세요.
+TUTORIAL_TREE_BODY,Press [%s] to spend your first Data on research.,[%s]를 눌러 모은 데이터로 연구하세요.
 TUTORIAL_TREE_HINT,Open the chart to continue.,성도를 열면 계속됩니다.
 TUTORIAL_INSTALL_TITLE,INSTALL YOUR FIRST SYSTEM,첫 시스템을 설치하세요
-TUTORIAL_INSTALL_BODY,Available nodes glow in their branch color. Hold an affordable node until its install meter fills.,설치 가능한 노드는 계열 색으로 빛납니다. 설치할 노드를 길게 눌러 게이지를 끝까지 채우세요.
+TUTORIAL_INSTALL_BODY,Hold a research star marked available until its meter fills.,설치 가능한 연구별을 길게 눌러 게이지를 채우세요.
 TUTORIAL_INSTALL_HINT,Hold one available system to install it and continue.,설치 가능한 시스템 하나를 길게 눌러 설치하면 계속됩니다.
 TUTORIAL_COMPLETE_TITLE,THE ARRAY IS YOURS,이제 관측망은 당신의 것입니다
 TUTORIAL_COMPLETE_BODY,Keep observing to unlock every research branch. The Settings menu also contains three manual save slots.,관측을 계속해 모든 연구 계열을 해금하세요. 설정 메뉴에서는 수동 저장 슬롯 3개도 사용할 수 있습니다.
@@ -898,3 +898,16 @@ SETTINGS_NUMBER_NOTATION,Number notation,숫자 표기
 SETTINGS_NUMBER_HINT,M = million · B = billion · T = trillion. From one million; hover for full values.,M 백만 · B 십억 · T 조. 100만부터 축약하며 데이터·가격 위에 마우스를 올리면 전체 값을 봅니다.
 SETTINGS_NUMBER_COMPACT,Abbreviated · 1.20B,축약 · 1.20B
 SETTINGS_NUMBER_SCIENTIFIC,Scientific · 1.20e9,과학적 · 1.20e9
+
+UI_DETAILS_HIDE,Hide details −,접기 −
+TREE_DETAILS_SHOW,Star details & help +,별 정보 · 도움말 +
+PHASE_DETAILS_SHOW,Round details +,세부 기록 +
+PHASE_SUMMARY_GROWTH,%s DATA/MIN · %s%% vs previous,분당 데이터 %s · 이전보다 %s%%
+HUD_RESEARCH_READY,Research available [%s],연구 가능 [%s]
+MODX_HELP_SHOW,Controls & full stats +,조작법 · 전체 수치 +
+MODX_SLOTS_USED,Slots %d / %d,장착 %d / %d
+MODX_CONDITIONAL_COUNT,%d conditional effects · inspect equipped modules,조건부 효과 %d종 · 장착 모듈에서 확인
+MODX_STAT_MANUAL,Manual speed,수동 속도
+MODX_STAT_RADIUS,Radius,반경
+MODX_STAT_M31,M31 Data,M31 데이터
+MODX_STAT_WAIT,M31 wait,M31 대기

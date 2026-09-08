@@ -107,14 +107,10 @@ class InventoryTile:
 		var border := UITheme.ACCENT_LINE if hover else (UITheme.INK_MID if owned else UITheme.INK_LOW)
 		draw_rect(Rect2(Vector2.ZERO, size), fill)
 		draw_rect(Rect2(Vector2.ZERO, size), Color(border, 0.9 if owned or hover else 0.52), false, UITheme.px(1), true)
-		# Keep the glyph between the code and the name, rather than drawing it
-		# across the text baselines in these compact inventory tiles.
+		# Reserve the upper band for the glyph and the lower band for readable type.
 		var glyph_rect := Rect2(Vector2(UITheme.px(13), UITheme.px(20)), Vector2(size.x - UITheme.px(26), UITheme.px(40)))
 		Visual.draw_module(self, glyph_rect, module_id, owned and owner_popup.model().spare_count(module_id) > 0)
-		var font: Font = UITheme.mono()
-		var definition: Dictionary = Modules.DEFINITIONS.get(module_id, {})
-		var code: String = String(definition.get("code", module_id.to_upper()))
-		draw_string(font, Vector2(UITheme.px(7), UITheme.px(16)), code, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.size_px(POPUP_META_SPEC_SIZE), UITheme.INK_LOW if not owned else UITheme.INK_MID)
+		# Codes remain available in the selected module details.
 		var short_name := owner_popup.tr("MODULE_%s_SHORT" % module_id.to_upper())
 		draw_string(UITheme.sans(), Vector2(UITheme.px(7), size.y - UITheme.px(28)), short_name, HORIZONTAL_ALIGNMENT_LEFT, size.x - UITheme.px(14), UITheme.size_px(POPUP_BODY_SPEC_SIZE), UITheme.INK_HIGH if owned else UITheme.INK_LOW)
 		var state_key := "MODX_OWNED" if owned else "MODX_LOCKED"
@@ -148,6 +144,7 @@ var summary_heading: Label
 var summary: Label
 var summary_details: Label
 var capacity_label: Label
+var help_button: Button
 var instructions: Label
 var hint: Label
 var slots: Array[RingSlot] = []
@@ -257,6 +254,8 @@ func _ready() -> void:
 	instructions.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hint = _label(surface, Vector2(1180, 908), 600, POPUP_BODY_SPEC_SIZE, UITheme.TOOLTIP_VALUE)
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	help_button = _text_action(surface, Vector2(1180, 878), Vector2(610, 30), func(): refresh(false))
+	help_button.toggle_mode = true
 	draw_button = _text_action(surface, Vector2(1180, 813), Vector2(610, 54), open_draw)
 	draw_window = DrawWindow.new()
 	overlay.add_child(draw_window)
@@ -317,6 +316,8 @@ func open() -> void:
 	surface.show()
 	draw_window.leave()
 	overlay.show()
+	help_button.set_pressed_no_signal(false)
+	game.hud.set_external_readouts_covered(true)
 	refresh(false)
 	finish_animations()
 	set_process(true)
@@ -329,6 +330,7 @@ func close() -> void:
 	draw_window.leave()
 	finish_animations()
 	overlay.hide()
+	game.hud.set_external_readouts_covered(false)
 	set_process(false)
 	get_tree().paused = previous_pause
 	Input.mouse_mode = previous_mouse
@@ -420,11 +422,18 @@ func refresh(animate: bool = true) -> void:
 	var new_speed := _effect_number("new_speed", 1.0)
 	var manual_speed := old_speed * new_speed
 	summary.text = _format_translation("MODX_STATIC_SUMMARY", [manual_speed, _effect_number("radius", 1.0), _effect_number("m31_value", 1.0), _effect_number("m31_cooldown", 1.0)], "Manual ×%.2f · Radius ×%.2f · M31 ×%.2f · Wait ×%.2f" % [manual_speed, _effect_number("radius", 1.0), _effect_number("m31_value", 1.0), _effect_number("m31_cooldown", 1.0)])
+	if not help_button.button_pressed:
+		summary.text = _changed_summary(manual_speed)
+	summary.visible = not summary.text.is_empty()
 	summary_details.text = _conditional_summary(installed_ids)
-	capacity_label.text = tr("RING_CAPACITY") % [model().unlocked_slots, Modules.MAX_SLOTS - model().unlocked_slots]
+	summary_details.visible = not summary_details.text.is_empty()
+	capacity_label.text = tr("MODX_SLOTS_USED") % [installed_ids.size(), model().unlocked_slots]
+	capacity_label.visible = installed_ids.is_empty() or help_button.button_pressed
 	instructions.text = tr("EXT_SAMPLES_COUNT") % game.deep_sky.samples
 	draw_button.text = tr("DRAW_OPEN")
+	help_button.text = tr("UI_DETAILS_HIDE" if help_button.button_pressed else "MODX_HELP_SHOW")
 	hint.text = tr("MODX_EQUIP_HINT") if not game.hud.autosave_failed else tr("AUTOSAVE_FAILURE") % game.active_save_slot
+	hint.visible = help_button.button_pressed or game.hud.autosave_failed
 	if inventory_scroll != null:
 		inventory_scroll.queue_redraw()
 	surface.queue_redraw()
@@ -521,7 +530,9 @@ func _update_tooltip() -> void:
 			tooltip_action.text = tr("RING_FULL_ACTION")
 		else:
 			tooltip_action.text = tr("RING_EQUIP_ACTION") % (model().first_empty_slot() + 1)
-	tooltip_combo.visible = not tooltip_combo.text.is_empty()
+	# Owned modules already describe their conditions and tradeoffs in the effect.
+	# Acquisition guidance remains useful for locked/empty slots only.
+	tooltip_combo.visible = not tooltip_combo.text.is_empty() and (hover_kind == "slot" and (hover_slot >= model().unlocked_slots or model().slots[hover_slot].is_empty()))
 	tooltip_panel.show()
 	tooltip_panel.size = Vector2(UITheme.px(400), 0)
 	_place_tooltip.call_deferred()
@@ -596,8 +607,21 @@ func _acquisition_route(id: String, definition: Dictionary) -> String:
 		_:
 			return tr("MODX_ACQUIRE_PURCHASE")
 
+func _changed_summary(manual_speed: float) -> String:
+	var parts: Array[String] = []
+	var stats := {"MODX_STAT_MANUAL": manual_speed, "MODX_STAT_RADIUS": _effect_number("radius", 1.0), "MODX_STAT_M31": _effect_number("m31_value", 1.0), "MODX_STAT_WAIT": _effect_number("m31_cooldown", 1.0)}
+	for key in stats:
+		var value: float = stats[key]
+		if is_equal_approx(value, 1.0):
+			continue
+		var delta := (value - 1.0) * 100.0
+		var number := String.num(delta, 1).trim_suffix(".0")
+		parts.append(tr(key) + " " + ("+" if delta > 0.0 else "") + number + "%")
+	return " · ".join(parts)
+
+
 func _conditional_summary(installed_ids: Array[String]) -> String:
-	var lines: Array[String] = []
+	var count := 0
 	var seen: Array[String] = []
 	for id in installed_ids:
 		if id in seen: continue
@@ -606,11 +630,8 @@ func _conditional_summary(installed_ids: Array[String]) -> String:
 		var text := String(definition.get("conditional_desc", definition.get("conditional", "")))
 		var is_conditional := not text.is_empty() or id in ["focus", "trail_integrator", "sweep_optics", "relay_bus", "long_baseline", "dual_processor", "afterglow_archive", "wide_correlation", "reference_bus", "shutter_weave"]
 		if is_conditional:
-			var short_name := _translation_or_empty("MODULE_%s_SHORT" % id.to_upper())
-			if short_name.is_empty():
-				short_name = id.replace("_", " ").capitalize()
-			lines.append("· " + short_name + (" ×%d" % installed_ids.count(id) if installed_ids.count(id) > 1 else ""))
-	return tr("MODX_CONDITIONAL_NONE") if lines.is_empty() else tr("MODX_CONDITIONAL") + "  " + "  ".join(lines)
+			count += 1
+	return "" if count == 0 else tr("MODX_CONDITIONAL_COUNT") % count
 
 func set_inventory_filter(filter_id: String) -> void:
 	if filter_id not in INVENTORY_FILTERS:

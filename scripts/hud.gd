@@ -86,6 +86,13 @@ var end_reveal_complete: bool = false
 var end_reveal_started_msec: int = 0
 var catalogue_debug_preview_active: bool = false
 var catalogue_save_failure_active: bool = false
+var guided_tutorial_active := false
+var external_readouts_covered := false
+var discovery_banners: Dictionary = {}
+var summary_details: VBoxContainer
+var summary_details_button: Button
+var summary_lead: Label
+var summary_highlight: Label
 var phase_summary_overlay: Control
 var phase_summary_reveal: Tween
 var in_round_visibility: Dictionary = {}
@@ -333,6 +340,33 @@ func _refresh_phase_time_label() -> void:
 	_layout_phase_clock()
 
 
+func show_discovery_banner(key: String, text: String, color: Color, duration: float) -> void:
+	if discovery_banners.has(key):
+		return
+	discovery_banners[key] = true
+	# Never replace an active discovery, warning or save failure with routine success.
+	if banner_root.visible:
+		return
+	show_banner(text, color, duration)
+
+
+func set_guided_tutorial_active(active: bool) -> void:
+	guided_tutorial_active = active
+	_set_tutorial_hint_visible(not tutorial_complete)
+
+
+func _set_tutorial_hint_visible(show_hint: bool) -> void:
+	var wanted := show_hint and not guided_tutorial_active
+	if in_round_visibility.has("FirstObservationHint"):
+		in_round_visibility["FirstObservationHint"] = wanted
+	tutorial_label.visible = wanted and not _in_round_readouts_covered()
+
+
+func set_external_readouts_covered(covered: bool) -> void:
+	external_readouts_covered = covered
+	_refresh_in_round_readouts()
+
+
 func show_banner(text: String, color: Color = Color.WHITE, duration: float = 2.5) -> void:
 	# A different announcement must not inherit a partially installed rule.
 	if installation_tween != null and installation_tween.is_valid():
@@ -463,24 +497,26 @@ func mark_first_success() -> void:
 	if tutorial_complete:
 		return
 	tutorial_complete = true
+	_set_tutorial_hint_visible(true)
 	tutorial_label.text = tr("HUD_TUTORIAL_DONE") % _chart_binding_label()
 	var timer := get_tree().create_timer(4.0)
 	timer.timeout.connect(func():
 		if is_instance_valid(tutorial_label):
-			tutorial_label.visible = false
+			_set_tutorial_hint_visible(false)
 	)
 
 
 func reset_tutorial() -> void:
+	discovery_banners.clear()
 	tutorial_complete = false
 	tutorial_label.text = tr("HUD_TUTORIAL_START")
-	tutorial_label.visible = true
+	_set_tutorial_hint_visible(true)
 
 
 func restore_tutorial(already_observed: bool) -> void:
 	tutorial_complete = already_observed
 	tutorial_label.text = tr("HUD_TUTORIAL_DONE") % _chart_binding_label() if already_observed else tr("HUD_TUTORIAL_START")
-	tutorial_label.visible = not already_observed
+	_set_tutorial_hint_visible(not already_observed)
 
 
 func toggle_debug() -> void:
@@ -602,7 +638,7 @@ func is_end_open() -> bool:
 # Live readouts that belong to the round that just ended. The summary is
 # typeset straight onto the sky now, so there is no panel in front of them and
 # they would sit inside the summary's own column.
-const IN_ROUND_GROUPS := ["DataReadout", "PhaseClock", "ExtensionReadout", "ReadySystems", "TrackingCluster", "EventBanner"]
+const IN_ROUND_GROUPS := ["DataReadout", "PhaseClock", "ExtensionReadout", "ReadySystems", "TrackingCluster", "EventBanner", "FirstObservationHint"]
 
 
 func _refresh_in_round_readouts() -> void:
@@ -619,7 +655,8 @@ func _refresh_in_round_readouts() -> void:
 
 func _in_round_readouts_covered() -> bool:
 	return (
-		is_phase_summary_open()
+		external_readouts_covered
+		or is_phase_summary_open()
 		or (end_overlay != null and end_overlay.visible)
 		or (settings_overlay != null and settings_overlay.visible)
 		or is_controls_open()
@@ -661,6 +698,10 @@ func show_phase_summary(
 	reveal_delay: float = 0.0
 ) -> void:
 	_reset_phase_summary_reveal()
+	_set_summary_details(false)
+	summary_details_button.set_pressed_no_signal(false)
+	summary_highlight.text = tr("PHASE_SUMMARY_BADGE_BEST") if new_best else ""
+	summary_highlight.visible = new_best
 	var round_number := maxi(1, int(result.get("round", 1)))
 	var data_earned := maxi(0, int(result.get("data", 0)))
 	var duration_seconds := maxi(1, int(round(float(result.get("duration", 20.0)))))
@@ -672,6 +713,7 @@ func show_phase_summary(
 	phase_summary_subtitle.text = tr("PHASE_SUMMARY_SUBTITLE") % duration_seconds
 	phase_number_result = {"data": data_earned, "rate": round_rate, "previous": previous_result.duplicate(true), "comparison": comparison_state}
 	_refresh_phase_number_text()
+	summary_details_button.text = tr("UI_DETAILS_HIDE" if summary_details_button.button_pressed else "PHASE_DETAILS_SHOW")
 	phase_summary_observations.text = tr("PHASE_SUMMARY_OBSERVATIONS") % observations
 	phase_summary_split.text = tr("PHASE_SUMMARY_MANUAL_AUTO") % [manual_observations, automatic_observations]
 	var badge_texts: Array[String] = []
@@ -737,6 +779,11 @@ func _refresh_phase_number_text() -> void:
 	phase_summary_data.text = tr("PHASE_SUMMARY_OUTPUT") % _data_number(phase_number_result.data)
 	UITheme.data_tooltip(phase_summary_data, phase_number_result.data)
 	phase_summary_comparison.text = _round_comparison_text(phase_number_result.rate, phase_number_result.previous, phase_number_result.comparison)
+	summary_lead.text = _round_comparison_text(phase_number_result.rate, phase_number_result.previous, phase_number_result.comparison)
+	var previous: Dictionary = phase_number_result.previous
+	if phase_number_result.comparison == "comparison" and float(previous.get("rate", 0.0)) > 0.0:
+		var change := int(round((phase_number_result.rate / float(previous.rate) - 1.0) * 100.0))
+		summary_lead.text = tr("PHASE_SUMMARY_GROWTH") % [_data_number(phase_number_result.rate, 1), _signed_round_value(change)]
 	UITheme.data_tooltip(phase_summary_comparison, phase_number_result.rate, 1)
 	phase_summary_comparison.tooltip_text = _round_comparison_text(phase_number_result.rate, phase_number_result.previous, phase_number_result.comparison, true)
 
@@ -1050,12 +1097,17 @@ func _refresh_ready_notice() -> void:
 				ready += 1
 	if ready == last_ready_count:
 		return
+	var newly_ready := last_ready_count <= 0 and ready > 0
 	last_ready_count = ready
-	ready_notice.visible = ready > 0
-	if ready_notice.visible:
-		ready_label.text = tr("HUD_READY_SYSTEMS") % [ready, _chart_binding_label()]
+	ready_notice.visible = ready > 0 and not _in_round_readouts_covered()
+	if in_round_visibility.has("ReadySystems"):
+		in_round_visibility["ReadySystems"] = ready > 0
+	if ready > 0:
+		ready_label.text = tr("HUD_RESEARCH_READY") % _chart_binding_label()
+		ready_label.tooltip_text = tr("HUD_READY_SYSTEMS") % [ready, _chart_binding_label()]
 		_layout_ready_notice()
-		_ensure_ready_pulse()
+		if newly_ready and ready_notice.visible:
+			_ensure_ready_pulse()
 	elif ready_pulse_tween != null and ready_pulse_tween.is_valid():
 		ready_pulse_tween.kill()
 
@@ -1070,7 +1122,7 @@ func _refresh_extension() -> void:
 		modules_visible = deep_sky.has_method("modules_unlocked") and bool(deep_sky.modules_unlocked())
 	extension_objective_label.text = objective
 	extension_objective_label.visible = not objective.is_empty()
-	extension_samples_label.visible = modules_visible
+	extension_samples_label.visible = false # Samples are shown beside the draw action, not over the sky.
 	if modules_visible:
 		extension_samples_label.text = tr("EXT_SAMPLES_COUNT") % maxi(0, int(deep_sky.get("samples")))
 	extension_should_show = extension_objective_label.visible or extension_samples_label.visible
@@ -1083,7 +1135,7 @@ func _refresh_extension() -> void:
 func _ensure_ready_pulse() -> void:
 	if ready_pulse_tween != null and ready_pulse_tween.is_valid():
 		return
-	ready_pulse_tween = create_tween().set_loops()
+	ready_pulse_tween = create_tween()
 	ready_pulse_tween.tween_property(ready_pip, "modulate:a", 0.35, 0.8).set_trans(Tween.TRANS_SINE)
 	ready_pulse_tween.tween_property(ready_pip, "modulate:a", 1.0, 0.8).set_trans(Tween.TRANS_SINE)
 
@@ -1672,6 +1724,7 @@ func _build_interface() -> void:
 	_layout_banner()
 
 	tutorial_label = _spec_label(tr("HUD_TUTORIAL_START"), UITheme.sans(), 15.0, UITheme.HINT)
+	tutorial_label.name = "FirstObservationHint"
 	tutorial_label.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	tutorial_label.anchor_left = 0.0
 	tutorial_label.anchor_right = 1.0
@@ -2203,6 +2256,13 @@ func _build_end_overlay() -> void:
 	end_actions.add_child(end_continue_button)
 
 
+func _set_summary_details(expanded: bool) -> void:
+	summary_details.visible = expanded
+	summary_lead.visible = not expanded
+	summary_highlight.visible = not expanded and not summary_highlight.text.is_empty()
+	summary_details_button.text = tr("UI_DETAILS_HIDE" if expanded else "PHASE_DETAILS_SHOW")
+
+
 func _build_phase_summary_overlay() -> void:
 	phase_summary_overlay = Control.new()
 	phase_summary_overlay.name = "PhaseSummary"
@@ -2240,7 +2300,7 @@ func _build_phase_summary_overlay() -> void:
 
 	phase_summary_subtitle = _spec_label("", UITheme.mono(), 13.0, UITheme.INK_MID, 0.30)
 	phase_summary_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	column.add_child(phase_summary_subtitle)
+	# Duration is part of the optional round breakdown below.
 
 	var rule := CenterContainer.new()
 	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -2257,23 +2317,42 @@ func _build_phase_summary_overlay() -> void:
 	phase_summary_data.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(phase_summary_data)
 
+	summary_lead = _spec_label("", UITheme.sans(), 22.0, UITheme.INK_HIGH)
+	summary_lead.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	summary_lead.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(summary_lead)
+	summary_highlight = _spec_label("", UITheme.sans(), 20.0, UITheme.ACCENT_TEXT)
+	summary_highlight.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(summary_highlight)
+	summary_details_button = Button.new()
+	summary_details_button.toggle_mode = true
+	summary_details_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_style_text_action(summary_details_button, 20.0, UITheme.INK_MID)
+	summary_details_button.toggled.connect(_set_summary_details)
+	column.add_child(summary_details_button)
+	summary_details = VBoxContainer.new()
+	summary_details.add_theme_constant_override("separation", UITheme.px(12))
+	column.add_child(summary_details)
+	summary_details.add_child(phase_summary_subtitle)
+	_set_summary_details(false)
+
 	phase_summary_comparison = _spec_label("", UITheme.sans(), 20.0, UITheme.INK_MID, 0.02)
 	phase_summary_comparison.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	phase_summary_comparison.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	column.add_child(phase_summary_comparison)
+	summary_details.add_child(phase_summary_comparison)
 
 	phase_summary_observations = _spec_label("", UITheme.sans("medium"), 22.0, UITheme.INK_HIGH, 0.0)
 	phase_summary_observations.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	column.add_child(phase_summary_observations)
+	summary_details.add_child(phase_summary_observations)
 
-	phase_summary_split = _spec_label("", UITheme.sans("light"), 16.0, UITheme.INK_LOW, 0.06)
+	phase_summary_split = _spec_label("", UITheme.sans(), 20.0, UITheme.INK_MID, 0.0)
 	phase_summary_split.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	column.add_child(phase_summary_split)
+	summary_details.add_child(phase_summary_split)
 
 	phase_summary_badges = _spec_label("", UITheme.sans(), 20.0, UITheme.ACCENT_TEXT, 0.12)
 	phase_summary_badges.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	phase_summary_badges.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	column.add_child(phase_summary_badges)
+	summary_details.add_child(phase_summary_badges)
 
 	# Text with a rule under it, matching the research chart header action rather
 	# than a filled button.

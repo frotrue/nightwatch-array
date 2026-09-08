@@ -121,7 +121,7 @@ func refresh() -> void:
 		result_effect.text = tr("DRAW_EXPLAIN")
 		result_quantity.text = tr("DRAW_NO_AUTO_EQUIP")
 	else:
-		status.text = tr("DRAW_ACQUIRED")
+		status.text = "" # The result heading already identifies the acquisition.
 		result_kind.text = tr("DRAW_NEW" if new_copy else "DRAW_SAVED")
 		result_name.text = tr("MODULE_%s_NAME" % result_id.to_upper())
 		result_effect.text = tr("MODULE_%s_DESC" % result_id.to_upper())
@@ -130,6 +130,7 @@ func refresh() -> void:
 			result_quantity.text += "  ·  " + tr("DRAW_DUPLICATE")
 	if host.game.hud.autosave_failed:
 		status.text = tr("AUTOSAVE_FAILURE") % host.game.active_save_slot
+	status.visible = not status.text.is_empty()
 	queue_redraw()
 
 func _process(delta: float) -> void:
