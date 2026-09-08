@@ -479,7 +479,7 @@ func _set_m31_manual_contact(active: bool) -> void:
 
 func _cursor_is_on_ui() -> bool:
 	var hovered: Control = get_viewport().gui_get_hovered_control()
-	if hovered != null and hovered.get_mouse_filter_with_override() != Control.MOUSE_FILTER_IGNORE:
+	if hovered != null and hovered.get_mouse_filter_with_override() != Control.MOUSE_FILTER_IGNORE and not UITheme.is_passive_data_readout(hovered):
 		return true
 	return hud != null and hud.has_method("is_pointer_over_hud") and hud.is_pointer_over_hud(_world_to_screen(cursor_position))
 

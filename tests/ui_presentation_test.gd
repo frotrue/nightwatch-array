@@ -18,6 +18,7 @@ func _run() -> void:
 	var hud := HUD.new()
 	var chart := Chart.new()
 	_test_grouped_integers(hud, chart)
+	_test_data_notation(hud, chart)
 	_test_spec_labels(hud, chart)
 	_test_renderer_alias()
 	hud.free()
@@ -88,6 +89,24 @@ func _test_spec_labels(hud, chart) -> void:
 	_check(not default_label.has_theme_constant_override("spacing_glyph"), "omitted em retains the original default")
 	_check(default_label.get_theme_font("font") == UITheme.mono_tabular(), "tabular font identity is preserved")
 	default_label.free()
+
+
+func _test_data_notation(hud, chart) -> void:
+	var cases := [
+		[0.0, "0", "0"], [999999.0, "999,999", "999,999"],
+		[1000000.0, "1.00M", "1.00e6"], [60000000.0, "60.0M", "6.00e7"],
+		[1200000000.0, "1.20B", "1.20e9"], [90940000000.0, "90.9B", "9.09e10"],
+		[1000000000000.0, "1.00T", "1.00e12"], [1000000000000000.0, "1.00e15", "1.00e15"],
+		[999499999.0, "999M", "9.99e8"], [999999999.0, "1.00B", "1.00e9"],
+		[-1200000000.0, "-1.20B", "-1.20e9"],
+	]
+	for item in cases:
+		_check(UITheme.data_number(item[0]) == item[1], "compact threshold/carry/sign: " + str(item[0]))
+		_check(UITheme.data_number(item[0], "scientific") == item[2], "scientific exponent/carry/sign: " + str(item[0]))
+		_check(hud._data_number(item[0]) == item[1] and chart._data_number(item[0]) == item[1], "HUD and chart default to the shared compact format")
+	_check(UITheme.data_number(1234.5, "scientific", 1) == "1,234.5", "small rates keep one decimal in either mode")
+	_check(UITheme.full_data(1234567890.0) == "1,234,567,890", "exact tooltip never abbreviates")
+	_check(UITheme.full_data(-1234567.8, 1) == "-1,234,567.8", "rate tooltip retains sign and decimal")
 
 
 func _test_renderer_alias() -> void:

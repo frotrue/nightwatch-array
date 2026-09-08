@@ -65,6 +65,7 @@ func _run() -> void:
 	settings.set_tutorial_completed(false)
 	_check(not settings.is_tutorial_completed(), "tutorial state can be varied in memory")
 	settings.set_language("en")
+	await _check_number_notation(game)
 	await _check_settings_persistence()
 	var silent := Fixtures.SilentSound.new()
 	root.add_child(silent)
@@ -84,6 +85,43 @@ func _run() -> void:
 	else:
 		print("GAME_FIXTURE_FAIL: %d failure(s)" % failures.size())
 		quit(1)
+
+
+func _check_number_notation(game: Node) -> void:
+	var hud: Node = game.hud
+	game.progression.observation_data = 1234567890.0
+	game.progression.state_changed.emit()
+	game.upgrade_tree._refresh()
+	_check(hud.data_label.text == "1.23B" and game.upgrade_tree.data_readout.text == "1.23B", "live HUD and chart abbreviate the same balance")
+	_check(hud.data_label.tooltip_text == "1,234,567,890" and game.upgrade_tree.data_readout.tooltip_text == "1,234,567,890", "live balance hovers preserve full values")
+	await process_frame
+	var motion := InputEventMouseMotion.new()
+	motion.position = hud.data_label.get_global_rect().get_center()
+	motion.global_position = motion.position
+	root.push_input(motion, true)
+	await process_frame
+	game.observer.cursor_position = game.observer._screen_to_world(motion.position)
+	_check(root.gui_get_hovered_control() == hud.data_label and not game.observer._cursor_is_on_ui(), "hovering the actual exact-value label does not block observation")
+	motion.position = hud.settings_button.get_global_rect().get_center()
+	motion.global_position = motion.position
+	root.push_input(motion, true)
+	await process_frame
+	game.observer.cursor_position = game.observer._screen_to_world(motion.position)
+	_check(game.observer._cursor_is_on_ui(), "interactive settings button still blocks sky observation")
+	hud._show_data_gain(1200000.0)
+	_check(hud.data_gain_label.text.contains("1.20M") and hud.data_gain_label.tooltip_text == "1,200,000", "actual gain feedback uses the shared format and exact tooltip")
+	hud.show_phase_summary({"data": 1200000000, "rate": 3600000000.0}, {"rate": 2400000000.0}, "comparable", false)
+	_check(hud.phase_summary_data.text.contains("1.20B") and hud.phase_summary_comparison.text.contains("3.60B"), "summary output and rates use the compact format")
+	hud.open_settings("general")
+	var overlay_order: int = hud.settings_overlay.get_index()
+	hud.number_notation_selector.item_selected.emit(1)
+	_check(game.settings.number_notation == "scientific" and hud.data_label.text == "1.23e9" and game.upgrade_tree.data_readout.text == "1.23e9", "settings selector immediately updates both data readouts")
+	_check(hud.phase_summary_data.text.contains("1.20e9") and hud.phase_summary_comparison.text.contains("+1.20e9"), "open summary refreshes its output and signed rate comparison")
+	_check(hud.settings_overlay.get_index() == overlay_order and hud.is_settings_open(), "notation change does not bring the summary in front of settings")
+	_check(game.progression.observation_data == 1234567890.0, "format changes never round or mutate the real balance")
+	hud.number_notation_selector.item_selected.emit(0)
+	hud.close_settings()
+	hud.hide_phase_summary()
 
 
 func _check_settings_persistence() -> void:
@@ -106,6 +144,10 @@ func _check_settings_persistence() -> void:
 	root.add_child(first)
 	await process_frame
 	_check(first.settings_path == temp_path, "settings accept an injected test-only path before ready")
+	_check(first.number_notation == "compact", "existing or missing settings default to compact numbers")
+	first.set_number_notation("scientific")
+	first.set_number_notation("invalid")
+	_check(first.number_notation == "scientific", "unsupported notation cannot replace a valid preference")
 	_check(
 		is_equal_approx(first.get_master_volume_linear(), 1.0)
 		and not first.is_muted()
@@ -161,6 +203,7 @@ func _check_settings_persistence() -> void:
 	var second := GameSettings.new(temp_path)
 	root.add_child(second)
 	await process_frame
+	_check(second.number_notation == "scientific" and second.format_data(1200000000.0) == "1.20e9", "notation preference round-trips through the isolated settings file")
 	_check(
 		is_equal_approx(second.get_master_volume_linear(), 0.37)
 		and second.is_muted()
@@ -184,12 +227,14 @@ func _check_settings_persistence() -> void:
 	# Corrupt one action only; a valid action beside it must still load.
 	config.set_value("input", "nw_chart", [{"kind": "key", "logical": -1, "modifiers": {"shift": false, "alt": false, "ctrl": false, "meta": false}}])
 	config.set_value("performance", "fps_limit", 45)
+	config.set_value("display", "number_notation", 42)
 	config.set_value("accessibility", "motion_intensity", "too much")
 	config.set_value("accessibility", "screen_flashes_enabled", 1)
 	_check(config.save(temp_path) == OK, "fixture can prepare one invalid action payload")
 	var third := GameSettings.new(temp_path)
 	root.add_child(third)
 	await process_frame
+	_check(third.number_notation == "compact", "malformed notation falls back without discarding other settings")
 	_check(_key_event(KEY_U).is_action(&"nw_chart"), "an invalid action falls back to its own project default")
 	_check(_key_event(KEY_F10).is_action(&"nw_fullscreen"), "one invalid action does not discard another valid override")
 	_check(

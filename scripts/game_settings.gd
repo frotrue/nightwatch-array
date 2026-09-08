@@ -1,6 +1,7 @@
 extends Node
 
 signal language_changed(locale: String)
+signal number_notation_changed(notation: String)
 signal audio_changed(master_linear: float, muted: bool)
 signal master_volume_changed(master_linear: float)
 signal mute_changed(muted: bool)
@@ -14,10 +15,12 @@ signal bindings_changed(action: StringName)
 signal input_bindings_changed
 
 const InputBindings = preload("res://scripts/game_input_bindings.gd")
+const UITheme = preload("res://scripts/ui_theme.gd")
 
 const SETTINGS_VERSION := 3
 const SETTINGS_PATH := "user://settings.cfg"
 const SUPPORTED_LOCALES := ["en", "ko"]
+const NUMBER_NOTATIONS := ["compact", "scientific"]
 const DEFAULT_MASTER_LINEAR := 1.0
 const DEFAULT_MUTED := false
 const DEFAULT_FULLSCREEN := false
@@ -31,6 +34,7 @@ const MIN_MASTER_DB := -80.0
 
 var settings_path: String = SETTINGS_PATH
 var locale: String = "en"
+var number_notation: String = "compact"
 var tutorial_completed: bool = false
 var research_chart_rotation: float = 0.0
 var master_linear: float = DEFAULT_MASTER_LINEAR
@@ -78,6 +82,7 @@ func load_settings(path_override: String = "") -> Dictionary:
 		settings_path = path_override
 	var fallback_locale := _default_locale()
 	locale = fallback_locale
+	number_notation = "compact"
 	tutorial_completed = false
 	research_chart_rotation = 0.0
 	master_linear = DEFAULT_MASTER_LINEAR
@@ -97,6 +102,9 @@ func load_settings(path_override: String = "") -> Dictionary:
 	if config_loaded:
 		_loaded_version = _validated_version(config.get_value("settings", "version", 0))
 		locale = _validated_locale(config.get_value("accessibility", "language", fallback_locale), fallback_locale)
+		var saved_notation = config.get_value("display", "number_notation", "compact")
+		if saved_notation is String and saved_notation in NUMBER_NOTATIONS:
+			number_notation = saved_notation
 		tutorial_completed = _validated_bool(
 			config.get_value("onboarding", "tutorial_completed", false),
 			false
@@ -158,6 +166,7 @@ func save_settings() -> Error:
 		push_warning("Replacing unreadable settings file: %s" % error_string(load_error))
 	config.set_value("settings", "version", SETTINGS_VERSION)
 	config.set_value("accessibility", "language", locale)
+	config.set_value("display", "number_notation", number_notation)
 	config.set_value("onboarding", "tutorial_completed", tutorial_completed)
 	config.set_value("research_chart", "rotation", research_chart_rotation)
 	config.set_value("audio", "master_linear", master_linear)
@@ -198,6 +207,19 @@ func set_language(requested_locale: String, persist: bool = true) -> void:
 
 func get_language_index() -> int:
 	return SUPPORTED_LOCALES.find(locale)
+
+
+func set_number_notation(value: String, persist: bool = true) -> void:
+	if value not in NUMBER_NOTATIONS or value == number_notation:
+		return
+	number_notation = value
+	if persist:
+		save_settings()
+	number_notation_changed.emit(number_notation)
+
+
+func format_data(value: float, small_decimals: int = 0) -> String:
+	return UITheme.data_number(value, number_notation, small_decimals)
 
 
 func is_tutorial_completed() -> bool:

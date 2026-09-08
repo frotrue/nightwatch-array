@@ -403,7 +403,7 @@ func _run() -> void:
 	if DisplayServer.get_name() != "headless":
 		_check(Input.mouse_mode == Input.MOUSE_MODE_HIDDEN, "native cursor is hidden while the software cursor is active")
 	var data_readout: Control = game.hud.root_control.get_node("DataReadout")
-	_check(_decorative_controls_ignore_mouse(data_readout), "data readout HUD remains mouse-filter transparent")
+	_check(_decorative_controls_pass_mouse(data_readout), "data readout HUD passes clicks while allowing exact-value hover")
 	_check(not game.hud.root_control.has_node("TopStatus"), "the bordered top status plate is gone")
 	_check(not game.hud.root_control.has_node("UpgradeTreeLauncher"), "persistent upgrade recommendation card is removed from the playfield")
 	_check(game.hud.debug_panel.mouse_filter == Control.MOUSE_FILTER_IGNORE, "display-only debug panel does not intercept tracking input")
@@ -2993,11 +2993,11 @@ func _restore_nightwatch_input(snapshot: Dictionary) -> void:
 				InputMap.action_add_event(action, event.duplicate())
 
 
-func _decorative_controls_ignore_mouse(node: Node) -> bool:
-	if node is Control and node.mouse_filter != Control.MOUSE_FILTER_IGNORE:
+func _decorative_controls_pass_mouse(node: Node) -> bool:
+	if node is Control and node.mouse_filter != Control.MOUSE_FILTER_IGNORE and not UITheme.is_passive_data_readout(node):
 		return false
 	for child in node.get_children():
-		if not _decorative_controls_ignore_mouse(child):
+		if not _decorative_controls_pass_mouse(child):
 			return false
 	return true
 

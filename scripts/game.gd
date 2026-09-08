@@ -105,6 +105,7 @@ func _ready() -> void:
 		tutorial.auto_start_enabled = false
 	tutorial.setup(settings, progression)
 	settings.language_changed.connect(_on_language_changed)
+	settings.number_notation_changed.connect(_on_language_changed)
 	if settings.has_signal("accessibility_changed"):
 		settings.accessibility_changed.connect(_on_accessibility_changed)
 	hud.catalogue_finish_requested.connect(_on_catalogue_finish_requested)
@@ -546,7 +547,7 @@ func _catalogue_stats_text() -> String:
 		tr("END_ROUNDS") % observation_round,
 		tr("END_OBSERVATIONS") % progression.success_count,
 		tr("END_MANUAL_AUTO") % [progression.manual_successes, progression.automatic_successes],
-		tr("END_TOTAL_DATA") % int(round(progression.total_data_earned)),
+		tr("END_TOTAL_DATA") % settings.format_data(round(progression.total_data_earned)),
 		tr("END_RESEARCH") % [progression.upgrade_level, Balance.research_node_count()],
 		tr("END_PHENOMENA") % [
 			galactic_phenomena.get_completed_record_count(),

@@ -245,6 +245,8 @@ func bind_settings(controller: Node) -> void:
 	settings_controller = controller
 	if not settings_controller.language_changed.is_connected(_on_language_changed):
 		settings_controller.language_changed.connect(_on_language_changed)
+	if not settings_controller.number_notation_changed.is_connected(_on_number_notation_changed):
+		settings_controller.number_notation_changed.connect(_on_number_notation_changed)
 	if settings_controller.has_signal("binding_changed"):
 		var binding_callback := Callable(self, "_on_binding_changed")
 		if not settings_controller.is_connected("binding_changed", binding_callback):
@@ -832,6 +834,10 @@ func _grouped(value: int) -> String:
 	return UITheme.grouped_integer(value)
 
 
+func _data_number(value: float) -> String:
+	return settings_controller.format_data(value) if settings_controller != null else UITheme.data_number(value)
+
+
 func _layout_chart_header() -> void:
 	if overlay == null or data_readout == null:
 		return
@@ -1276,7 +1282,8 @@ func _refresh_galactic_panel(node_id: String) -> void:
 		galactic_panel_order.text = tr("TREE_GALACTIC_ORDER") % [_local_group_functional_order(node_id), Balance.local_group_functional_node_count()]
 	var state: String = progression.get_node_state(node_id)
 	galactic_panel_state.text = tr("STATE_%s" % state.to_upper())
-	galactic_panel_cost.text = tr("TREE_GALACTIC_COST") % _grouped(int(definition.cost))
+	galactic_panel_cost.text = tr("TREE_GALACTIC_COST") % _data_number(definition.cost)
+	UITheme.data_tooltip(galactic_panel_cost, definition.cost)
 	galactic_panel_effect.text = _upgrade_description(definition)
 	_layout_galactic_panel_content()
 
@@ -1720,7 +1727,8 @@ func _refresh() -> void:
 	if progression == null or data_readout == null:
 		return
 	refresh_pending = false
-	data_readout.text = _grouped(int(floor(progression.observation_data)))
+	data_readout.text = _data_number(floor(progression.observation_data))
+	UITheme.data_tooltip(data_readout, floor(progression.observation_data))
 	var visible_owned := _visible_base_owned_count() + (_extension_owned_count() if galactic_unlocked else 0)
 	var visible_total := _visible_base_research_count() + (extension_definitions.size() if galactic_unlocked else 0)
 	systems_readout.text = tr("TREE_PROGRESS_COUNT") % [visible_owned, visible_total]
@@ -1871,13 +1879,15 @@ func _refresh_constellation_inspector(node_id: String) -> void:
 		tooltip_description.text = tr("TREE_TEASER_DESCRIPTION")
 		tooltip_state.text = tr("STATE_HIDDEN")
 		tooltip_cost.text = "—"
+		tooltip_cost.tooltip_text = ""
 		tooltip_action.text = tr("TREE_SIGNAL_OBSCURED")
 	else:
 		tooltip_branch.text = constellation_label
 		tooltip_name.text = _upgrade_name(definition)
 		tooltip_description.text = _upgrade_description(definition)
 		tooltip_state.text = tr("STATE_%s" % visual_state.to_upper())
-		tooltip_cost.text = tr("TREE_CONSTELLATION_COST") % _grouped(int(definition.cost))
+		tooltip_cost.text = tr("TREE_CONSTELLATION_COST") % _data_number(definition.cost)
+		UITheme.data_tooltip(tooltip_cost, definition.cost)
 		match visual_state:
 			"purchased":
 				tooltip_action.text = tr("TREE_SYSTEM_ONLINE")
@@ -1885,7 +1895,7 @@ func _refresh_constellation_inspector(node_id: String) -> void:
 				if progression.can_purchase(node_id):
 					tooltip_action.text = tr("TREE_CONSTELLATION_INSTALL_ACTION")
 				else:
-					tooltip_action.text = tr("TREE_NEED_MORE") % [int(floor(progression.observation_data)), int(definition.cost)]
+					tooltip_action.text = tr("TREE_NEED_MORE") % [_data_number(floor(progression.observation_data)), _data_number(definition.cost)]
 			_:
 				var prerequisite_names: Array[String] = []
 				for prerequisite_variant in definition.prerequisites:
@@ -1906,6 +1916,11 @@ func _refresh_constellation_inspector(node_id: String) -> void:
 
 func _on_language_changed(_locale: String) -> void:
 	_apply_locale()
+
+
+func _on_number_notation_changed(_notation: String) -> void:
+	tooltip_content_key = ""
+	_refresh()
 
 
 func _on_binding_changed(action: StringName) -> void:
@@ -3069,11 +3084,12 @@ func _refresh_extension_inspector(id: String) -> void:
 	tooltip_description.text = extension_research.research_description(id)
 	tooltip_state.text = tr("STATE_" + state.to_upper())
 	var cost: float = extension_research.research_cost(id)
-	tooltip_cost.text = tr("CHX_FREE") if is_zero_approx(cost) else tr("TREE_CONSTELLATION_COST") % _grouped(int(cost))
+	tooltip_cost.text = tr("CHX_FREE") if is_zero_approx(cost) else tr("TREE_CONSTELLATION_COST") % _data_number(cost)
+	UITheme.data_tooltip(tooltip_cost, cost)
 	if state == "purchased": tooltip_action.text = tr("TREE_SYSTEM_ONLINE")
 	elif _can_research(id): tooltip_action.text = tr("TREE_CONSTELLATION_INSTALL_ACTION")
 	elif not extension_research.modules_unlocked(): tooltip_action.text = tr("ATLAS_FIRST_M31")
-	elif state == "available": tooltip_action.text = tr("TREE_NEED_MORE") % [int(progression.observation_data), int(cost)]
+	elif state == "available": tooltip_action.text = tr("TREE_NEED_MORE") % [_data_number(floor(progression.observation_data)), _data_number(cost)]
 	else: tooltip_action.text = extension_research.prerequisite_text(id)
 	tooltip_state.add_theme_color_override("font_color", UITheme.ACCENT_PIP if _can_research(id) else UITheme.INK_MID)
 	tooltip_action.add_theme_color_override("font_color", UITheme.TOOLTIP_ACTION)

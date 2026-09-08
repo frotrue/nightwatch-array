@@ -83,7 +83,7 @@ SETTINGS_OFF,OFF,끔
 SETTINGS_LANGUAGE,LANGUAGE,언어
 SETTINGS_LANGUAGE_HINT,Applies immediately and is saved automatically.,즉시 적용되며 자동으로 저장됩니다.
 SETTINGS_PAGE_GENERAL_TITLE,GENERAL,일반
-SETTINGS_PAGE_GENERAL_DESC,Language and onboarding preferences.,언어와 게임 안내를 설정합니다.
+SETTINGS_PAGE_GENERAL_DESC,Language and number display preferences.,언어와 숫자 표기를 설정합니다.
 SETTINGS_PAGE_AUDIO_TITLE,AUDIO,소리
 SETTINGS_PAGE_AUDIO_DESC,Adjust game audio and what happens when the window loses focus.,게임 음량과 다른 창을 사용할 때의 동작을 설정합니다.
 SETTINGS_PAGE_DISPLAY_TITLE,DISPLAY & PERFORMANCE,화면 및 성능
@@ -196,7 +196,7 @@ SAVE_SLOT_TITLE,SLOT %d,슬롯 %d
 SAVE_ACTIVE_MARKER,  •  ACTIVE,  •  사용 중
 SAVE_SLOT_EMPTY,EMPTY SLOT,빈 슬롯
 SAVE_SLOT_INVALID,SAVE DATA IS DAMAGED,저장 파일이 손상되었습니다
-SAVE_SLOT_META,%s  •  %02d:%02d  •  DATA %d  •  %d/%d,%s  •  %02d:%02d  •  관측 데이터 %d  •  %d/%d
+SAVE_SLOT_META,%s  •  %02d:%02d  •  DATA %s  •  %d/%d,%s  •  %02d:%02d  •  관측 데이터 %s  •  %d/%d
 SAVE_ACTION,SAVE,저장
 SAVE_OVERWRITE,OVERWRITE,덮어쓰기
 LOAD_ACTION,LOAD,불러오기
@@ -219,18 +219,18 @@ HUD_DATA,OBSERVATION DATA   %d,관측 데이터   %d
 HUD_STATUS,OBSERVED  %d    •    ARRAY  %d/%d,관측 기록  %d    •    관측망  %d/%d
 HUD_DATA_CAPTION,OBSERVATION DATA,관측 데이터
 HUD_OBSERVED_COUNT,%d OBJECTS LOGGED,관측 기록 %d건
-HUD_DATA_GAIN,+%d DATA,+%d 데이터
+HUD_DATA_GAIN,+%s DATA,+%s 데이터
 HUD_TIME,RUN  %02d:%02d,진행  %02d:%02d
 HUD_OBSERVATION_TIME,OBSERVATION %d  •  %02d:%02d,%d차 관측  •  %02d:%02d
 HUD_UPGRADE_PHASE,OBSERVATION %d COMPLETE  •  RESEARCH,%d차 관측 완료  •  연구
 PHASE_SUMMARY_TITLE,OBSERVATION %d COMPLETE,%d차 관측 완료
 PHASE_SUMMARY_SUBTITLE,%d-SECOND OBSERVATION,%d초 관측 결과
-PHASE_SUMMARY_OUTPUT,%d DATA,데이터 %d
-PHASE_SUMMARY_COMPARE,%.1f DATA/MIN  •  %s DATA/MIN VS PREVIOUS  •  %s%%,분당 데이터 %.1f  •  이전보다 분당 %s  •  %s%%
-PHASE_SUMMARY_COMPARE_DELTA,%.1f DATA/MIN  •  %s DATA/MIN VS PREVIOUS,분당 데이터 %.1f  •  이전보다 분당 %s
-PHASE_SUMMARY_FIRST_BASELINE,%.1f DATA/MIN  •  FIRST RESULT,분당 데이터 %.1f  •  첫 기록
-PHASE_SUMMARY_SYSTEMS_CHANGED,%.1f DATA/MIN  •  SYSTEMS CHANGED  •  COMPARE NEXT ROUND,분당 데이터 %.1f  •  시스템 변경  •  다음 회차부터 비교
-PHASE_SUMMARY_SESSION_RESUMED,%.1f DATA/MIN  •  GAME LOADED  •  NEW COMPARISON,분당 데이터 %.1f  •  게임 불러옴  •  새 비교 시작
+PHASE_SUMMARY_OUTPUT,%s DATA,데이터 %s
+PHASE_SUMMARY_COMPARE,%s DATA/MIN  •  %s DATA/MIN VS PREVIOUS  •  %s%%,분당 데이터 %s  •  이전보다 분당 %s  •  %s%%
+PHASE_SUMMARY_COMPARE_DELTA,%s DATA/MIN  •  %s DATA/MIN VS PREVIOUS,분당 데이터 %s  •  이전보다 분당 %s
+PHASE_SUMMARY_FIRST_BASELINE,%s DATA/MIN  •  FIRST RESULT,분당 데이터 %s  •  첫 기록
+PHASE_SUMMARY_SYSTEMS_CHANGED,%s DATA/MIN  •  SYSTEMS CHANGED  •  COMPARE NEXT ROUND,분당 데이터 %s  •  시스템 변경  •  다음 회차부터 비교
+PHASE_SUMMARY_SESSION_RESUMED,%s DATA/MIN  •  GAME LOADED  •  NEW COMPARISON,분당 데이터 %s  •  게임 불러옴  •  새 비교 시작
 PHASE_SUMMARY_OBSERVATIONS,%d OBJECTS,관측 %d건
 PHASE_SUMMARY_MANUAL_AUTO,MANUAL %d  •  AUTO %d,수동 %d  •  자동 %d
 PHASE_SUMMARY_SINCE_BASELINE,NEW SINCE LAST COMPARISON: %s,마지막 비교 이후 설치: %s
@@ -288,7 +288,7 @@ TREE_TEASER_DESCRIPTION,Install the adjacent system to reveal this research. Its
 TREE_SIGNAL_OBSCURED,RESEARCH HIDDEN,연구 정보 숨김
 TREE_SYSTEM_ONLINE,✓  SYSTEM ONLINE,✓  시스템 가동
 TREE_INSTALL,◆  HOLD NODE TO INSTALL    %d DATA,◆  노드를 길게 눌러 설치    데이터 %d
-TREE_NEED_MORE,◇  %d / %d DATA,◇  데이터 %d / %d
+TREE_NEED_MORE,◇  %s / %s DATA,◇  데이터 %s / %s
 TREE_REQUIRES,LOCKED    /    REQUIRES %s,잠김    /    선행 조건: %s
 UPGRADE_ERROR_UNKNOWN,UNKNOWN UPGRADE,알 수 없는 업그레이드
 UPGRADE_ERROR_STATE,NODE IS %s,노드 상태: %s
@@ -730,7 +730,7 @@ END_ACTIVE_TIME,ACTIVE OBSERVATION TIME   %02d:%02d,활성 관측 시간   %02d:
 END_ROUNDS,OBSERVATION ROUNDS   %d,관측 회차   %d
 END_OBSERVATIONS,OBSERVATIONS   %d,관측 횟수   %d
 END_MANUAL_AUTO,MANUAL / AUTO   %d / %d,수동 / 자동   %d / %d
-END_TOTAL_DATA,TOTAL DATA EARNED   %d,총 획득 데이터   %d
+END_TOTAL_DATA,TOTAL DATA EARNED   %s,총 획득 데이터   %s
 END_RESEARCH,RESEARCH   %d / %d,연구   %d / %d
 END_PHENOMENA,GALACTIC PHENOMENA   %d / %d,은하 현상   %d / %d
 HUD_READY_SYSTEMS,%d SYSTEMS READY  [%s],설치 가능한 시스템 %d  [%s]
@@ -894,3 +894,7 @@ MODULE_REVISIT_DESC,M31 cooldown after completion ×0.60.,M31 관측 완료 후 
 MODULE_REVISIT_COMBO,Deep record increases the reward per repeat.,심층 기록과 조합하면 재관측 수입이 증가합니다.
 MODULE_FOCUS_COMBO,With wide: manual speed ×1.35.,광역과 함께 장착하면 수동 속도 ×1.35.
 MODULE_WIDE_COMBO,With focus: manual speed ×1.35.,집중과 함께 장착하면 수동 속도 ×1.35.
+SETTINGS_NUMBER_NOTATION,Number notation,숫자 표기
+SETTINGS_NUMBER_HINT,M = million · B = billion · T = trillion. From one million; hover for full values.,M 백만 · B 십억 · T 조. 100만부터 축약하며 데이터·가격 위에 마우스를 올리면 전체 값을 봅니다.
+SETTINGS_NUMBER_COMPACT,Abbreviated · 1.20B,축약 · 1.20B
+SETTINGS_NUMBER_SCIENTIFIC,Scientific · 1.20e9,과학적 · 1.20e9

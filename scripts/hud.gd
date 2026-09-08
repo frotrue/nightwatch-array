@@ -115,6 +115,7 @@ var settings_page_before_controls: String = "general"
 var settings_language_label: Label
 var settings_hint: Label
 var language_selector: OptionButton
+var number_notation_selector: OptionButton
 var tutorial_replay_button: Button
 var settings_close_button: Button
 var audio_display_button: Button
@@ -190,6 +191,8 @@ var tracking_layout_passes: int = 0
 var last_phase_window_width: float = -1.0
 var last_ready_count: int = -1
 var last_observation_data: float = -1.0
+var last_data_gain: float = 0.0
+var phase_number_result: Dictionary = {}
 var data_gain_tween: Tween
 var data_pulse_tween: Tween
 var ready_pulse_tween: Tween
@@ -226,6 +229,8 @@ func bind_settings(controller: Node) -> void:
 	settings_controller = controller
 	if not settings_controller.language_changed.is_connected(_on_language_changed):
 		settings_controller.language_changed.connect(_on_language_changed)
+	if not settings_controller.number_notation_changed.is_connected(_on_number_notation_changed):
+		settings_controller.number_notation_changed.connect(_on_number_notation_changed)
 	if settings_controller.has_signal("audio_changed") and not settings_controller.audio_changed.is_connected(_on_audio_changed):
 		settings_controller.audio_changed.connect(_on_audio_changed)
 	if settings_controller.has_signal("audio_policy_changed") and not settings_controller.audio_policy_changed.is_connected(_on_settings_policy_changed):
@@ -662,10 +667,10 @@ func show_phase_summary(
 	var automatic_observations := maxi(0, int(result.get("automatic", 0)))
 	phase_summary_title.text = tr("PHASE_SUMMARY_TITLE") % round_number
 	phase_summary_subtitle.text = tr("PHASE_SUMMARY_SUBTITLE") % duration_seconds
-	phase_summary_data.text = tr("PHASE_SUMMARY_OUTPUT") % data_earned
+	phase_number_result = {"data": data_earned, "rate": round_rate, "previous": previous_result.duplicate(true), "comparison": comparison_state}
+	_refresh_phase_number_text()
 	phase_summary_observations.text = tr("PHASE_SUMMARY_OBSERVATIONS") % observations
 	phase_summary_split.text = tr("PHASE_SUMMARY_MANUAL_AUTO") % [manual_observations, automatic_observations]
-	phase_summary_comparison.text = _round_comparison_text(round_rate, previous_result, comparison_state)
 	var badge_texts: Array[String] = []
 	var systems_since_baseline = result.get("systems_since_baseline", [])
 	if systems_since_baseline is Array and not systems_since_baseline.is_empty():
@@ -715,25 +720,36 @@ func show_phase_summary(
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 
-func _round_comparison_text(round_rate: float, previous_result: Dictionary, comparison_state: String) -> String:
+func _refresh_phase_number_text() -> void:
+	if phase_number_result.is_empty():
+		return
+	phase_summary_data.text = tr("PHASE_SUMMARY_OUTPUT") % _data_number(phase_number_result.data)
+	UITheme.data_tooltip(phase_summary_data, phase_number_result.data)
+	phase_summary_comparison.text = _round_comparison_text(phase_number_result.rate, phase_number_result.previous, phase_number_result.comparison)
+	UITheme.data_tooltip(phase_summary_comparison, phase_number_result.rate, 1)
+	phase_summary_comparison.tooltip_text = _round_comparison_text(phase_number_result.rate, phase_number_result.previous, phase_number_result.comparison, true)
+
+
+func _round_comparison_text(round_rate: float, previous_result: Dictionary, comparison_state: String, exact: bool = false) -> String:
+	var rate_text := UITheme.full_data(round_rate, 1) if exact else _data_number(round_rate, 1)
 	match comparison_state:
 		"systems_changed":
-			return tr("PHASE_SUMMARY_SYSTEMS_CHANGED") % round_rate
+			return tr("PHASE_SUMMARY_SYSTEMS_CHANGED") % rate_text
 		"equipment_changed":
-			return tr("PHASE_SUMMARY_EQUIPMENT_CHANGED") % round_rate
+			return tr("PHASE_SUMMARY_EQUIPMENT_CHANGED") % rate_text
 		"session_resumed":
-			return tr("PHASE_SUMMARY_SESSION_RESUMED") % round_rate
+			return tr("PHASE_SUMMARY_SESSION_RESUMED") % rate_text
 		"first_baseline":
-			return tr("PHASE_SUMMARY_FIRST_BASELINE") % round_rate
+			return tr("PHASE_SUMMARY_FIRST_BASELINE") % rate_text
 	if previous_result.is_empty():
-		return tr("PHASE_SUMMARY_FIRST_BASELINE") % round_rate
+		return tr("PHASE_SUMMARY_FIRST_BASELINE") % rate_text
 	var previous_rate := maxf(0.0, float(previous_result.get("rate", 0.0)))
 	var delta := round_rate - previous_rate
-	var signed_delta := _signed_rate_value(delta)
+	var signed_delta := _signed_rate_value(delta, exact)
 	if previous_rate <= 0.0:
-		return tr("PHASE_SUMMARY_COMPARE_DELTA") % [round_rate, signed_delta]
+		return tr("PHASE_SUMMARY_COMPARE_DELTA") % [rate_text, signed_delta]
 	var percent_delta := int(round(delta * 100.0 / previous_rate))
-	return tr("PHASE_SUMMARY_COMPARE") % [round_rate, signed_delta, _signed_round_value(percent_delta)]
+	return tr("PHASE_SUMMARY_COMPARE") % [rate_text, signed_delta, _signed_round_value(percent_delta)]
 
 
 func _bounded_acquired_names(names: Array[String]) -> String:
@@ -746,8 +762,8 @@ func _signed_round_value(value: int) -> String:
 	return "+%d" % value if value > 0 else "%d" % value
 
 
-func _signed_rate_value(value: float) -> String:
-	return "+%.1f" % value if value > 0.0 else "%.1f" % value
+func _signed_rate_value(value: float, exact: bool = false) -> String:
+	return ("+" if value > 0.0 else "") + (UITheme.full_data(value, 1) if exact else _data_number(value, 1))
 
 
 func hide_phase_summary() -> void:
@@ -981,13 +997,18 @@ func _refresh_progression() -> void:
 	if last_observation_data >= 0.0 and current_data > last_observation_data:
 		_show_data_gain(current_data - last_observation_data)
 	last_observation_data = current_data
-	data_label.text = _grouped(int(floor(current_data)))
+	data_label.text = _data_number(floor(current_data))
+	UITheme.data_tooltip(data_label, floor(current_data))
 	_layout_data_readout()
 	_refresh_ready_notice()
 
 
 func _grouped(value: int) -> String:
 	return UITheme.grouped_integer(value)
+
+
+func _data_number(value: float, small_decimals: int = 0) -> String:
+	return settings_controller.format_data(value, small_decimals) if settings_controller != null else UITheme.data_number(value, "compact", small_decimals)
 
 
 func _refresh_ready_notice() -> void:
@@ -1084,7 +1105,10 @@ func _show_data_gain(amount: float) -> void:
 		return
 	if data_gain_tween != null and data_gain_tween.is_valid():
 		data_gain_tween.kill()
-	data_gain_label.text = tr("HUD_DATA_GAIN") % int(round(amount))
+	last_data_gain = round(amount)
+	data_gain_label.text = tr("HUD_DATA_GAIN") % _data_number(last_data_gain)
+	UITheme.data_tooltip(data_gain_label, last_data_gain)
+	_layout_data_readout()
 	data_gain_label.modulate = Color.WHITE
 	data_gain_label.visible = true
 	data_label.modulate = UITheme.GAIN
@@ -1199,6 +1223,8 @@ func _refresh_save_slots() -> void:
 			save_slot_buttons[index].text = tr("STARTUP_NEW_GAME")
 		load_slot_buttons[index].text = tr("LOAD_ACTION")
 		save_slot_details[index].text = _format_slot_details(summary)
+		UITheme.data_tooltip(save_slot_details[index], floor(float(summary.get("observation_data", 0.0))))
+		if not exists or not valid: save_slot_details[index].tooltip_text = ""
 	_refresh_save_status()
 
 
@@ -1243,6 +1269,8 @@ func _refresh_startup_slots() -> void:
 		var valid := bool(summary.get("valid", false))
 		startup_slot_titles[index].text = tr("SAVE_SLOT_TITLE") % slot
 		startup_slot_details[index].text = _format_slot_details(summary)
+		UITheme.data_tooltip(startup_slot_details[index], floor(float(summary.get("observation_data", 0.0))))
+		if not exists or not valid: startup_slot_details[index].tooltip_text = ""
 		startup_slot_buttons[index].disabled = exists and not valid
 		startup_reset_buttons[index].visible = exists
 		startup_reset_buttons[index].text = tr("SAVE_RESET_ACTION")
@@ -1269,7 +1297,7 @@ func _format_slot_details(summary: Dictionary) -> String:
 	var seconds := int(summary.get("elapsed_time", 0.0))
 	return tr("SAVE_SLOT_META") % [
 		stamp, seconds / 60, seconds % 60,
-		int(summary.get("observation_data", 0.0)), int(summary.get("upgrade_level", 0)),
+		_data_number(floor(float(summary.get("observation_data", 0.0)))), int(summary.get("upgrade_level", 0)),
 		Balance.research_node_count()
 	]
 
@@ -1283,6 +1311,22 @@ func _on_language_selected(index: int) -> void:
 func _on_language_changed(_locale: String) -> void:
 	_sync_language_selector()
 	_apply_locale()
+	_refresh_phase_number_text()
+
+
+func _on_number_notation_selected(index: int) -> void:
+	if syncing_settings_controls or settings_controller == null:
+		return
+	settings_controller.set_number_notation(String(number_notation_selector.get_item_metadata(index)))
+
+
+func _on_number_notation_changed(_notation: String) -> void:
+	_sync_settings_controls()
+	_refresh_progression()
+	data_gain_label.text = tr("HUD_DATA_GAIN") % _data_number(last_data_gain)
+	_layout_data_readout()
+	_refresh_phase_number_text()
+	_refresh_save_slot_views()
 
 
 func _on_audio_changed(_master_linear: float, _muted: bool) -> void:
@@ -1357,6 +1401,10 @@ func _sync_settings_controls() -> void:
 	if settings_controller == null:
 		return
 	syncing_settings_controls = true
+	if number_notation_selector != null:
+		for index in range(number_notation_selector.item_count):
+			if number_notation_selector.get_item_metadata(index) == settings_controller.number_notation:
+				number_notation_selector.select(index)
 	if master_volume_slider != null:
 		master_volume_slider.value = float(settings_controller.get_master_volume_linear()) * 100.0
 	if master_volume_value != null:
@@ -1541,6 +1589,8 @@ func _apply_locale() -> void:
 		reset_bindings_dialog.cancel_button_text = tr("SAVE_CANCEL")
 	language_selector.set_item_text(0, tr("SETTINGS_ENGLISH"))
 	language_selector.set_item_text(1, tr("SETTINGS_KOREAN"))
+	number_notation_selector.set_item_text(0, tr("SETTINGS_NUMBER_COMPACT"))
+	number_notation_selector.set_item_text(1, tr("SETTINGS_NUMBER_SCIENTIFIC"))
 	if fps_limit_selector != null:
 		for index in range(fps_limit_selector.item_count):
 			var limit := int(fps_limit_selector.get_item_metadata(index))
@@ -1679,7 +1729,7 @@ func _build_data_readout() -> void:
 	column.name = "DataReadout"
 	column.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	column.offset_left = UITheme.px(64.0)
-	column.offset_top = -UITheme.px(110.0)
+	column.offset_top = -UITheme.px(126.0)
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root_control.add_child(column)
 
@@ -2509,6 +2559,15 @@ func _build_general_settings_page() -> void:
 	var language_row := _add_settings_action_row(page, "SETTINGS_LANGUAGE", "SETTINGS_LANGUAGE_HINT", language_selector)
 	settings_language_label = language_row["title"]
 	settings_hint = language_row["description"]
+	number_notation_selector = OptionButton.new()
+	number_notation_selector.alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	for notation in ["compact", "scientific"]:
+		var index := number_notation_selector.item_count
+		number_notation_selector.add_item(tr("SETTINGS_NUMBER_" + notation.to_upper()))
+		number_notation_selector.set_item_metadata(index, notation)
+	_style_settings_action(number_notation_selector, 17.0, UITheme.BANNER_TITLE)
+	number_notation_selector.item_selected.connect(_on_number_notation_selected)
+	_add_settings_action_row(page, "SETTINGS_NUMBER_NOTATION", "SETTINGS_NUMBER_HINT", number_notation_selector)
 	tutorial_replay_button = Button.new()
 	tutorial_replay_button.text = tr("TUTORIAL_REPLAY")
 	tutorial_replay_button.alignment = HORIZONTAL_ALIGNMENT_RIGHT

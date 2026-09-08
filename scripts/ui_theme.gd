@@ -119,6 +119,80 @@ static func grouped_integer(value: int) -> String:
 	return ("-" if value < 0 else "") + grouped
 
 
+# Display only: purchasing and saves continue to use the unformatted value.
+# Below one million, amounts retain their full value; rates keep one decimal.
+static func data_number(value: float, notation: String = "compact", small_decimals: int = 0) -> String:
+	if not is_finite(value):
+		return "—"
+	var magnitude := absf(value)
+	if magnitude < 1000000.0:
+		return full_data(value, small_decimals)
+	var sign_text := "-" if value < 0.0 else ""
+	if notation == "scientific" or magnitude >= 1.0e15:
+		var exponent := int(floor(log(magnitude) / log(10.0)))
+		var mantissa := snappedf(magnitude / pow(10.0, exponent), 0.01)
+		if mantissa >= 10.0:
+			mantissa /= 10.0
+			exponent += 1
+		return sign_text + "%.2fe%d" % [mantissa, exponent]
+	var units := ["M", "B", "T"]
+	var unit := 0
+	var scaled := magnitude / 1000000.0
+	while scaled >= 1000.0 and unit < units.size() - 1:
+		scaled /= 1000.0
+		unit += 1
+	var decimals := 2 if scaled < 10.0 else (1 if scaled < 100.0 else 0)
+	scaled = snappedf(scaled, pow(10.0, -decimals))
+	if scaled >= 1000.0:
+		if unit == units.size() - 1:
+			return data_number(value, "scientific", small_decimals)
+		scaled /= 1000.0
+		unit += 1
+	decimals = 2 if scaled < 10.0 else (1 if scaled < 100.0 else 0)
+	return sign_text + (("%." + str(decimals) + "f") % scaled) + units[unit]
+
+
+static func full_data(value: float, decimals: int = 0) -> String:
+	if not is_finite(value):
+		return "—"
+	var plain := (("%." + str(clampi(decimals, 0, 2)) + "f") % absf(value)).split(".")
+	var digits := plain[0]
+	var grouped := ""
+	for index in range(digits.length()):
+		if index > 0 and (digits.length() - index) % 3 == 0:
+			grouped += ","
+		grouped += digits[index]
+	return ("-" if value < 0.0 else "") + grouped + ("." + plain[1] if plain.size() > 1 else "")
+
+
+static func data_tooltip(control: Control, value: float, decimals: int = 0) -> void:
+	control.tooltip_text = full_data(value, decimals)
+	# Labels must receive hover to expose the exact value, while clicks still
+	# propagate to the existing parent/sky input path.
+	control.mouse_filter = Control.MOUSE_FILTER_PASS
+	control.set_meta("passive_data_readout", true)
+	if not _cache.has("data_tooltip_theme"):
+		var tooltip_theme := Theme.new()
+		tooltip_theme.set_font("font", "TooltipLabel", mono_tabular())
+		tooltip_theme.set_font_size("font_size", "TooltipLabel", 14)
+		tooltip_theme.set_color("font_color", "TooltipLabel", TOOLTIP_BODY)
+		var panel := StyleBoxFlat.new()
+		panel.bg_color = TOOLTIP_BACKGROUND
+		panel.border_color = TOOLTIP_BORDER
+		panel.set_border_width_all(1)
+		panel.content_margin_left = 10
+		panel.content_margin_right = 10
+		panel.content_margin_top = 6
+		panel.content_margin_bottom = 6
+		tooltip_theme.set_stylebox("panel", "TooltipPanel", panel)
+		_cache["data_tooltip_theme"] = tooltip_theme
+	control.theme = _cache["data_tooltip_theme"]
+
+
+static func is_passive_data_readout(control: Control) -> bool:
+	return control is Label and control.mouse_filter == Control.MOUSE_FILTER_PASS and bool(control.get_meta("passive_data_readout", false))
+
+
 static func _font(path: String) -> FontFile:
 	if _cache.has(path):
 		return _cache[path]
