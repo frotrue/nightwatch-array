@@ -2228,13 +2228,13 @@ func _build_node_tooltip() -> void:
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_theme_constant_override("separation", UITheme.size_px(11.0))
 	tooltip_panel.add_child(column)
-	tooltip_branch = _spec_label("", UITheme.mono(), 11.0, UITheme.INK_MID, 0.31)
+	tooltip_branch = _spec_label("", UITheme.mono(), 17.0, UITheme.INK_MID)
 	tooltip_branch.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(tooltip_branch)
 	tooltip_name = _spec_label("", UITheme.sans(), 26.0, UITheme.TOOLTIP_NAME)
 	tooltip_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(tooltip_name)
-	tooltip_star = _spec_label("", UITheme.mono(), 13.0, UITheme.TOOLTIP_VALUE)
+	tooltip_star = _spec_label("", UITheme.mono(), 17.0, UITheme.TOOLTIP_VALUE)
 	tooltip_star.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(tooltip_star)
 	# The VBox owns the slot's geometry, not the animated rule's transform.
@@ -2257,34 +2257,34 @@ func _build_node_tooltip() -> void:
 	fields.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(fields)
 	for field_key in ["STATUS", "COST"]:
-		var field_label := _spec_label(tr("TREE_CONSTELLATION_FIELD_%s" % field_key), UITheme.mono(), 11.0, UITheme.TOOLTIP_LABEL, 0.18)
+		var field_label := _spec_label(tr("TREE_CONSTELLATION_FIELD_%s" % field_key), UITheme.mono(), 17.0, UITheme.INK_MID)
 		field_label.name = "Field%sLabel" % field_key.capitalize()
 		field_label.custom_minimum_size.x = UITheme.px(44.0)
 		fields.add_child(field_label)
 		match field_key:
 			"STATUS":
-				tooltip_state = _spec_label("", UITheme.sans("light"), 13.0, UITheme.INK_MAX)
+				tooltip_state = _spec_label("", UITheme.sans(), 20.0, UITheme.INK_MAX)
 				fields.add_child(tooltip_state)
 			"COST":
-				tooltip_cost = _spec_label("", UITheme.mono_tabular(), 13.0, UITheme.TOOLTIP_BODY)
+				tooltip_cost = _spec_label("", UITheme.mono_tabular(), 20.0, UITheme.TOOLTIP_BODY)
 				fields.add_child(tooltip_cost)
 	# The effect is the purchase decision: give it the full inspector width.
-	# 15 spec pixels become 9 logical / 15 output pixels at 1920x1080.
-	var effect_label := _spec_label(tr("TREE_CONSTELLATION_FIELD_EFFECT"), UITheme.mono(), 11.0, UITheme.TOOLTIP_LABEL, 0.18)
+	# Readable at the default window: 20/24 spec pixels become 12/14 logical.
+	var effect_label := _spec_label(tr("TREE_CONSTELLATION_FIELD_EFFECT"), UITheme.mono(), 17.0, UITheme.INK_MID)
 	effect_label.name = "FieldEffectLabel"
 	column.add_child(effect_label)
-	tooltip_description = _spec_label("", UITheme.sans(), 15.0, UITheme.TOOLTIP_VALUE)
+	tooltip_description = _spec_label("", UITheme.sans(), 20.0, UITheme.TOOLTIP_VALUE)
 	tooltip_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	tooltip_description.custom_minimum_size.x = UITheme.px(292.0)
 	column.add_child(tooltip_description)
-	tooltip_action = _spec_label("", UITheme.mono(), 13.0, UITheme.TOOLTIP_ACTION, 0.6 / 13.0)
+	tooltip_action = _spec_label("", UITheme.sans("medium"), 24.0, UITheme.TOOLTIP_ACTION)
 	tooltip_action.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(tooltip_action)
 	var legend_spacer := Control.new()
 	legend_spacer.custom_minimum_size.y = UITheme.px(7.0)
 	legend_spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(legend_spacer)
-	var legend_title := _spec_label(tr("TREE_CONSTELLATION_STAR_STATES"), UITheme.mono(), 11.0, UITheme.INK_MID, 0.31)
+	var legend_title := _spec_label(tr("TREE_CONSTELLATION_STAR_STATES"), UITheme.mono(), 17.0, UITheme.INK_MID)
 	legend_title.name = "LegendTitle"
 	column.add_child(legend_title)
 	var legend_rows := [
@@ -2300,10 +2300,12 @@ func _build_node_tooltip() -> void:
 		legend_row.add_theme_constant_override("separation", UITheme.size_px(11.0))
 		legend_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		column.add_child(legend_row)
-		var marker := _spec_label(String(row[0]), UITheme.mono(), 15.0, Color(row[1]))
+		var marker := _spec_label(String(row[0]), UITheme.mono(), 20.0, Color(row[1]))
 		marker.custom_minimum_size.x = UITheme.px(12.0)
 		legend_row.add_child(marker)
-		var legend_text := _spec_label(tr(String(row[2])), UITheme.sans("light"), 12.0, UITheme.TOOLTIP_LABEL)
+		var legend_text := _spec_label(tr(String(row[2])), UITheme.sans(), 20.0, UITheme.TOOLTIP_BODY)
+		legend_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		legend_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		legend_text.name = "LegendText%d" % legend_index
 		legend_row.add_child(legend_text)
 	tooltip_meta = tooltip_action

@@ -107,7 +107,10 @@ class InventoryTile:
 		var border := UITheme.ACCENT_LINE if hover else (UITheme.INK_MID if owned else UITheme.INK_LOW)
 		draw_rect(Rect2(Vector2.ZERO, size), fill)
 		draw_rect(Rect2(Vector2.ZERO, size), Color(border, 0.9 if owned or hover else 0.52), false, UITheme.px(1), true)
-		Visual.draw_module(self, Rect2(Vector2.ONE * UITheme.px(13), size - Vector2.ONE * UITheme.px(26)), module_id, owned and owner_popup.model().spare_count(module_id) > 0)
+		# Keep the glyph between the code and the name, rather than drawing it
+		# across the text baselines in these compact inventory tiles.
+		var glyph_rect := Rect2(Vector2(UITheme.px(13), UITheme.px(20)), Vector2(size.x - UITheme.px(26), UITheme.px(40)))
+		Visual.draw_module(self, glyph_rect, module_id, owned and owner_popup.model().spare_count(module_id) > 0)
 		var font: Font = UITheme.mono()
 		var definition: Dictionary = Modules.DEFINITIONS.get(module_id, {})
 		var code: String = String(definition.get("code", module_id.to_upper()))
@@ -160,6 +163,7 @@ var hover_kind := ""
 var hover_id := ""
 var hover_slot := -1
 var tooltip_pointer := Vector2.ZERO
+var tooltip_from_focus := false
 
 func model():
 	return game.deep_sky.modules
@@ -189,9 +193,10 @@ func _ready() -> void:
 		_empty_button_style(button)
 		button.pressed.connect(remove_module.bind(index))
 		button.mouse_entered.connect(show_slot_tooltip.bind(index))
-		button.mouse_exited.connect(hide_tooltip)
-		button.focus_entered.connect(show_slot_tooltip.bind(index))
-		button.focus_exited.connect(hide_tooltip)
+		button.mouse_exited.connect(_on_tooltip_mouse_exited)
+		button.gui_input.connect(_on_slot_pointer_input.bind(index))
+		button.focus_entered.connect(show_slot_tooltip.bind(index, true))
+		button.focus_exited.connect(_on_tooltip_focus_exited)
 		surface.add_child(button)
 		slots.append(button)
 		var center := button.position / UITheme.SCALE + Vector2.ONE * SLOT_RADIUS
@@ -228,9 +233,10 @@ func _ready() -> void:
 		_empty_button_style(tile)
 		tile.pressed.connect(equip_from_inventory.bind(id))
 		tile.mouse_entered.connect(show_module_tooltip.bind(id))
-		tile.mouse_exited.connect(hide_tooltip)
+		tile.mouse_exited.connect(_on_tooltip_mouse_exited)
+		tile.gui_input.connect(_on_tile_pointer_input.bind(id))
 		tile.focus_entered.connect(_on_tile_focus.bind(id))
-		tile.focus_exited.connect(hide_tooltip)
+		tile.focus_exited.connect(_on_tooltip_focus_exited)
 		inventory_grid.add_child(tile)
 		owned_buttons[id] = tile
 	inventory_empty = _label(surface, Vector2(1210, 538), 540, POPUP_BODY_SPEC_SIZE, UITheme.INK_MID)
@@ -340,7 +346,16 @@ func _input(event: InputEvent) -> void:
 
 func _process(_delta: float) -> void:
 	if tooltip_panel.visible:
-		tooltip_pointer = overlay.get_local_mouse_position()
+		if tooltip_from_focus:
+			var control: Control = owned_buttons.get(hover_id) if hover_kind == "module" else slots[hover_slot]
+			if control == null or not control.is_visible_in_tree() or not control.has_focus():
+				hide_tooltip()
+				return
+			# Recompute after scrolling/layout, but never replace a keyboard
+			# anchor with the position of an idle mouse.
+			tooltip_pointer = overlay.get_global_transform().affine_inverse() * control.get_global_rect().get_center()
+		else:
+			tooltip_pointer = overlay.get_local_mouse_position()
 		_place_tooltip()
 
 func equip_from_inventory(id: String) -> void:
@@ -415,32 +430,51 @@ func refresh(animate: bool = true) -> void:
 	surface.queue_redraw()
 	_update_tooltip()
 
-func show_module_tooltip(id: String) -> void:
+func show_module_tooltip(id: String, from_focus: bool = false) -> void:
 	if not owned_buttons.has(id) or id not in model().purchased or not owned_buttons[id].visible:
 		hide_tooltip()
 		return
 	hover_kind = "module"
 	hover_id = id
 	hover_slot = -1
+	tooltip_from_focus = from_focus
 	tooltip_pointer = owned_buttons[id].get_global_rect().get_center()
 	_update_tooltip()
 
 func _on_tile_focus(id: String) -> void:
-	show_module_tooltip(id)
+	show_module_tooltip(id, true)
 	var tile: InventoryTile = owned_buttons.get(id)
 	if tile != null and inventory_scroll != null:
 		inventory_scroll.ensure_control_visible(tile)
 
-func show_slot_tooltip(index: int) -> void:
+func show_slot_tooltip(index: int, from_focus: bool = false) -> void:
 	hover_kind = "slot"
 	hover_slot = index
 	hover_id = model().slots[index]
+	tooltip_from_focus = from_focus
 	tooltip_pointer = slots[index].get_global_rect().get_center()
 	_update_tooltip()
 
 func hide_tooltip() -> void:
 	hover_kind = ""
+	tooltip_from_focus = false
 	tooltip_panel.hide()
+
+func _on_tooltip_mouse_exited() -> void:
+	if not tooltip_from_focus:
+		hide_tooltip()
+
+func _on_tooltip_focus_exited() -> void:
+	if tooltip_from_focus:
+		hide_tooltip()
+
+func _on_tile_pointer_input(event: InputEvent, id: String) -> void:
+	if tooltip_from_focus and event is InputEventMouseMotion and not event.relative.is_zero_approx():
+		show_module_tooltip(id)
+
+func _on_slot_pointer_input(event: InputEvent, index: int) -> void:
+	if tooltip_from_focus and event is InputEventMouseMotion and not event.relative.is_zero_approx():
+		show_slot_tooltip(index)
 
 func _update_tooltip() -> void:
 	if hover_kind.is_empty() or not is_open() or is_draw_open():

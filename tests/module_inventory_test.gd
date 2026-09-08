@@ -77,6 +77,38 @@ func _run() -> void:
 	var scrollbar: Range = popup.inventory_scroll.get_v_scroll_bar()
 	_check(scrollbar.max_value > scrollbar.page, "fourteen owned modules create scrollable storage")
 
+	# Keyboard descriptions follow their focused item even with the pointer
+	# elsewhere, including the last item brought into view by focus scrolling.
+	for id in ["focus", Modules.DEFINITIONS.keys().back()]:
+		var tile: Button = popup.owned_buttons[id]
+		tile.grab_focus()
+		await process_frame
+		await process_frame
+		popup._process(0.016)
+		var anchor: Vector2 = popup.overlay.get_global_transform().affine_inverse() * tile.get_global_rect().get_center()
+		_check(popup.tooltip_panel.visible and popup.tooltip_from_focus, "keyboard focus opens the module description")
+		_check(popup.tooltip_pointer.is_equal_approx(anchor), "idle pointer cannot replace the focused module anchor")
+		# Scroll offsets are integers while spec geometry retains fractional pixels.
+		_check(popup.inventory_scroll.get_global_rect().grow(1.0).encloses(tile.get_global_rect()), "focused inventory item is scrolled into view: " + id)
+		tile.mouse_exited.emit()
+		_check(popup.tooltip_panel.visible, "pointer exit does not dismiss a keyboard description")
+		var motion := InputEventMouseMotion.new()
+		motion.relative = Vector2(4, 0)
+		tile.gui_input.emit(motion)
+		popup._process(0.016)
+		_check(not popup.tooltip_from_focus and popup.tooltip_pointer.is_equal_approx(popup.overlay.get_local_mouse_position()), "pointer movement takes over description placement")
+		popup.close_button.grab_focus()
+		_check(popup.tooltip_panel.visible, "leaving keyboard focus does not dismiss a pointer description")
+		tile.mouse_exited.emit()
+		_check(not popup.tooltip_panel.visible, "leaving pointer hover dismisses its description")
+	game.deep_sky.equip("focus")
+	popup.slots[0].grab_focus()
+	await process_frame
+	popup._process(0.016)
+	_check(popup.tooltip_from_focus and popup.tooltip_panel.visible, "equipped slot supports keyboard descriptions")
+	_check(popup.tooltip_pointer.is_equal_approx(popup.slots[0].get_global_rect().get_center()), "slot description remains anchored to the focused slot")
+	_check(Rect2(Vector2.ZERO, popup.overlay.size).encloses(popup.tooltip_panel.get_rect()), "keyboard description stays inside the viewport")
+
 	popup.close()
 	_check(not popup.is_open() and game.upgrade_tree.visible and paused, "closing the modal restores the chart pause")
 	_check(game.get_viewport().gui_get_focus_owner() == popup.launcher, "closing the modal restores the previous focus")
