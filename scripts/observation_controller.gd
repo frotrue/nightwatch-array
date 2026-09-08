@@ -213,7 +213,7 @@ func _update_manual_tracking(delta: float, keep_primary: bool = false) -> bool:
 	if not _selection_is_valid():
 		selected_meteor = _find_target_under_cursor()
 		if _selection_is_valid():
-			tracking_grace_remaining = TRACKING_GRACE_SECONDS
+			tracking_grace_remaining = TRACKING_GRACE_SECONDS + progression.extension_effect("tracking_grace", 0.0)
 	if not _selection_is_valid():
 		_reset_primary_tracking()
 		return false
@@ -229,11 +229,11 @@ func _update_manual_tracking(delta: float, keep_primary: bool = false) -> bool:
 	var tracking_radius: float = primary.get_tracking_radius(_world_px(_module_tracking_radius()))
 	var current_distance: float = _target_contact_distance(primary, cursor_position)
 	if _apply_manual_contact(primary, delta):
-		tracking_grace_remaining = TRACKING_GRACE_SECONDS
+		tracking_grace_remaining = TRACKING_GRACE_SECONDS + progression.extension_effect("tracking_grace", 0.0)
 		_append_tracked_if_valid(primary)
 	elif current_distance <= tracking_radius * TRACKING_BREAK_MULTIPLIER:
 		# The soft outer ring pauses progress but keeps the target latched.
-		tracking_grace_remaining = TRACKING_GRACE_SECONDS
+		tracking_grace_remaining = TRACKING_GRACE_SECONDS + progression.extension_effect("tracking_grace", 0.0)
 	else:
 		tracking_grace_remaining -= delta
 		if tracking_grace_remaining <= 0.0:
@@ -734,6 +734,8 @@ func _module_manual_speed_for_target(target) -> float:
 		return legacy_speed
 	var new_multiplier := float(modules.effect("new_speed"))
 	var is_primary: bool = target == (_manual_frame_primary if _manual_frame_active else selected_meteor)
+	if not is_primary:
+		legacy_speed *= progression.extension_effect("secondary_speed")
 	if modules.has("long_baseline") and is_primary and primary_tracking_seconds >= 1.0:
 		new_multiplier *= modules.stacked_effect("long_baseline", "baseline_speed")
 	if modules.has("dual_processor"):

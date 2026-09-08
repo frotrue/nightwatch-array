@@ -173,12 +173,12 @@ func _update_dishes(delta: float) -> void:
 
 		if locked != null:
 			var offset: Vector2 = locked.global_position - Vector2(dish.position)
-			var track_step := TRACK_SPEED * delta
+			var track_step: float = TRACK_SPEED * progression.extension_effect("dish_move") * delta
 			dish.position = Vector2(dish.position) + (
 				offset if offset.length() <= track_step else offset.normalized() * track_step
 			)
 			dish.arrived = true
-			if Vector2(dish.position).distance_to(locked.global_position) > _world_px(COVERAGE_RADIUS):
+			if Vector2(dish.position).distance_to(locked.global_position) > _world_px(COVERAGE_RADIUS * progression.extension_effect("dish_radius")):
 				dish.locked_id = 0
 			else:
 				locked.set_dish_assist_rate(_dish_assist_rate(locked))
@@ -189,7 +189,7 @@ func _update_dishes(delta: float) -> void:
 		var position: Vector2 = dish.position
 		var target: Vector2 = dish.target
 		if not position.is_equal_approx(target):
-			var step := SLEW_SPEED * delta
+			var step: float = SLEW_SPEED * progression.extension_effect("dish_move") * delta
 			var slew := target - position
 			if slew.length() <= step:
 				dish.position = target
@@ -222,7 +222,7 @@ func _dish_assist_rate(target) -> float:
 	var multiplier := 1.0
 	if modules != null and modules.has_method("dish_multiplier"):
 		multiplier = float(modules.dish_multiplier(target))
-	return target.get_assist_rate(DISH_TIME_MULTIPLIER) * multiplier
+	return target.get_assist_rate(DISH_TIME_MULTIPLIER) * multiplier * progression.extension_effect("dish_speed")
 
 
 func _locked_target(dish: Dictionary):
@@ -269,7 +269,7 @@ func _acquire_target(dish: Dictionary, own_index: int):
 		if taken:
 			continue
 		var distance: float = Vector2(dish.position).distance_to(meteor.global_position)
-		if distance <= _world_px(COVERAGE_RADIUS) and distance < closest_distance:
+		if distance <= _world_px(COVERAGE_RADIUS * progression.extension_effect("dish_radius")) and distance < closest_distance:
 			closest = meteor
 			closest_distance = distance
 	return closest
@@ -309,7 +309,7 @@ func _automatic_dish_for(contact: Dictionary) -> int:
 	var best_free_time := INF
 	for index in range(dishes.size()):
 		var dish: Dictionary = dishes[index]
-		var travel: float = Vector2(dish.position).distance_to(estimate) / SLEW_SPEED
+		var travel: float = Vector2(dish.position).distance_to(estimate) / (SLEW_SPEED * progression.extension_effect("dish_move"))
 		var free: bool = (
 			int(dish.assigned_id) == -1
 			and _locked_target(dish) == null
@@ -417,7 +417,7 @@ func _draw_dish(dish: Dictionary) -> void:
 	var position: Vector2 = dish.position
 	var arrived: bool = bool(dish.arrived)
 	var visual_scale := _world_px(1.0)
-	var coverage_radius := _world_px(COVERAGE_RADIUS)
+	var coverage_radius := _world_px(COVERAGE_RADIUS * progression.extension_effect("dish_radius"))
 	var assigned_contact := _find_contact(int(dish.assigned_id))
 	var assignment_visual_visible := (
 		assigned_contact.is_empty() or forecast_contact_visible(assigned_contact)

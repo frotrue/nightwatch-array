@@ -70,15 +70,22 @@ func _run() -> void:
 	tree.open_tree()
 	await process_frame
 	await process_frame
+	game.progression.observation_data = 60000000.0
+	_check(research.purchase("ext_trace_study"), "permanent tracking research is available after M31")
 	game.progression.observation_data = 119999999.0
 	_check(not research.purchase("focus"), "insufficient balance is rejected")
 	game.progression.observation_data = 240000000.0
 	chart.select_extension("focus")
 	_hold_chart_star(game)
-	_check(research.modules.purchased == ["focus"] and research.modules.installed_ids().is_empty() and game.progression.observation_data == 120000000.0, "chart purchase debits once and adds to inventory without equipping")
+	_check(research.research_owned("focus") and research.modules.purchased.is_empty() and game.progression.observation_data == 120000000.0, "chart purchase debits once and installs permanent research without granting equipment")
 	_check(not research.purchase("focus"), "duplicate purchases never charge twice")
+	game.progression.observation_data = 240000000.0
+	_check(research.purchase("ext_sweep_study"), "sweep predecessor purchased")
 	chart.select_extension("wide")
 	_hold_chart_star(game)
+	# Inventory fixtures isolate the established equipment and pointer contract.
+	research.modules.grant("focus")
+	research.modules.grant("wide")
 	var popup = game.module_popup
 	popup.launcher.pressed.emit()
 	_check(popup.is_open() and tree.is_open() and paused, "equipment popup overlays the chart while retaining its pause")
@@ -253,6 +260,20 @@ func _check_popup_pointer_routing() -> void:
 	_check(game.deep_sky.modules.slots[0] == "focus", "removed module stays in inventory and refills the first clockwise gap")
 	_click_in_viewport(viewport, game.module_popup.close_button.get_global_rect().get_center())
 	_check(not game.module_popup.is_open() and game.upgrade_tree.is_open() and paused, "visible popup close click returns to research without passing through")
+	game.deep_sky._sync_protocol()
+	game.deep_sky.state.award_samples(8)
+	game.module_popup.refresh()
+	_click_in_viewport(viewport, game.module_popup.draw_launcher.get_global_rect().get_center())
+	await _frames(2)
+	_check(game.module_popup.is_draw_open(), "real pointer opens the dedicated draw window directly from the chart")
+	var draw_window: Control = game.module_popup.draw_window
+	_click_in_viewport(viewport, draw_window.action.get_global_rect().get_center())
+	_check(draw_window.drawing and game.deep_sky.samples == 0, "real draw click begins one paid animation")
+	_click_in_viewport(viewport, draw_window.skip_button.get_global_rect().get_center())
+	_check(not draw_window.drawing and draw_window.result_panel.visible, "real pointer skips to the saved result")
+	_click_in_viewport(viewport, draw_window.loadout_button.get_global_rect().get_center())
+	_check(game.module_popup.is_open() and not game.module_popup.is_draw_open(), "real loadout click changes surfaces without resuming the sky")
+	_click_in_viewport(viewport, game.module_popup.close_button.get_global_rect().get_center())
 	_click_in_viewport(viewport, game.upgrade_tree.close_button.get_global_rect().get_center())
 	var before: float = game.observation_phase_remaining
 	await _frames(10)
@@ -316,21 +337,20 @@ func _check_ring_research(game: Node) -> void:
 	var research = game.deep_sky
 	var popup = game.module_popup
 	var chart = game.upgrade_tree
-	research.modules.load_save_data({})
+	research.reset()
 	research.observations = 1
+	research._sync_protocol()
 	game.progression.observation_data = 5000000000.0
 	game.upgrade_tree.open_tree()
 	await _frames(2)
 	popup.open()
-	_check(popup.instructions.text == tr("MODX_DRAW_RULE"), "newly unlocked empty inventory explains where to buy modules")
+	_check(popup.draw_button.text == tr("DRAW_OPEN"), "empty inventory links to the dedicated draw window")
 	popup.close()
-	_check(not research.purchase("slot_3") and not research.purchase("slot_5") and not research.purchase("precision") and not research.purchase("revisit"), "Andromeda research enforces module and predecessor-gated slot prerequisites")
-	for id in ["focus", "wide", "precision", "record"]:
-		chart.select_extension(id)
-		var before: float = game.progression.observation_data
-		_hold_chart_star(game)
-		_check(research.modules.research_owned(id) and is_equal_approx(before - game.progression.observation_data, research.modules.research_cost(id)), "chart buys and charges once: " + id)
-	_check(research.modules.unlocked_slots == 2 and research.modules.purchased.size() == 4, "module choices expand before the third position")
+	_check(research.research_ready("slot_3") and not research.purchase("slot_4") and not research.purchase("slot_5"), "module capacity is a sequential permanent research branch")
+	# Acquisition is tested by the draw integration gate. These known five
+	# copies let this gate isolate equip, slot holds, JSON and legacy effects.
+	for id in ["focus", "wide", "precision", "record", "revisit"]:
+		research.modules.grant(id)
 	popup.open()
 	popup.owned_buttons.focus.pressed.emit()
 	popup.owned_buttons.wide.pressed.emit()
@@ -339,12 +359,12 @@ func _check_ring_research(game: Node) -> void:
 	popup.owned_buttons.precision.pressed.emit()
 	popup.owned_buttons.focus.pressed.emit()
 	_check(research.modules.slots == ["focus", "wide", "", "", ""], "full and already-mounted tile clicks never replace equipment")
-	_check(not research.equip("record", 2) and not research.purchase("slot_3"), "popup cannot equip locked positions or bypass the predecessor research gate")
+	_check(not research.equip("record", 2) and not research.purchase("slot_3"), "popup cannot equip a locked position or purchase chart research")
 	popup.show_module_tooltip("focus")
 	_check(popup.tooltip_action.text == tr("RING_EQUIPPED_ACTION"), "mounted inventory tile explains its no-op")
 	popup.slots[0].pressed.emit()
 	popup.owned_buttons.precision.pressed.emit()
-	_check(research.modules.slots == ["precision", "wide", "", "", ""], "click removal leaves a gap that the next inventory click fills first")
+	_check(research.modules.slots == ["precision", "wide", "", "", ""], "removal leaves a gap that the next inventory click fills")
 	popup.set_process(false)
 	for locale in ["ko", "en"]:
 		game.settings.set_language(locale, false)
@@ -352,42 +372,28 @@ func _check_ring_research(game: Node) -> void:
 		await _frames(3)
 		popup.tooltip_pointer = popup.overlay.size - Vector2.ONE
 		popup._place_tooltip()
-		_check(absf(popup.tooltip_panel.size.x - 240.0) <= 1.0 and Rect2(Vector2.ZERO, popup.overlay.size).encloses(popup.tooltip_panel.get_rect()), "tooltip maintains spec width and flips within viewport: " + locale + " " + str(popup.tooltip_panel.get_rect()))
+		_check(absf(popup.tooltip_panel.size.x - 240.0) <= 1.0 and Rect2(Vector2.ZERO, popup.overlay.size).encloses(popup.tooltip_panel.get_rect()), "tooltip remains within viewport: " + locale)
 	popup.close()
-	research.state.research_ids.append("ext_trace_study")
-	for id in ["slot_3", "revisit"]:
+	for id in ["slot_3", "slot_4", "slot_5"]:
 		chart.select_extension(id)
 		var before: float = game.progression.observation_data
 		_hold_chart_star(game)
-		_check(research.modules.research_owned(id) and is_equal_approx(before - game.progression.observation_data, research.modules.research_cost(id)), "chart unlocks each sequential expansion: " + id)
-		_check(not research.purchase(id) and game.progression.observation_data == before - research.modules.research_cost(id), "duplicate expansion cannot charge again: " + id)
-	research.state.research_ids.append_array(["ext_sweep_study", "ext_link_study"])
-	chart.select_extension("slot_4")
-	var slot_4_before: float = game.progression.observation_data
-	_hold_chart_star(game)
-	_check(research.modules.research_owned("slot_4") and is_equal_approx(slot_4_before - game.progression.observation_data, research.modules.research_cost("slot_4")), "the three branch studies unlock the fourth position")
-	_check(not research.purchase("slot_4") and game.progression.observation_data == slot_4_before - research.modules.research_cost("slot_4"), "fourth position cannot charge twice")
-	research.state.research_ids.append("ext_combined_watch")
-	chart.select_extension("slot_5")
-	var slot_5_before: float = game.progression.observation_data
-	_hold_chart_star(game)
-	_check(research.modules.research_owned("slot_5") and is_equal_approx(slot_5_before - game.progression.observation_data, research.modules.research_cost("slot_5")), "extended watch research unlock the fifth position")
-	_check(not research.purchase("slot_5") and game.progression.observation_data == slot_5_before - research.modules.research_cost("slot_5"), "fifth position cannot charge twice")
-	_check(research.modules.unlocked_slots == 5 and research.modules.purchased.size() == 5, "final expansion stops at exactly five modules and five positions")
+		_check(research.research_owned(id) and is_equal_approx(before - game.progression.observation_data, research.research_cost(id)), "held star unlocks and charges for capacity: " + id)
+		_check(not research.purchase(id) and game.progression.observation_data == before - research.research_cost(id), "duplicate slot purchase cannot charge again: " + id)
+	_check(research.modules.unlocked_slots == 5 and research.modules.purchased.size() == 5, "slot research leaves the equipment fixture intact")
 	popup.open()
 	for index in range(5):
 		popup.remove_module(index)
 	for id in Modules.DEFINITIONS:
 		popup.owned_buttons[id].pressed.emit()
-	_check(research.modules.slots == ["focus", "wide", "precision", "record", "revisit"], "all unlocked ring positions fill clockwise through popup controls")
+	_check(research.modules.slots == ["focus", "wide", "precision", "record", "revisit"], "five unlocked positions fill clockwise through popup controls")
 	var snapshot: Dictionary = JSON.parse_string(JSON.stringify(game._build_save_data()))
 	popup.close()
 	game.upgrade_tree.close_tree()
 	game._apply_save_data(snapshot)
 	await _frames(2)
-	_check(research.modules.unlocked_slots == 5 and research.modules.installed_ids().size() == 5 and not paused, "full game JSON save restores researched capacity and observation")
-	# Measure target reward and cooldown through actual completion, with a frozen
-	# simulation so ordinary income cannot contaminate the comparison.
+	_check(research.modules.unlocked_slots == 5 and research.modules.installed_ids().size() == 5 and not paused, "full game JSON restores researched capacity and observation")
+	_check(not research.research_owned("record") and not research.research_owned("revisit"), "new inventory ownership does not grant permanent research on load")
 	game.set_process(false)
 	game.spawner.set_process(false)
 	game.events.set_process(false)

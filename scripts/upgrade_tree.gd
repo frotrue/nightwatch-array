@@ -12,7 +12,7 @@ const UITheme = preload("res://scripts/ui_theme.gd")
 const StarNodeVisual = preload("res://scripts/research_star_visual.gd")
 const ACTION_CHART := &"nw_chart"
 const ACTION_MENU_BACK := &"nw_menu_back"
-const ATLAS_ACTION_ORIGIN := Vector2(34, 282)
+const ATLAS_ACTION_ORIGIN := Vector2(34, 390)
 const ATLAS_ACTION_SIZE := Vector2(172, 34)
 const ATLAS_ACTION_STEP := Vector2(0, 46)
 const RAW_DEBUG_KEYS := [
@@ -2091,7 +2091,7 @@ func _build_interface() -> void:
 	overlay.add_child(hub_return_button)
 	atlas_navigation = ColorRect.new()
 	atlas_navigation.position = ATLAS_ACTION_ORIGIN - Vector2(10, 14)
-	atlas_navigation.size = Vector2(192, 108)
+	atlas_navigation.size = Vector2(192, 154)
 	atlas_navigation.color = UITheme.GROUND
 	atlas_navigation.mouse_filter = Control.MOUSE_FILTER_STOP
 	atlas_navigation.z_index = 30
@@ -2099,7 +2099,7 @@ func _build_interface() -> void:
 	for index in range(1):
 		var action := Button.new()
 		action.flat = true
-		action.position = ATLAS_ACTION_ORIGIN + ATLAS_ACTION_STEP * (index + 1)
+		action.position = ATLAS_ACTION_ORIGIN + ATLAS_ACTION_STEP * (index + 2)
 		action.size = ATLAS_ACTION_SIZE
 		action.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		action.z_index = 31
@@ -3063,7 +3063,7 @@ func _refresh_extension_inspector(id: String) -> void:
 	var record: Dictionary = node_star_records[id]
 	var star: Dictionary = record.star
 	var state := _research_state(id)
-	tooltip_branch.text = tr(chart_constellations[record.constellation_id].label_key)
+	tooltip_branch.text = tr(chart_constellations[record.constellation_id].label_key) + " · " + tr("ATLAS_ROLE_" + String(record.constellation_id).to_upper())
 	tooltip_star.text = "%s    %s" % [tr(star.name_key), star.bayer]
 	tooltip_name.text = extension_research.research_name(id)
 	tooltip_description.text = extension_research.research_description(id)

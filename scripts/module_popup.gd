@@ -3,6 +3,7 @@ extends CanvasLayer
 const UITheme = preload("res://scripts/ui_theme.gd")
 const Visual = preload("res://scripts/module_visual.gd")
 const Modules = preload("res://scripts/observation_modules.gd")
+const DrawWindow = preload("res://scripts/module_draw_window.gd")
 const RING_CENTER := Vector2(700, 590)
 const RING_RADIUS := 180.0
 const SLOT_RADIUS := 38.0
@@ -128,10 +129,10 @@ var previous_chart_visible := true
 var overlay: Control
 var surface: Control
 var launcher: Button
+var draw_launcher: Button
+var draw_window: Control
 var close_button: Button
 var draw_button: Button
-var draw_balance: Label
-var draw_result: Label
 var heading: Label
 var inventory_heading: Label
 var inventory_count: Label
@@ -245,10 +246,10 @@ func _ready() -> void:
 	instructions.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hint = _label(surface, Vector2(1180, 908), 600, POPUP_BODY_SPEC_SIZE, UITheme.TOOLTIP_VALUE)
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	draw_balance = _label(surface, Vector2(1180, 806), 255, POPUP_BODY_SPEC_SIZE, UITheme.TOOLTIP_VALUE)
-	draw_button = _text_action(surface, Vector2(1450, 795), Vector2(340, 44), _draw_module)
-	draw_result = _label(surface, Vector2(1180, 849), 610, POPUP_BODY_SPEC_SIZE, UITheme.ACCENT_TEXT)
-	draw_result.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	draw_button = _text_action(surface, Vector2(1180, 813), Vector2(610, 54), open_draw)
+	draw_window = DrawWindow.new()
+	overlay.add_child(draw_window)
+	draw_window.setup(self)
 	_build_tooltip()
 	overlay.hide()
 	set_process(false)
@@ -260,12 +261,32 @@ func setup(controller: Node) -> void:
 	game.settings.language_changed.connect(func(_locale): refresh())
 	launcher = _text_action(game.upgrade_tree.overlay, Vector2(63, 940), Vector2(273, 50), open)
 	launcher.z_index = 101
+	draw_launcher = _text_action(game.upgrade_tree.overlay, Vector2.ZERO, Vector2(273, 50), open_draw)
+	draw_launcher.z_index = 101
 	game.upgrade_tree.tree_opened.connect(refresh)
 	game.upgrade_tree.tree_closed.connect(refresh)
 	refresh()
 
 func is_open() -> bool:
 	return overlay.visible
+
+func is_draw_open() -> bool:
+	return is_open() and draw_window.visible
+
+func open_draw() -> void:
+	if not is_open():
+		open()
+	if not is_open() or is_draw_open():
+		return
+	hide_tooltip()
+	surface.hide()
+	draw_window.enter()
+
+func show_loadout() -> void:
+	draw_window.leave()
+	surface.show()
+	refresh(false)
+	close_button.grab_focus()
 
 func open() -> void:
 	if is_open() or not game.upgrade_tree.is_open() or not game.deep_sky.modules_unlocked() or game.hud.is_settings_open() or game.hud.is_startup_slots_open() or game.hud.is_end_open() or game.tutorial.is_modal_step():
@@ -282,6 +303,8 @@ func open() -> void:
 	# Hide only the chart canvas, retaining its logical open/pause state. The
 	# paused real sky remains the backdrop, as in the supplied ring mockup.
 	game.upgrade_tree.hide()
+	surface.show()
+	draw_window.leave()
 	overlay.show()
 	refresh(false)
 	finish_animations()
@@ -292,6 +315,7 @@ func close() -> void:
 	if not is_open():
 		return
 	hide_tooltip()
+	draw_window.leave()
 	finish_animations()
 	overlay.hide()
 	set_process(false)
@@ -319,13 +343,6 @@ func equip_from_inventory(id: String) -> void:
 		return
 	game.deep_sky.equip(id)
 
-func _draw_module() -> void:
-	var id: String = game.deep_sky.draw_module()
-	if id.is_empty(): return
-	if not _matches_filter(id, _definition(id)):
-		set_inventory_filter("owned")
-	inventory_scroll.ensure_control_visible.call_deferred(owned_buttons[id])
-
 func remove_module(index: int) -> void:
 	if index < 0 or index >= model().unlocked_slots or model().slots[index].is_empty():
 		return
@@ -341,8 +358,11 @@ func refresh(animate: bool = true) -> void:
 	place_launcher()
 	launcher.text = tr("DEEP_MODULES")
 	launcher.visible = game.upgrade_tree.is_open() and game.deep_sky.modules_unlocked()
+	draw_launcher.text = tr("DRAW_TITLE")
+	draw_launcher.visible = launcher.visible
 	if not is_open():
 		return
+	draw_window.refresh()
 	heading.text = tr("DEEP_MODULES")
 	close_button.text = tr("RING_CLOSE")
 	inventory_heading.text = tr("MODX_INVENTORY")
@@ -377,12 +397,8 @@ func refresh(animate: bool = true) -> void:
 	summary.text = _format_translation("MODX_STATIC_SUMMARY", [manual_speed, _effect_number("radius", 1.0), _effect_number("m31_value", 1.0), _effect_number("m31_cooldown", 1.0)], "Manual ×%.2f · Radius ×%.2f · M31 ×%.2f · Wait ×%.2f" % [manual_speed, _effect_number("radius", 1.0), _effect_number("m31_value", 1.0), _effect_number("m31_cooldown", 1.0)])
 	summary_details.text = _conditional_summary(installed_ids)
 	capacity_label.text = tr("RING_CAPACITY") % [model().unlocked_slots, Modules.MAX_SLOTS - model().unlocked_slots]
-	instructions.text = tr("MODX_DRAW_RULE")
-	draw_balance.text = tr("EXT_SAMPLES_COUNT") % game.deep_sky.samples
-	draw_button.text = tr("MODX_DRAW") % game.deep_sky.state.draw_cost()
-	draw_button.disabled = game.deep_sky.samples < game.deep_sky.state.draw_cost()
-	var drawn: String = game.deep_sky.state.last_draw
-	draw_result.text = "" if drawn.is_empty() else tr("MODX_DRAW_RESULT") % [tr("MODULE_%s_SHORT" % drawn.to_upper()), model().owned_count(drawn)]
+	instructions.text = tr("EXT_SAMPLES_COUNT") % game.deep_sky.samples
+	draw_button.text = tr("DRAW_OPEN")
 	hint.text = tr("MODX_EQUIP_HINT") if not game.hud.autosave_failed else tr("AUTOSAVE_FAILURE") % game.active_save_slot
 	if inventory_scroll != null:
 		inventory_scroll.queue_redraw()
@@ -416,7 +432,7 @@ func hide_tooltip() -> void:
 	tooltip_panel.hide()
 
 func _update_tooltip() -> void:
-	if hover_kind.is_empty() or not is_open():
+	if hover_kind.is_empty() or not is_open() or is_draw_open():
 		tooltip_panel.hide()
 		return
 	var id := hover_id
@@ -671,3 +687,7 @@ func place_launcher() -> void:
 	launcher.position = game.upgrade_tree.ATLAS_ACTION_ORIGIN
 	launcher.size = game.upgrade_tree.ATLAS_ACTION_SIZE
 	launcher.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	if draw_launcher != null:
+		draw_launcher.position = launcher.position + game.upgrade_tree.ATLAS_ACTION_STEP
+		draw_launcher.size = launcher.size
+		draw_launcher.alignment = HORIZONTAL_ALIGNMENT_LEFT

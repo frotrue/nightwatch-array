@@ -23,7 +23,7 @@ func can_be_tracked() -> bool:
 	return research != null and research.available() and research.game.observation_phase_active and cooldown <= 0.0
 
 func get_tracking_radius(base: float) -> float:
-	return base
+	return base * research.state.effect("m31_radius")
 
 func get_progress() -> float:
 	return progress
@@ -41,13 +41,13 @@ func apply_manual_observation(delta: float, distance: float, radius: float, spee
 	# Older snapshots and diagnostic fixtures can begin part-way through an
 	# exposure. Account for that segment once under its restored configuration.
 	if integrated_progress < progress:
-		value_integral += (progress - integrated_progress) * float(research.modules.effect("m31_value"))
-		cooldown_integral += (progress - integrated_progress) * float(research.modules.effect("m31_cooldown"))
+		value_integral += (progress - integrated_progress) * research.m31_value_multiplier()
+		cooldown_integral += (progress - integrated_progress) * research.m31_cooldown_multiplier()
 	var previous := progress
-	progress = minf(1.0, progress + delta * lerpf(0.8, 1.2, quality) * speed * research.game.progression.get_analysis_speed_multiplier("galaxy") / 10.0)
+	progress = minf(1.0, progress + delta * lerpf(0.8, 1.2, quality) * speed * research.state.effect("m31_speed") * research.game.progression.get_analysis_speed_multiplier("galaxy") / 10.0)
 	var credited := progress - previous
-	value_integral += credited * float(research.modules.effect("m31_value"))
-	cooldown_integral += credited * float(research.modules.effect("m31_cooldown"))
+	value_integral += credited * research.m31_value_multiplier()
+	cooldown_integral += credited * research.m31_cooldown_multiplier()
 	integrated_progress = progress
 	if progress >= 1.0:
 		var final_value := value_integral

@@ -54,9 +54,10 @@ func _run() -> void:
 		await _capture(game, locale + "_star_hold")
 		tree._on_node_hold_released("precision")
 		game.deep_sky.state.award_samples(24)
-		game.module_popup.open()
+		game.module_popup.open_draw()
 		await _capture(game, locale + "_popup_draw")
-		game.module_popup.draw_button.pressed.emit()
+		game.module_popup.draw_window.begin_draw()
+		game.module_popup.draw_window.finish_reveal()
 		await _capture(game, locale + "_popup_result")
 		game.module_popup.close()
 	for id in game.deep_sky.Data.RESEARCH_ORDER:

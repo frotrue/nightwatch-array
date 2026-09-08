@@ -7,10 +7,14 @@ func _initialize() -> void:
 	var state = State.new()
 	_check(state.draw_module().is_empty(), "protocol required")
 	state.research_ids.append("ext_protocol")
-	for id in Data.RESEARCH_ORDER:
-		if id == "ext_protocol": continue
-		_check(state.research_ready(id), "all research reachable by predecessor alone: " + id)
-		state.research_ids.append(id)
+	var advanced := true
+	while advanced:
+		advanced = false
+		for id in Data.RESEARCH_ORDER:
+			if state.research_ready(id):
+				state.research_ids.append(id)
+				advanced = true
+	_check(state.research_ids.size() == 47, "all 47 research nodes reachable by predecessor alone")
 	_check(state.draw_cost() == 6 and state.sample_reward() == 3, "late research changes cost and reward")
 	state = State.new()
 	state.research_ids.append("ext_protocol")
@@ -23,9 +27,9 @@ func _initialize() -> void:
 	var counts := {}
 	for index in range(1000):
 		var id: String = state.draw_module()
-		_check(id in Data.SAMPLE_MODULES and id == restored.draw_module(), "six-item deterministic replacement draw")
+		_check(id in Data.SAMPLE_MODULES and id == restored.draw_module(), "deterministic replacement draw")
 		counts[id] = int(counts.get(id, 0)) + 1
-	_check(counts.size() == 6 and state.samples == 7 and state.samples_spent == 8000, "collection continues after every type has been drawn")
+	_check(counts.size() == Data.SAMPLE_MODULES.size() and state.samples == 7 and state.samples_spent == 8000, "collection continues after every type has been drawn")
 	var model = Modules.new()
 	model.grant_copy("long_baseline")
 	model.grant_copy("long_baseline")

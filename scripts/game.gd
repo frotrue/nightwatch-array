@@ -429,6 +429,9 @@ func _current_equipment_signature() -> Array[String]:
 
 
 func _on_deep_sky_changed() -> void:
+	if not _loading_save:
+		sky_contacts.refresh_dishes()
+		spawner.refresh_active_features()
 	if _loading_save or not observation_phase_active:
 		return
 	phase_build_mutated = phase_build_mutated or _current_equipment_signature() != phase_start_equipment

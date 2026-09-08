@@ -38,7 +38,7 @@ All script names below are under `scripts/`.
 | Independent anomaly scheduler, persistent tickets and concrete targets | `anomaly_director.gd`, `anomaly_target.gd` |
 | Outer figure geometry and stable research/star mapping | `constellation_extension_data.gd` |
 | Module definitions, ownership, five slots, capacity and effect cache | `observation_modules.gd` |
-| Research-only equipment popup and shared glyphs | `module_popup.gd`, `module_visual.gd` |
+| Chart-owned loadout/draw modal, reveal animation and shared glyphs | `module_popup.gd`, `module_draw_window.gd`, `module_visual.gd` |
 | Palette, fonts, spec coordinates and integer formatting | `ui_theme.gd` |
 | Onboarding steps and tutorial modal focus | `tutorial_controller.gd` |
 | Slot files; persisted settings | `save_game_controller.gd`; `game_settings.gd` |
@@ -63,7 +63,10 @@ star buttons, hold controller, renderer, ledger and inspector. It dispatches
 outer purchases to DeepSkyResearch while preserving the original progression owner.
 Alpheratz is one shared coordinate/state at the Andromeda/Pegasus corner.
 The original 95-star geometry stays intact when the wider sky is revealed.
-ModulePopup owns draws and equipment; closing preserves chart rotation/zoom.
+ModulePopup owns the shared pause/focus boundary. Its equipment surface and ModuleDrawWindow
+are separate views with separate chart launchers; closing preserves chart rotation/zoom.
+DeepSkyResearch owns all 47 extension research IDs. ProgressionController references its
+ExpansionState for cached permanent effects, so equipment cannot remove research gains.
 
 ## Signal wiring
 
@@ -143,8 +146,10 @@ and price, then emits `upgrade_purchased`. The chart does not maintain its own b
 `runtime_parameters` is production data; `effect_notes` is explanatory;
 `effect_contract` is an independent test oracle and must not drive gameplay.
 
-Deep-sky purchases are chart-only and equipment changes are popup-only.
-Buying does not equip. Closing the popup restores chart canvas, focus and prior
+Deep-sky research purchases are chart-only, equipment changes are loadout-only, and draws
+are draw-window-only. Thirty-seven permanent observation upgrades occupy eight figures;
+ten module/sample support upgrades occupy Pegasus and Lacerta.
+Research does not grant or equip modules. Capacity research opens slots directly. Closing the popup restores chart canvas, focus and prior
 pause; closing the chart dismisses the popup first. Its canvas sits one layer
 above the chart and temporarily hides only the chart canvas, not its logical open state.
 The chart yields first-refusal input while the popup is active.
@@ -160,7 +165,9 @@ The expansion catalogue separates research, quantities and installed copies. A d
 spends eight specimens (six after efficiency research) for one uniformly selected
 module from six, with replacement. Transactions persist currency, quantity and RNG
 together, restoring all three on failure. Same-ID bonuses/penalties add; different
-IDs retain multiplicative composition. The loadout displays owned/installed counts.
+IDs retain multiplicative composition. The loadout displays owned/installed counts. ModuleDrawWindow only presents an already
+committed draw: its 1.8s scan/align animation can be skipped or closed, and reduced motion
+reveals immediately. It never performs an extra transaction while closing/reopening.
 `AnomalyDirector` schedules one conventional rare meteor kind after the first M31.
 It reserves three components including module-created archive afterglows, defers
 around Major warnings and insufficient round time, and awards 2/3 samples per
@@ -183,7 +190,12 @@ progress/clocks rather than rerolling them. A resumed round becomes its own comp
 
 Deep sky saves unique module IDs plus quantities, five slots, research, specimens,
 M31 partial progress/weighted reward/cooldown and live rare targets. Its nested version
-is 3; the outer slot version stays 1. Version 1 keeps its existing equipment and
+is 3; the outer slot version stays 1. Extension catalogue version 3 separates permanent
+research IDs from the five legacy direct-purchase module IDs. Old saves copy those
+completed IDs and preserve their three research-granted modules once; current-catalogue
+module ownership never implies research. The progression effect-state reference is
+rebound on every reset/load, including failed-transaction rollback. Unknown future
+catalogues are rejected before mutation. Version 1 keeps its existing equipment and
 capacity. Version 2 preserves research/currency/modules, refunds paid pending offers
 once, and converts in-flight legacy events to one rare meteor per ticket while
 preserving normalized progress and payment flags. Unknown nested versions are

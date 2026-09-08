@@ -7,7 +7,7 @@ func _run() -> void:
 		return
 	root.gui_disable_input = true
 	var source := Capture.source_snapshot(failures)
-	output = "res://build/module_draw_review/%d" % int(Time.get_unix_time_from_system())
+	output = "res://build/outer_growth_review/%d" % int(Time.get_unix_time_from_system())
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(output))
 	var game: Node = load("res://scenes/main.tscn").instantiate()
 	Fixtures.configure_before_ready(game)
@@ -25,45 +25,66 @@ func _run() -> void:
 	game.deep_sky.target._process(0.0)
 	game.deep_sky.target.apply_manual_observation(10.0, 0.0, 100.0)
 	game.upgrade_tree.open_tree()
-	game.progression.observation_data = 5000000000.0
+	game.progression.observation_data = 100000000000.0
 	game.effects.reset()
 	_freeze(game)
+	var popup: Node = game.module_popup
+	var window: Control = popup.draw_window
 	for locale in ["en", "ko"]:
 		_set_locale(game, locale)
-		game.upgrade_tree.focus_outer_constellations()
-		game.upgrade_tree.select_extension("ext_trace_advanced")
-		await _capture(game, locale + "_research")
-		game.module_popup.open()
+		popup.open()
 		await _capture(game, locale + "_popup_empty")
-		game.module_popup.close()
+		popup.open_draw()
+		window.set_process(false)
+		await _capture(game, locale + "_draw_empty")
+		popup.close()
 	game.deep_sky.state.award_samples(80)
 	game.deep_sky.state.acquisition_seed = 314159
-	game.module_popup.open()
-	game.module_popup.draw_button.pressed.emit()
+	popup.open_draw()
+	window.begin_draw()
+	window.set_process(false)
 	var id: String = game.deep_sky.state.last_draw
+	for locale in ["en", "ko"]:
+		_set_locale(game, locale)
+		window.drawing = true
+		window.elapsed = 0.45
+		window.refresh()
+		await _capture(game, locale + "_draw_scan")
+		window.elapsed = 1.25
+		window.refresh()
+		await _capture(game, locale + "_draw_align")
+		window.finish_reveal()
+		await _capture(game, locale + "_draw_result")
 	game.deep_sky.modules.grant_copy(id)
-	game.module_popup.refresh()
-	game.module_popup.owned_buttons[id].pressed.emit()
-	game.module_popup.owned_buttons[id].pressed.emit()
+	popup.show_loadout()
+	popup.owned_buttons[id].pressed.emit()
+	popup.owned_buttons[id].pressed.emit()
 	for locale in ["en", "ko"]:
 		_set_locale(game, locale)
 		await _capture(game, locale + "_popup_duplicate")
-		game.module_popup.show_module_tooltip(id)
-		await _capture(game, locale + "_popup_duplicate_tooltip")
-		game.module_popup.hide_tooltip()
-	game.module_popup.close()
-	for research_id in game.deep_sky.Data.RESEARCH_ORDER:
-		if not game.deep_sky.research_owned(research_id): game.deep_sky.purchase(research_id)
-	for research_id in game.deep_sky.Modules.RESEARCH_IDS:
-		if not game.deep_sky.research_owned(research_id): game.deep_sky.purchase(research_id)
+	popup.close()
+	# Paint every figure in its actual chart focus pose, with completed research.
+	progressed = true
+	while progressed:
+		progressed = false
+		for research_id in game.deep_sky.Data.RESEARCH_ORDER:
+			if game.deep_sky.can_purchase(research_id):
+				progressed = game.deep_sky.purchase(research_id) or progressed
+	if game.deep_sky.state.research_ids.size() != 47: failures.append("not all outer research purchased")
+	for locale in ["en", "ko"]:
+		_set_locale(game, locale)
+		for figure in game.upgrade_tree.ExtensionChart.ORDER:
+			game.upgrade_tree.focus_constellation(figure)
+			await _capture(game, locale + "_chart_" + figure)
+		game.upgrade_tree.focus_outer_constellations()
+		await _capture(game, locale + "_chart_overview")
 	for module_id in game.deep_sky.Modules.DEFINITIONS: game.deep_sky.modules.grant(module_id)
-	game.module_popup.open()
+	popup.open()
 	for module_id in ["focus", "relay_bus", "reference_bus"]: game.deep_sky.equip(module_id)
-	game.module_popup.inventory_scroll.scroll_vertical = 10000
 	for locale in ["en", "ko"]:
 		_set_locale(game, locale)
 		await _capture(game, locale + "_popup_five_slots")
-	game.module_popup.close()
+	popup.close()
 	game.upgrade_tree.close_tree()
 	game.observation_phase_remaining = 46.0
 	game.hud.set_observation_phase(game.observation_round, 46.0, 60.0)
@@ -89,8 +110,8 @@ func _run() -> void:
 	game.free()
 	paused = false
 	await process_frame
-	if failures.is_empty() and records.size() == 12:
-		print("EXPANSION_PREVIEW_PASS: 12 frames at " + ProjectSettings.globalize_path(output))
+	if failures.is_empty() and records.size() == 38:
+		print("EXPANSION_PREVIEW_PASS: 38 frames at " + ProjectSettings.globalize_path(output))
 		quit(0)
 	else:
 		push_error(str(failures))

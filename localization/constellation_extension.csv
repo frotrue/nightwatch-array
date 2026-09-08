@@ -25,7 +25,52 @@ ATLAS_EXPAND,Outer constellations,바깥 별자리
 ATLAS_RETURN,Return to the star chart,성도로 돌아가기
 ATLAS_PLANS,Observation plans,관측 계획
 ATLAS_ANALYSIS,Specimen analysis,표본 분석
-ATLAS_NEW_SKY,Four new constellations · hold a star to research,새 별자리 4개 · 별을 길게 눌러 연구
-ATLAS_FIELD_RECORDS,%s · %d / 18 outer stars,%s · 바깥 연구별 %d / 18
+ATLAS_NEW_SKY,10 outer constellations · 8 observation / 2 module branches,바깥 별자리 10개 · 관측 성장 8 / 모듈 지원 2
+ATLAS_FIELD_RECORDS,%s · %d / 47 outer stars,%s · 바깥 연구별 %d / 47
 ATLAS_FIRST_M31,Observe M31 in the same sky to begin this research.,같은 하늘의 M31을 처음 관측하면 이 연구가 열립니다.
 ATLAS_OPEN_PLAN,Open this observation plan,관련 관측 계획 열기
+ATLAS_DELTA_AQL,Delta Aquilae,독수리자리 델타
+ATLAS_THETA_AQL,Theta Aquilae,독수리자리 세타
+ATLAS_ALPHA_LAC,Lacerta Alpha,도마뱀자리 알파
+ATLAS_BETA_LAC,Lacerta Beta,도마뱀자리 베타
+ATLAS_FOUR_LAC,Lacerta 4,도마뱀자리 4
+ATLAS_FIVE_LAC,Lacerta 5,도마뱀자리 5
+ATLAS_ONE_LAC,Lacerta 1,도마뱀자리 1
+ATLAS_ALPHA_VUL,Vulpecula Alpha,여우자리 알파
+ATLAS_EIGHT_VUL,Vulpecula 8,여우자리 8
+ATLAS_THIRTEEN_VUL,Vulpecula 13,여우자리 13
+ATLAS_SIXTEEN_VUL,Vulpecula 16,여우자리 16
+ATLAS_TWENTYTHREE_VUL,Vulpecula 23,여우자리 23
+ATLAS_ALPHA_DEL,Delphinus Alpha,돌고래자리 알파
+ATLAS_BETA_DEL,Delphinus Beta,돌고래자리 베타
+ATLAS_GAMMA_DEL,Delphinus Gamma,돌고래자리 감마
+ATLAS_DELTA_DEL,Delphinus Delta,돌고래자리 델타
+ATLAS_EPSILON_DEL,Delphinus Epsilon,돌고래자리 엡실론
+ATLAS_ALPHA_SGE,Sagitta Alpha,화살자리 알파
+ATLAS_BETA_SGE,Sagitta Beta,화살자리 베타
+ATLAS_DELTA_SGE,Sagitta Delta,화살자리 델타
+ATLAS_GAMMA_SGE,Sagitta Gamma,화살자리 감마
+ATLAS_ETA_SGE,Sagitta Eta,화살자리 에타
+ATLAS_ALPHA_EQU,Equuleus Alpha,조랑말자리 알파
+ATLAS_BETA_EQU,Equuleus Beta,조랑말자리 베타
+ATLAS_GAMMA_EQU,Equuleus Gamma,조랑말자리 감마
+ATLAS_DELTA_EQU,Equuleus Delta,조랑말자리 델타
+ATLAS_ALPHA_TRI,Triangulum Alpha,삼각형자리 알파
+ATLAS_BETA_TRI,Triangulum Beta,삼각형자리 베타
+ATLAS_GAMMA_TRI,Triangulum Gamma,삼각형자리 감마
+ATLAS_ROLE_PEGASUS,Module capacity,모듈 편성
+ATLAS_LACERTA,Lacerta,도마뱀자리
+ATLAS_ROLE_LACERTA,Rare meteor samples,특수 유성 표본
+ATLAS_ROLE_CYGNUS,Manual tracking,수동 추적
+ATLAS_ROLE_CEPHEUS,M31 observation,M31 관측
+ATLAS_ROLE_AQUILA,Sky sweep,하늘 훑기
+ATLAS_VULPECULA,Vulpecula,여우자리
+ATLAS_ROLE_VULPECULA,Observation rhythm,연속 관측
+ATLAS_DELPHINUS,Delphinus,돌고래자리
+ATLAS_ROLE_DELPHINUS,Observation echoes,관측 반향
+ATLAS_SAGITTA,Sagitta,화살자리
+ATLAS_ROLE_SAGITTA,Meteor arrivals,유성 발견
+ATLAS_EQUULEUS,Equuleus,조랑말자리
+ATLAS_ROLE_EQUULEUS,Dish automation,접시 자동화
+ATLAS_TRIANGULUM,Triangulum,삼각형자리
+ATLAS_ROLE_TRIANGULUM,Data analysis,데이터 분석

@@ -21,6 +21,7 @@ var record_complete: bool:
 
 func setup(controller: Node) -> void:
 	game = controller
+	game.progression.extension_state = state
 	target = Target.new()
 	target.research = self
 	add_child(target)
@@ -57,25 +58,15 @@ func modules_unlocked() -> bool:
 	return available() and (observations > 0 or not modules.purchased.is_empty())
 
 func research_owned(id: String) -> bool:
-	return id in state.research_ids if Data.RESEARCH.has(id) else modules.research_owned(id)
+	return id in state.research_ids
 
 func research_ready(id: String) -> bool:
 	if not modules_unlocked():
 		return false
-	if Data.RESEARCH.has(id):
-		return state.research_ready(id)
-	if id not in Modules.RESEARCH_IDS or not modules.research_ready(id):
-		return false
-	if id == "slot_3":
-		return research_owned("ext_trace_study")
-	if id == "slot_4":
-		return research_owned("ext_sweep_study") and research_owned("ext_link_study")
-	if id == "slot_5":
-		return research_owned("ext_combined_watch")
-	return true
+	return state.research_ready(id)
 
 func research_cost(id: String) -> float:
-	return float(Data.RESEARCH[id].cost) if Data.RESEARCH.has(id) else modules.research_cost(id)
+	return float(Data.RESEARCH.get(id, {}).get("cost", 0.0))
 
 func can_purchase(id: String) -> bool:
 	return research_ready(id) and game.progression.observation_data >= research_cost(id)
@@ -88,16 +79,9 @@ func purchase(id: String) -> bool:
 		return false
 	var before := get_save_data()
 	var balance: float = game.progression.observation_data
-	if Data.RESEARCH.has(id):
-		game.progression.observation_data -= research_cost(id)
-		state.research_ids.append(id)
-		var definition: Dictionary = Data.RESEARCH[id]
-		if definition.has("grant"):
-			modules.grant(definition.grant)
-
-	else:
-		if not modules.purchase(id, game.progression):
-			return false
+	game.progression.observation_data -= research_cost(id)
+	state.research_ids.append(id)
+	modules.unlocked_slots = maxi(modules.unlocked_slots, int(state.effect("slot_capacity", 2.0)))
 	_sync_protocol()
 	if not _commit_transaction(before, balance):
 		return false
@@ -107,7 +91,7 @@ func purchase(id: String) -> bool:
 	return true
 
 func equip(id: String, slot: int = -1) -> bool:
-	if not modules_unlocked() or not game.module_popup.is_open():
+	if not modules_unlocked() or not game.module_popup.is_open() or game.module_popup.is_draw_open():
 		return false
 	var before := get_save_data()
 	if not modules.equip(id, slot):
@@ -132,7 +116,7 @@ func _commit_transaction(before: Dictionary, balance: float) -> bool:
 	return true
 
 func draw_module() -> String:
-	if not modules_unlocked() or not game.module_popup.is_open() or game.hud.is_settings_open():
+	if not modules_unlocked() or not game.module_popup.is_draw_open() or game.hud.is_settings_open():
 		return ""
 	var before := get_save_data()
 	var id: String = state.draw_module()
@@ -149,9 +133,6 @@ func draw_module() -> String:
 
 func paid_research_count() -> int:
 	var count := 0
-	for id in Modules.RESEARCH_IDS:
-		if modules.research_owned(id):
-			count += 1
 	for id in state.research_ids:
 		if Data.RESEARCH[id].cost > 0.0:
 			count += 1
@@ -173,13 +154,7 @@ func research_description(id: String) -> String:
 	return tr("MODULE_%s_DESC" % id.to_upper())
 
 func prerequisite_text(id: String) -> String:
-	var required: Array = []
-	if id == "slot_3": required = ["ext_trace_study"]
-	elif id == "slot_4": required = ["slot_3", "ext_sweep_study", "ext_link_study"]
-	elif id == "slot_5": required = ["slot_4", "ext_combined_watch"]
-	elif id == "revisit": required = ["slot_3"]
-	elif Data.RESEARCH.has(id): required = Data.RESEARCH[id].requires
-	else: required = Modules.DEFINITIONS.get(id, {}).get("requires", [])
+	var required: Array = Data.RESEARCH.get(id, {}).get("requires", [])
 	var names: Array[String] = []
 	for prerequisite in required:
 		names.append(research_name(prerequisite))
@@ -190,9 +165,15 @@ func current_objective() -> String:
 		return tr("DEEP_FIRST_HINT") if available() else ""
 	return tr("MODX_DRAW_HINT")
 
+func m31_value_multiplier() -> float:
+	return float(modules.effect("m31_value")) * state.effect("m31_data")
+
+func m31_cooldown_multiplier() -> float:
+	return float(modules.effect("m31_cooldown")) * state.effect("m31_wait")
+
 func record_observation(value_multiplier: float = -1.0) -> void:
 	if value_multiplier < 0.0:
-		value_multiplier = float(modules.effect("m31_value"))
+		value_multiplier = m31_value_multiplier()
 	observations += 1
 	game.observer.release_target(target)
 	var reward: float = 8000.0 * game.progression.get_observation_value_multiplier("common", 1) * value_multiplier
@@ -239,6 +220,7 @@ func reset() -> void:
 	observations = 0
 	modules.load_save_data({})
 	state = State.new()
+	game.progression.extension_state = state
 	if director != null:
 		director.reset()
 	target.progress = 0.0
@@ -256,7 +238,14 @@ func get_save_data() -> Dictionary:
 
 static func supports_save(data: Dictionary) -> bool:
 	var version = data.get("version", 1)
-	return (version is int or version is float) and version in [1, 2, 3]
+	if not (version is int or version is float) or version not in [1, 2, 3]:
+		return false
+	var extension = data.get("extension", {})
+	if extension is Dictionary and extension.has("catalogue_version"):
+		var catalogue = extension.catalogue_version
+		if not (catalogue is int or catalogue is float) or not is_finite(float(catalogue)) or floorf(float(catalogue)) != float(catalogue) or catalogue < 0 or catalogue > Data.CATALOGUE_VERSION:
+			return false
+	return true
 
 func load_save_data(data: Dictionary, legacy: Dictionary = {}) -> bool:
 	if not supports_save(data):
@@ -271,12 +260,24 @@ func load_save_data(data: Dictionary, legacy: Dictionary = {}) -> bool:
 	if data.get("version", 1) >= 2:
 		var extension = data.get("extension", {})
 		state.load_save_data(extension if extension is Dictionary else {}, data.get("version", 1) == 2)
-	for id in state.research_ids:
-		if Data.RESEARCH[id].has("grant"):
-			modules.grant(Data.RESEARCH[id].grant)
-	var value: float = modules.effect("m31_value")
-	var delay: float = modules.effect("m31_cooldown")
-	target.value_integral = Data.number(data.get("value_integral", target.progress * value), target.progress * 1.5)
+	# Before catalogue 3, these research purchases were represented by module
+	# ownership. Convert once; a newly drawn copy must never buy research.
+	var saved_extension = data.get("extension", {})
+	var old_catalogue := not saved_extension is Dictionary or Data.integer(saved_extension.get("catalogue_version", 0), 1000) < 3
+	if old_catalogue:
+		for id in Data.LEGACY_PURCHASE_IDS:
+			if id in modules.purchased and id not in state.research_ids:
+				state.research_ids.append(id)
+		for id in Data.LEGACY_GRANTS:
+			if id in state.research_ids: modules.grant(Data.LEGACY_GRANTS[id])
+	for capacity in range(3, modules.unlocked_slots + 1):
+		var id := "slot_%d" % capacity
+		if id not in state.research_ids: state.research_ids.append(id)
+	modules.unlocked_slots = maxi(modules.unlocked_slots, int(state.effect("slot_capacity", 2.0)))
+	var value: float = modules.effect("m31_value") if old_catalogue else m31_value_multiplier()
+	var delay: float = modules.effect("m31_cooldown") if old_catalogue else m31_cooldown_multiplier()
+	# Five record copies (×3.5), with both permanent M31 value upgrades.
+	target.value_integral = Data.number(data.get("value_integral", target.progress * value), target.progress * 3.5 * 1.25 * 1.15)
 	target.cooldown_integral = Data.number(data.get("cooldown_integral", target.progress * delay), target.progress * 2.25)
 	_sync_protocol()
 	var anomalies = data.get("anomalies", {})

@@ -67,9 +67,9 @@ Each file below is under `tests/`. Run one while iterating with:
 | `expansion_state_test.gd` | `EXPANSION_STATE_PASS` | Predecessor research, replacement draw determinism, additive copies and malformed saves |
 | `module_expansion_test.gd` | `MODULE_EXPANSION_PASS` | Conditional new effects, legacy multipliers, trail contact, sweep and contribution eligibility |
 | `module_inventory_test.gd` | `MODULE_INVENTORY_PASS` | Fourteen entries, categories, ownership, acquisition routes and scroll/focus controls |
-| `deep_sky_chart_expansion_test.gd` | `DEEP_SKY_CHART_EXPANSION_PASS` | Integrated popup draws, duplicate equipment, localized controls and chart return |
-| `constellation_extension_test.gd` | `CONSTELLATION_EXTENSION_PASS` | Original geometry preserved, shared Alpheratz, eighteen mapped stars, real hold purchases, module/target unlocks, save compatibility and bilingual navigation |
-| `expansion_integration_test.gd` | `EXPANSION_INTEGRATION_PASS` | Real rare targets and all research without specimen modules, duplicate rewards, transactional failure, active save/load, integrated M31 equipment and round context |
+| `deep_sky_chart_expansion_test.gd` | `DEEP_SKY_CHART_EXPANSION_PASS` | Dedicated draw view, animation/skip/double-click/reduced-motion, save failure and modal return |
+| `constellation_extension_test.gd` | `CONSTELLATION_EXTENSION_PASS` | Original geometry preserved, shared Alpheratz, forty-seven mapped stars across ten figures, real hold purchases, permanent growth/target unlocks, save compatibility and bilingual navigation |
+| `expansion_integration_test.gd` | `EXPANSION_INTEGRATION_PASS` | Real rare targets and all research without specimen modules, duplicate rewards, transactional failure, active save/load, all eight permanent growth roles, integrated M31 equipment and round context |
 | `observation_span_probe.gd` | `OBSERVATION_SPAN_PASS` | Fixed-seed atmospheric equality, screen/world bounds, input/effect scaling, forecast suppression |
 | `galactic_slice_test.gd` | `GALACTIC_SLICE_PASS` | Legacy 12+17 topology, target/phenomenon behavior, lens automation, span and save contracts |
 | `probe_layer2_test.gd` | `PROBE_TEST_PASS` | Independent Layer 2 signals, uncertainty, commitment, abandonment and completion |

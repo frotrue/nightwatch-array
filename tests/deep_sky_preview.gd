@@ -57,16 +57,20 @@ func _run() -> void:
 	game.deep_sky.target.apply_manual_observation(10.0, 0.0, 52.0)
 	game.effects.reset()
 	game.hud.banner_root.hide()
-	game.progression.observation_data = 240000000.0
+	game.progression.observation_data = 360000000.0
 	game.upgrade_tree.open_tree()
 	await process_frame
 	await process_frame
+	game.deep_sky.purchase("ext_trace_study")
+	game.deep_sky.purchase("ext_sweep_study")
 	game.upgrade_tree.select_extension("focus")
 	for locale in ["en", "ko"]:
 		_set_locale(game, locale)
 		await _capture(game, locale + "_chart_purchase")
 	game.deep_sky.purchase("focus")
 	game.deep_sky.purchase("wide")
+	game.deep_sky.modules.grant("focus")
+	game.deep_sky.modules.grant("wide")
 	game.module_popup.open()
 	game.deep_sky.equip("wide", 0)
 	game.module_popup.show_module_tooltip("focus")
@@ -90,24 +94,24 @@ func _run() -> void:
 	game.module_popup.close()
 	game.progression.observation_data = 5000000000.0
 	game.deep_sky.purchase("precision")
+	game.deep_sky.modules.grant("precision")
 	game.module_popup.open()
 	game.module_popup.owned_buttons.focus.pressed.emit()
 	game.module_popup.show_module_tooltip("precision")
 	await _capture(game, "ko_popup_full_two")
 	game.module_popup.close()
-	for id in ["record"]:
+	for id in ["ext_link_study", "record"]:
 		if not game.deep_sky.purchase(id):
 			failures.append("expansion purchase failed: " + id)
-	game.deep_sky.state.research_ids.append("ext_trace_study")
 	for id in ["slot_3", "revisit"]:
 		if not game.deep_sky.purchase(id):
-			failures.append("first basic-plan expansion purchase failed: " + id)
-	game.deep_sky.state.research_ids.append_array(["ext_sweep_study", "ext_link_study"])
+			failures.append("expansion purchase failed: " + id)
 	if not game.deep_sky.purchase("slot_4"):
-		failures.append("second basic-plan expansion purchase failed: slot_4")
-	game.deep_sky.state.research_ids.append("ext_combined_watch")
+		failures.append("expansion purchase failed: slot_4")
 	if not game.deep_sky.purchase("slot_5"):
-		failures.append("advanced-plan expansion purchase failed: slot_5")
+		failures.append("expansion purchase failed: slot_5")
+	game.deep_sky.modules.grant("record")
+	game.deep_sky.modules.grant("revisit")
 	game.module_popup.open()
 	for id in ["precision", "record", "revisit"]:
 		game.module_popup.owned_buttons[id].pressed.emit()

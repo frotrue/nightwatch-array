@@ -16,6 +16,8 @@ const PERSEID_SURVEY_TARGET_THRESHOLD := 3
 # intrinsic ceiling cannot be a truthful manual-observation multiplier.
 const MAX_INTRINSIC_OBSERVATION_MULTIPLIER := 1.35 * 3.0 * 1.55
 
+# Owned by DeepSkyResearch; never duplicated in the progression save.
+var extension_state: RefCounted
 var observation_data: float = 0.0
 var success_count: int = 0
 var purchased_nodes: Dictionary = {}
@@ -281,7 +283,7 @@ func debug_purchase_all() -> void:
 				made_progress = true
 
 
-func get_tracking_radius() -> float:
+func _base_get_tracking_radius() -> float:
 	var base_radius := 52.0 if has_upgrade("better_lens") else 36.0
 	return base_radius + get_taurus_tracking_radius_bonus()
 
@@ -290,7 +292,7 @@ func survey_enabled() -> bool:
 	return has_upgrade("polar_survey")
 
 
-func get_survey_required_distance() -> float:
+func _base_get_survey_required_distance() -> float:
 	if has_upgrade("draco_sweep"):
 		return 190.0
 	return 380.0 if has_upgrade("sweep_gain") else 460.0
@@ -310,13 +312,13 @@ func survey_charge_persists() -> bool:
 	return has_upgrade("sustained_sweep")
 
 
-func get_survey_cooldown_seconds() -> float:
+func _base_get_survey_cooldown_seconds() -> float:
 	if has_upgrade("draco_sweep"):
 		return 0.45
 	return 0.9 if has_upgrade("rapid_scan") else 1.5
 
 
-func get_survey_spawn_count() -> int:
+func _base_get_survey_spawn_count() -> int:
 	if has_upgrade("draco_sweep"):
 		return 4
 	return 2 if has_upgrade("polar_cascade") else 1
@@ -342,7 +344,7 @@ func reset_manual_combo() -> void:
 	manual_combo_remaining = 0.0
 
 
-func get_manual_combo_window() -> float:
+func _base_get_manual_combo_window() -> float:
 	if has_upgrade("taurus_full_gallop"):
 		return 5.0
 	if has_upgrade("sustained_charge"):
@@ -354,7 +356,7 @@ func get_manual_combo_window() -> float:
 	return BASE_MANUAL_COMBO_WINDOW
 
 
-func get_taurus_combo_cap() -> int:
+func _base_get_taurus_combo_cap() -> int:
 	if not has_upgrade("momentum_acquisition"):
 		return 0
 	if has_upgrade("taurus_full_gallop"):
@@ -385,11 +387,12 @@ func get_manual_combo_progress() -> float:
 func get_manual_analysis_speed_multiplier() -> float:
 	var stacks := get_taurus_combo_stack_count()
 	if stacks <= 0:
-		return 1.0
+		return extension_effect("manual_speed")
 	var speed_per_stack := 0.04 if has_upgrade("accelerated_analysis") else 0.02
 	if has_upgrade("rapid_focus"):
 		speed_per_stack += 0.01
-	return 1.0 + float(stacks) * speed_per_stack
+	speed_per_stack += extension_effect("combo_speed", 0.0)
+	return (1.0 + float(stacks) * speed_per_stack) * extension_effect("manual_speed")
 
 
 func get_taurus_tracking_radius_bonus() -> float:
@@ -399,17 +402,18 @@ func get_taurus_tracking_radius_bonus() -> float:
 	var radius_per_stack := 2.0 if has_upgrade("expanded_sweep") else 1.0
 	if has_upgrade("wide_pursuit"):
 		radius_per_stack += 0.5
+	radius_per_stack += extension_effect("combo_radius", 0.0)
 	return float(stacks) * radius_per_stack
 
 
-func get_lifetime_multiplier() -> float:
+func _base_get_lifetime_multiplier() -> float:
 	var multiplier := 1.35 if has_upgrade("long_exposure") else 1.0
 	if has_upgrade("adaptive_exposure_grid"):
 		multiplier *= 1.12
 	return multiplier
 
 
-func get_spawn_interval_scale() -> float:
+func _base_get_spawn_interval_scale() -> float:
 	var scale := lerpf(1.0, 0.34, get_progression_ratio())
 	if has_upgrade("radiant_plotting"):
 		scale *= 0.94
@@ -418,7 +422,7 @@ func get_spawn_interval_scale() -> float:
 	return scale
 
 
-func get_regular_spawn_interval_floor() -> float:
+func _base_get_regular_spawn_interval_floor() -> float:
 	if has_upgrade("draco_cadence"):
 		return 0.45
 	if has_upgrade("canis_cadence_iii"):
@@ -430,7 +434,7 @@ func get_regular_spawn_interval_floor() -> float:
 	return 1.15
 
 
-func get_observation_echo_probability() -> float:
+func _base_get_observation_echo_probability() -> float:
 	if has_upgrade("draco_echo"):
 		return 0.65
 	if has_upgrade("echo_correlation_20"):
@@ -440,7 +444,7 @@ func get_observation_echo_probability() -> float:
 	return 0.0
 
 
-func get_observation_echo_count() -> int:
+func _base_get_observation_echo_count() -> int:
 	if has_upgrade("draco_echo"):
 		return 6
 	if has_upgrade("triple_echo_array"):
@@ -530,7 +534,7 @@ func get_max_active() -> int:
 # Control later pre-positions idle dishes without adding another input gesture.
 # The network nodes keep their automatic lanes, one fewer each, while the final
 # Observatory Network deliberately adds late-game dish capacity.
-func get_dish_count() -> int:
+func _base_get_dish_count() -> int:
 	if has_upgrade("draco_array"):
 		return 4
 	if has_upgrade("observatory_network"):
@@ -550,14 +554,14 @@ func dish_active() -> bool:
 	return get_dish_count() > 0
 
 
-func get_forecast_lead() -> float:
+func _base_get_forecast_lead() -> float:
 	var lead := 4.0 if dish_active() else (3.0 if has_upgrade("ephemeris_marks") else 2.0)
 	if has_upgrade("crowd_forecast"):
 		lead += 0.8
 	return lead
 
 
-func get_forecast_max_error(type_id: String = "") -> float:
+func _base_get_forecast_max_error(type_id: String = "") -> float:
 	if has_upgrade("change_detection") and is_andromeda_target(type_id):
 		return 22.0
 	if has_upgrade("double_star_resolution") and type_id == "binary_star":
@@ -567,7 +571,7 @@ func get_forecast_max_error(type_id: String = "") -> float:
 	return 58.0 if has_upgrade("contact_ledger") else 70.0
 
 
-func get_forecast_min_error(type_id: String = "") -> float:
+func _base_get_forecast_min_error(type_id: String = "") -> float:
 	if has_upgrade("change_detection") and is_andromeda_target(type_id):
 		return 8.0
 	if has_upgrade("double_star_resolution") and type_id == "binary_star":
@@ -593,7 +597,7 @@ func is_andromeda_target(type_id: String) -> bool:
 	return type_id in ["satellite", "variable_star", "comet", "galaxy"]
 
 
-func get_analysis_speed_multiplier(type_id: String) -> float:
+func _base_get_analysis_speed_multiplier(type_id: String) -> float:
 	if has_upgrade("andromeda_deep_survey") and is_andromeda_target(type_id):
 		return 1.25
 	return 1.0
@@ -614,7 +618,9 @@ func get_observation_value_multiplier(type_id: String, active_target_count: int)
 		multiplier *= 1.3
 	if is_perseid_survey_active(active_target_count):
 		multiplier *= 1.18
-	return multiplier
+	if type_id in ["fragment", "fragment_piece"]:
+		multiplier *= extension_effect("fragment_data")
+	return multiplier * extension_effect("data")
 
 
 func is_perseid_survey_active(active_target_count: int) -> bool:
@@ -714,3 +720,56 @@ func get_automation_strength(type_id: String) -> float:
 	if type_id == "fragment_piece" and has_upgrade("fragment_analysis") and has_upgrade("multi_target_analysis"):
 		strength = maxf(strength, 0.18)
 	return strength
+
+
+# Permanent outer-chart research composes after the original sky formulas.
+func extension_effect(key: String, fallback: float = 1.0) -> float:
+	return extension_state.effect(key, fallback) if extension_state != null else fallback
+
+func get_tracking_radius() -> float:
+	return _base_get_tracking_radius() * extension_effect("tracking_radius")
+
+func get_survey_required_distance() -> float:
+	return _base_get_survey_required_distance() * extension_effect("survey_distance")
+
+func get_survey_cooldown_seconds() -> float:
+	return _base_get_survey_cooldown_seconds() * extension_effect("survey_cooldown")
+
+func get_survey_spawn_count() -> int:
+	return _base_get_survey_spawn_count() + int(extension_effect("survey_count", 0.0))
+
+func get_manual_combo_window() -> float:
+	return _base_get_manual_combo_window() + extension_effect("combo_window", 0.0)
+
+func get_taurus_combo_cap() -> int:
+	return mini(MAX_MANUAL_COMBO_COUNT, _base_get_taurus_combo_cap() + int(extension_effect("combo_cap", 0.0))) if _base_get_taurus_combo_cap() > 0 else 0
+
+func get_lifetime_multiplier() -> float:
+	return _base_get_lifetime_multiplier() * extension_effect("meteor_lifetime")
+
+func get_spawn_interval_scale() -> float:
+	return _base_get_spawn_interval_scale() * extension_effect("spawn_interval")
+
+func get_regular_spawn_interval_floor() -> float:
+	return _base_get_regular_spawn_interval_floor() * extension_effect("spawn_interval")
+
+func get_observation_echo_probability() -> float:
+	return clampf(_base_get_observation_echo_probability() + extension_effect("echo_probability", 0.0), 0.0, 1.0)
+
+func get_observation_echo_count() -> int:
+	return _base_get_observation_echo_count() + int(extension_effect("echo_count", 0.0))
+
+func get_dish_count() -> int:
+	return _base_get_dish_count() + int(extension_effect("dish_count", 0.0))
+
+func get_forecast_lead() -> float:
+	return _base_get_forecast_lead() + extension_effect("forecast_lead", 0.0)
+
+func get_forecast_max_error(type_id: String = "") -> float:
+	return _base_get_forecast_max_error(type_id) * extension_effect("forecast_error")
+
+func get_forecast_min_error(type_id: String = "") -> float:
+	return _base_get_forecast_min_error(type_id) * extension_effect("forecast_error")
+
+func get_analysis_speed_multiplier(type_id: String) -> float:
+	return _base_get_analysis_speed_multiplier(type_id) * extension_effect("analysis_speed")

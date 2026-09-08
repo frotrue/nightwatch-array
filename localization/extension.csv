@@ -1,24 +1,24 @@
 keys,en,ko
-EXT_RESEARCH_PROTOCOL_NAME,Rare meteor observation,특수 유성 관측
-EXT_RESEARCH_PROTOCOL_DESC,Unlock rare meteors and module research.,특수 유성과 모듈 연구를 엽니다.
-EXT_RESEARCH_TRACE_STUDY_NAME,Trail study,궤적 연구
-EXT_RESEARCH_TRACE_STUDY_DESC,Acquire the Trail integrator module. Equip it in the module popup.,궤적 적분 모듈을 얻습니다. 편성창에서 장착할 수 있습니다.
-EXT_RESEARCH_SWEEP_STUDY_NAME,Sweep study,훑기 연구
-EXT_RESEARCH_SWEEP_STUDY_DESC,Acquire the Sweep optics module. Equip it in the module popup.,훑기 광학 모듈을 얻습니다. 편성창에서 장착할 수 있습니다.
-EXT_RESEARCH_LINK_STUDY_NAME,Relay study,연계 연구
-EXT_RESEARCH_LINK_STUDY_DESC,Acquire the Relay bus module. Equip it in the module popup.,연계 버스 모듈을 얻습니다. 편성창에서 장착할 수 있습니다.
-EXT_RESEARCH_TRACE_ADVANCED_NAME,Precise tracking,추적 정밀화
-EXT_RESEARCH_TRACE_ADVANCED_DESC,Rare meteor observation time −25%.,특수 유성의 관측 소요 시간 −25%.
-EXT_RESEARCH_SWEEP_ADVANCED_NAME,Wide survey,광역 탐색
-EXT_RESEARCH_SWEEP_ADVANCED_DESC,Rare meteor arrival interval −20%.,특수 유성의 출현 간격 −20%.
-EXT_RESEARCH_LINK_ADVANCED_NAME,Precise dishes,접시 정밀화
-EXT_RESEARCH_LINK_ADVANCED_DESC,Dish observation speed on rare meteors +25%.,특수 유성에 대한 접시 관측 속도 +25%.
-EXT_RESEARCH_SYNTHESIS_NAME,Specimen recovery,표본 회수
-EXT_RESEARCH_SYNTHESIS_DESC,Samples per rare meteor: 2 → 3.,특수 유성당 표본 2개 → 3개.
-EXT_RESEARCH_COMBINED_WATCH_NAME,Extended watch,지속 관측
-EXT_RESEARCH_COMBINED_WATCH_DESC,Rare meteor visibility +4 seconds.,특수 유성의 관측 가능 시간 +4초.
-EXT_RESEARCH_RECORD_COMPLETE_NAME,Efficient fabrication,제작 효율화
-EXT_RESEARCH_RECORD_COMPLETE_DESC,Module draw cost: 8 → 6 samples.,모듈 뽑기 비용: 표본 8개 → 6개.
+EXT_RESEARCH_PROTOCOL_NAME,Module interface,모듈 접속
+EXT_RESEARCH_PROTOCOL_DESC,Unlock rare meteors and module draws after the first M31 observation.,M31 첫 관측 후 특수 유성과 모듈 뽑기를 엽니다.
+EXT_RESEARCH_TRACE_STUDY_NAME,Continuous tracking,연속 추적
+EXT_RESEARCH_TRACE_STUDY_DESC,Manual observation speed ×1.15. Always active without a module.,수동 관측 속도 ×1.15. 모듈 장착 없이 적용.
+EXT_RESEARCH_SWEEP_STUDY_NAME,Survey sensitivity,훑기 감도
+EXT_RESEARCH_SWEEP_STUDY_DESC,Required empty-sky sweep distance ×0.90.,빈 하늘 훑기 필요 이동 거리 ×0.90.
+EXT_RESEARCH_LINK_STUDY_NAME,Deep exposure,심층 노출
+EXT_RESEARCH_LINK_STUDY_DESC,M31 observation speed ×1.15.,M31 관측 속도 ×1.15.
+EXT_RESEARCH_TRACE_ADVANCED_NAME,Rare meteor tracking,특수 유성 추적
+EXT_RESEARCH_TRACE_ADVANCED_DESC,Rare meteor observation time ×0.75.,특수 유성 관측 시간 ×0.75.
+EXT_RESEARCH_SWEEP_ADVANCED_NAME,Rare meteor discovery,특수 유성 탐색
+EXT_RESEARCH_SWEEP_ADVANCED_DESC,Rare meteor spawn interval ×0.80.,특수 유성 출현 간격 ×0.80.
+EXT_RESEARCH_LINK_ADVANCED_NAME,Rare meteor dish control,특수 유성 접시 제어
+EXT_RESEARCH_LINK_ADVANCED_DESC,Dish observation speed for rare meteors ×1.25.,특수 유성 접시 관측 속도 ×1.25.
+EXT_RESEARCH_SYNTHESIS_NAME,Sample recovery,표본 회수
+EXT_RESEARCH_SYNTHESIS_DESC,Samples per rare meteor 2 → 3.,특수 유성 완료 표본 2 → 3.
+EXT_RESEARCH_COMBINED_WATCH_NAME,Sustained rare watch,특수 유성 지속 관측
+EXT_RESEARCH_COMBINED_WATCH_DESC,Rare meteor observation window +4s.,특수 유성 관측 가능 시간 +4초.
+EXT_RESEARCH_RECORD_COMPLETE_NAME,Fabrication efficiency,제작 효율화
+EXT_RESEARCH_RECORD_COMPLETE_DESC,Module draw cost 8 → 6 samples.,모듈 뽑기 표본 비용 8 → 6.
 EXT_PLAN_TRACE_1_NAME,Spectrum pass I,분광 관측 I
 EXT_PLAN_TRACE_1_DESC,Follow the spectrum trail and return to M31.,분광 궤적을 따라간 뒤 M31로 돌아갑니다.
 EXT_PLAN_SWEEP_1_NAME,Afterglow pass I,잔광 탐색 I
@@ -93,11 +93,85 @@ PHASE_SUMMARY_MORE_ACQUIRED,+%d more,+%d개 더
 EXT_TARGET_RARE,Rare meteor,특수 유성
 MODX_DRAW,Draw · %d samples,모듈 뽑기 · 표본 %d
 MODX_QUANTITY,Have %d · Use %d,보유 %d · 장착 %d
-MODX_DRAW_RULE,Six modules · Equal odds · Duplicates allowed,모듈 6종 · 같은 확률 · 중복 가능
+MODX_DRAW_RULE,Equal chances · Duplicates allowed,같은 확률 · 중복 획득 가능
 MODX_DRAW_RESULT,Acquired %s · Owned %d,%s 획득 · 보유 %d
-MODX_DRAW_ROUTE,Draw with samples from rare meteors. All six have equal odds.,특수 유성 표본으로 뽑기 · 6종이 같은 확률로 나옵니다.
-MODX_DRAW_HINT,Observe rare meteors → Draw modules in the loadout,특수 유성 관측 → 편성창에서 모듈 뽑기
+MODX_DRAW_ROUTE,Draw with rare-meteor samples. Every module in the pool has equal odds.,특수 유성 표본으로 모듈 뽑기 · 뽑기에 포함된 모듈은 모두 같은 확률입니다.
+MODX_DRAW_HINT,Rare meteors → samples → module draw,특수 유성 관측 → 표본 → 모듈 뽑기
 METEOR_ANOMALY_RARE,RARE METEOR,특수 유성
 MODX_EQUIP_HINT,"Click a module to equip; click a slot to remove.
 Same module bonuses and penalties add.","목록을 눌러 장착 · 장착한 모듈을 눌러 해제
 같은 모듈의 증감분은 합산합니다."
+EXT_RESEARCH_SLOT_3_NAME,Third module slot,셋째 모듈 자리
+EXT_RESEARCH_SLOT_3_DESC,Module capacity 2 → 3.,모듈 장착 자리 2 → 3.
+EXT_RESEARCH_SLOT_4_NAME,Fourth module slot,넷째 모듈 자리
+EXT_RESEARCH_SLOT_4_DESC,Module capacity 3 → 4.,모듈 장착 자리 3 → 4.
+EXT_RESEARCH_SLOT_5_NAME,Fifth module slot,다섯째 모듈 자리
+EXT_RESEARCH_SLOT_5_DESC,Module capacity 4 → 5.,모듈 장착 자리 4 → 5.
+EXT_RESEARCH_FOCUS_NAME,Aperture alignment,집광 조율
+EXT_RESEARCH_FOCUS_DESC,Cursor observation radius ×1.12.,커서 관측 반경 ×1.12.
+EXT_RESEARCH_PRECISION_NAME,Parallel exposure,병렬 노출
+EXT_RESEARCH_PRECISION_DESC,Manual observation speed on additional targets ×1.20.,추가 표적의 수동 관측 속도 ×1.20.
+EXT_RESEARCH_CYG_LOCK_NAME,Tracking continuity,추적 유지
+EXT_RESEARCH_CYG_LOCK_DESC,Keep the selected target for an extra 0.10s after leaving its range.,범위를 벗어나도 선택 표적을 유지하는 시간 +0.10초.
+EXT_RESEARCH_CYG_APERTURE_NAME,Open aperture,확장 개구
+EXT_RESEARCH_CYG_APERTURE_DESC,Cursor observation radius ×1.18.,커서 관측 반경 ×1.18.
+EXT_RESEARCH_RECORD_NAME,Core photometry,중심부 측광
+EXT_RESEARCH_RECORD_DESC,"M31 Data ×1.25, weighted by exposure progress.",M31 데이터 ×1.25. 관측 진행량에 비례해 적용.
+EXT_RESEARCH_REVISIT_NAME,Exposure cadence,노출 주기
+EXT_RESEARCH_REVISIT_DESC,"Next M31 waiting time ×0.85, weighted by exposure progress.",다음 M31 대기 시간 ×0.85. 관측 진행량에 비례해 적용.
+EXT_RESEARCH_CEP_CORE_NAME,Core acquisition,중심부 포착
+EXT_RESEARCH_CEP_CORE_DESC,M31 cursor observation radius ×1.25.,M31 커서 관측 반경 ×1.25.
+EXT_RESEARCH_CEP_DEPTH_NAME,Integrated deep watch,심층 통합 관측
+EXT_RESEARCH_CEP_DEPTH_DESC,M31 observation speed ×1.20 and Data ×1.15.,M31 관측 속도 ×1.20 · 데이터 ×1.15.
+EXT_RESEARCH_WIDE_NAME,Survey cycle,훑기 주기
+EXT_RESEARCH_WIDE_DESC,Sky sweep cooldown ×0.90.,하늘 훑기 재사용 대기 ×0.90.
+EXT_RESEARCH_AQL_PAIR_NAME,Companion sweep,동반 훑기
+EXT_RESEARCH_AQL_PAIR_DESC,One additional meteor per successful sky sweep.,하늘 훑기 성공 시 유성 +1개.
+EXT_RESEARCH_AQL_STRIDE_NAME,Long sweep,긴 훑기
+EXT_RESEARCH_AQL_STRIDE_DESC,Required empty-sky sweep distance ×0.88.,빈 하늘 훑기 필요 이동 거리 ×0.88.
+EXT_RESEARCH_AQL_STREAM_NAME,Continuous survey,연속 탐색
+EXT_RESEARCH_AQL_STREAM_DESC,Sky sweep cooldown ×0.85.,하늘 훑기 재사용 대기 ×0.85.
+EXT_RESEARCH_VUL_MEMORY_NAME,Rhythm memory,관측 리듬 기억
+EXT_RESEARCH_VUL_MEMORY_DESC,Manual observation combo window +1s.,수동 연속 관측 유지 시간 +1초.
+EXT_RESEARCH_VUL_RHYTHM_NAME,Rhythmic analysis,리듬 분석
+EXT_RESEARCH_VUL_RHYTHM_DESC,Each manual combo stack adds another 0.5% observation speed.,수동 연속 관측 중첩당 관측 속도 +0.5%p.
+EXT_RESEARCH_VUL_ARC_NAME,Growing arc,확장 추적호
+EXT_RESEARCH_VUL_ARC_DESC,Each manual combo stack adds another 0.3px cursor radius.,수동 연속 관측 중첩당 커서 반경 +0.3px.
+EXT_RESEARCH_VUL_CADENCE_NAME,Extended cadence,연속 관측 확장
+EXT_RESEARCH_VUL_CADENCE_DESC,"Two additional effective manual combo stacks, up to 12.",수동 연속 관측 유효 중첩 +2. 최대 12중첩.
+EXT_RESEARCH_VUL_FLOW_NAME,Unbroken rhythm,이어지는 리듬
+EXT_RESEARCH_VUL_FLOW_DESC,Combo window +1s and speed per stack +0.5 percentage points.,연속 관측 유지 +1초 · 중첩당 관측 속도 +0.5%p.
+EXT_RESEARCH_DEL_SIGNAL_NAME,Echo reception,반향 수신
+EXT_RESEARCH_DEL_SIGNAL_DESC,Observation echo chance +5 percentage points.,관측 반향 발생 확률 +5%p.
+EXT_RESEARCH_DEL_COMPANION_NAME,Companion echo,동반 반향
+EXT_RESEARCH_DEL_COMPANION_DESC,One additional meteor in each observation echo.,관측 반향마다 유성 +1개.
+EXT_RESEARCH_DEL_DEBRIS_NAME,Debris photometry,파편 측광
+EXT_RESEARCH_DEL_DEBRIS_DESC,Fragment and fragment-piece Data ×1.15.,분열 유성·파편 데이터 ×1.15.
+EXT_RESEARCH_DEL_RESONANCE_NAME,Echo resonance,반향 공명
+EXT_RESEARCH_DEL_RESONANCE_DESC,Observation echo chance +5 percentage points.,관측 반향 발생 확률 +5%p.
+EXT_RESEARCH_DEL_SCHOOL_NAME,Echo formation,반향 대열
+EXT_RESEARCH_DEL_SCHOOL_DESC,One additional meteor in each observation echo.,관측 반향마다 유성 +1개.
+EXT_RESEARCH_SGE_CADENCE_NAME,Entry cadence,유성 진입 주기
+EXT_RESEARCH_SGE_CADENCE_DESC,"Natural regular meteor spawn interval ×0.95, including its minimum.",자연 일반 유성 출현 간격과 최소 간격 ×0.95.
+EXT_RESEARCH_SGE_FORECAST_NAME,Early ephemeris,선행 궤도력
+EXT_RESEARCH_SGE_FORECAST_DESC,Meteor arrival forecast +0.6s earlier.,유성 도착 예고 +0.6초.
+EXT_RESEARCH_SGE_SOLUTION_NAME,Trajectory solution,진입 궤도 해석
+EXT_RESEARCH_SGE_SOLUTION_DESC,Meteor forecast position error ×0.85.,유성 예측 위치 오차 ×0.85.
+EXT_RESEARCH_SGE_WINDOW_NAME,Long passage,긴 통과
+EXT_RESEARCH_SGE_WINDOW_DESC,Atmospheric meteor lifetime ×1.12.,대기권 유성 수명 ×1.12.
+EXT_RESEARCH_SGE_STREAM_NAME,Dense passage,촘촘한 통과
+EXT_RESEARCH_SGE_STREAM_DESC,"Natural regular meteor spawn interval ×0.92, including its minimum.",자연 일반 유성 출현 간격과 최소 간격 ×0.92.
+EXT_RESEARCH_EQU_FOCUS_NAME,Dish focus,접시 집속
+EXT_RESEARCH_EQU_FOCUS_DESC,Actual dish observation speed ×1.15.,실제 접시 관측 속도 ×1.15.
+EXT_RESEARCH_EQU_MOUNT_NAME,Tracking mount,추적 가대
+EXT_RESEARCH_EQU_MOUNT_DESC,Dish movement speed ×1.20 and acquisition radius ×1.10.,접시 이동 속도 ×1.20 · 포착 반경 ×1.10.
+EXT_RESEARCH_EQU_ARRAY_NAME,Additional dish,추가 접시
+EXT_RESEARCH_EQU_ARRAY_DESC,One additional automatic observation dish.,자동 관측 접시 +1대.
+EXT_RESEARCH_EQU_LINK_NAME,Array integration,접시 통합
+EXT_RESEARCH_EQU_LINK_DESC,Actual dish observation speed ×1.20.,실제 접시 관측 속도 ×1.20.
+EXT_RESEARCH_TRI_PHOTOMETRY_NAME,Wide photometry,광역 측광
+EXT_RESEARCH_TRI_PHOTOMETRY_DESC,Observation Data ×1.10.,관측 데이터 ×1.10.
+EXT_RESEARCH_TRI_ANALYSIS_NAME,Integrated analysis,통합 분석
+EXT_RESEARCH_TRI_ANALYSIS_DESC,Manual observation analysis speed ×1.10.,수동 관측 분석 속도 ×1.10.
+EXT_RESEARCH_TRI_CATALOGUE_NAME,Calibrated catalogue,보정 관측 목록
+EXT_RESEARCH_TRI_CATALOGUE_DESC,Observation Data ×1.15.,관측 데이터 ×1.15.

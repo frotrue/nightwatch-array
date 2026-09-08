@@ -8,6 +8,24 @@ var samples_spent := 0
 var acquisition_seed := 1
 var draw_serial := 0
 var last_draw := ""
+const ADDITIVE_EFFECTS := ["tracking_grace", "survey_count", "combo_window", "combo_speed", "combo_radius", "combo_cap", "echo_probability", "echo_count", "forecast_lead", "dish_count"]
+var _cached_research_ids: Array[String] = []
+var _cached_effects: Dictionary = {}
+
+func effect(key: String, fallback: float = 1.0) -> float:
+	if _cached_research_ids != research_ids:
+		_cached_research_ids = research_ids.duplicate()
+		_cached_effects.clear()
+		for id in research_ids:
+			for effect_key in Data.RESEARCH[id].effects:
+				var value := float(Data.RESEARCH[id].effects[effect_key])
+				if effect_key == "slot_capacity":
+					_cached_effects[effect_key] = maxf(float(_cached_effects.get(effect_key, 2.0)), value)
+				elif effect_key in ADDITIVE_EFFECTS:
+					_cached_effects[effect_key] = float(_cached_effects.get(effect_key, 0.0)) + value
+				else:
+					_cached_effects[effect_key] = float(_cached_effects.get(effect_key, 1.0)) * value
+	return float(_cached_effects.get(key, fallback))
 
 func _init() -> void:
 	var rng := RandomNumberGenerator.new()

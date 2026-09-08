@@ -6,6 +6,7 @@ const Data = preload("res://scripts/expansion_data.gd")
 var failures: Array[String] = []
 var game: Node
 var research: Node
+var growth_baseline: Dictionary
 
 func _initialize() -> void:
 	_run.call_deferred()
@@ -35,6 +36,7 @@ func _run() -> void:
 	_check(game.progression.upgrade_level == 95, "original 95-node economy remains sufficient")
 	_m31()
 	_check(research.observations == 1 and research.research_owned("ext_protocol"), "first real M31 unlocks special meteors")
+	growth_baseline = _growth_snapshot()
 	await _check_transactions()
 	await _check_target_persistence()
 	await _check_research_loop()
@@ -83,12 +85,12 @@ func _sky() -> void:
 func _m31(amount: float = 1.0) -> void:
 	var target: Node = research.target
 	target.cooldown = 0.0
-	var rate: float = 1.2 * game.progression.get_analysis_speed_multiplier("galaxy") / 10.0
-	target.apply_manual_observation(amount / rate, 0.0, 100.0)
+	var rate: float = 1.2 * research.state.effect("m31_speed") * game.progression.get_analysis_speed_multiplier("galaxy") / 10.0
+	target.apply_manual_observation(amount / rate + (0.00001 if amount >= 1.0 else 0.0), 0.0, 100.0)
 
 func _manual(target: Node, amount: float = 1.0) -> void:
 	var rate: float = 1.42 * game.progression.get_analysis_speed_multiplier("common") / target.required_track_time
-	target.apply_manual_observation(amount / rate, 0.0, 100.0)
+	target.apply_manual_observation(amount / rate + (0.00001 if amount >= 1.0 else 0.0), 0.0, 100.0)
 
 func _automatic(target: Node, amount: float = 1.0) -> void:
 	# Use the production dish rate and target time path, with a stationary test
@@ -102,14 +104,14 @@ func _check_transactions() -> void:
 	_chart()
 	for id in ["ext_trace_study", "ext_sweep_study", "ext_link_study"]:
 		_check(research.purchase(id), "study purchase succeeds: " + id)
-	_check(research.modules.purchased.size() == 3 and research.modules.installed_ids().is_empty(), "guaranteed modules enter inventory")
+	_check(research.modules.purchased.is_empty() and research.modules.installed_ids().is_empty(), "research growth does not grant or equip modules")
 	research.state.award_samples(80)
-	_check(research.draw_module().is_empty(), "draw requires the loadout popup")
-	game.module_popup.open()
+	_check(research.draw_module().is_empty(), "draw requires the dedicated window")
+	game.module_popup.open_draw()
 	var before: Dictionary = research.get_save_data()
 	game.active_save_slot = 1
 	_check(research.draw_module().is_empty(), "failed persistence rejects draw")
-	_check(research.samples == 80 and research.modules.purchased.size() == 3 and research.state.draw_serial == before.extension.draw_serial, "failed draw restores debit, RNG and ownership")
+	_check(research.samples == 80 and research.modules.purchased.is_empty() and research.state.draw_serial == before.extension.draw_serial, "failed draw restores debit, RNG and ownership")
 	game.active_save_slot = 0
 	var id: String = research.draw_module()
 	_check(not id.is_empty() and research.samples == 72 and research.modules.owned_count(id) == 1, "successful draw spends exactly eight")
@@ -117,7 +119,7 @@ func _check_transactions() -> void:
 	game.module_popup.close()
 	game._apply_save_data(saved)
 	_chart()
-	game.module_popup.open()
+	game.module_popup.open_draw()
 	_check(research.state.last_draw == id and research.samples == 72, "disk-shaped save restores paid result")
 	for index in range(8): research.draw_module()
 	var copies := 0
@@ -173,18 +175,24 @@ func _check_target_persistence() -> void:
 
 func _check_research_loop() -> void:
 	_chart()
-	for id in Data.RESEARCH_ORDER:
-		if not research.research_owned(id): _check(research.purchase(id), "research needs only predecessors and Data: " + id)
-	for id in research.Modules.RESEARCH_IDS:
-		if not research.research_owned(id): _check(research.purchase(id), "module and slot research reachable: " + id)
+	var advanced := true
+	while advanced:
+		advanced = false
+		for id in Data.RESEARCH_ORDER:
+			if research.can_purchase(id):
+				_check(research.purchase(id), "research purchase succeeds: " + id)
+				advanced = true
+	_check(research.state.research_ids.size() == 47, "all forty-seven nodes reached using only Data and predecessor research")
 	_check(research.modules.unlocked_slots == 5 and research.state.draw_cost() == 6, "all five slots and final efficiency reachable")
-	_check(research.modules.purchased.size() == 8, "all research completed without random modules")
+	_check(research.modules.purchased.is_empty(), "all research completed without owning a single module")
+	_check_permanent_growth()
 	_sky()
 	var targets := await _spawn_due()
 	if not targets.is_empty():
 		var target: Node = targets[0]
 		_check(is_equal_approx(target.required_track_time, 1.65) and is_equal_approx(target.visible_lifetime, 17.5), "research changes actual meteor observation and visibility")
 		_check(is_equal_approx(target.get_assist_rate(1.0), 1.25 / 1.65), "research changes dish rate")
+		research.modules.grant("sweep_optics")
 		research.modules.equip("sweep_optics", 0)
 		_check(is_equal_approx(target.get_tracking_radius(40.0), 60.0), "Sweep Optics widens the real rare meteor aim radius")
 		research.modules.equip("", 0)
@@ -249,6 +257,53 @@ func _check_archive_and_budget() -> void:
 	_check(pair.get_automatic_contribution() > 0.0, "actual dish work records automatic contribution")
 	research.director.end_round()
 
+func _growth_snapshot() -> Dictionary:
+	game.progression.reset_manual_combo()
+	var meteor: Node = load("res://scripts/meteor.gd").new()
+	meteor.configure(Balance.meteor_spec("common"), "common", Vector2(480, 290), Vector2.ZERO, game.progression.get_lifetime_multiplier(), game.spawner._current_features("common"))
+	game.meteor_layer.add_child(meteor)
+	meteor.set_process(false)
+	game.observer.reset()
+	game.observer.selected_meteor = meteor
+	game.observer.previous_cursor_position = meteor.global_position
+	game.observer.cursor_position = meteor.global_position
+	game.observer._apply_manual_contact(meteor, 0.05)
+	var result := {
+		"manual": meteor.get_progress(), "dish": game.sky_contacts._dish_assist_rate(meteor),
+		"radius": game.observer._module_tracking_radius(), "dishes": game.sky_contacts.dishes.size(),
+		"sweep_distance": game.progression.get_survey_required_distance(), "sweep_count": game.progression.get_survey_spawn_count(),
+		"sweep_cooldown": game.progression.get_survey_cooldown_seconds(), "spawn_floor": game.progression.get_regular_spawn_interval_floor(),
+		"echo_chance": game.progression.get_observation_echo_probability(), "echo_count": game.progression.get_observation_echo_count(),
+		"forecast_lead": game.progression.get_forecast_lead(), "forecast_error": game.progression.get_forecast_max_error("common"),
+		"data": game.progression.get_observation_value_multiplier("common", 1), "lifetime": meteor.visible_lifetime,
+	}
+	game.observer.reset()
+	meteor.free()
+	return result
+
+func _check_permanent_growth() -> void:
+	var current := _growth_snapshot()
+	_check(is_equal_approx(current.manual / growth_baseline.manual, 1.15 * 1.10), "empty loadout gains actual manual work from Cygnus and Triangulum")
+	_check(is_equal_approx(current.radius / growth_baseline.radius, 1.12 * 1.18), "Cygnus grows the actual cursor radius without modules")
+	_check(is_equal_approx(current.dish / growth_baseline.dish, 1.15 * 1.20) and current.dishes == growth_baseline.dishes + 1, "Equuleus improves real dish rate and creates a fifth dish")
+	_check(current.sweep_count == growth_baseline.sweep_count + 1 and current.sweep_distance < growth_baseline.sweep_distance and current.sweep_cooldown < growth_baseline.sweep_cooldown, "Aquila changes the production sweep inputs")
+	_check(is_equal_approx(current.echo_chance - growth_baseline.echo_chance, 0.1) and current.echo_count == growth_baseline.echo_count + 2, "Delphinus increases the production echo opportunity and burst")
+	_check(current.spawn_floor < growth_baseline.spawn_floor and current.forecast_lead > growth_baseline.forecast_lead and current.forecast_error < growth_baseline.forecast_error and current.lifetime > growth_baseline.lifetime, "Sagitta changes arrivals, actual meteor lifetime and forecast quality")
+	_check(is_equal_approx(current.data / growth_baseline.data, 1.10 * 1.15), "Triangulum improves real observation reward calculation")
+	for index in range(12): game.progression.record_manual_combo_success()
+	_check(game.progression.get_taurus_tracking_radius_bonus() > 25.0 and game.progression.get_taurus_combo_stack_count() == 12 and game.progression.get_manual_combo_window() == 7.0, "Vulpecula grows the live twelve-stack observation rhythm")
+	game.progression.reset_manual_combo()
+	var before: Dictionary = JSON.parse_string(JSON.stringify(research.get_save_data()))
+	research.load_save_data(before)
+	_check(research.modules.purchased.is_empty() and game.progression.extension_state == research.state and _growth_snapshot() == current, "JSON restores every permanent effect without inventing modules or retaining a stale state owner")
+	# A newly acquired legacy module ID is inventory, not a free research node.
+	research.state.research_ids.erase("focus")
+	research.modules.grant("focus")
+	var current_save: Dictionary = JSON.parse_string(JSON.stringify(research.get_save_data()))
+	research.load_save_data(current_save)
+	_check(not research.research_owned("focus") and research.modules.owned_count("focus") == 1, "new-catalogue ownership never backfills an old direct-purchase research ID")
+	research.load_save_data(before)
+
 func _check_weighted_exposure() -> void:
 	for id in ["record", "revisit"]: research.modules.grant(id)
 	research.modules.slots.assign(["", "", "", "", ""])
@@ -261,11 +316,11 @@ func _check_weighted_exposure() -> void:
 	research.modules.slots[1] = "revisit"
 	var before: float = game.progression.total_data_earned
 	_m31(0.5)
-	var expected: float = 8000.0 * game.progression.get_observation_value_multiplier("common", 1) * 1.25
+	var expected: float = 8000.0 * game.progression.get_observation_value_multiplier("common", 1) * 1.25 * 1.25 * 1.15
 	_check(absf((game.progression.total_data_earned - before) - expected) <= 1.0, "half record exposure yields integrated x1.25")
-	_check(is_equal_approx(research.target.cooldown, 5.6), "half revisit exposure yields integrated x0.8 cooldown")
+	_check(is_equal_approx(research.target.cooldown, 5.6 * 0.85), "half revisit exposure composes with permanent cadence")
 	research.modules.slots[1] = ""
-	_check(is_equal_approx(research.target.cooldown, 5.6), "removing revisit cannot alter a cooldown already started")
+	_check(is_equal_approx(research.target.cooldown, 5.6 * 0.85), "removing revisit cannot alter a cooldown already started")
 
 func _check_measurement() -> void:
 	game._begin_observation_phase()
@@ -296,6 +351,7 @@ func _check_measurement() -> void:
 func _check_migration() -> void:
 	var before: Dictionary = research.get_save_data()
 	_check(not research.load_save_data({"version": 99}) and research.get_save_data() == before, "unknown deep-sky version cannot reset state")
+	_check(not research.load_save_data({"version": 3, "extension": {"catalogue_version": 99}}) and research.get_save_data() == before, "future catalogue cannot be migrated or overwritten")
 	var save: Dictionary = game._build_save_data()
 	save.deep_sky.version = 99
 	game._apply_save_data(save)
@@ -303,9 +359,11 @@ func _check_migration() -> void:
 	research.load_save_data({"version": 1, "observations": 2, "progress": 0.4, "cooldown": 2.0, "modules": {"purchased": ["record", "revisit"], "slots": ["record", "revisit", "", "", ""], "unlocked_slots": 5}})
 	_check(research.modules.unlocked_slots == 5 and research.research_owned("ext_protocol"), "v1 preserves capacity without inventing plans")
 	_check(is_equal_approx(research.target.value_integral, 0.6) and is_equal_approx(research.target.cooldown_integral, 0.24), "v1 partial exposure initializes its existing equipment weights")
+	_check(research.research_owned("record") and research.research_owned("revisit"), "legacy direct purchases retain completed research IDs")
 
 	# Two shutter copies preserve the longer M31 cooldown across disk saves.
 	research.modules.load_save_data({"purchased": ["shutter_weave"], "quantities": {"shutter_weave": 2}, "slots": ["shutter_weave", "shutter_weave"]})
+	research.state.research_ids.erase("revisit") # Isolate the preserved module penalty.
 	research.target.progress = 0.0
 	research.target.integrated_progress = 0.0
 	research.target.value_integral = 0.0

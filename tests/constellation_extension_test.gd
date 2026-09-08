@@ -34,7 +34,7 @@ func _run() -> void:
 	tree.focus_outer_constellations()
 	game.progression.observation_data = 2000000000.0
 	tree._refresh()
-	_check(tree.chart_constellations.size() == 16 and tree.extension_definitions.size() == 18, "four figures and eighteen stars extend the original chart")
+	_check(tree.chart_constellations.size() == 22 and tree.extension_definitions.size() == 47, "ten figures and forty-seven stars extend the original chart")
 	_check(original_geometry == tree.base_star_positions, "unlock preserves the original positions")
 	_check(tree.base_star_positions["pegasus/alpheratz"] == tree.base_star_positions["andromeda/alpheratz"], "Pegasus shares the original Alpheratz corner")
 	var seen: Dictionary = {}
@@ -44,10 +44,12 @@ func _run() -> void:
 			if id.is_empty(): continue
 			_check(not seen.has(id), "one research maps to one new star")
 			seen[id] = true
+			_check(Data.RESEARCH[id].branch == constellation, "research effect belongs to its displayed constellation: " + id)
 			_check(tree.node_buttons[id].get_parent() == tree.tree_canvas, "original and new stars share the same canvas")
 			_check(tree._research_state(id) == "locked", "first M31 observation gates the stars: " + id)
 	for id in Modules.RESEARCH_IDS + Data.RESEARCH_ORDER:
 		_check(seen.has(id), "acquisition remains reachable: " + id)
+	_check(Data.MODULE_BRANCHES.size() == 2 and Extension.ORDER.size() - Data.MODULE_BRANCHES.size() == 8, "only two of ten branches support modules")
 	_check(tree.content_clip.visible and tree.constellation_ledger.visible, "research opens on the constellation chart")
 	_check(tree.node_positions.better_lens.distance_to(tree.CHART_ORIGIN) > 100.0, "original geometry does not collapse into a miniature")
 	var visible_original := 0
@@ -68,7 +70,7 @@ func _run() -> void:
 	tree.node_buttons.ext_trace_study.button_down.emit()
 	tree._process(tree.HOLD_PURCHASE_SECONDS)
 	tree.node_buttons.ext_trace_study.button_up.emit()
-	_check(research.research_owned("ext_trace_study") and research.modules.research_owned("trail_integrator"), "holding Deneb grants its research and module")
+	_check(research.research_owned("ext_trace_study") and research.modules.purchased.is_empty() and is_equal_approx(research.state.effect("manual_speed"), 1.15), "holding Deneb installs permanent tracking without granting a module")
 	_check(game.progression.observation_data == balance_before - Data.RESEARCH.ext_trace_study.cost and research.modules.installed_ids().is_empty(), "purchase debits once without auto-equipping")
 	_check(tree.node_hold_bars.ext_trace_study.visual_state == "purchased", "completed research lights the existing star marker")
 	_check(research.research_owned("ext_trace_study") and research.director.available_kinds() == ["rare"], "one rare meteor kind uses the real scheduler")
@@ -82,16 +84,16 @@ func _run() -> void:
 	tree.node_buttons.focus.button_down.emit()
 	tree._process(tree.HOLD_PURCHASE_SECONDS)
 	tree.node_buttons.focus.button_up.emit()
-	_check(research.modules.research_owned("focus"), "old module IDs use star purchases")
+	_check(research.research_owned("focus") and research.modules.purchased.is_empty(), "retained research IDs install growth without module ownership")
 	var save: Dictionary = JSON.parse_string(JSON.stringify(game._build_save_data()))
 	game._apply_save_data(save)
 	tree.open_tree()
 	await process_frame
-	_check(research.modules.research_owned("focus") and research.research_owned("ext_trace_study"), "version-two saves preserve ownership")
+	_check(research.research_owned("focus") and research.research_owned("ext_trace_study") and research.modules.purchased.is_empty(), "new saves preserve permanent research independently from equipment")
 	for locale in ["en", "ko"]:
 		game.settings.set_language(locale, false)
 		tree.focus_constellation("cygnus")
-		_check(tree.tooltip_branch.text == tr("ATLAS_CYGNUS") and tree.tooltip_branch.text != "ATLAS_CYGNUS", "localized constellation navigation: " + locale)
+		_check(tree.tooltip_branch.text.begins_with(tr("ATLAS_CYGNUS")) and tree.tooltip_branch.text.contains(tr("ATLAS_ROLE_CYGNUS")), "localized constellation role and navigation: " + locale)
 		var previous: Vector2 = tree.node_positions.ext_trace_study
 		tree._rotate_chart(0.2)
 		_check(not previous.is_equal_approx(tree.node_positions.ext_trace_study), "the chart wheel rotates new stars")

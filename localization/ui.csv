@@ -578,9 +578,9 @@ UPGRADE_DRACO_APOTHEOSIS_DESC,Observation Data ×8 (automatic included; Local Gr
 UPGRADE_GALACTIC_REFERENCE_FRAME_NAME,Galaxy Map,은하 지도
 UPGRADE_GALACTIC_REFERENCE_FRAME_DESC,Opens the galaxy map and Local Group research.,은하 지도와 국부은하군 연구를 엽니다.
 UPGRADE_LARGE_MAGELLANIC_CLOUD_NAME,Large Magellanic Cloud,대마젤란은하
-UPGRADE_LARGE_MAGELLANIC_CLOUD_DESC,"Widens the observation field by 5% and opens one stationary host star for repeat exoplanet transit confirmation.",관측 범위를 5% 넓히고 반복 외계행성 통과 확인을 위한 고정된 호스트별 하나를 엽니다.
+UPGRADE_LARGE_MAGELLANIC_CLOUD_DESC,Widens the observation field by 5% and opens one stationary host star for repeat exoplanet transit confirmation.,관측 범위를 5% 넓히고 반복 외계행성 통과 확인을 위한 고정된 호스트별 하나를 엽니다.
 UPGRADE_SMALL_MAGELLANIC_CLOUD_NAME,Small Magellanic Cloud,소마젤란은하
-UPGRADE_SMALL_MAGELLANIC_CLOUD_DESC,"Widens the observation field another 5% and increases transit Data by 50%.",관측 범위를 5% 더 넓히고 통과 관측 데이터가 50% 증가합니다.
+UPGRADE_SMALL_MAGELLANIC_CLOUD_DESC,Widens the observation field another 5% and increases transit Data by 50%.,관측 범위를 5% 더 넓히고 통과 관측 데이터가 50% 증가합니다.
 UPGRADE_ANDROMEDA_GALAXY_NAME,Andromeda Galaxy,안드로메다은하
 UPGRADE_ANDROMEDA_GALAXY_DESC,Widens the observation field by 5% and opens the Andromeda satellite route.,관측 범위를 5% 넓히고 안드로메다 위성은하 경로를 엽니다.
 UPGRADE_MESSIER_32_NAME,Messier 32,메시에 32
@@ -588,9 +588,9 @@ UPGRADE_MESSIER_32_DESC,Keeps two stationary host stars in the observation field
 UPGRADE_MESSIER_110_NAME,Messier 110,메시에 110
 UPGRADE_MESSIER_110_DESC,"Allows two exoplanet transit windows to overlap, forcing a host priority choice.",외계행성 통과 창 두 개가 겹칠 수 있어 어느 호스트를 먼저 볼지 선택하게 합니다.
 UPGRADE_NGC_147_NAME,NGC 147,NGC 147
-UPGRADE_NGC_147_DESC,"Adds a weak permanent reference-star chain; live harvestable hosts remain the stronger astrometric anchors.",약한 영구 기준별 사슬을 추가합니다. 살아 있고 수확 가능한 호스트가 더 강한 위치천문 기준입니다.
+UPGRADE_NGC_147_DESC,Adds a weak permanent reference-star chain; live harvestable hosts remain the stronger astrometric anchors.,약한 영구 기준별 사슬을 추가합니다. 살아 있고 수확 가능한 호스트가 더 강한 위치천문 기준입니다.
 UPGRADE_NGC_185_NAME,NGC 185,NGC 185
-UPGRADE_NGC_185_DESC,"Adds an active-nucleus host pattern that teaches brightening decoys: release instead of tracking them.",밝아지는 미끼에서는 추적하지 않고 놓는 활동핵형 호스트 패턴을 추가합니다.
+UPGRADE_NGC_185_DESC,Adds an active-nucleus host pattern that teaches brightening decoys: release instead of tracking them.,밝아지는 미끼에서는 추적하지 않고 놓는 활동핵형 호스트 패턴을 추가합니다.
 UPGRADE_TRIANGULUM_GALAXY_NAME,Triangulum Galaxy,삼각형자리은하
 UPGRADE_TRIANGULUM_GALAXY_DESC,Widens the observation field by 5% and opens the independent-galaxy route.,관측 범위를 5% 넓히고 독립 은하 경로를 엽니다.
 UPGRADE_NGC_6822_NAME,NGC 6822,NGC 6822
@@ -606,11 +606,11 @@ UPGRADE_PEGASUS_DWARF_IRREGULAR_DESC,Adds a timing-variation host pattern whose 
 UPGRADE_PHOENIX_DWARF_NAME,Phoenix Dwarf,피닉스 왜소은하
 UPGRADE_PHOENIX_DWARF_DESC,Adds an offset comparison-star host pattern: lock its baseline before tracking the transit.,떨어진 비교별로 기준선을 잠근 뒤 통과를 추적하는 호스트 패턴을 추가합니다.
 UPGRADE_LEO_A_NAME,Leo A,사자자리 A
-UPGRADE_LEO_A_DESC,"Adds a linked two-candidate host pattern; harvesting one candidate abandons its sibling.",연결된 두 후보 호스트 패턴을 추가합니다. 하나를 수확하면 다른 후보를 포기합니다.
+UPGRADE_LEO_A_DESC,Adds a linked two-candidate host pattern; harvesting one candidate abandons its sibling.,연결된 두 후보 호스트 패턴을 추가합니다. 하나를 수확하면 다른 후보를 포기합니다.
 UPGRADE_AQUARIUS_DWARF_NAME,Aquarius Dwarf,물병자리 왜소은하
 UPGRADE_AQUARIUS_DWARF_DESC,Adds an exact world-space ephemeris notch after the first confirmation.,첫 확인 뒤 세계 좌표에 정확한 다음 통과 눈금을 남깁니다.
 UPGRADE_SAGITTARIUS_DWARF_IRREGULAR_NAME,Sagittarius Dwarf Irregular,궁수자리 왜소불규칙은하
-UPGRADE_SAGITTARIUS_DWARF_IRREGULAR_DESC,"Adds a two-choice comparison-star host pattern; match the host color to lock its baseline.",비교별 둘 중 호스트 색과 맞는 별을 골라 기준선을 잠그는 패턴을 추가합니다.
+UPGRADE_SAGITTARIUS_DWARF_IRREGULAR_DESC,Adds a two-choice comparison-star host pattern; match the host color to lock its baseline.,비교별 둘 중 호스트 색과 맞는 별을 골라 기준선을 잠그는 패턴을 추가합니다.
 UPGRADE_TUCANA_DWARF_NAME,Tucana Dwarf,투카나 왜소은하
 UPGRADE_TUCANA_DWARF_DESC,Widens the observation field by 5%.,관측 범위를 5% 넓힙니다.
 UPGRADE_CETUS_DWARF_NAME,Cetus Dwarf,고래자리 왜소은하
@@ -630,9 +630,9 @@ UPGRADE_URSA_MINOR_DWARF_DESC,Adds periodic pulsation decoys that must be reject
 UPGRADE_SEXTANS_DWARF_NAME,Sextans Dwarf,육분의자리 왜소은하
 UPGRADE_SEXTANS_DWARF_DESC,Adds a three-sweep hidden host whose matched comparison star must then be selected.,세 번 훑어 드러낸 뒤 색이 맞는 비교별을 골라야 하는 숨은 호스트를 추가합니다.
 UPGRADE_LEO_I_NAME,Leo I,사자자리 I
-UPGRADE_LEO_I_DESC,"Adds exact ephemeris notches to overlapping host windows; no new spectrograph is introduced.",겹치는 호스트 창에 정확한 다음 통과 눈금을 더하며 새 분광 계기는 추가하지 않습니다.
+UPGRADE_LEO_I_DESC,Adds exact ephemeris notches to overlapping host windows; no new spectrograph is introduced.,겹치는 호스트 창에 정확한 다음 통과 눈금을 더하며 새 분광 계기는 추가하지 않습니다.
 UPGRADE_LEO_II_NAME,Leo II,사자자리 II
-UPGRADE_LEO_II_DESC,"Adds a hidden pulsation-decoy host with a generous reacquisition window; a fresh sweep always reveals it again.",넉넉한 재획득 시간이 있는 숨은 맥동 미끼 호스트를 추가합니다. 놓쳐도 다시 훑으면 항상 드러납니다.
+UPGRADE_LEO_II_DESC,Adds a hidden pulsation-decoy host with a generous reacquisition window; a fresh sweep always reveals it again.,넉넉한 재획득 시간이 있는 숨은 맥동 미끼 호스트를 추가합니다. 놓쳐도 다시 훑으면 항상 드러납니다.
 UPGRADE_ANDROMEDA_II_NAME,Andromeda II,안드로메다 II
 UPGRADE_ANDROMEDA_II_DESC,Adds a two-notch forecast host whose matched comparison star locks the final transit baseline.,두 눈금으로 예보되며 색이 맞는 비교별로 마지막 통과 기준선을 잠그는 호스트를 추가합니다.
 RESEARCH_GROUP_LOCAL_GROUP,LOCAL GROUP / PHENOMENA,국부은하군 / 천체 현상
@@ -861,7 +861,7 @@ RING_MODULE_TYPE,Observation module,관측 모듈
 RING_EFFECT,PER COPY,1개 효과
 RING_COMBO,COMBINATION,조합
 RING_UNLOCK_BY,Unlocked by %s.,%s 연구로 열립니다.
-RING_RESEARCH_LOCATION,Research in the Andromeda chart.,안드로메다 성도에서 연구할 수 있습니다.
+RING_RESEARCH_LOCATION,Research in Pegasus on the star chart.,성도의 페가수스자리에서 연구할 수 있습니다.
 RING_LOCKED_ACTION,Cannot equip until this slot is researched.,연구 전에는 장착할 수 없습니다.
 RING_EMPTY_HINT,Choose an owned module from the inventory.,보관함에서 보유 모듈을 선택하세요.
 RING_EMPTY_ACTION,Inventory clicks fill the first open slot clockwise.,보관함 클릭은 시계 방향 첫 빈 자리에 장착합니다.

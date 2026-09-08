@@ -11,6 +11,9 @@ var failures: Array[String] = []
 
 class MockProgression:
 	extends Node
+	func extension_effect(_key: String, fallback: float = 1.0) -> float:
+		return fallback
+
 	func galaxy_unlocked() -> bool:
 		return true
 
