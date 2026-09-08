@@ -163,7 +163,7 @@ Definitions, prerequisites and placement behavior are in [module details](design
 
 The expansion catalogue separates research, quantities and installed copies. A draw
 spends eight specimens (six after efficiency research) for one uniformly selected
-module from six, with replacement. Transactions persist currency, quantity and RNG
+module from fourteen, with replacement. Transactions persist currency, quantity and RNG
 together, restoring all three on failure. Same-ID bonuses/penalties add; different
 IDs retain multiplicative composition. The loadout displays owned/installed counts. ModuleDrawWindow only presents an already
 committed draw: its 1.8s scan/align animation can be skipped or closed, and reduced motion

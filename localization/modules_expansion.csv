@@ -22,7 +22,7 @@ MODX_CONDITIONAL,Conditional effects,조건부 효과
 MODX_CONDITIONAL_NONE,No conditional effects active.,활성 조건부 효과 없음
 MODULE_TRAIL_INTEGRATOR_NAME,Trail integrator,궤적 적분기
 MODULE_TRAIL_INTEGRATOR_SHORT,Trail integrator,궤적 적분
-MODULE_TRAIL_INTEGRATOR_DESC,"Observe the last 1s of trail at 60% speed; manual ×0.90. Excludes M31, fireballs and major events.",최근 1초의 궤적을 속도 ×0.60으로 관측합니다. 수동 ×0.90. M31·화구·주요 사건 제외.
+MODULE_TRAIL_INTEGRATOR_DESC,"Last 1s of trail: 60% speed per copy; manual ×0.90. Excludes M31, fireballs and major events.",최근 1초 궤적을 장착 1개당 60% 속도로 관측합니다. 수동 ×0.90. M31·화구·주요 사건 제외.
 MODULE_TRAIL_INTEGRATOR_COMBO,Hold over the recent trail when the moving head leaves your cursor.,움직이는 본체를 놓쳤다면 최근 궤적 위에서 관측을 이어갑니다.
 MODULE_SWEEP_OPTICS_NAME,Sweep optics,훑기 광학
 MODULE_SWEEP_OPTICS_SHORT,Sweep optics,훑기 광학

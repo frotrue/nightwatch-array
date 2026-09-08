@@ -321,6 +321,20 @@ func _check_weighted_exposure() -> void:
 	_check(is_equal_approx(research.target.cooldown, 5.6 * 0.85), "half revisit exposure composes with permanent cadence")
 	research.modules.slots[1] = ""
 	_check(is_equal_approx(research.target.cooldown, 5.6 * 0.85), "removing revisit cannot alter a cooldown already started")
+	# Previously fixed-purchase modules can now fill every slot with copies.
+	research.modules.slots.assign(["", "", "", "", ""])
+	for index in range(5):
+		research.modules.grant_copy("record")
+		research.modules.equip("record", index)
+	_m31(0.5)
+	var half_value: float = research.target.value_integral
+	var half_save: Dictionary = JSON.parse_string(JSON.stringify(research.get_save_data()))
+	research.load_save_data(half_save)
+	_check(is_equal_approx(research.target.value_integral, half_value) and research.modules.installed_count("record") == 5, "five record copies retain their high partial value and inventory through JSON")
+	before = game.progression.total_data_earned
+	_m31(0.5)
+	expected = 8000.0 * game.progression.get_observation_value_multiplier("common", 1) * 3.5 * 1.25 * 1.15
+	_check(absf((game.progression.total_data_earned - before) - expected) <= 1.0, "five record copies pay their full integrated reward after save/load")
 
 func _check_measurement() -> void:
 	game._begin_observation_phase()

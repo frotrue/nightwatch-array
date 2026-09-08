@@ -3,17 +3,16 @@ extends RefCounted
 const MAX_SLOTS := 5
 const INITIAL_SLOTS := 2
 const DEFINITIONS := {
-	# The original purchased set intentionally keeps its established effects and
-	# costs. `source` and `category` let the expanded inventory describe every
-	# item without making the older five part of a specimen pool.
-	"focus": {"cost": 120000000.0, "speed": 1.8, "radius": 1.0, "targets": 1, "glyph": "focus", "code": "FOCUS", "badge": "×1.80", "requires": [], "source": "purchase", "category": "trace", "pool": ""},
-	"wide": {"cost": 120000000.0, "speed": 0.75, "radius": 1.65, "targets": 3, "glyph": "wide", "code": "WIDE", "badge": "×1.65", "requires": [], "source": "purchase", "category": "sweep", "pool": ""},
-	"precision": {"cost": 180000000.0, "speed": 1.5, "radius": 0.7, "glyph": "focus", "code": "PRECISION", "badge": "×1.50", "requires": ["focus"], "source": "purchase", "category": "trace", "pool": ""},
-	"record": {"cost": 180000000.0, "speed": 0.8, "m31_value": 1.5, "glyph": "focus", "code": "RECORD", "badge": "×1.50", "requires": ["wide"], "source": "purchase", "category": "link", "pool": ""},
-	"revisit": {"cost": 240000000.0, "m31_cooldown": 0.6, "glyph": "wide", "code": "REVISIT", "badge": "×0.60", "requires": [], "slots_required": 3, "source": "purchase", "category": "link", "pool": ""},
-	"trail_integrator": {"cost": 0.0, "new_speed": 0.9, "trail_progress": 0.6, "glyph": "focus", "code": "TRAIL", "badge": "TRAIL 60%", "requires": [], "source": "research", "research_id": "ext_trace_study", "category": "trace", "pool": ""},
-	"sweep_optics": {"cost": 0.0, "new_speed": 0.9, "sweep_charge": 1.35, "rare_radius": 1.5, "glyph": "wide", "code": "SWEEP", "badge": "CHARGE ×1.35", "requires": [], "source": "research", "research_id": "ext_sweep_study", "category": "sweep", "pool": ""},
-	"relay_bus": {"cost": 0.0, "new_speed": 0.9, "relay_dish": 1.75, "glyph": "wide", "code": "RELAY", "badge": "DISH ×1.75", "requires": [], "source": "research", "research_id": "ext_link_study", "category": "link", "pool": ""},
+	# All fourteen modules use one draw pool. Legacy costs and prerequisites
+	# remain for the retained module diagnostic API, not the current chart.
+	"focus": {"cost": 120000000.0, "speed": 1.8, "radius": 1.0, "targets": 1, "glyph": "focus", "code": "FOCUS", "badge": "×1.80", "requires": [], "source": "sample", "category": "trace", "pool": "trace"},
+	"wide": {"cost": 120000000.0, "speed": 0.75, "radius": 1.65, "targets": 3, "glyph": "wide", "code": "WIDE", "badge": "×1.65", "requires": [], "source": "sample", "category": "sweep", "pool": "sweep"},
+	"precision": {"cost": 180000000.0, "speed": 1.5, "radius": 0.7, "glyph": "focus", "code": "PRECISION", "badge": "×1.50", "requires": ["focus"], "source": "sample", "category": "trace", "pool": "trace"},
+	"record": {"cost": 180000000.0, "speed": 0.8, "m31_value": 1.5, "glyph": "focus", "code": "RECORD", "badge": "×1.50", "requires": ["wide"], "source": "sample", "category": "link", "pool": "link"},
+	"revisit": {"cost": 240000000.0, "m31_cooldown": 0.6, "glyph": "wide", "code": "REVISIT", "badge": "×0.60", "requires": [], "slots_required": 3, "source": "sample", "category": "link", "pool": "link"},
+	"trail_integrator": {"cost": 0.0, "new_speed": 0.9, "trail_progress": 0.6, "glyph": "focus", "code": "TRAIL", "badge": "TRAIL 60%", "requires": [], "source": "sample", "category": "trace", "pool": "trace"},
+	"sweep_optics": {"cost": 0.0, "new_speed": 0.9, "sweep_charge": 1.35, "rare_radius": 1.5, "glyph": "wide", "code": "SWEEP", "badge": "CHARGE ×1.35", "requires": [], "source": "sample", "category": "sweep", "pool": "sweep"},
+	"relay_bus": {"cost": 0.0, "new_speed": 0.9, "relay_dish": 1.75, "glyph": "wide", "code": "RELAY", "badge": "DISH ×1.75", "requires": [], "source": "sample", "category": "link", "pool": "link"},
 	"long_baseline": {"cost": 0.0, "new_speed": 0.85, "baseline_speed": 1.6, "glyph": "focus", "code": "BASELINE", "badge": "1s ×1.60", "requires": [], "source": "sample", "category": "trace", "pool": "trace"},
 	"dual_processor": {"cost": 0.0, "primary_speed": 1.3, "secondary_speed": 0.55, "glyph": "focus", "code": "DUAL", "badge": "DUAL ×1.30", "requires": [], "source": "sample", "category": "trace", "pool": "trace"},
 	"afterglow_archive": {"cost": 0.0, "archive_value": 0.5, "archive_lifetime": 8.0, "glyph": "wide", "code": "ARCHIVE", "badge": "AFTERGLOW", "requires": [], "source": "sample", "category": "sweep", "pool": "sweep"},
@@ -104,6 +103,8 @@ func grant_copy(id: String) -> bool:
 	return true
 
 func stacked_effect(id: String, key: String) -> float:
+	if key == "trail_progress":
+		return float(DEFINITIONS.get(id, {}).get(key, 0.0)) * installed_count(id)
 	return maxf(0.1, 1.0 + (float(DEFINITIONS.get(id, {}).get(key, 1.0)) - 1.0) * installed_count(id))
 
 func first_empty_slot() -> int:
@@ -167,7 +168,7 @@ static func configuration(selection) -> Dictionary:
 		var definition: Dictionary = DEFINITIONS[id]
 		for key in ["speed", "new_speed", "radius", "m31_value", "m31_cooldown", "sweep_charge", "rare_radius"]:
 			result[key] *= maxf(0.1, 1.0 + (float(definition.get(key, 1.0)) - 1.0) * ids.count(id))
-		result.targets = maxi(result.targets, int(definition.get("targets", 1)))
+		result.targets += (int(definition.get("targets", 1)) - 1) * ids.count(id)
 		result.cost += definition.cost
 	return result
 

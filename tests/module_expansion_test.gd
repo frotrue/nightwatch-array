@@ -3,6 +3,7 @@ extends SceneTree
 const Balance = preload("res://scripts/game_balance.gd")
 const Meteor = preload("res://scripts/meteor.gd")
 const Modules = preload("res://scripts/observation_modules.gd")
+const Expansion = preload("res://scripts/expansion_data.gd")
 const Observer = preload("res://scripts/observation_controller.gd")
 const Survey = preload("res://scripts/survey_controller.gd")
 
@@ -127,14 +128,11 @@ func _installed(ids: Array[String]) -> RefCounted:
 
 
 func _check_definition_contract() -> void:
-	_check(Modules.DEFINITIONS.size() == 14, "the five purchased and nine expansion modules are defined")
-	_check(Modules.RESEARCH_IDS.size() == 8 and "trail_integrator" not in Modules.RESEARCH_IDS, "only the original eight chart purchases remain research IDs")
-	for id in ["trail_integrator", "sweep_optics", "relay_bus"]:
+	_check(Modules.DEFINITIONS.size() == 14 and Expansion.SAMPLE_MODULES.size() == 14, "all fourteen modules are in the current draw pool")
+	_check(Modules.RESEARCH_IDS.size() == 8 and "trail_integrator" not in Modules.RESEARCH_IDS, "the retained diagnostic purchase IDs remain compatible")
+	for id in Modules.DEFINITIONS:
 		var definition: Dictionary = Modules.DEFINITIONS[id]
-		_check(definition.source == "research" and String(definition.category) in ["trace", "sweep", "link"] and String(definition.pool).is_empty(), id + " is research-granted metadata")
-	for id in ["long_baseline", "dual_processor", "afterglow_archive", "wide_correlation", "reference_bus", "shutter_weave"]:
-		var definition: Dictionary = Modules.DEFINITIONS[id]
-		_check(definition.source == "sample" and String(definition.pool) == String(definition.category), id + " has its matching specimen pool")
+		_check(Expansion.SAMPLE_MODULES.count(id) == 1 and definition.source == "sample" and String(definition.pool) == String(definition.category), id + " occurs once in the equal-odds draw with matching acquisition metadata")
 	var legacy := Modules.configuration(["focus", "wide", "record"])
 	_check(is_equal_approx(float(legacy.speed), 1.08) and is_equal_approx(float(legacy.radius), 1.65) and is_equal_approx(float(legacy.m31_value), 1.5), "legacy speed, radius and M31 value effects are unchanged")
 	var expanded := Modules.configuration(["sweep_optics", "trail_integrator", "relay_bus", "shutter_weave"])
@@ -218,6 +216,11 @@ func _check_trail_observation_contract() -> void:
 	observer.previous_cursor_position = Vector2(50.0, 0.0)
 	observer.cursor_position = Vector2(50.0, 0.0)
 	_check(observer._apply_manual_contact(target, 1.0) and target.applications == 1 and is_equal_approx(target.last_speed, 0.54), "trail acquisition applies one 60% observation only when the head has no contact")
+	modules.grant_copy("trail_integrator")
+	modules.equip("trail_integrator")
+	target.applications = 0
+	_check(observer._apply_manual_contact(target, 1.0) and target.applications == 1 and is_equal_approx(target.last_speed, 0.96), "two trail copies add 60% work each before their two manual penalties")
+	modules.equip("", 1)
 	target.applications = 0
 	target.position = Vector2(50.0, 0.0)
 	_check(observer._apply_manual_contact(target, 1.0) and target.applications == 1 and is_equal_approx(target.last_speed, 0.9), "head contact does not double-apply the trail path")
@@ -272,6 +275,23 @@ func _check_same_frame_completion() -> void:
 	observer.free()
 
 func _check_duplicate_effects() -> void:
+	var wide := _installed(["wide", "wide"])
+	_check(wide.effect("targets") == 5 and is_equal_approx(wide.effect("radius"), 2.3) and is_equal_approx(wide.effect("speed"), 0.5), "two wide copies add two extra targets and both radius bonuses and speed penalties")
+	var focus := _installed(["focus", "focus"])
+	_check(is_equal_approx(focus.effect("speed"), 2.6), "two focus copies preserve additive legacy speed")
+	var precision := _installed(["precision", "precision"])
+	_check(is_equal_approx(precision.effect("speed"), 2.0) and is_equal_approx(precision.effect("radius"), 0.4), "two precision copies compose speed and radius penalties")
+	var record := _installed(["record", "record"])
+	_check(is_equal_approx(record.effect("m31_value"), 2.0) and is_equal_approx(record.effect("speed"), 0.6), "two record copies compose reward and speed")
+	var revisit := _installed(["revisit", "revisit", "revisit"])
+	_check(is_equal_approx(revisit.effect("m31_cooldown"), 0.1), "revisit copies respect the positive cooldown floor")
+	var sweep := _installed(["sweep_optics", "sweep_optics"])
+	_check(is_equal_approx(sweep.effect("sweep_charge"), 1.7) and is_equal_approx(sweep.effect("rare_radius"), 2.0), "sweep copies add both effects")
+	var relay := _installed(["relay_bus", "relay_bus"])
+	var assisted := MockTarget.new()
+	assisted.manual_contribution = 0.25
+	_check(is_equal_approx(relay.dish_multiplier(assisted), 2.5), "relay copies reach the actual dish cap")
+	assisted.free()
 	var observer = Observer.new()
 	observer.progression = MockProgression.new()
 	var target := MockTarget.new()

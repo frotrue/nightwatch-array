@@ -58,7 +58,7 @@ MODULE_BALANCE,Data %s   ·   Equipped: %s,보유 데이터 %s   ·   장착: %s
 MODULE_FOCUS_NAME,Focused observation,집중 관측
 MODULE_FOCUS_DESC,Manual observation speed +80%. Also applies to wide-field targets.,수동 관측 속도 +80%. 광역 모듈과 조합 가능.
 MODULE_WIDE_NAME,Wide-field observation,광역 관측
-MODULE_WIDE_DESC,Observation radius +65%. Manual speed -25%. Keeps existing multi-target research.,관측 반경 +65%. 수동 분석 속도 -25%. 기존 다중 관측 유지.
+MODULE_WIDE_DESC,Radius +65%. Manual speed -25%. Two extra targets per copy; existing multi-target research remains.,관측 반경 +65%. 수동 속도 -25%. 장착 1개당 추가 표적 +2. 기존 다중 관측 연구 유지.
 MODULE_BUY,Buy · %s Data,구매 · %s 데이터
 MODULE_EQUIP,Equip,장착
 MODULE_EQUIPPED,Equipped,장착 중

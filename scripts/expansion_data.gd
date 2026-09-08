@@ -2,7 +2,7 @@ extends RefCounted
 
 const CATALOGUE_VERSION := 3
 const DRAW_COST := 8
-const SAMPLE_MODULES := ["long_baseline", "dual_processor", "afterglow_archive", "wide_correlation", "reference_bus", "shutter_weave"]
+const SAMPLE_MODULES := ["long_baseline", "dual_processor", "afterglow_archive", "wide_correlation", "reference_bus", "shutter_weave", "focus", "wide", "precision", "record", "revisit", "trail_integrator", "sweep_optics", "relay_bus"]
 const MODULE_BRANCHES := ["pegasus", "lacerta"]
 const LEGACY_PURCHASE_IDS := ["focus", "wide", "precision", "record", "revisit"]
 const LEGACY_GRANTS := {"ext_trace_study": "trail_integrator", "ext_sweep_study": "sweep_optics", "ext_link_study": "relay_bus"}

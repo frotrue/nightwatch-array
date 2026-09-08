@@ -152,3 +152,14 @@ IAU의 [도마뱀자리](https://iauarchive.eso.org/static/public/constellations
 [삼각형자리](https://iauarchive.eso.org/static/public/constellations/pdf/TRI.pdf) 자료를 참고했다.
 연결선과 좌표는 게임용으로 단순화한 형상이며 적경·적위 투영이나 정밀 위치/등급 계측도가 아니다.
 기존 네 별자리 자료와 모듈·특수 유성 규칙은 [확장 설계](expansion-design.md)를 따른다.
+
+## 구현 검증 — 2026-09-08
+
+- 최종 14종 뽑기 상태에서 빠른 게이트 20개, 전체 경제 검사, Windows 내보내기 모두 통과했다.
+  기록: `build/validation/20260908T081312813Z_3e37daf5/summary.json`.
+- 47개 연구의 무장착 도달성, 실제 관측 효과, 중복 효과, 저장 호환·실패 복구와
+  결과 공개·건너뛰기를 전용 검사에서 확인했다. 전체 경제 검사는 기존 107연구·5현상 진단 경로의
+  회귀 검사이며 새 47개 연구의 사람 플레이 완주 시간을 측정한 것은 아니다.
+- 최종 한국어·영어 실제 렌더 38장: `build/outer_growth_review/1788855179/`.
+  성도 프레임 검사에서 휠 회전 p95 10.98ms, 전환 p95 13.32ms로 16.7ms 기준을 통과했다.
+  기록: `build/outer_growth_frame_probe.log`.
