@@ -86,6 +86,7 @@ var galactic_pullback_seen: bool = false
 
 func _ready() -> void:
 	print("NIGHTWATCH_ENGINE_VERSION: ", Engine.get_version_info())
+	starfield.background_visibility_changed.connect(func(alpha: float): twinkle_stars.modulate.a = alpha)
 	sound = SoundSynth.new()
 	sound.name = "SoundSynth"
 	add_child(sound)
@@ -266,6 +267,7 @@ func _process(delta: float) -> void:
 	var real_delta := delta / maxf(Engine.time_scale, 0.001)
 	elapsed_time += real_delta
 	observation_phase_remaining = maxf(0.0, observation_phase_remaining - real_delta)
+	starfield.set_watch_progress(1.0 - observation_phase_remaining / observation_phase_duration)
 	spawner.set_phase_time_remaining(observation_phase_remaining)
 	hud.set_runtime(elapsed_time)
 	hud.set_observation_phase(observation_round, observation_phase_remaining, observation_phase_duration)
@@ -292,6 +294,7 @@ func _begin_observation_phase(advance_round: bool = false, remaining_override: f
 	var duration := _observation_duration()
 	observation_phase_duration = duration
 	observation_phase_remaining = duration if remaining_override < 0.0 else clampf(remaining_override, 0.05, duration)
+	starfield.set_watch_progress(1.0 - observation_phase_remaining / duration)
 	spawner.set_phase_time_remaining(observation_phase_remaining)
 	observation_phase_active = true
 	progression.reset_manual_combo()
@@ -378,11 +381,13 @@ func _end_observation_phase() -> void:
 	upgrade_tree.set_intermission_context(next_round, int(_observation_duration()))
 	_autosave_active_slot()
 	get_tree().paused = true
+	var sunrise_delay: float = starfield.finish_watch(settings.get_motion_intensity() > 0.0)
 	hud.show_phase_summary(
 		result,
 		previous_result,
 		comparison_state,
-		new_best
+		new_best,
+		sunrise_delay
 	)
 
 
@@ -1275,6 +1280,7 @@ func _apply_save_data(data: Dictionary) -> void:
 	else:
 		observation_phase_active = false
 		observation_phase_remaining = 0.0
+		starfield.finish_watch(false)
 		phase_started_with_complete_research = false
 		survey.end_round()
 		hud.set_upgrade_phase(observation_round)

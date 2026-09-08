@@ -1,6 +1,9 @@
 extends Node2D
 
+signal background_visibility_changed(alpha: float)
+
 const Balance = preload("res://scripts/game_balance.gd")
+const SUNRISE_SECONDS := 1.1
 
 # Keep a small overscan reserve around the final camera limit so changing the
 # single balance constant cannot silently reveal an unpainted border.
@@ -45,6 +48,54 @@ var galactic_mode: bool = false
 var rng := RandomNumberGenerator.new()
 var cached_size := Vector2.ZERO
 var observation_view: Camera2D
+var watch_progress: float = 0.0
+var sunrise: float = 0.0
+var sunrise_tween: Tween
+
+
+func set_watch_progress(value: float) -> void:
+	# A restored clock can quantize to the same value as the finished round.
+	# Cancel first so its pending sunrise cannot run over an active observation.
+	_stop_sunrise()
+	var next := snappedf(clampf(value, 0.0, 1.0), 1.0 / 600.0)
+	if is_equal_approx(next, watch_progress) and is_zero_approx(sunrise):
+		return
+	watch_progress = next
+	_set_sunrise(0.0)
+
+
+func finish_watch(animate: bool = true) -> float:
+	_stop_sunrise()
+	watch_progress = 1.0
+	_set_sunrise(0.0 if animate else 1.0)
+	if not animate:
+		return 0.0
+	# The simulation is already paused and accounted for. Only the sky moves.
+	sunrise_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	sunrise_tween.set_ignore_time_scale(true)
+	sunrise_tween.tween_method(_set_sunrise, 0.0, 1.0, SUNRISE_SECONDS).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	return SUNRISE_SECONDS
+
+
+func _stop_sunrise() -> void:
+	if sunrise_tween != null:
+		sunrise_tween.kill()
+		sunrise_tween = null
+
+
+func _set_sunrise(value: float) -> void:
+	sunrise = value
+	background_visibility_changed.emit(background_star_alpha())
+	queue_redraw()
+
+
+func dawn_amount() -> float:
+	# Preserve most of the night; the last quarter carries the clear time cue.
+	return 0.12 * smoothstep(0.0, 0.75, watch_progress) + 0.88 * smoothstep(0.72, 1.0, watch_progress)
+
+
+func background_star_alpha() -> float:
+	return (1.0 - dawn_amount() * 0.55) * (1.0 - sunrise * 0.90)
 
 
 func _ready() -> void:
@@ -69,7 +120,7 @@ func set_activity(value: float) -> void:
 	if is_equal_approx(next_activity, activity):
 		return
 	activity = next_activity
-	# The expensive full background is rebuilt only when event tint changes.
+	# Event tint and the quantized watch clock invalidate the background.
 	queue_redraw()
 
 
@@ -122,6 +173,11 @@ func _draw() -> void:
 		else:
 			sky = Color("09131F").lerp(Color("203746"), smoothstep(0.0, 1.0, (t - 0.52) / 0.48))
 		sky = sky.lerp(Color("28191D"), activity * (0.06 + t * 0.10))
+		var dawn := Color("192139").lerp(Color("635067"), smoothstep(0.12, 0.78, t))
+		dawn = dawn.lerp(Color("C3896A"), smoothstep(0.66, 0.96, t))
+		sky = sky.lerp(dawn, dawn_amount() * lerpf(0.45, 0.82, t))
+		var morning := Color("34435B").lerp(Color("E8B48B"), smoothstep(0.12, 0.96, t))
+		sky = sky.lerp(morning, sunrise * lerpf(0.40, 0.78, t))
 		draw_rect(Rect2(sky_frame.position.x, band_y, sky_size.x, sky_size.y / bands + 2.0), sky)
 
 	_draw_airglow(sky_frame)
@@ -130,6 +186,7 @@ func _draw() -> void:
 		_draw_star(atmospheric.position + Vector2(star.p) * size, star)
 	for star in outer_stars:
 		_draw_star(Vector2(star.p), star)
+	_draw_sunrise(sky_frame)
 
 	# Quiet ridges establish distance below the playable sky. The near plateau
 	# and observatory are the one authored focal shape beneath the moving light.
@@ -142,6 +199,7 @@ func _draw_star(point: Vector2, star: Dictionary) -> void:
 	var level := int(star.level)
 	var star_color: Color = STAR_TEMPERATURES[int(star.temperature)]
 	star_color.a = clampf(float(star.alpha) + sin(float(star.phase)) * 0.035 + activity * 0.08, 0.18, 0.92)
+	star_color.a *= background_star_alpha()
 	# No cross rays. They were the reason a background star could occupy more
 	# pixels than a meteor's head, and the sky has to stay quieter than the
 	# thing the player is trying to see in it.
@@ -150,6 +208,25 @@ func _draw_star(point: Vector2, star: Dictionary) -> void:
 		var soft_edge := star_color
 		soft_edge.a *= 0.07
 		draw_circle(point, _world_px(float(star.size) * 2.15), soft_edge)
+
+
+func _draw_sunrise(frame: Rect2) -> void:
+	# Draw behind the ridges so the sun rises out of the existing landscape.
+	var radius := frame.size.y * 0.029
+	var centre := frame.position + frame.size * Vector2(0.32, lerpf(0.96, 0.897, sunrise))
+	var glow := dawn_amount() * 0.25 + sunrise * 0.75
+	# A vertex-colored radial mesh avoids hard concentric halo edges.
+	var points := PackedVector2Array()
+	var colors := PackedColorArray()
+	var glow_radius := radius * 6.0
+	for index in range(64):
+		var angle := TAU * float(index) / 64.0
+		var next_angle := TAU * float(index + 1) / 64.0
+		points = PackedVector2Array([centre, centre + Vector2.from_angle(angle) * glow_radius, centre + Vector2.from_angle(next_angle) * glow_radius])
+		colors = PackedColorArray([Color(1.0, 0.64, 0.33, glow * 0.15), Color(1.0, 0.64, 0.33, 0.0), Color(1.0, 0.64, 0.33, 0.0)])
+		draw_polygon(points, colors)
+	if sunrise > 0.0:
+		draw_circle(centre, radius, Color("FFE1AE"), true, -1.0, true)
 
 
 func _make_star(point: Vector2, index: int) -> Dictionary:

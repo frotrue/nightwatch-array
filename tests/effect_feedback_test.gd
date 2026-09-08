@@ -58,12 +58,55 @@ func _run() -> void:
 	paused = false
 	game._release_hitstop()
 	game.free()
+	await _test_round_dawn()
 	if failures.is_empty():
-		print("EFFECT_FEEDBACK_PASS: routine/accent routing, directional cones, event/cap preservation and visible paused HUD/chart installation rules")
+		print("EFFECT_FEEDBACK_PASS: routine/accent routing, directional cones, event/cap preservation, paused HUD/chart installation rules and round dawn lifecycle")
 		quit(0)
 	else:
 		print("EFFECT_FEEDBACK_FAIL: %d failure(s)" % failures.size())
 		quit(1)
+
+
+func _test_round_dawn() -> void:
+	var game = MainScene.instantiate()
+	Fixtures.configure_before_ready(game)
+	root.add_child(game)
+	game.set_process(false)
+	game.spawner.running = false
+	game.events.running = false
+	game._process(game.observation_phase_duration * 0.85)
+	var dusk: float = game.starfield.dawn_amount()
+	var saved: Dictionary = game._build_save_data()
+	paused = true
+	await create_timer(0.05).timeout
+	_check(is_equal_approx(game.starfield.dawn_amount(), dusk), "paused observation preserves the sky clock")
+	game._apply_save_data(saved)
+	_check(is_equal_approx(game.starfield.dawn_amount(), dusk), "active load restores the sky from remaining round time")
+	game._process(game.observation_phase_remaining)
+	var earned: float = game.progression.total_data_earned
+	var elapsed: float = game.elapsed_time
+	_check(paused and not game.observation_phase_active and not game.spawner.running, "sunrise begins only after the round is closed")
+	_check(game.hud.is_phase_summary_open() and is_zero_approx(game.hud.phase_summary_overlay.modulate.a) and game.hud.phase_summary_button.disabled, "summary owns pause without an invisible clickable button during sunrise")
+	await create_timer(0.35).timeout
+	_check(game.starfield.sunrise > 0.0 and game.starfield.sunrise < 1.0, "sunrise animates while simulation is paused")
+	await create_timer(1.2).timeout
+	_check(is_equal_approx(game.starfield.sunrise, 1.0) and is_equal_approx(game.hud.phase_summary_overlay.modulate.a, 1.0) and not game.hud.phase_summary_button.disabled, "sunrise reveals the usable summary")
+	_check(game.elapsed_time == elapsed and game.progression.total_data_earned == earned, "sunrise adds neither observation time nor income")
+	game.starfield.finish_watch()
+	var same_clock_tween: Tween = game.starfield.sunrise_tween
+	game.starfield.set_watch_progress(game.starfield.watch_progress)
+	_check(not same_clock_tween.is_valid(), "restoring an identical clock cancels a not-yet-started sunrise")
+	game._begin_observation_phase(true)
+	_check(is_zero_approx(game.starfield.sunrise) and is_zero_approx(game.starfield.watch_progress) and is_equal_approx(game.twinkle_stars.modulate.a, 1.0), "next round restores both night star layers")
+	game._end_observation_phase()
+	var interrupted: Tween = game.starfield.sunrise_tween
+	game._apply_save_data(saved)
+	_check(not interrupted.is_valid() and not game.hud.is_phase_summary_open() and game.hud.phase_summary_reveal == null, "loading during sunrise cancels both presentation tweens")
+	game.settings.motion_intensity = 0.0
+	game._end_observation_phase()
+	_check(is_equal_approx(game.starfield.sunrise, 1.0) and game.starfield.sunrise_tween == null and is_equal_approx(game.hud.phase_summary_overlay.modulate.a, 1.0), "zero motion displays dawn and summary without a delay")
+	paused = false
+	game.free()
 
 
 func _test_particle_categories(effects) -> void:

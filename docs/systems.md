@@ -94,7 +94,8 @@ Ordinary Data changes use progression's existing signal, not duplicate deep-sky 
 _begin_observation_phase
   → live observation, spawning, events and accounting
 _end_observation_phase
-  → finalize result, clear round-local objects, autosave, pause, show summary
+  → finalize result, clear round-local objects, autosave, pause
+  → presentation-only sunrise, reveal summary (summary owns input/pause immediately)
 _on_phase_summary_continue_requested
   → open research chart
 _on_upgrade_tree_closed
@@ -105,6 +106,11 @@ _on_upgrade_tree_closed
   `Engine.time_scale` prevents hitstop from extending a round's real duration.
 - Round end clears atmospheric meteors, contacts, survey charge, forecasts and
   spawn queues. Persistent storm charge and saved target progress follow their own contracts.
+- Starfield derives dawn from the round's remaining fraction and fades TwinkleStars
+  through `background_visibility_changed`. Its sunrise tween and HUD summary reveal
+  run during intermission pause, ignoring hitstop time scale. Active load/new round
+  cancels the old sky tween; HUD hide/replacement cancels the old reveal. Intermission
+  load restores finished dawn directly. These are unsaved presentation states.
 - Canis scheduling begins with a new round. Showers and the 2.6-second Sirius
   warning plus 14-second Major lifetime must fit, or defer to a viable round.
 - Atmospheric long-watch objects do not carry across rounds. M31 records,

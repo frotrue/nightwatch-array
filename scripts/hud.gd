@@ -87,6 +87,7 @@ var end_reveal_started_msec: int = 0
 var catalogue_debug_preview_active: bool = false
 var catalogue_save_failure_active: bool = false
 var phase_summary_overlay: Control
+var phase_summary_reveal: Tween
 var in_round_visibility: Dictionary = {}
 var phase_summary_title: Label
 var phase_summary_subtitle: Label
@@ -656,8 +657,10 @@ func show_phase_summary(
 	result: Dictionary,
 	previous_result: Dictionary,
 	comparison_state: String,
-	new_best: bool
+	new_best: bool,
+	reveal_delay: float = 0.0
 ) -> void:
+	_reset_phase_summary_reveal()
 	var round_number := maxi(1, int(result.get("round", 1)))
 	var data_earned := maxi(0, int(result.get("data", 0)))
 	var duration_seconds := maxi(1, int(round(float(result.get("duration", 20.0)))))
@@ -716,6 +719,14 @@ func show_phase_summary(
 	phase_summary_button.text = tr("PHASE_SUMMARY_CONTINUE")
 	phase_summary_overlay.visible = true
 	phase_summary_overlay.move_to_front()
+	if reveal_delay > 0.0:
+		phase_summary_overlay.modulate.a = 0.0
+		phase_summary_button.disabled = true
+		phase_summary_reveal = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+		phase_summary_reveal.set_ignore_time_scale(true)
+		phase_summary_reveal.tween_interval(reveal_delay)
+		phase_summary_reveal.tween_property(phase_summary_overlay, "modulate:a", 1.0, 0.3)
+		phase_summary_reveal.tween_callback(func(): phase_summary_button.disabled = false)
 	_refresh_in_round_readouts()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
@@ -767,10 +778,20 @@ func _signed_rate_value(value: float, exact: bool = false) -> String:
 
 
 func hide_phase_summary() -> void:
+	_reset_phase_summary_reveal()
 	if phase_summary_overlay != null:
 		phase_summary_button.release_focus()
 		phase_summary_overlay.visible = false
 	_refresh_in_round_readouts()
+
+
+func _reset_phase_summary_reveal() -> void:
+	if phase_summary_reveal != null:
+		phase_summary_reveal.kill()
+		phase_summary_reveal = null
+	if phase_summary_overlay != null:
+		phase_summary_overlay.modulate.a = 1.0
+		phase_summary_button.disabled = false
 
 
 func is_phase_summary_open() -> bool:
@@ -2193,7 +2214,7 @@ func _build_phase_summary_overlay() -> void:
 	# sky, the same way the in-round readouts and the research chart are. A panel
 	# here was the last surface still speaking the old cyan HUD language.
 	var dim := ColorRect.new()
-	dim.color = Color(0.016, 0.008, 0.006, 0.88)
+	dim.color = Color(0.016, 0.008, 0.006, 0.62)
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	phase_summary_overlay.add_child(dim)

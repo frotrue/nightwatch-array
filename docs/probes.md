@@ -74,7 +74,7 @@ Each file below is under `tests/`. Run one while iterating with:
 | `galactic_slice_test.gd` | `GALACTIC_SLICE_PASS` | Legacy 12+17 topology, target/phenomenon behavior, lens automation, span and save contracts |
 | `probe_layer2_test.gd` | `PROBE_TEST_PASS` | Independent Layer 2 signals, uncertainty, commitment, abandonment and completion |
 | `sound_feedback_test.gd` | `SOUND_FEEDBACK_PASS` | Event dispatch, PCM distinctions, 1,000 automatic events aggregated into 63 pulses, timing and queue clearing |
-| `effect_feedback_test.gd` | `EFFECT_FEEDBACK_PASS` | Routine/accent routing, real visible installation rule, pause/selection cancellation and capacity limits |
+| `effect_feedback_test.gd` | `EFFECT_FEEDBACK_PASS` | Routine/accent routing, real visible installation rule, pause/selection cancellation, capacity limits and dawn/summary pause, load, next-round and zero-motion lifecycle |
 | `reference_capture_test.gd` | `REFERENCE_CAPTURE_TEST_PASS` | Thirteen isolated scenario states, malformed image/manifest/Git rejection; no PNG rendering |
 | `research_visual_test.gd` | `RESEARCH_VISUAL_PASS` | Actual marker draw paths, branch/state color bindings, alpha/radii and tutorial claims |
 | `ui_presentation_test.gd` | `UI_PRESENTATION_PASS` | Shared font/spec/spacing, full integer formatting, compact/scientific thresholds, rounding carries and signed rates |
