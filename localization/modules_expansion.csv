@@ -1,8 +1,9 @@
 keys,en,ko
-MODX_INVENTORY,Module catalogue,모듈 목록
-MODX_COUNT,%d / %d owned,%d / %d종 보유
+MODX_INVENTORY,Module storage,모듈 보관함
+MODX_COUNT,%d types,%d종 보유
+MODX_EMPTY,Your storage is empty. Acquire a module from the draw window below.,보관함이 비어 있습니다. 아래 뽑기창에서 모듈을 획득하세요.
+MODX_EMPTY_CATEGORY,No modules owned in this category.,이 분류에는 보유한 모듈이 없습니다.
 MODX_FILTER_ALL,All,전체
-MODX_FILTER_OWNED,Owned,보유
 MODX_FILTER_TRACE,Tracking,추적
 MODX_FILTER_SWEEP,Survey,탐색
 MODX_FILTER_LINK,Relay,연계

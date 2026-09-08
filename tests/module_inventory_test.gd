@@ -40,15 +40,42 @@ func _run() -> void:
 	popup.owned_buttons[locked_id].pressed.emit()
 	_check(game.deep_sky.modules.installed_ids() == before, "unowned catalog tiles never equip")
 	popup.show_module_tooltip(locked_id)
-	_check(popup.tooltip_panel.visible, "unowned catalog tile exposes an acquisition tooltip")
+	_check(not popup.tooltip_panel.visible, "unowned module exposes no tooltip")
 
-	popup.set_inventory_filter("owned")
-	_check(popup.owned_buttons.focus.visible and not popup.owned_buttons[locked_id].visible, "owned filter hides unowned modules")
-	popup.set_inventory_filter("trace")
-	_check(popup.owned_buttons["trail_integrator"].visible and not popup.owned_buttons["afterglow_archive"].visible, "tracking filter uses definition categories")
+	for filter_id in popup.INVENTORY_FILTERS:
+		popup.set_inventory_filter(filter_id)
+		for id in Modules.DEFINITIONS:
+			if id != "focus":
+				_check(not popup.owned_buttons[id].visible and popup.owned_buttons[id].focus_mode == Control.FOCUS_NONE, "unowned module is hidden and unfocusable in " + filter_id + ": " + id)
+		_check(popup.owned_buttons.focus.visible == (filter_id in ["all", "trace"]), "owned module respects category filter: " + filter_id)
+		_check(popup.inventory_empty.visible == (filter_id in ["sweep", "link"]), "empty category explains missing owned modules: " + filter_id)
 	popup.set_inventory_filter("all")
+	_check(popup.owned_buttons.focus.visible and popup.owned_buttons.focus.installed, "installed module remains in storage")
+	game.deep_sky.modules.grant_copy("focus")
+	popup.refresh(false)
+	_check(game.deep_sky.modules.owned_count("focus") == 2 and popup.inventory_count.text == tr("MODX_COUNT") % 1, "duplicates keep one type and their owned quantity")
+	popup.show_module_tooltip("focus")
+	_check(popup.tooltip_panel.visible, "owned module exposes its tooltip")
+	popup.set_inventory_filter("sweep")
+	_check(not popup.tooltip_panel.visible, "filtering out hovered module dismisses its tooltip")
+	popup.set_inventory_filter("all")
+	popup.owned_buttons.focus.grab_focus()
+	game.deep_sky.modules.load_save_data({})
+	popup.refresh(false)
+	_check(popup.inventory_empty.visible and popup.inventory_empty.text == tr("MODX_EMPTY"), "empty storage points to module draws")
+	_check(not popup.tooltip_panel.visible and not popup.owned_buttons.focus.has_focus(), "removing ownership dismisses stale tooltip and keyboard focus")
+	for tile in popup.owned_buttons.values():
+		_check(not tile.visible, "empty storage has no module tiles")
+	for id in Modules.DEFINITIONS:
+		game.deep_sky.modules.grant_copy(id)
+	popup.refresh(false)
+	await process_frame
+	await process_frame
+	_check(not popup.inventory_empty.visible, "acquiring modules clears empty storage message")
+	for tile in popup.owned_buttons.values():
+		_check(tile.visible, "acquired module appears in storage")
 	var scrollbar: Range = popup.inventory_scroll.get_v_scroll_bar()
-	_check(scrollbar.max_value > scrollbar.page, "fourteen modules create a scrollable catalog")
+	_check(scrollbar.max_value > scrollbar.page, "fourteen owned modules create scrollable storage")
 
 	popup.close()
 	_check(not popup.is_open() and game.upgrade_tree.visible and paused, "closing the modal restores the chart pause")
@@ -56,7 +83,7 @@ func _run() -> void:
 	game.free()
 
 	if failures.is_empty():
-		print("MODULE_INVENTORY_PASS: fourteen-module catalog, filters, locked paths, scroll and modal focus")
+		print("MODULE_INVENTORY_PASS: owned-only storage, empty states, categories, duplicates, scroll and modal focus")
 		quit(0)
 	else:
 		push_error(str(failures))

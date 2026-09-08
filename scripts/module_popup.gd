@@ -20,7 +20,7 @@ const INVENTORY_TILE_SPEC_SIZE := Vector2(188, 104)
 const INVENTORY_GAP_SPEC := 10.0
 const INVENTORY_SCROLL_SPEC_RECT := Rect2(1174, 414, 620, 338)
 const INVENTORY_GRID_SPEC_WIDTH := 600.0
-const INVENTORY_FILTERS := ["all", "owned", "trace", "sweep", "link"]
+const INVENTORY_FILTERS := ["all", "trace", "sweep", "link"]
 
 class RingSlot:
 	extends Button
@@ -136,6 +136,7 @@ var draw_button: Button
 var heading: Label
 var inventory_heading: Label
 var inventory_count: Label
+var inventory_empty: Label
 var inventory_scroll: ScrollContainer
 var inventory_grid: GridContainer
 var filter_buttons: Dictionary = {}
@@ -203,7 +204,7 @@ func _ready() -> void:
 	inventory_count.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	for filter_index in range(INVENTORY_FILTERS.size()):
 		var filter_id: String = INVENTORY_FILTERS[filter_index]
-		var filter := _filter_action(surface, Vector2(1180 + filter_index * 117, 376), Vector2(108, 30), filter_id)
+		var filter := _filter_action(surface, Vector2(1180 + filter_index * 150, 376), Vector2(140, 30), filter_id)
 		filter_buttons[filter_id] = filter
 	inventory_scroll = ScrollContainer.new()
 	inventory_scroll.position = Vector2(INVENTORY_SCROLL_SPEC_RECT.position) * UITheme.SCALE
@@ -232,6 +233,10 @@ func _ready() -> void:
 		tile.focus_exited.connect(hide_tooltip)
 		inventory_grid.add_child(tile)
 		owned_buttons[id] = tile
+	inventory_empty = _label(surface, Vector2(1210, 538), 540, POPUP_BODY_SPEC_SIZE, UITheme.INK_MID)
+	inventory_empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	inventory_empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	inventory_empty.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	summary_heading = _label(surface, Vector2(400, 842), 600, POPUP_BODY_SPEC_SIZE, UITheme.TOOLTIP_LABEL, true)
 	summary_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	summary = _label(surface, Vector2(250, 872), 900, POPUP_BODY_SPEC_SIZE, UITheme.TOOLTIP_VALUE)
@@ -366,7 +371,7 @@ func refresh(animate: bool = true) -> void:
 	heading.text = tr("DEEP_MODULES")
 	close_button.text = tr("RING_CLOSE")
 	inventory_heading.text = tr("MODX_INVENTORY")
-	inventory_count.text = _format_translation("MODX_COUNT", [model().purchased.size(), Modules.DEFINITIONS.size()], "%d / %d" % [model().purchased.size(), Modules.DEFINITIONS.size()])
+	inventory_count.text = tr("MODX_COUNT") % model().purchased.size()
 	for filter_id in filter_buttons:
 		var filter: Button = filter_buttons[filter_id]
 		filter.text = _filter_label(filter_id)
@@ -382,14 +387,19 @@ func refresh(animate: bool = true) -> void:
 		slot_captions[index].text = tr("RING_LOCKED") if locked else (tr("RING_EMPTY") if id.is_empty() else tr("MODULE_%s_SHORT" % id.to_upper()))
 		slot_captions[index].add_theme_color_override("font_color", UITheme.INK_LOW if locked else UITheme.INK_HIGH)
 	var installed_ids: Array[String] = model().installed_ids()
+	var visible_count := 0
 	for id in owned_buttons:
 		var tile: InventoryTile = owned_buttons[id]
 		var definition: Dictionary = _definition(id)
 		tile.visible = _matches_filter(id, definition)
+		if tile.visible:
+			visible_count += 1
 		tile.update_state(id in model().purchased, id in installed_ids, _category_for(id, definition))
 		# A filtered grid keeps its original child order, so keyboard focus remains
 		# stable as modules are added to the catalog later.
 		tile.focus_mode = Control.FOCUS_ALL if tile.visible else Control.FOCUS_NONE
+	inventory_empty.visible = visible_count == 0
+	inventory_empty.text = tr("MODX_EMPTY" if model().purchased.is_empty() else "MODX_EMPTY_CATEGORY")
 	summary_heading.text = tr("MODX_CURRENT")
 	var old_speed := _effect_number("speed", 1.0)
 	var new_speed := _effect_number("new_speed", 1.0)
@@ -406,7 +416,8 @@ func refresh(animate: bool = true) -> void:
 	_update_tooltip()
 
 func show_module_tooltip(id: String) -> void:
-	if not owned_buttons.has(id):
+	if not owned_buttons.has(id) or id not in model().purchased or not owned_buttons[id].visible:
+		hide_tooltip()
 		return
 	hover_kind = "module"
 	hover_id = id
@@ -436,6 +447,9 @@ func _update_tooltip() -> void:
 		tooltip_panel.hide()
 		return
 	var id := hover_id
+	if hover_kind == "module" and (id not in model().purchased or not owned_buttons.has(id) or not owned_buttons[id].visible):
+		hide_tooltip()
+		return
 	if hover_kind == "slot":
 		id = model().slots[hover_slot]
 	if hover_kind == "slot" and hover_slot >= model().unlocked_slots:
@@ -507,9 +521,9 @@ func _source_for(id: String, definition: Dictionary = {}) -> String:
 	return "purchase" if id in ["focus", "wide", "precision", "record", "revisit"] else "research"
 
 func _matches_filter(id: String, definition: Dictionary) -> bool:
+	if id not in model().purchased:
+		return false
 	match inventory_filter:
-		"owned":
-			return id in model().purchased
 		"trace", "sweep", "link":
 			return _category_for(id, definition) == inventory_filter
 		_:
