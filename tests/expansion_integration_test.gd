@@ -45,6 +45,7 @@ func _run() -> void:
 	_check_measurement()
 	_check_migration()
 	_check_tracking_names()
+	await _check_split_module()
 	game.free()
 	paused = false
 	await process_frame
@@ -59,6 +60,99 @@ func _freeze(node: Node) -> void:
 	node.set_process(false)
 	node.set_physics_process(false)
 	for child in node.get_children(): _freeze(child)
+
+func _clear_split_sky() -> void:
+	game.observer.reset()
+	for child in game.meteor_layer.get_children(): child.free()
+	game.spawner.pending_echoes.clear()
+	game.spawner.pending_contacts.clear()
+	game.spawner.leonid_storm_remaining = 0
+
+func _split_pieces() -> Array:
+	return game.meteor_layer.get_children().filter(func(node): return node.get_meta("module_fragment", false))
+
+func _check_split_module() -> void:
+	_sky()
+	game.spawner.running = true
+	game.spawner.phase_time_remaining = 60.0
+	research.modules.load_save_data({"purchased": ["focus"], "quantities": {"focus": 4}, "slots": ["focus", "focus", "focus", "focus"], "unlocked_slots": 5})
+	for manual in [true, false]:
+		for kind in ["common", "fast"]:
+			_clear_split_sky()
+			var parent = game.spawner.spawn_meteor(kind, Vector2(500, 280), Vector2(180, 0))
+			# A constellation-born common/fast remains eligible, while suppressing
+			# unrelated parent bursts so this checks the production completion route.
+			parent.set_meta("gemini_echo", true)
+			parent.set_process(false)
+			_check(game.spawner.try_spawn_module_fragments(parent, 1.0) == 0, "unfinished meteor cannot split")
+			if manual:
+				game.observer.cursor_position = parent.global_position
+				game.observer._apply_manual_contact(parent, 20.0)
+				parent._process(0.0)
+			else:
+				parent.set_dish_assist_rate(10.0)
+				parent._process(0.11)
+			var pieces := _split_pieces()
+			_check(parent.observed_successfully and pieces.size() == 2, "real manual/automatic completion creates a pair: " + kind + "/" + str(manual))
+			if pieces.size() != 2: continue
+			_check(pieces[0].velocity.cross(pieces[1].velocity) != 0.0, "children fly in distinct directions")
+			_check(game.spawner.try_spawn_module_fragments(parent, 1.0) == 0, "same success cannot roll twice")
+			var before_count: int = game.meteor_layer.get_child_count()
+			var before_data: float = game.progression.total_data_earned
+			for piece in pieces:
+				piece.set_process(false)
+				_check(is_equal_approx(piece.base_value, parent.base_value * 0.25) and piece.body_radius < parent.body_radius, "children carry a quarter base Data and smaller bodies")
+				_check(piece.primary_color == parent.primary_color and piece.glow_color == parent.glow_color, "children inherit parent color")
+				game.observer.cursor_position = piece.global_position
+				game.observer._apply_manual_contact(piece, 20.0)
+				piece._process(0.0)
+			_check(game.meteor_layer.get_child_count() == before_count and game.spawner.pending_echoes.is_empty() and game.spawner.pending_contacts.is_empty() and game.spawner.leonid_storm_remaining == 0, "children cannot resplit or launch constellation bursts")
+			_check(game.progression.total_data_earned > before_data, "collecting children awards real data")
+	_clear_split_sky()
+	# A seeded series checks both hit and miss branches against the advertised
+	# chance and keeps this new random stream independent of regular arrivals.
+	var expected_rng := RandomNumberGenerator.new()
+	expected_rng.seed = 42
+	game.spawner.module_rng.seed = 42
+	var ordinary_rng_state: int = game.spawner.rng.state
+	var hits := 0
+	for index in range(120):
+		var parent = game.spawner.spawn_meteor("common", Vector2(500, 280), Vector2(180, 0))
+		parent.observed_successfully = true
+		var expected := 2 if expected_rng.randf() < 0.3 else 0
+		_check(game.spawner.try_spawn_module_fragments(parent, 0.3) == expected, "seeded 30 percent chance matches hit/miss decision")
+		hits += int(expected > 0)
+		_clear_split_sky()
+	_check(hits > 0 and hits < 120 and game.spawner.rng.state == ordinary_rng_state, "chance covers hits and misses without consuming arrival RNG")
+	for kind in ["fragment", "fragment_piece", "fireball", "major"]:
+		var parent = game.spawner.spawn_meteor(kind, Vector2(500, 280), Vector2(180, 0))
+		parent.observed_successfully = true
+		_check(game.spawner.try_spawn_module_fragments(parent, 1.0) == 0, "other meteor families excluded: " + kind)
+		_clear_split_sky()
+	var parent = game.spawner.spawn_meteor("common", Vector2(500, 280), Vector2(180, 0))
+	parent.observed_successfully = true
+	research.modules.slots.fill("")
+	_check(game.spawner.try_spawn_module_fragments(parent, research.modules.effect("split_chance")) == 0, "unequipping disables splitting")
+	_clear_split_sky()
+	parent = game.spawner.spawn_meteor("common", Vector2(500, 280), Vector2(180, 0))
+	parent.observed_successfully = true
+	var extension_count: int = research.director.object_count()
+	var budget: int = 31 - maxi(game.spawner.extension_reserved_slots, extension_count)
+	while game.meteor_layer.get_child_count() < budget - 1:
+		game.spawner.spawn_meteor("common", Vector2(500, 280), Vector2.ZERO)
+	_check(game.spawner.try_spawn_module_fragments(parent, 1.0) == 0 and _split_pieces().is_empty(), "one free slot cannot create a partial pair or consume reserved capacity")
+	_clear_split_sky()
+	parent = game.spawner.spawn_meteor("common", Vector2(500, 280), Vector2(180, 0))
+	parent.observed_successfully = true
+	game.spawner.try_spawn_module_fragments(parent, 1.0)
+	for piece in _split_pieces():
+		piece.set_process(false)
+		piece._process(3.0)
+		_check(not piece.alive and not piece.observed_successfully, "uncollected split children expire")
+		piece._process(2.0)
+	await process_frame
+	_check(_split_pieces().is_empty(), "expired children are freed")
+	_clear_split_sky()
 
 func _check_tracking_names() -> void:
 	for locale in ["en", "ko"]:

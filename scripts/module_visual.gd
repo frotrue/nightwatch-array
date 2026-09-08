@@ -35,7 +35,13 @@ static func draw_module(canvas: CanvasItem, rect: Rect2, id: String, active: boo
 	if id not in expansion_ids:
 		id = String(definition.get("glyph", id))
 	var ink := Color(UITheme.TOOLTIP_NAME, (0.95 if active else 0.45) * opacity)
-	if id == "focus":
+	if id == "split":
+		canvas.draw_line(c + Vector2(-1.2, 0) * r, c, ink, 1.2, true)
+		for side in [-1.0, 1.0]:
+			var end := c + Vector2(0.95, side * 0.65) * r
+			canvas.draw_line(c, end, ink, 1.2, true)
+			canvas.draw_circle(end, 2.2, ink)
+	elif id == "focus":
 		canvas.draw_arc(c, r * 0.62, 0, TAU, 32, ink, 1.0, true)
 		canvas.draw_circle(c, 2.2, ink)
 		for direction in [Vector2.UP, Vector2.DOWN, Vector2.LEFT, Vector2.RIGHT]:

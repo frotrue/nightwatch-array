@@ -69,6 +69,7 @@ var rng := RandomNumberGenerator.new()
 var forecast_rng := RandomNumberGenerator.new()
 var warm_contact_rng := RandomNumberGenerator.new()
 var echo_rng := RandomNumberGenerator.new()
+var module_rng := RandomNumberGenerator.new()
 var running: bool = false
 var pause_regular_spawns: bool = false
 var next_spawn_time: float = Balance.FIRST_METEOR_DELAY
@@ -99,6 +100,7 @@ func setup(target_layer: Node2D, progression_controller: Node, view: Camera2D = 
 	forecast_rng.randomize()
 	warm_contact_rng.randomize()
 	echo_rng.randomize()
+	module_rng.randomize()
 
 
 func start_spawning() -> void:
@@ -211,6 +213,34 @@ func spawn_meteor(type_id: String = "common", custom_start := Vector2.INF, custo
 	if type_id == "fireball" or type_id == "major":
 		rare_spawned.emit(type_id)
 	return meteor
+
+
+func try_spawn_module_fragments(parent, chance: float) -> int:
+	# One roll per completed common/fast target. A separate stream leaves normal
+	# arrivals and constellation bursts unchanged when equipment is swapped.
+	if not running or phase_time_remaining <= 0.0 or not is_instance_valid(parent):
+		return 0
+	if parent.type_id not in ["common", "fast"] or not parent.observed_successfully or parent.get_meta("module_fragment", false) or parent.get_meta("module_split_checked", false):
+		return 0
+	parent.set_meta("module_split_checked", true)
+	if chance <= 0.0 or module_rng.randf() >= clampf(chance, 0.0, 1.0):
+		return 0
+	var extension_objects: int = extension_owner.director.object_count() if extension_owner != null else 0
+	var limit := MAX_TOTAL_METEORS - 1 - maxi(extension_reserved_slots, extension_objects)
+	# The effect is a pair; preserve the major/deep-sky reservation even at cap.
+	if meteor_layer == null or meteor_layer.get_child_count() + 2 > limit:
+		return 0
+	var direction: Vector2 = parent.velocity.normalized() if parent.velocity.length_squared() > 0.01 else Vector2.RIGHT
+	var speed := clampf(parent.velocity.length() * 0.65, 130.0, 220.0)
+	for angle in [-0.48, 0.48]:
+		var branch := direction.rotated(angle)
+		var piece = spawn_meteor("fragment_piece", parent.position + branch * 7.0, branch * speed, 2.9)
+		piece.set_meta("module_fragment", true)
+		piece.base_value = parent.base_value * 0.25
+		piece.primary_color = parent.primary_color
+		piece.glow_color = parent.glow_color
+		piece.body_radius = minf(piece.body_radius, parent.body_radius * 0.65)
+	return 2
 
 
 func should_trigger_observation_echo(roll: float) -> bool:

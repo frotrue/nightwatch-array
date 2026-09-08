@@ -570,7 +570,7 @@ func _conditional_summary(installed_ids: Array[String]) -> String:
 		seen.append(id)
 		var definition := _definition(id)
 		var text := String(definition.get("conditional_desc", definition.get("conditional", "")))
-		var is_conditional := not text.is_empty() or id in ["trail_integrator", "sweep_optics", "relay_bus", "long_baseline", "dual_processor", "afterglow_archive", "wide_correlation", "reference_bus", "shutter_weave"]
+		var is_conditional := not text.is_empty() or id in ["focus", "trail_integrator", "sweep_optics", "relay_bus", "long_baseline", "dual_processor", "afterglow_archive", "wide_correlation", "reference_bus", "shutter_weave"]
 		if is_conditional:
 			var short_name := _translation_or_empty("MODULE_%s_SHORT" % id.to_upper())
 			if short_name.is_empty():

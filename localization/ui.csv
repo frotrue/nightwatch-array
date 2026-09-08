@@ -10,7 +10,7 @@ MODULE_FIT_SLOT,Equip in slot %d,슬롯 %d에 장착
 MODULE_CURRENT,Current loadout,현재 편성
 MODULE_CANDIDATE,Preview selection,선택 반영
 MODULE_TRIAL_TITLE,TEST OBSERVATION,시험 관측
-MODULE_FOCUS_SHORT,Focus,집중 관측
+MODULE_FOCUS_SHORT,Split,분열 관측
 MODULE_WIDE_SHORT,Wide field,광역 관측
 MODULE_DRAG_HINT,Choose a slot then a module. Owned modules can also be dragged into a slot.,슬롯과 모듈을 선택하세요. 보유 모듈은 슬롯으로 끌어 장착할 수도 있습니다.
 MODULE_OWNED,Owned,보유 중
@@ -55,8 +55,8 @@ MODULE_OPEN,Modules  [%s],모듈 구매 / 편성  [%s]
 MODULE_TITLE,Observation modules,관측 모듈
 MODULE_INTRO,Two slots. Combine modules and change them for free.,슬롯 2개. 모듈을 조합하고 무료로 편성을 바꿀 수 있습니다.
 MODULE_BALANCE,Data %s   ·   Equipped: %s,보유 데이터 %s   ·   장착: %s
-MODULE_FOCUS_NAME,Focused observation,집중 관측
-MODULE_FOCUS_DESC,Manual observation speed +80%. Also applies to wide-field targets.,수동 관측 속도 +80%. 광역 모듈과 조합 가능.
+MODULE_FOCUS_NAME,Splitting observation,분열 관측
+MODULE_FOCUS_DESC,"Common/fast success: 30% chance to split into 2 small meteors. Manual or automatic. Each has 25% base Data; no further splits.","일반·고속 유성 관측 성공 시 30% 확률로 작은 유성 2개 생성. 수동·자동 모두 적용. 각각 원본 기본 데이터의 25%이며 재분열하지 않습니다."
 MODULE_WIDE_NAME,Wide-field observation,광역 관측
 MODULE_WIDE_DESC,Radius +65%. Manual speed -25%. Two extra targets per copy; existing multi-target research remains.,관측 반경 +65%. 수동 속도 -25%. 장착 1개당 추가 표적 +2. 기존 다중 관측 연구 유지.
 MODULE_BUY,Buy · %s Data,구매 · %s 데이터
@@ -887,13 +887,13 @@ MODULE_PRECISION_COMBO,Combine with wide to offset the smaller radius.,광역과
 MODULE_RECORD_NAME,Deep record,심층 기록
 MODULE_RECORD_SHORT,Record,심층 기록
 MODULE_RECORD_DESC,M31 Data ×1.50. Manual speed ×0.80.,M31 데이터 ×1.50. 수동 속도 ×0.80.
-MODULE_RECORD_COMBO,Focus offsets the speed penalty.,집중과 조합하면 속도 감소를 보완합니다.
+MODULE_RECORD_COMBO,Precision offsets the speed penalty.,정밀 관측과 조합하면 속도 감소를 보완합니다.
 MODULE_REVISIT_NAME,Repeat observation,재관측
 MODULE_REVISIT_SHORT,Revisit,재관측
 MODULE_REVISIT_DESC,M31 cooldown after completion ×0.60.,M31 관측 완료 후 대기 ×0.60.
 MODULE_REVISIT_COMBO,Deep record increases the reward per repeat.,심층 기록과 조합하면 재관측 수입이 증가합니다.
-MODULE_FOCUS_COMBO,With wide: manual speed ×1.35.,광역과 함께 장착하면 수동 속도 ×1.35.
-MODULE_WIDE_COMBO,With focus: manual speed ×1.35.,집중과 함께 장착하면 수동 속도 ×1.35.
+MODULE_FOCUS_COMBO,Each equipped copy adds 30 percentage points (max 100%).,중복 장착마다 확률 +30%p (최대 100%).
+MODULE_WIDE_COMBO,Pair with splitting observation to collect both fragments.,분열 관측과 조합해 작은 유성 둘을 함께 관측하세요.
 SETTINGS_NUMBER_NOTATION,Number notation,숫자 표기
 SETTINGS_NUMBER_HINT,M = million · B = billion · T = trillion. From one million; hover for full values.,M 백만 · B 십억 · T 조. 100만부터 축약하며 데이터·가격 위에 마우스를 올리면 전체 값을 봅니다.
 SETTINGS_NUMBER_COMPACT,Abbreviated · 1.20B,축약 · 1.20B

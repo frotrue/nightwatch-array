@@ -5,7 +5,7 @@ const INITIAL_SLOTS := 2
 const DEFINITIONS := {
 	# All fourteen modules use one draw pool. Legacy costs and prerequisites
 	# remain for the retained module diagnostic API, not the current chart.
-	"focus": {"cost": 120000000.0, "speed": 1.8, "radius": 1.0, "targets": 1, "glyph": "focus", "code": "FOCUS", "badge": "×1.80", "requires": [], "source": "sample", "category": "trace", "pool": "trace"},
+	"focus": {"cost": 120000000.0, "split_chance": 0.3, "glyph": "split", "code": "SPLIT", "badge": "30%", "requires": [], "source": "sample", "category": "trace", "pool": "trace"},
 	"wide": {"cost": 120000000.0, "speed": 0.75, "radius": 1.65, "targets": 3, "glyph": "wide", "code": "WIDE", "badge": "×1.65", "requires": [], "source": "sample", "category": "sweep", "pool": "sweep"},
 	"precision": {"cost": 180000000.0, "speed": 1.5, "radius": 0.7, "glyph": "focus", "code": "PRECISION", "badge": "×1.50", "requires": ["focus"], "source": "sample", "category": "trace", "pool": "trace"},
 	"record": {"cost": 180000000.0, "speed": 0.8, "m31_value": 1.5, "glyph": "focus", "code": "RECORD", "badge": "×1.50", "requires": ["wide"], "source": "sample", "category": "link", "pool": "link"},
@@ -158,6 +158,7 @@ static func configuration(selection) -> Dictionary:
 		"m31_cooldown": 1.0,
 		"sweep_charge": 1.0,
 		"rare_radius": 1.0,
+		"split_chance": 0.0,
 	}
 	var ids: Array = selection if selection is Array else [selection]
 	var used: Array = []
@@ -169,6 +170,7 @@ static func configuration(selection) -> Dictionary:
 		for key in ["speed", "new_speed", "radius", "m31_value", "m31_cooldown", "sweep_charge", "rare_radius"]:
 			result[key] *= maxf(0.1, 1.0 + (float(definition.get(key, 1.0)) - 1.0) * ids.count(id))
 		result.targets += (int(definition.get("targets", 1)) - 1) * ids.count(id)
+		result.split_chance = minf(1.0, result.split_chance + float(definition.get("split_chance", 0.0)) * ids.count(id))
 		result.cost += definition.cost
 	return result
 

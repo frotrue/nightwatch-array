@@ -136,7 +136,7 @@ func _run() -> void:
 		if ids == ["", ""]:
 			baseline = meteor.observation_progress
 		else:
-			var expected := 1.35 if ids == ["focus", "wide"] else (1.8 if ids[0] == "focus" else 0.75)
+			var expected := 0.75 if "wide" in ids else 1.0
 			_check(is_equal_approx(meteor.observation_progress / baseline, expected), "module multiplier applies to ordinary live meteors: " + str(ids))
 	_check(is_equal_approx(game.observer._module_tracking_radius(), game.progression.get_tracking_radius() * 1.65), "wide expands the real cursor radius")
 	_check(game.progression.has_upgrade("multi_target_analysis"), "existing multi-target research is retained")
@@ -297,17 +297,17 @@ func _click_in_viewport(viewport: SubViewport, point: Vector2) -> void:
 func _check_module_effect_cache() -> void:
 	var model = load("res://scripts/observation_modules.gd").new()
 	model.load_save_data({"purchased": ["focus", "wide"], "slots": ["focus", "wide"]})
-	_check(is_equal_approx(model.effect("speed"), 1.35) and model.effect("targets") == 3, "combined cached effects match the existing contract")
+	_check(is_equal_approx(model.effect("speed"), 0.75) and model.effect("targets") == 3, "combined cached effects match the existing contract")
 	for index in range(20):
 		_check(is_equal_approx(model.effect("radius"), 1.65), "repeated cached reads remain stable")
 	model.slots[1] = ""
-	_check(is_equal_approx(model.effect("speed"), 1.8) and model.effect("targets") == 1, "direct slot change invalidates cached effects")
+	_check(is_equal_approx(model.effect("split_chance"), 0.3) and model.effect("targets") == 1, "direct slot change invalidates cached effects")
 	model.purchased.clear()
-	_check(is_equal_approx(model.effect("speed"), 1.0), "direct ownership removal invalidates cached effects")
+	_check(is_equal_approx(model.effect("split_chance"), 0.0), "direct ownership removal invalidates cached effects")
 	model.purchased.append("focus")
-	_check(is_equal_approx(model.effect("speed"), 1.8), "ownership restoration is reflected without an equip call")
+	_check(is_equal_approx(model.effect("split_chance"), 0.3), "ownership restoration is reflected without an equip call")
 	model.slots[1] = "focus"
-	_check(is_equal_approx(model.effect("speed"), 1.8), "duplicate direct slots do not stack cached effects")
+	_check(is_equal_approx(model.effect("split_chance"), 0.3), "duplicate direct slots do not stack cached effects")
 	model.load_save_data({"purchased": ["wide"], "equipped": "wide"})
 	_check(is_equal_approx(model.effect("speed"), 0.75) and model.effect("missing") == null, "legacy load invalidates cache and unknown effect lookup remains null")
 
@@ -324,9 +324,9 @@ func _check_slot_saves() -> void:
 	var encoded: Dictionary = JSON.parse_string(JSON.stringify(model.get_save_data()))
 	model.load_save_data(encoded)
 	_check(model.unlocked_slots == 5 and model.slots == ["focus", "wide", "precision", "record", "revisit"], "five positions and researched capacity survive real JSON serialization")
-	_check(is_equal_approx(model.effect("speed"), 1.62) and is_equal_approx(model.effect("radius"), 1.155), "all five effects compose without losing original multipliers")
+	_check(is_equal_approx(model.effect("speed"), 0.9) and is_equal_approx(model.effect("radius"), 1.155), "all five effects compose without losing original multipliers")
 	model.unlocked_slots = 2
-	_check(is_equal_approx(model.effect("speed"), 1.35), "capacity changes invalidate cache and exclude locked equipment")
+	_check(is_equal_approx(model.effect("speed"), 0.75), "capacity changes invalidate cache and exclude locked equipment")
 	model.load_save_data({"purchased": ["focus", "focus", "wide", "bad", 7], "slots": ["focus", "focus", "wide", "record", "bad", "wide"], "unlocked_slots": 5})
 	_check(model.purchased == ["focus", "wide"] and model.slots == ["focus", "", "wide", "", ""], "load sanitizes duplicate, unowned, unknown and extra positions")
 	for invalid in ["5", null, 3.5, NAN]:

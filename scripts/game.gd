@@ -724,6 +724,7 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 		or bool(meteor.get_meta("leonid_storm", false))
 		or bool(meteor.get_meta("perseid_outburst", false))
 		or bool(meteor.get_meta("polar_summoned", false))
+		or bool(meteor.get_meta("module_fragment", false))
 	)
 	var leonid_spawn_count := 0
 	if was_manual and not is_proc_meteor and not meteor.is_major():
@@ -736,6 +737,7 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 			is_proc_meteor,
 			meteor
 		)
+	spawner.try_spawn_module_fragments(meteor, float(deep_sky.modules.effect("split_chance")))
 	# Base value is target identity, not economy. Quality and the live manual
 	# chain remain explicit feedback inputs inside _observation_strength.
 	var strength := _observation_strength(float(meteor.base_value), was_manual, quality_grade)
