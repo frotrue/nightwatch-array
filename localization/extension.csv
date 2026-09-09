@@ -98,9 +98,6 @@ MODX_DRAW_RESULT,Acquired %s · Owned %d,%s 획득 · 보유 %d
 MODX_DRAW_ROUTE,Draw with rare-meteor samples. Every module in the pool has equal odds.,특수 유성 표본으로 모듈 뽑기 · 뽑기에 포함된 모듈은 모두 같은 확률입니다.
 MODX_DRAW_HINT,Rare meteors → samples → module draw,특수 유성 관측 → 표본 → 모듈 뽑기
 METEOR_ANOMALY_RARE,RARE METEOR,특수 유성
-MODX_EQUIP_HINT,"Click a module to equip; click a slot to remove.
-Same module bonuses and penalties add.","목록을 눌러 장착 · 장착한 모듈을 눌러 해제
-같은 모듈의 증감분은 합산합니다."
 EXT_RESEARCH_SLOT_3_NAME,Third module slot,셋째 모듈 자리
 EXT_RESEARCH_SLOT_3_DESC,Module capacity 2 → 3.,모듈 장착 자리 2 → 3.
 EXT_RESEARCH_SLOT_4_NAME,Fourth module slot,넷째 모듈 자리

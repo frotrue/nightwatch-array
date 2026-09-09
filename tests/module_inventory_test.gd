@@ -164,11 +164,14 @@ func _verify_information_hierarchy(game: Node) -> void:
 	_check(not chart.inspector_details.visible, "keyboard closes star help")
 
 	popup.open()
-	_check(not popup.hint.visible and not popup.help_button.button_pressed, "loadout instructions start collapsed")
+	_check(not popup.hint.visible, "loadout has no persistent instruction block")
 	_check(not hud.data_label.is_visible_in_tree(), "loadout suppresses the underlying observation readouts")
-	popup.help_button.grab_focus()
-	await _activate_focused_control()
-	_check(popup.hint.visible and popup.help_button.button_pressed and popup.summary.text.contains("1.00"), "keyboard reveals loadout instructions and neutral full stats")
+	hud.autosave_failed = true
+	popup.refresh(false)
+	_check(popup.hint.visible and popup.hint.text == tr("AUTOSAVE_FAILURE") % game.active_save_slot, "loadout still reports a failed save without a details panel")
+	hud.autosave_failed = false
+	popup.refresh(false)
+	_check(not popup.hint.visible, "resolved save warning leaves no instruction text")
 	popup.close()
 	_check(not hud.external_readouts_covered, "closing loadout releases its HUD visibility ownership")
 	_check(game.deep_sky.current_objective().is_empty(), "learned module acquisition route is absent from the observation HUD")

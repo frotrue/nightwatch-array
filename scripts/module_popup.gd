@@ -48,7 +48,6 @@ var summary_heading: Label
 var summary: Label
 var summary_details: Label
 var capacity_label: Label
-var help_button: Button
 var instructions: Label
 var hint: Label
 var slots: Array[RingSlot] = []
@@ -78,7 +77,6 @@ func _ready() -> void:
 	draw_window = view.get_node("%DrawWindow")
 	filter_buttons = {"all": view.get_node("%FilterButtonsAll"), "trace": view.get_node("%FilterButtonsTrace"), "sweep": view.get_node("%FilterButtonsSweep"), "link": view.get_node("%FilterButtonsLink")}
 	heading = view.get_node("%Heading")
-	help_button = view.get_node("%HelpButton")
 	hint = view.get_node("%Hint")
 	instructions = view.get_node("%Instructions")
 	inventory_count = view.get_node("%InventoryCount")
@@ -134,9 +132,8 @@ func _ready() -> void:
 		owned_buttons[id] = tile
 	for id in filter_buttons:
 		filter_buttons[id].draw.connect(_draw_filter.bind(id))
-	for button in [close_button, help_button, draw_button]:
+	for button in [close_button, draw_button]:
 		button.draw.connect(_draw_action_underline.bind(button))
-	help_button.pressed.connect(func(): refresh(false))
 	draw_window.setup(self)
 	set_process(false)
 
@@ -193,7 +190,6 @@ func open() -> void:
 	surface.show()
 	draw_window.leave()
 	overlay.show()
-	help_button.set_pressed_no_signal(false)
 	game.hud.set_external_readouts_covered(true)
 	refresh(false)
 	finish_animations()
@@ -298,19 +294,16 @@ func refresh(animate: bool = true) -> void:
 	var old_speed := _effect_number("speed", 1.0)
 	var new_speed := _effect_number("new_speed", 1.0)
 	var manual_speed := old_speed * new_speed
-	summary.text = _format_translation("MODX_STATIC_SUMMARY", [manual_speed, _effect_number("radius", 1.0), _effect_number("m31_value", 1.0), _effect_number("m31_cooldown", 1.0)], "Manual ×%.2f · Radius ×%.2f · M31 ×%.2f · Wait ×%.2f" % [manual_speed, _effect_number("radius", 1.0), _effect_number("m31_value", 1.0), _effect_number("m31_cooldown", 1.0)])
-	if not help_button.button_pressed:
-		summary.text = _changed_summary(manual_speed)
+	summary.text = _changed_summary(manual_speed)
 	summary.visible = not summary.text.is_empty()
 	summary_details.text = _conditional_summary(installed_ids)
 	summary_details.visible = not summary_details.text.is_empty()
 	capacity_label.text = tr("MODX_SLOTS_USED") % [installed_ids.size(), model().unlocked_slots]
-	capacity_label.visible = installed_ids.is_empty() or help_button.button_pressed
+	capacity_label.visible = installed_ids.is_empty()
 	instructions.text = tr("EXT_SAMPLES_COUNT") % game.deep_sky.samples
 	draw_button.text = tr("DRAW_OPEN")
-	help_button.text = tr("UI_DETAILS_HIDE" if help_button.button_pressed else "MODX_HELP_SHOW")
-	hint.text = tr("MODX_EQUIP_HINT") if not game.hud.autosave_failed else tr("AUTOSAVE_FAILURE") % game.active_save_slot
-	hint.visible = help_button.button_pressed or game.hud.autosave_failed
+	hint.text = tr("AUTOSAVE_FAILURE") % game.active_save_slot if game.hud.autosave_failed else ""
+	hint.visible = game.hud.autosave_failed
 	if inventory_scroll != null:
 		inventory_scroll.queue_redraw()
 	surface.queue_redraw()
