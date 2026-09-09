@@ -904,7 +904,7 @@ TREE_DETAILS_SHOW,Star details & help +,별 정보 · 도움말 +
 PHASE_DETAILS_SHOW,Round details +,세부 기록 +
 PHASE_SUMMARY_GROWTH,%s DATA/MIN · %s%% vs previous,분당 데이터 %s · 이전보다 %s%%
 HUD_RESEARCH_READY,Research available [%s],연구 가능 [%s]
-MODX_HELP_SHOW,Controls & full stats +,조작법 · 전체 수치 +
+MODX_HELP_SHOW,Details +,상세 +
 MODX_SLOTS_USED,Slots %d / %d,장착 %d / %d
 MODX_CONDITIONAL_COUNT,%d conditional effects · inspect equipped modules,조건부 효과 %d종 · 장착 모듈에서 확인
 MODX_STAT_MANUAL,Manual speed,수동 속도

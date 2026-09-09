@@ -3,8 +3,8 @@ extends CanvasLayer
 const UITheme = preload("res://scripts/ui_theme.gd")
 const Modules = preload("res://scripts/observation_modules.gd")
 const DrawWindow = preload("res://scripts/module_draw_window.gd")
-const RING_CENTER := Vector2(700, 590)
-const RING_RADIUS := 180.0
+const RING_CENTER := Vector2(700, 500)
+const RING_RADIUS := 230.0
 const SLOT_RADIUS := 38.0
 const CHANGE_SECONDS := 0.28
 # The popup is authored against the 1920x1080 spec frame and rendered at 0.6x
@@ -17,7 +17,6 @@ const POPUP_META_SPEC_SIZE := 16 # 10px at UITheme.SCALE
 const INVENTORY_COLUMNS := 3
 const INVENTORY_TILE_SPEC_SIZE := Vector2(188, 104)
 const INVENTORY_GAP_SPEC := 10.0
-const INVENTORY_SCROLL_SPEC_RECT := Rect2(1174, 414, 620, 338)
 const INVENTORY_GRID_SPEC_WIDTH := 600.0
 const INVENTORY_FILTERS := ["all", "trace", "sweep", "link"]
 
@@ -531,15 +530,17 @@ func _place_tooltip() -> void:
 	tooltip_panel.position = p
 
 func _draw_surface() -> void:
-	surface.draw_line(Vector2(140, 322) * UITheme.SCALE, Vector2(1780, 322) * UITheme.SCALE, Color(UITheme.INK_MID, 0.3), UITheme.px(1), true)
+	# Dividers follow the authored controls so layout edits stay in the scene.
+	var header_y := heading.position.y + heading.size.y + UITheme.px(16)
+	surface.draw_line(Vector2(heading.position.x, header_y), Vector2(close_button.position.x + close_button.size.x, header_y), Color(UITheme.INK_MID, 0.3), UITheme.px(1), true)
 	var center := RING_CENTER * UITheme.SCALE
 	surface.draw_arc(center, UITheme.px(RING_RADIUS), 0, TAU, 128, Color(UITheme.INK_MID, 0.42), UITheme.px(1), true)
 	surface.draw_arc(center, UITheme.px(16), 0, TAU, 48, Color(UITheme.INSTRUMENT_ARC, 0.35), UITheme.px(1), true)
 	surface.draw_circle(center, UITheme.px(2.2), UITheme.INSTRUMENT_ARC)
 	for direction in [Vector2.UP, Vector2.DOWN, Vector2.LEFT, Vector2.RIGHT]:
 		surface.draw_line(center + direction * UITheme.px(22), center + direction * UITheme.px(28), Color(UITheme.INSTRUMENT_ARC, 0.45), UITheme.px(1), true)
-	for y in [402, 760]:
-		surface.draw_line(Vector2(1180, y) * UITheme.SCALE, Vector2(1780, y) * UITheme.SCALE, Color(UITheme.INK_MID, 0.22), UITheme.px(1), true)
+	var footer_y := inventory_scroll.position.y + inventory_scroll.size.y + UITheme.px(8)
+	surface.draw_line(Vector2(inventory_heading.position.x, footer_y), Vector2(inventory_count.position.x + inventory_count.size.x, footer_y), Color(UITheme.INK_MID, 0.22), UITheme.px(1), true)
 
 func _text_action(parent: Control, p: Vector2, dimensions: Vector2, callback: Callable) -> Button:
 	var button: Button = preload("res://scenes/ui/module_action.tscn").instantiate()

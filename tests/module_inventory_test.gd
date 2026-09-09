@@ -78,7 +78,13 @@ func _run() -> void:
 	for tile in popup.owned_buttons.values():
 		_check(tile.visible, "acquired module appears in storage")
 	var scrollbar: Range = popup.inventory_scroll.get_v_scroll_bar()
-	_check(scrollbar.max_value > scrollbar.page, "fourteen owned modules create scrollable storage")
+	_check(scrollbar.max_value <= scrollbar.page, "all fourteen owned modules fit in the default storage view")
+	# Retain the overflow/focus contract for constrained views or a larger catalog.
+	var authored_scroll_height: float = popup.inventory_scroll.size.y
+	popup.inventory_scroll.size.y = 200.0
+	await process_frame
+	await process_frame
+	_check(scrollbar.max_value > scrollbar.page, "constrained storage remains scrollable")
 
 	# Keyboard descriptions follow their focused item even with the pointer
 	# elsewhere, including the last item brought into view by focus scrolling.
@@ -104,6 +110,7 @@ func _run() -> void:
 		_check(popup.tooltip_panel.visible, "leaving keyboard focus does not dismiss a pointer description")
 		tile.mouse_exited.emit()
 		_check(not popup.tooltip_panel.visible, "leaving pointer hover dismisses its description")
+	popup.inventory_scroll.size.y = authored_scroll_height
 	game.deep_sky.equip("focus")
 	popup.slots[0].grab_focus()
 	await process_frame

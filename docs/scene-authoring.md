@@ -76,3 +76,9 @@ because scene serialization does not preserve that runtime metadata/localization
 Game retains all progression, round transitions, pause ownership and persistence.
 The migration tools and before/after captures in `build/` are diagnostic artifacts;
 no generated-tree loader or migration tool is part of the shipped runtime.
+
+The Compatibility renderer uses a 65,536-command canvas item buffer. Showing all
+14 inventory glyphs alongside Korean details/tooltips exceeded the default
+16,384 limit and dropped UI drawing commands in reproducible captures. Keep this
+headroom when changing the loadout layout; the setting is documented in
+[Godot ProjectSettings](https://docs.godotengine.org/en/4.4/classes/class_projectsettings.html#class-projectsettings-property-rendering-gl-compatibility-item-buffer-size).

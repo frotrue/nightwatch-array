@@ -58,7 +58,7 @@ MODULE_SHUTTER_WEAVE_SHORT,Shutter weave,셔터 직조
 MODULE_SHUTTER_WEAVE_DESC,"After direct completion, M31 for 5s ×1.35; M31 waiting ×1.25. Refresh only.",자격 표적 직접 완료 후 5초 M31 ×1.35. M31 대기 ×1.25. 갱신만 허용.
 MODULE_SHUTTER_WEAVE_COMBO,Finish a qualifying target directly before the next M31 window.,다음 M31 창 전에 자격 표적을 직접 완료합니다.
 DRAW_TITLE,Module draw,모듈 뽑기
-DRAW_OPEN,Open module draw →,모듈 뽑기창 열기 →
+DRAW_OPEN,Draw →,뽑기 →
 DRAW_POOL,%d modules · equal chance (1/%d) · duplicates allowed,모듈 %d종 · 각각 같은 확률 (1/%d) · 중복 획득 가능
 DRAW_CLOSE,[Esc] Star chart,[Esc] 성도로
 DRAW_LOADOUT,Open loadout →,모듈 편성으로 →

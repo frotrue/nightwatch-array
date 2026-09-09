@@ -24,6 +24,7 @@ window/vsync/vsync_mode=1
 
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
+gl_compatibility/item_buffer_size=65536
 textures/default_filters/use_nearest_mipmap_filter=false
 environment/defaults/default_clear_color=Color(0.006, 0.012, 0.035, 1)
 
