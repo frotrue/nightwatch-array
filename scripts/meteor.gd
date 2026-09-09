@@ -76,6 +76,7 @@ var trail_strip_point_count: int = -1
 var trail_station_weights := PackedFloat64Array()
 var trail_weight_point_count: int = -1
 var prediction_draw_points := PackedVector2Array()
+var prediction_draw_colors := PackedColorArray()
 var debris_draw_points := PackedVector2Array()
 var travel_direction := Vector2.ZERO
 var trail_sample_accumulator: float = 0.0
@@ -173,10 +174,12 @@ func _ready() -> void:
 
 func _rebuild_prediction_draw_points() -> void:
 	prediction_draw_points.clear()
-	for index in range(7):
-		var distance := (body_radius + 28.0 + index * 24.0) * observation_visual_scale
+	prediction_draw_colors.resize(13)
+	# A continuous instrument hairline keeps the old forecast extent without
+	# making every meteor carry a repeated row of bright dashes.
+	for index in range(13):
+		var distance := (body_radius + 28.0 + 154.0 * float(index) / 12.0) * observation_visual_scale
 		prediction_draw_points.append(travel_direction * distance)
-		prediction_draw_points.append(travel_direction * (distance + 10.0 * observation_visual_scale))
 
 
 func _process(delta: float) -> void:
@@ -532,7 +535,10 @@ func _draw() -> void:
 		_draw_exposure_filament(trail_visibility, visual_scale)
 
 	if prediction_enabled and alive:
-		draw_multiline(prediction_draw_points, Color(UITheme.ACCENT_LINE, 0.30 * minf(1.0, burn_visibility)), 1.0 * visual_scale, true)
+		for index in range(prediction_draw_colors.size()):
+			var along := float(index) / float(prediction_draw_colors.size() - 1)
+			prediction_draw_colors[index] = Color(UITheme.ACCENT_LINE, 0.26 * (1.0 - along) * minf(1.0, burn_visibility))
+		draw_polyline_colors(prediction_draw_points, prediction_draw_colors, 0.85 * visual_scale, true)
 
 	var visibility := burn_visibility
 	if not alive:

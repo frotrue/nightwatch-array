@@ -395,17 +395,25 @@ func _draw() -> void:
 		draw_string(font, popup.p, text, HORIZONTAL_ALIGNMENT_CENTER, -1.0, int(round(float(popup.font_size) * visual_scale)), Color(popup.color, alpha))
 	for marker in incoming_markers:
 		var alpha := clampf(float(marker.life) / 0.4, 0.0, 1.0)
-		var pulse := 1.0 + sin(float(marker.life) * 16.0) * 0.12
+		var forecast := bool(marker.get("forecast", false))
+		var duration := 3.0 if forecast else 1.45
+		alpha *= smoothstep(0.0, 0.12, duration - float(marker.life))
 		var p: Vector2 = marker.p
 		var direction: Vector2 = marker.dir
 		var side := Vector2(-direction.y, direction.x)
-		var tip := p + direction * 13.0 * visual_scale * pulse
-		var arrow := PackedVector2Array([tip, p + (-direction * 7.0 + side * 7.0) * visual_scale, p + (-direction * 7.0 - side * 7.0) * visual_scale])
-		draw_colored_polygon(arrow, Color(marker.color, alpha * 0.72))
-		draw_arc(p, 23.0 * visual_scale * pulse, 0.0, TAU, 28, Color(marker.color, alpha * 0.28), 1.4 * visual_scale, true)
-		if bool(marker.get("forecast", false)):
-			draw_arc(p, 34.0 * visual_scale * pulse, -PI * 0.75, PI * 0.75, 24, Color(marker.color, alpha * 0.5), 2.0 * visual_scale, true)
-			draw_line(p + direction * 18.0 * visual_scale, p + direction * 58.0 * visual_scale, Color(marker.color, alpha * 0.22), 1.2 * visual_scale, true)
+		# Open entry ticks and a taper indicate direction without a filled alert
+		# icon, expanding target ring, or a motion-intensity-independent pulse.
+		var ink := UITheme.ACCENT_LINE
+		for sign_value in [-1.0, 1.0]:
+			var anchor: Vector2 = p + side * sign_value * 7.0 * visual_scale
+			draw_line(anchor - direction * 5.0 * visual_scale, anchor + direction * 3.0 * visual_scale, Color(ink, alpha * 0.65), visual_scale, true)
+			if forecast:
+				var outer: Vector2 = anchor - direction * 9.0 * visual_scale
+				draw_line(outer - direction * 3.0 * visual_scale, outer + direction * 1.0 * visual_scale, Color(ink, alpha * 0.32), visual_scale, true)
+		var reach := 38.0 if forecast else 26.0
+		var axis := PackedVector2Array([p - direction * 4.0 * visual_scale, p + direction * 8.0 * visual_scale, p + direction * reach * visual_scale])
+		var colors := PackedColorArray([Color(ink, alpha * 0.28), Color(ink, alpha * 0.8), Color(ink, 0.0)])
+		draw_polyline_colors(axis, colors, 1.1 * visual_scale, true)
 	if flash_strength > 0.001:
 		# Grown by the shake budget so a displaced canvas cannot expose an
 		# unpainted strip along the edge the screen shook away from.
