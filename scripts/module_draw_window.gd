@@ -14,6 +14,7 @@ var new_copy := false
 var title: Label
 var subtitle: Label
 var balance: Label
+var acquisition_hint: Label
 var status: Label
 var result_name: Label
 var result_kind: Label
@@ -29,6 +30,7 @@ func setup(owner_popup: CanvasLayer) -> void:
 	host = owner_popup
 	action = get_node("Action")
 	balance = get_node("Balance")
+	acquisition_hint = get_node("AcquisitionHint")
 	close_button = get_node("CloseButton")
 	loadout_button = get_node("LoadoutButton")
 	result_effect = get_node("ResultPanel/ResultEffect")
@@ -108,35 +110,40 @@ func refresh() -> void:
 	skip_button.text = tr("DRAW_SKIP")
 	skip_button.visible = drawing
 	result_panel.visible = not drawing
-	if drawing:
-		status.text = tr("DRAW_ALIGN" if elapsed >= REVEAL_SECONDS * 0.5 else "DRAW_SCAN")
-	elif result_id.is_empty():
-		status.text = tr("DRAW_READY")
-		result_kind.text = tr("DRAW_SPECIMEN")
+	result_kind.visible = not result_id.is_empty()
+	result_quantity.visible = not result_id.is_empty()
+	result_effect.visible = not result_id.is_empty()
+	acquisition_hint.visible = not drawing and result_id.is_empty()
+	acquisition_hint.text = tr("DRAW_EXPLAIN")
+	if not drawing and result_id.is_empty():
 		result_name.text = tr("DRAW_WAITING")
-		result_effect.text = tr("DRAW_EXPLAIN")
-		result_quantity.text = tr("DRAW_NO_AUTO_EQUIP")
-	else:
-		status.text = "" # The result heading already identifies the acquisition.
+	elif not drawing:
 		result_kind.text = tr("DRAW_NEW" if new_copy else "DRAW_SAVED")
 		result_name.text = tr("MODULE_%s_NAME" % result_id.to_upper())
 		result_effect.text = tr("MODULE_%s_DESC" % result_id.to_upper())
 		result_quantity.text = tr("MODX_QUANTITY") % [host.model().owned_count(result_id), host.model().installed_count(result_id)]
 		if not new_copy and host.model().owned_count(result_id) > 1:
 			result_quantity.text += "  ·  " + tr("DRAW_DUPLICATE")
+	_refresh_status()
+	queue_redraw()
+
+func _refresh_status() -> void:
+	# Errors outrank animation text on every frame, including skip and recovery.
 	if host.game.hud.autosave_failed:
 		status.text = tr("AUTOSAVE_FAILURE") % host.game.active_save_slot
+	elif drawing:
+		status.text = tr("DRAW_ALIGN" if elapsed >= REVEAL_SECONDS * 0.5 else "DRAW_SCAN")
+	else:
+		status.text = ""
 	status.visible = not status.text.is_empty()
-	queue_redraw()
 
 func _process(delta: float) -> void:
 	if drawing:
 		elapsed += delta / maxf(Engine.time_scale, 0.001)
 		if elapsed >= REVEAL_SECONDS:
 			finish_reveal()
-		else:
-			status.text = tr("DRAW_ALIGN" if elapsed >= REVEAL_SECONDS * 0.5 else "DRAW_SCAN")
 		queue_redraw()
+	_refresh_status()
 
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color("100C09"))

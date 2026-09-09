@@ -119,6 +119,18 @@ theme_override_colors/font_color = Color(1, 0.7058824, 0.5568628, 1)
 theme_override_fonts/font = ExtResource("R1")
 theme_override_font_sizes/font_size = 13
 
+[node name="AcquisitionHint" type="Label" parent="."]
+layout_mode = 0
+offset_left = 640.0
+offset_top = 460.0
+offset_right = 1065.0
+offset_bottom = 488.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 14
+autowrap_mode = 3
+
 [node name="Action" type="Button" parent="."]
 layout_mode = 0
 offset_left = 640.0

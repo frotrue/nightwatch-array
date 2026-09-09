@@ -267,10 +267,23 @@ func _check_popup_pointer_routing() -> void:
 	await _frames(2)
 	_check(game.module_popup.is_draw_open(), "real pointer opens the dedicated draw window directly from the chart")
 	var draw_window: Control = game.module_popup.draw_window
+	_check(draw_window.acquisition_hint.visible and not draw_window.result_kind.visible and not draw_window.result_quantity.visible, "empty draw shows one acquisition hint without result metadata")
 	_click_in_viewport(viewport, draw_window.action.get_global_rect().get_center())
 	_check(draw_window.drawing and game.deep_sky.samples == 0, "real draw click begins one paid animation")
+	game.hud.autosave_failed = true
+	draw_window.refresh()
+	draw_window._process(0.05)
+	_check(draw_window.status.visible and draw_window.status.text == tr("AUTOSAVE_FAILURE") % game.active_save_slot, "animation cannot overwrite a save failure")
+	game.hud.autosave_failed = false
+	draw_window._process(0.0)
+	_check(draw_window.status.text == tr("DRAW_SCAN"), "save recovery restores the current animation status")
+	game.hud.autosave_failed = true
 	_click_in_viewport(viewport, draw_window.skip_button.get_global_rect().get_center())
 	_check(not draw_window.drawing and draw_window.result_panel.visible, "real pointer skips to the saved result")
+	_check(draw_window.status.visible and draw_window.status.text == tr("AUTOSAVE_FAILURE") % game.active_save_slot, "skipping preserves an unresolved save failure")
+	game.hud.autosave_failed = false
+	draw_window._process(0.0)
+	_check(not draw_window.status.visible and not draw_window.acquisition_hint.visible, "resolved result has no repeated acquisition or status instruction")
 	_click_in_viewport(viewport, draw_window.loadout_button.get_global_rect().get_center())
 	_check(game.module_popup.is_open() and not game.module_popup.is_draw_open(), "real loadout click changes surfaces without resuming the sky")
 	_click_in_viewport(viewport, game.module_popup.close_button.get_global_rect().get_center())

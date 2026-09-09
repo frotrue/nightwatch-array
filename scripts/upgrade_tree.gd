@@ -810,7 +810,7 @@ func _apply_transform() -> void:
 	tree_canvas.position = pan_position
 	tree_canvas.scale = Vector2.ONE * zoom
 	if north_label != null:
-		north_label.position.y = minf(_north_label_y(), controls_label.position.y - north_label.get_combined_minimum_size().y - UITheme.px(6.0))
+		north_label.position.y = minf(_north_label_y(), overlay.size.y - UITheme.px(60.0) - north_label.get_combined_minimum_size().y)
 	_layout_galactic_overlays()
 
 
@@ -924,15 +924,10 @@ func _layout_chart_header() -> void:
 	)
 
 	var wide := frame.x
-	for label in [controls_label, north_label]:
-		label.size.x = wide
-		label.position.x = 0.0
+	north_label.size.x = wide
+	north_label.position.x = 0.0
 	var bottom_y := frame.y - UITheme.px(38.0)
-	controls_label.position.y = bottom_y - controls_label.get_combined_minimum_size().y
-	north_label.position.y = minf(_north_label_y(), controls_label.position.y - north_label.get_combined_minimum_size().y - UITheme.px(6.0))
-	if constellation_horizon_hint != null:
-		constellation_horizon_hint.size.x = UITheme.px(430.0)
-		constellation_horizon_hint.position = Vector2(UITheme.px(56.0), bottom_y - constellation_horizon_hint.get_combined_minimum_size().y)
+	north_label.position.y = minf(_north_label_y(), overlay.size.y - UITheme.px(60.0) - north_label.get_combined_minimum_size().y)
 	if constellation_bottom_action != null:
 		constellation_bottom_action.size.x = UITheme.px(430.0)
 		constellation_bottom_action.position = Vector2(frame.x - UITheme.px(40.0) - constellation_bottom_action.size.x, bottom_y - constellation_bottom_action.get_combined_minimum_size().y)
@@ -1979,7 +1974,7 @@ func _build_interface() -> void:
 	close_underline = view.get_node("%ChartHeader").get_node("%CloseUnderline")
 	completion_detail_label = view.get_node("%ChartHeader").get_node("%CompletionDetailLabel")
 	constellation_bottom_action = view.get_node("%ChartHeader").get_node("%ConstellationBottomAction")
-	constellation_horizon_hint = view.get_node("%ChartHeader").get_node("%ConstellationHorizonHint")
+	constellation_horizon_hint = view.get_node("%ConstellationInspector").get_node("%ConstellationHorizonHint")
 	constellation_installation_rule = view.get_node("%ConstellationInspector").get_node("%Divider")
 	constellation_ledger = view.get_node("%ConstellationInstallLedger")
 	constellation_ledger_counts = [
@@ -2103,7 +2098,7 @@ func _build_interface() -> void:
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes21"),
 	]
 	content_clip = view.get_node("%TreeViewport")
-	controls_label = view.get_node("%ChartHeader").get_node("%ControlsLabel")
+	controls_label = view.get_node("%ConstellationInspector").get_node("%ControlsLabel")
 	data_context_label = view.get_node("%ChartHeader").get_node("%DataContextLabel")
 	data_readout = view.get_node("%ChartHeader").get_node("%DataReadout")
 	galactic_core_hit = view.get_node("%GalacticCoreHit")
