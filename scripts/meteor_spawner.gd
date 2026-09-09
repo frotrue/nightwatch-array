@@ -995,7 +995,6 @@ func _current_features(type_id: String) -> Dictionary:
 	var spectral_band := String(spec.get("spectral_band", "blue"))
 	return {
 		"wide_field": progression.has_upgrade("wide_field"),
-		"prediction": progression.has_upgrade("trajectory"),
 		"precision": progression.has_upgrade("precision_multiplier"),
 		"perfect": progression.has_upgrade("perfect_observation"),
 		"automation": progression.get_automation_strength(type_id),

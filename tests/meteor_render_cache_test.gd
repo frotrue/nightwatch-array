@@ -182,7 +182,6 @@ func _apply_case(meteor: Recorder, test_case: Dictionary) -> void:
 	meteor.velocity = Vector2(231.75, 61.125)
 	meteor.observation_progress = 0.413
 	meteor.base_automatic_rate = 0.0
-	meteor.prediction_enabled = false
 	meteor.trail_points.clear()
 	var first_offset := float(test_case.get("first_offset", 0.0))
 	for index in range(int(test_case.count)):

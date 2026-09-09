@@ -400,16 +400,8 @@ func _draw() -> void:
 		alpha *= smoothstep(0.0, 0.12, duration - float(marker.life))
 		var p: Vector2 = marker.p
 		var direction: Vector2 = marker.dir
-		var side := Vector2(-direction.y, direction.x)
-		# Open entry ticks and a taper indicate direction without a filled alert
-		# icon, expanding target ring, or a motion-intensity-independent pulse.
+		# One fading stroke is enough to indicate the entry direction.
 		var ink := UITheme.ACCENT_LINE
-		for sign_value in [-1.0, 1.0]:
-			var anchor: Vector2 = p + side * sign_value * 7.0 * visual_scale
-			draw_line(anchor - direction * 5.0 * visual_scale, anchor + direction * 3.0 * visual_scale, Color(ink, alpha * 0.65), visual_scale, true)
-			if forecast:
-				var outer: Vector2 = anchor - direction * 9.0 * visual_scale
-				draw_line(outer - direction * 3.0 * visual_scale, outer + direction * 1.0 * visual_scale, Color(ink, alpha * 0.32), visual_scale, true)
 		var reach := 38.0 if forecast else 26.0
 		var axis := PackedVector2Array([p - direction * 4.0 * visual_scale, p + direction * 8.0 * visual_scale, p + direction * reach * visual_scale])
 		var colors := PackedColorArray([Color(ink, alpha * 0.28), Color(ink, alpha * 0.8), Color(ink, 0.0)])

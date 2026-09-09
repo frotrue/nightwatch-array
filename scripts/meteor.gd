@@ -46,7 +46,6 @@ var last_manual_frame: int = -100
 var base_automatic_rate: float = 0.0
 var dish_assist_rate: float = 0.0
 var lane_assist_rate: float = 0.0
-var prediction_enabled: bool = false
 var wide_field_enabled: bool = false
 var precision_enabled: bool = false
 var perfect_enabled: bool = false
@@ -75,8 +74,6 @@ var trail_strip_indices := PackedInt32Array()
 var trail_strip_point_count: int = -1
 var trail_station_weights := PackedFloat64Array()
 var trail_weight_point_count: int = -1
-var prediction_draw_points := PackedVector2Array()
-var prediction_draw_colors := PackedColorArray()
 var debris_draw_points := PackedVector2Array()
 var travel_direction := Vector2.ZERO
 var trail_sample_accumulator: float = 0.0
@@ -122,7 +119,6 @@ func configure(spec: Dictionary, meteor_type: String, start_position: Vector2, m
 	var planned_direction := (burnout_position - entry_position).normalized()
 	if not planned_direction.is_zero_approx():
 		travel_direction = planned_direction
-	prediction_enabled = bool(features.get("prediction", false))
 	wide_field_enabled = bool(features.get("wide_field", false))
 	precision_enabled = bool(features.get("precision", false))
 	perfect_enabled = bool(features.get("perfect", false))
@@ -142,7 +138,6 @@ func configure(spec: Dictionary, meteor_type: String, start_position: Vector2, m
 	trail_points.append(start_position)
 	observation_trail_points.append(start_position)
 	trail_sample_times.append(0.0)
-	_rebuild_prediction_draw_points()
 
 
 static func burn_distance_for(initial_speed: float, lifetime: float, terminal_ratio: float) -> float:
@@ -170,16 +165,6 @@ func _ready() -> void:
 		SHARED_ADDITIVE_MATERIAL.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
 	material = SHARED_ADDITIVE_MATERIAL
 	queue_redraw()
-
-
-func _rebuild_prediction_draw_points() -> void:
-	prediction_draw_points.clear()
-	prediction_draw_colors.resize(13)
-	# A continuous instrument hairline keeps the old forecast extent without
-	# making every meteor carry a repeated row of bright dashes.
-	for index in range(13):
-		var distance := (body_radius + 28.0 + 154.0 * float(index) / 12.0) * observation_visual_scale
-		prediction_draw_points.append(travel_direction * distance)
 
 
 func _process(delta: float) -> void:
@@ -305,7 +290,6 @@ func apply_manual_observation(
 
 
 func set_features(features: Dictionary) -> void:
-	prediction_enabled = bool(features.get("prediction", prediction_enabled))
 	wide_field_enabled = bool(features.get("wide_field", wide_field_enabled))
 	precision_enabled = bool(features.get("precision", precision_enabled))
 	perfect_enabled = bool(features.get("perfect", perfect_enabled))
@@ -349,7 +333,6 @@ func set_lens_curve(control_position: Vector2, zone_center: Vector2, zone_radius
 	lens_center = zone_center
 	lens_radius = maxf(0.0, zone_radius)
 	lens_activity_rect = activity_rect
-	_rebuild_prediction_draw_points()
 
 
 func is_lensed() -> bool:
@@ -533,12 +516,6 @@ func _draw() -> void:
 		var trail_visibility := burn_visibility * burn_tail_scale * linger_alpha
 		_draw_tapered_trail(trail_visibility, burn_tail_scale, visual_scale)
 		_draw_exposure_filament(trail_visibility, visual_scale)
-
-	if prediction_enabled and alive:
-		for index in range(prediction_draw_colors.size()):
-			var along := float(index) / float(prediction_draw_colors.size() - 1)
-			prediction_draw_colors[index] = Color(UITheme.ACCENT_LINE, 0.26 * (1.0 - along) * minf(1.0, burn_visibility))
-		draw_polyline_colors(prediction_draw_points, prediction_draw_colors, 0.85 * visual_scale, true)
 
 	var visibility := burn_visibility
 	if not alive:
@@ -1235,5 +1212,4 @@ func _sync_visual_scale() -> void:
 	if is_equal_approx(next_scale, observation_visual_scale):
 		return
 	observation_visual_scale = next_scale
-	_rebuild_prediction_draw_points()
 	queue_redraw()
