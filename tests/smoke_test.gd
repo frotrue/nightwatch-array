@@ -1200,7 +1200,7 @@ func _run() -> void:
 	game.observer.selected_meteor = null
 	game.observer._update_manual_tracking(0.18)
 	_check(group_target_a.get_progress() > 0.0 and group_target_b.get_progress() > 0.0, "Multi-Target Analysis advances every meteor inside the tracking field")
-	_check(game.observer._valid_tracked_count() == 2, "group observation retains individual target rings")
+	_check(game.observer._valid_tracked_count() == 2, "group observation retains both tracked targets without per-target gauges")
 	game.hud.set_tracking(0.4, "common", 1.0, game.observer._valid_tracked_count(), Vector2(400.0, 300.0))
 	_check(game.hud.tracking_cluster.visible and game.hud.tracking_cluster.cursor == Vector2(400.0, 300.0), "the tracking cluster follows the cursor")
 	_check("40%" in game.hud.tracking_percent.text, "the cursor cluster reports tracking progress")

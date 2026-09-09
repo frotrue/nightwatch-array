@@ -498,12 +498,7 @@ func _draw() -> void:
 	if not native_cursor_visible:
 		_draw_software_cursor()
 	if _selection_is_valid():
-		_draw_tracking_ring(selected_meteor, true)
-	elif _target_is_valid(hovered_meteor):
-		_draw_hover_ring(hovered_meteor)
-	for target in tracked_meteors:
-		if target != selected_meteor and _target_is_valid(target):
-			_draw_tracking_ring(target, false)
+		_draw_primary_tracking_link()
 
 
 func _draw_software_cursor() -> void:
@@ -643,59 +638,14 @@ func _software_cursor_radius() -> float:
 	return _world_px(_module_tracking_radius() if progression != null else DEFAULT_TRACKING_RADIUS)
 
 
-func _draw_tracking_ring(target, is_primary: bool) -> void:
-	if target.has_method("get_manual_contact_distance"):
+func _draw_primary_tracking_link() -> void:
+	# Progress belongs to the cursor alone, including multi-target observation.
+	# Keep only the primary latch link when the cursor drifts inside its grace area.
+	if selected_meteor.has_method("get_manual_contact_distance"):
 		return
 	var visual_scale := _world_px(1.0)
-	var tracking_radius: float = target.get_tracking_radius(_world_px(_module_tracking_radius()))
-	var quality: float = target.get_quality()
-	# Quality rides brightness inside the palette: a poorly centred track sits
-	# at the accent line, a perfectly centred one climbs to the brightest ink.
-	var ring_color := UITheme.ACCENT_LINE.lerp(UITheme.INK_MAX, quality)
-	# The primary target draws no ring at all. The cursor is the gauge for it and
-	# is sitting on it, so a circle here only doubles the one already there. When
-	# the cursor drifts inside the grace radius the connector line is what says
-	# which object is still latched.
-	if is_primary:
-		if cursor_position.distance_to(target.global_position) > 2.0 * visual_scale:
-			draw_line(cursor_position, target.global_position, Color(UITheme.ACCENT_DEEP, 0.45), 1.0 * visual_scale, true)
-		return
-	# Secondary targets keep a ring of their own, on one radius: the dim full
-	# circle is the track and the bright arc fills it. The cursor gauge only ever
-	# reports the primary, so these have nothing else showing their progress.
-	draw_circle(target.global_position, tracking_radius, Color(ring_color, 0.018))
-	draw_arc(target.global_position, tracking_radius, 0.0, TAU, 48, Color(ring_color, 0.16), 0.9 * visual_scale, true)
-	draw_arc(
-		target.global_position,
-		tracking_radius,
-		-PI * 0.5,
-		-PI * 0.5 + TAU * target.get_progress(),
-		48,
-		Color(ring_color, 0.76),
-		1.8 * visual_scale,
-		true
-	)
-
-
-func _draw_hover_ring(target) -> void:
-	if target.has_method("get_manual_contact_distance"):
-		return
-	var visual_scale := _world_px(1.0)
-	var tracking_radius: float = target.get_tracking_radius(_world_px(_module_tracking_radius()))
-	# A hint, not a gauge, so it stays below the tracking ring.
-	var ring_color := UITheme.INK_MID
-	var pulse := 1.0 + sin(Time.get_ticks_msec() * 0.006) * 0.06
-	var radius := tracking_radius * pulse
-	draw_arc(target.global_position, radius, 0.0, TAU, 40, Color(ring_color, 0.34), 1.8 * visual_scale, true)
-	for angle in [0.0, PI * 0.5, PI, PI * 1.5]:
-		var direction := Vector2.from_angle(angle)
-		draw_line(
-			target.global_position + direction * (radius - 5.0 * visual_scale),
-			target.global_position + direction * (radius + 5.0 * visual_scale),
-			Color(ring_color, 0.62),
-			2.0 * visual_scale,
-			true
-		)
+	if cursor_position.distance_to(selected_meteor.global_position) > 2.0 * visual_scale:
+		draw_line(cursor_position, selected_meteor.global_position, Color(UITheme.ACCENT_DEEP, 0.45), 1.0 * visual_scale, true)
 
 
 func _world_px(pixels: float) -> float:
