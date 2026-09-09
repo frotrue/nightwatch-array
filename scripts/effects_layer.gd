@@ -399,7 +399,7 @@ func _draw() -> void:
 		var forecast := bool(marker.get("forecast", false))
 		var duration := 3.0 if forecast else 1.45
 		alpha *= smoothstep(0.0, 0.12, duration - float(marker.life))
-		var p: Vector2 = marker.p
+		var p := ArrivalVisual.edge_point(Vector2(marker.p), _visible_world_rect(), visual_scale)
 		var direction: Vector2 = marker.dir
 		# One fading stroke is enough to indicate the entry direction.
 		var ink := UITheme.ACCENT_LINE

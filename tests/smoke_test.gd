@@ -1424,14 +1424,16 @@ func _run() -> void:
 	_check(not game.progression.dish_auto_assignment_enabled(), "dish auto-assignment remains unavailable before its research")
 	var isolated_contact_position := Vector2(-1000.0, -1000.0)
 	contact.intercept = isolated_contact_position
-	game.observer.cursor_position = isolated_contact_position
-	game.observer.previous_cursor_position = isolated_contact_position
+	var display_contact_position: Vector2 = game.sky_contacts._display_position_of(contact)
+	_check(not display_contact_position.is_equal_approx(game.sky_contacts._estimate_of(contact)), "forecast display is separated from the physical arrival estimate")
+	game.observer.cursor_position = display_contact_position
+	game.observer.previous_cursor_position = display_contact_position
 	game.observer.selected_meteor = null
 	game.observer.tracking_grace_remaining = 0.0
 	var hud_was_visible: bool = game.hud.visible
 	game.hud.visible = false
 	_check(
-		game.sky_contacts._contact_at(isolated_contact_position) == int(contact.id),
+		game.sky_contacts._contact_at(display_contact_position) == int(contact.id),
 		"the observation regression cursor is positioned over the forecast contact"
 	)
 	_check(not game.observer._cursor_is_on_ui(), "a forecast contact does not suppress manual observation tracking")

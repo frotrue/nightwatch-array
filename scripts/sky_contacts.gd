@@ -138,7 +138,7 @@ func _contact_at(point: Vector2) -> int:
 	for contact in contacts:
 		if not forecast_contact_visible(contact):
 			continue
-		if point.distance_to(_estimate_of(contact)) <= _world_px(CONTACT_HIT_RADIUS):
+		if point.distance_to(_display_position_of(contact)) <= _world_px(CONTACT_HIT_RADIUS):
 			return int(contact.id)
 	return -1
 
@@ -149,6 +149,10 @@ func _estimate_of(contact: Dictionary) -> Vector2:
 	var lead: float = maxf(float(contact.lead_time), 0.001)
 	var certainty: float = clampf(1.0 - float(contact.countdown) / lead, 0.0, 1.0)
 	return Vector2(contact.intercept) + Vector2(contact.error_offset) * (1.0 - certainty)
+
+
+func _display_position_of(contact: Dictionary) -> Vector2:
+	return ArrivalVisual.edge_point(_estimate_of(contact), _visible_world_rect(), _world_px(1.0))
 
 
 func _process(delta: float) -> void:
@@ -477,7 +481,8 @@ func _draw_contact(contact: Dictionary) -> void:
 	var base_color := UITheme.INK_MID.lerp(UITheme.ACCENT_TEXT, certainty)
 	if float(contact.get("abandoned_flash", 0.0)) > 0.0:
 		base_color = UITheme.ALERT
-	var hovered: bool = int(contact.id) == hovered_contact_id or get_local_mouse_position().distance_to(estimate) <= _world_px(CONTACT_HIT_RADIUS)
+	var marker := _display_position_of(contact)
+	var hovered: bool = int(contact.id) == hovered_contact_id or get_local_mouse_position().distance_to(marker) <= _world_px(CONTACT_HIT_RADIUS)
 
 	# The error footprint is inspection detail; a quiet mark locates the
 	# forecast without surrounding every incoming object with two rings.
@@ -485,10 +490,10 @@ func _draw_contact(contact: Dictionary) -> void:
 	if hovered and error_radius > _world_px(7.0):
 		draw_arc(estimate, error_radius, 0.0, TAU, 40, Color(base_color, 0.20), visual_scale, true)
 	if bool(contact.get("trajectory_known", false)):
-		ArrivalVisual.draw_direction(self, estimate, Vector2(contact.direction), visual_scale, base_color, 1.0 if hovered else 0.85)
+		ArrivalVisual.draw_direction(self, marker, Vector2(contact.direction), visual_scale, base_color, 1.0 if hovered else 0.85)
 	else:
 		# No approach vector is revealed before the direction research.
-		draw_line(estimate - Vector2(0, 4) * visual_scale, estimate + Vector2(0, 4) * visual_scale, Color(base_color, 0.75), visual_scale, true)
+		draw_line(marker - Vector2(0, 4) * visual_scale, marker + Vector2(0, 4) * visual_scale, Color(base_color, 0.75), visual_scale, true)
 
 	var label := ""
 	if bool(contact.classified):
@@ -501,9 +506,8 @@ func _draw_contact(contact: Dictionary) -> void:
 	var font := UITheme.mono_tabular()
 	var font_size := maxi(1, int(round(12.0 * visual_scale)))
 	var width := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
-	var rect := _atmospheric_rect().grow(-8.0 * visual_scale)
-	var label_offset := maxf(22.0 * visual_scale, error_radius + 18.0 * visual_scale) if hovered else 22.0 * visual_scale
-	var label_position := estimate + Vector2(-width * 0.5, label_offset)
+	var rect := _visible_world_rect().grow(-16.0 * visual_scale)
+	var label_position := marker + Vector2(-width * 0.5, 22.0 * visual_scale)
 	label_position.x = clampf(label_position.x, rect.position.x, maxf(rect.position.x, rect.end.x - width))
 	label_position.y = clampf(label_position.y, rect.position.y + font.get_ascent(font_size), rect.end.y - font.get_descent(font_size))
 	draw_string(font, label_position, label, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, Color(base_color, 0.82))
@@ -513,6 +517,10 @@ func _atmospheric_rect() -> Rect2:
 	if observation_view != null:
 		return observation_view.atmospheric_rect()
 	return Rect2(Vector2.ZERO, get_viewport_rect().size)
+
+
+func _visible_world_rect() -> Rect2:
+	return observation_view.visible_world_rect() if observation_view != null else _atmospheric_rect()
 
 
 func _world_px(pixels: float) -> float:

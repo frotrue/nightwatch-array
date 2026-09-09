@@ -43,6 +43,7 @@ func _run() -> void:
 	view.set_observation_span(1.0)
 	await process_frame
 	var atmospheric_at_one: Rect2 = view.atmospheric_rect()
+	_check_forecast_projection(game)
 	var activity_at_one: Rect2 = view.meteor_activity_rect()
 	var plans_at_one := _capture_plans(game.spawner)
 
@@ -198,6 +199,7 @@ func _run() -> void:
 	game._sync_galactic_systems()
 	game.sky_contacts.refresh_dishes()
 	await process_frame
+	_check_forecast_projection(game)
 	game.effects.reset()
 	game.effects.spawn_success(centre, 1.0, Color.WHITE, 1.0, 1.0, "", Vector2.ZERO, game._meteor_flash_scale("common"), true)
 	_check(
@@ -307,6 +309,21 @@ func _capture_entry_distribution(spawner: Node, activity: Rect2) -> Dictionary:
 			"burnout_stays_safe": burnout_stays_safe,
 		}
 	return distribution
+
+
+func _check_forecast_projection(game: Node) -> void:
+	var view: Camera2D = game.observation_view
+	var screen_size: Vector2 = root.get_visible_rect().size
+	var central_playfield := Rect2(screen_size * 0.25, screen_size * 0.5)
+	var world: Rect2 = view.visible_world_rect()
+	for uv in [Vector2(0.5, 0.5), Vector2(0.1, 0.2), Vector2(0.9, 0.7), Vector2(0.4, 0.1), Vector2(0.6, 0.9)]:
+		var contact := {"intercept": world.position + world.size * uv, "error_offset": Vector2(12, -8), "lead_time": 3.0, "countdown": 1.5}
+		var before := contact.duplicate(true)
+		var estimate: Vector2 = game.sky_contacts._estimate_of(contact)
+		var marker: Vector2 = game.sky_contacts._display_position_of(contact)
+		var screen: Vector2 = view.world_to_screen(marker)
+		_check(Rect2(Vector2.ZERO, screen_size).has_point(screen) and not central_playfield.has_point(screen), "forecast stays on-screen outside the central playfield at span %s" % view.observation_span)
+		_check(contact == before and game.sky_contacts._estimate_of(contact).is_equal_approx(estimate), "edge projection never changes physical forecast data")
 
 
 func _check_entry_distribution(label: String, distribution: Dictionary) -> void:

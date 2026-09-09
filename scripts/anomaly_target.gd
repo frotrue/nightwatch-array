@@ -180,11 +180,15 @@ func _draw() -> void:
 	if not alive:
 		color.a = clampf(_linger / 0.45, 0.0, 1.0)
 	var pulse := 0.75 + sin(age * 3.0) * 0.1
+	var label_origin := Vector2.ZERO
 	if age < warning_time and kind != "afterglow":
 		color = UITheme.ACCENT_LINE
 		var rect: Rect2 = research.game.observation_view.atmospheric_rect()
 		var direction := ((end_uv - start_uv) * rect.size).normalized()
-		ArrivalVisual.draw_direction(self, Vector2.ZERO, direction, scale_factor, UITheme.ACCENT_LINE, lerpf(0.55, 1.0, clampf(age / maxf(warning_time, 0.001), 0.0, 1.0)))
+		var view_rect: Rect2 = research.game.observation_view.visible_world_rect()
+		var marker := to_local(ArrivalVisual.edge_point(global_position, view_rect, scale_factor))
+		label_origin = marker / scale_factor
+		ArrivalVisual.draw_direction(self, marker, direction, scale_factor, UITheme.ACCENT_LINE, lerpf(0.55, 1.0, clampf(age / maxf(warning_time, 0.001), 0.0, 1.0)))
 	else:
 		if kind == "afterglow":
 			var opacity := 0.7 if discovered else 0.27
@@ -208,7 +212,11 @@ func _draw() -> void:
 	var text := tr(key)
 	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE * scale_factor)
-	draw_string(font, Vector2(-width * 0.5, 28), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(color, 0.85))
+	var label_position := label_origin + Vector2(-width * 0.5, 28)
+	if age < warning_time and kind != "afterglow":
+		var bounds: Rect2 = research.game.observation_view.visible_world_rect().grow(-16.0 * scale_factor)
+		label_position.x = clampf(label_position.x, (bounds.position.x - global_position.x) / scale_factor, (bounds.end.x - global_position.x) / scale_factor - width)
+	draw_string(font, label_position, text, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(color, 0.85))
 	draw_set_transform(Vector2.ZERO)
 
 func get_save_data() -> Dictionary:
