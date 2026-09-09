@@ -1,28 +1,11 @@
 [gd_scene format=3]
 
+[ext_resource type="StyleBoxFlat" path="res://resources/ui/action_normal.tres" id="action_normal"]
+[ext_resource type="StyleBoxFlat" path="res://resources/ui/action_focus.tres" id="action_focus"]
+
 [ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Medium.ttf" id="SansMedium"]
 [ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Regular.ttf" id="SansRegular"]
 [ext_resource type="FontFile" path="res://fonts/IBMPlexMono-Regular.ttf" id="MonoRegular"]
-
-[sub_resource type="StyleBoxFlat" id="ActionNormal"]
-content_margin_left = 6.0
-content_margin_top = 7.2
-content_margin_right = 6.0
-content_margin_bottom = 5.4
-bg_color = Color(0, 0, 0, 0)
-draw_center = false
-border_width_bottom = 1
-border_color = Color(0.33333334, 0.23529412, 0.19215687, 1)
-
-[sub_resource type="StyleBoxFlat" id="ActionFocus"]
-content_margin_left = 6.0
-content_margin_top = 7.2
-content_margin_right = 6.0
-content_margin_bottom = 5.4
-bg_color = Color(0, 0, 0, 0)
-draw_center = false
-border_width_bottom = 1
-border_color = Color(1, 0.7058824, 0.5568628, 1)
 
 [node name="PhaseSummary" type="Control"]
 visible = false
@@ -111,11 +94,11 @@ theme_override_colors/font_hover_color = Color(0.6, 0.47058824, 0.4, 1)
 theme_override_colors/font_disabled_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
 theme_override_fonts/font = ExtResource("SansRegular")
 theme_override_font_sizes/font_size = 12
-theme_override_styles/normal = SubResource("ActionNormal")
-theme_override_styles/pressed = SubResource("ActionNormal")
-theme_override_styles/hover = SubResource("ActionFocus")
-theme_override_styles/disabled = SubResource("ActionNormal")
-theme_override_styles/focus = SubResource("ActionFocus")
+theme_override_styles/normal = ExtResource("action_normal")
+theme_override_styles/pressed = ExtResource("action_normal")
+theme_override_styles/hover = ExtResource("action_focus")
+theme_override_styles/disabled = ExtResource("action_normal")
+theme_override_styles/focus = ExtResource("action_focus")
 toggle_mode = true
 flat = true
 
@@ -178,9 +161,9 @@ theme_override_colors/font_hover_color = Color(1, 0.81960785, 0.6745098, 1)
 theme_override_colors/font_disabled_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
 theme_override_fonts/font = ExtResource("SansRegular")
 theme_override_font_sizes/font_size = 13
-theme_override_styles/normal = SubResource("ActionNormal")
-theme_override_styles/pressed = SubResource("ActionNormal")
-theme_override_styles/hover = SubResource("ActionFocus")
-theme_override_styles/disabled = SubResource("ActionNormal")
-theme_override_styles/focus = SubResource("ActionFocus")
+theme_override_styles/normal = ExtResource("action_normal")
+theme_override_styles/pressed = ExtResource("action_normal")
+theme_override_styles/hover = ExtResource("action_focus")
+theme_override_styles/disabled = ExtResource("action_normal")
+theme_override_styles/focus = ExtResource("action_focus")
 flat = true

@@ -1,0 +1,920 @@
+[gd_scene format=3]
+
+[ext_resource type="Resource" path="res://resources/ui/mono_tabular.tres" id="R1"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexMono-Regular.ttf" id="R2"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Light.ttf" id="R4"]
+[ext_resource type="Resource" path="res://resources/ui/empty.tres" id="R5"]
+
+[node name="ConstellationInstallLedger" type="Control"]
+z_index = 30
+anchors_preset = 0
+mouse_filter = 2
+
+[node name="LedgerTitle" type="Label" parent="."]
+layout_mode = 0
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+text = "INSTALLS BY CONSTELLATION"
+
+[node name="ConstellationLedgerNames0" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 11
+text = "CASSIOPEIA"
+
+[node name="ConstellationLedgerLeaders0" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="ConstellationLedgerNotes0" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerCounts0" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0 / 0"
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerHits0" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+tooltip_text = "CASSIOPEIA"
+theme_override_styles/normal = ExtResource("R5")
+theme_override_styles/pressed = ExtResource("R5")
+theme_override_styles/hover = ExtResource("R5")
+theme_override_styles/focus = ExtResource("R5")
+flat = true
+
+[node name="ConstellationLedgerNames1" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 11
+text = "BIG DIPPER"
+
+[node name="ConstellationLedgerLeaders1" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="ConstellationLedgerNotes1" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerCounts1" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0 / 0"
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerHits1" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+tooltip_text = "BIG DIPPER"
+theme_override_styles/normal = ExtResource("R5")
+theme_override_styles/pressed = ExtResource("R5")
+theme_override_styles/hover = ExtResource("R5")
+theme_override_styles/focus = ExtResource("R5")
+flat = true
+
+[node name="ConstellationLedgerNames2" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 11
+text = "ORION"
+
+[node name="ConstellationLedgerLeaders2" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="ConstellationLedgerNotes2" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerCounts2" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0 / 0"
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerHits2" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+tooltip_text = "ORION"
+theme_override_styles/normal = ExtResource("R5")
+theme_override_styles/pressed = ExtResource("R5")
+theme_override_styles/hover = ExtResource("R5")
+theme_override_styles/focus = ExtResource("R5")
+flat = true
+
+[node name="ConstellationLedgerNames3" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 11
+text = "ANDROMEDA"
+
+[node name="ConstellationLedgerLeaders3" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="ConstellationLedgerNotes3" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerCounts3" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0 / 0"
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerHits3" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+tooltip_text = "ANDROMEDA"
+theme_override_styles/normal = ExtResource("R5")
+theme_override_styles/pressed = ExtResource("R5")
+theme_override_styles/hover = ExtResource("R5")
+theme_override_styles/focus = ExtResource("R5")
+flat = true
+
+[node name="ConstellationLedgerNames4" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 11
+text = "PERSEUS"
+
+[node name="ConstellationLedgerLeaders4" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="ConstellationLedgerNotes4" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerCounts4" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0 / 0"
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerHits4" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+tooltip_text = "PERSEUS"
+theme_override_styles/normal = ExtResource("R5")
+theme_override_styles/pressed = ExtResource("R5")
+theme_override_styles/hover = ExtResource("R5")
+theme_override_styles/focus = ExtResource("R5")
+flat = true
+
+[node name="ConstellationLedgerNames5" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 11
+text = "LYRA"
+
+[node name="ConstellationLedgerLeaders5" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="ConstellationLedgerNotes5" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerCounts5" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0 / 0"
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerHits5" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+tooltip_text = "LYRA"
+theme_override_styles/normal = ExtResource("R5")
+theme_override_styles/pressed = ExtResource("R5")
+theme_override_styles/hover = ExtResource("R5")
+theme_override_styles/focus = ExtResource("R5")
+flat = true
+
+[node name="ConstellationLedgerNames6" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 11
+text = "GEMINI"
+
+[node name="ConstellationLedgerLeaders6" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="ConstellationLedgerNotes6" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerCounts6" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0 / 0"
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerHits6" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+tooltip_text = "GEMINI"
+theme_override_styles/normal = ExtResource("R5")
+theme_override_styles/pressed = ExtResource("R5")
+theme_override_styles/hover = ExtResource("R5")
+theme_override_styles/focus = ExtResource("R5")
+flat = true
+
+[node name="ConstellationLedgerNames7" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 11
+text = "TAURUS"
+
+[node name="ConstellationLedgerLeaders7" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="ConstellationLedgerNotes7" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerCounts7" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0 / 0"
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerHits7" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+tooltip_text = "TAURUS"
+theme_override_styles/normal = ExtResource("R5")
+theme_override_styles/pressed = ExtResource("R5")
+theme_override_styles/hover = ExtResource("R5")
+theme_override_styles/focus = ExtResource("R5")
+flat = true
+
+[node name="ConstellationLedgerNames8" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 11
+text = "LEO"
+
+[node name="ConstellationLedgerLeaders8" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="ConstellationLedgerNotes8" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerCounts8" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0 / 0"
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerHits8" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+tooltip_text = "LEO"
+theme_override_styles/normal = ExtResource("R5")
+theme_override_styles/pressed = ExtResource("R5")
+theme_override_styles/hover = ExtResource("R5")
+theme_override_styles/focus = ExtResource("R5")
+flat = true
+
+[node name="ConstellationLedgerNames9" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 11
+text = "URSA MINOR"
+
+[node name="ConstellationLedgerLeaders9" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="ConstellationLedgerNotes9" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerCounts9" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0 / 0"
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerHits9" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+tooltip_text = "URSA MINOR"
+theme_override_styles/normal = ExtResource("R5")
+theme_override_styles/pressed = ExtResource("R5")
+theme_override_styles/hover = ExtResource("R5")
+theme_override_styles/focus = ExtResource("R5")
+flat = true
+
+[node name="ConstellationLedgerNames10" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 11
+text = "CANIS MAJOR"
+
+[node name="ConstellationLedgerLeaders10" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="ConstellationLedgerNotes10" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerCounts10" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0 / 0"
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerHits10" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+tooltip_text = "CANIS MAJOR"
+theme_override_styles/normal = ExtResource("R5")
+theme_override_styles/pressed = ExtResource("R5")
+theme_override_styles/hover = ExtResource("R5")
+theme_override_styles/focus = ExtResource("R5")
+flat = true
+
+[node name="ConstellationLedgerNames11" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 11
+text = "DRACO"
+
+[node name="ConstellationLedgerLeaders11" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="ConstellationLedgerNotes11" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerCounts11" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0 / 0"
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerHits11" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+tooltip_text = "DRACO"
+theme_override_styles/normal = ExtResource("R5")
+theme_override_styles/pressed = ExtResource("R5")
+theme_override_styles/hover = ExtResource("R5")
+theme_override_styles/focus = ExtResource("R5")
+flat = true
+
+[node name="ConstellationLedgerNames12" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 11
+text = "Pegasus"
+
+[node name="ConstellationLedgerLeaders12" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="ConstellationLedgerNotes12" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerCounts12" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0 / 0"
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerHits12" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+tooltip_text = "Pegasus"
+theme_override_styles/normal = ExtResource("R5")
+theme_override_styles/pressed = ExtResource("R5")
+theme_override_styles/hover = ExtResource("R5")
+theme_override_styles/focus = ExtResource("R5")
+flat = true
+
+[node name="ConstellationLedgerNames13" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 11
+text = "Lacerta"
+
+[node name="ConstellationLedgerLeaders13" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="ConstellationLedgerNotes13" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerCounts13" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0 / 0"
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerHits13" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+tooltip_text = "Lacerta"
+theme_override_styles/normal = ExtResource("R5")
+theme_override_styles/pressed = ExtResource("R5")
+theme_override_styles/hover = ExtResource("R5")
+theme_override_styles/focus = ExtResource("R5")
+flat = true
+
+[node name="ConstellationLedgerNames14" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 11
+text = "Cygnus"
+
+[node name="ConstellationLedgerLeaders14" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="ConstellationLedgerNotes14" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerCounts14" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0 / 0"
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerHits14" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+tooltip_text = "Cygnus"
+theme_override_styles/normal = ExtResource("R5")
+theme_override_styles/pressed = ExtResource("R5")
+theme_override_styles/hover = ExtResource("R5")
+theme_override_styles/focus = ExtResource("R5")
+flat = true
+
+[node name="ConstellationLedgerNames15" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 11
+text = "Aquila"
+
+[node name="ConstellationLedgerLeaders15" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="ConstellationLedgerNotes15" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerCounts15" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0 / 0"
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerHits15" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+tooltip_text = "Aquila"
+theme_override_styles/normal = ExtResource("R5")
+theme_override_styles/pressed = ExtResource("R5")
+theme_override_styles/hover = ExtResource("R5")
+theme_override_styles/focus = ExtResource("R5")
+flat = true
+
+[node name="ConstellationLedgerNames16" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 11
+text = "Vulpecula"
+
+[node name="ConstellationLedgerLeaders16" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="ConstellationLedgerNotes16" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerCounts16" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0 / 0"
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerHits16" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+tooltip_text = "Vulpecula"
+theme_override_styles/normal = ExtResource("R5")
+theme_override_styles/pressed = ExtResource("R5")
+theme_override_styles/hover = ExtResource("R5")
+theme_override_styles/focus = ExtResource("R5")
+flat = true
+
+[node name="ConstellationLedgerNames17" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 11
+text = "Delphinus"
+
+[node name="ConstellationLedgerLeaders17" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="ConstellationLedgerNotes17" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerCounts17" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0 / 0"
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerHits17" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+tooltip_text = "Delphinus"
+theme_override_styles/normal = ExtResource("R5")
+theme_override_styles/pressed = ExtResource("R5")
+theme_override_styles/hover = ExtResource("R5")
+theme_override_styles/focus = ExtResource("R5")
+flat = true
+
+[node name="ConstellationLedgerNames18" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 11
+text = "Sagitta"
+
+[node name="ConstellationLedgerLeaders18" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="ConstellationLedgerNotes18" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerCounts18" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0 / 0"
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerHits18" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+tooltip_text = "Sagitta"
+theme_override_styles/normal = ExtResource("R5")
+theme_override_styles/pressed = ExtResource("R5")
+theme_override_styles/hover = ExtResource("R5")
+theme_override_styles/focus = ExtResource("R5")
+flat = true
+
+[node name="ConstellationLedgerNames19" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 11
+text = "Equuleus"
+
+[node name="ConstellationLedgerLeaders19" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="ConstellationLedgerNotes19" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerCounts19" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0 / 0"
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerHits19" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+tooltip_text = "Equuleus"
+theme_override_styles/normal = ExtResource("R5")
+theme_override_styles/pressed = ExtResource("R5")
+theme_override_styles/hover = ExtResource("R5")
+theme_override_styles/focus = ExtResource("R5")
+flat = true
+
+[node name="ConstellationLedgerNames20" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 11
+text = "Cepheus"
+
+[node name="ConstellationLedgerLeaders20" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="ConstellationLedgerNotes20" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerCounts20" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0 / 0"
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerHits20" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+tooltip_text = "Cepheus"
+theme_override_styles/normal = ExtResource("R5")
+theme_override_styles/pressed = ExtResource("R5")
+theme_override_styles/hover = ExtResource("R5")
+theme_override_styles/focus = ExtResource("R5")
+flat = true
+
+[node name="ConstellationLedgerNames21" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 11
+text = "Triangulum"
+
+[node name="ConstellationLedgerLeaders21" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="ConstellationLedgerNotes21" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerCounts21" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0 / 0"
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerHits21" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+tooltip_text = "Triangulum"
+theme_override_styles/normal = ExtResource("R5")
+theme_override_styles/pressed = ExtResource("R5")
+theme_override_styles/hover = ExtResource("R5")
+theme_override_styles/focus = ExtResource("R5")
+flat = true

@@ -1,0 +1,9 @@
+[gd_resource type="FontVariation" format=3]
+
+[ext_resource type="FontFile" path="res://fonts/IBMPlexMono-Regular.ttf" id="R1"]
+
+[resource]
+base_font = ExtResource("R1")
+opentype_features = {
+1953396077: 1
+}

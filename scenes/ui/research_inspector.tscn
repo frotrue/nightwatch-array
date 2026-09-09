@@ -1,0 +1,245 @@
+[gd_scene format=3]
+
+[ext_resource type="Resource" path="res://resources/ui/mono_tabular.tres" id="R1"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexMono-Regular.ttf" id="R2"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Regular.ttf" id="R3"]
+[ext_resource type="Resource" path="res://resources/ui/empty.tres" id="R5"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Medium.ttf" id="R6"]
+
+[node name="ConstellationInspector" type="PanelContainer"]
+visible = false
+z_index = 100
+custom_minimum_size = Vector2(175.2, 0)
+layout_mode = 0
+mouse_filter = 2
+theme_override_styles/panel = ExtResource("R5")
+
+[node name="InspectorScroll" type="ScrollContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+follow_focus = true
+horizontal_scroll_mode = 0
+
+[node name="VBoxContainer0" type="VBoxContainer" parent="InspectorScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_constants/separation = 7
+
+[node name="TooltipBranch" type="Label" parent="InspectorScroll/VBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 10
+autowrap_mode = 3
+
+[node name="TooltipName" type="Label" parent="InspectorScroll/VBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9843137, 0.90588236, 0.84705883, 1)
+theme_override_fonts/font = ExtResource("R3")
+theme_override_font_sizes/font_size = 16
+autowrap_mode = 3
+
+[node name="DividerSlot" type="Control" parent="InspectorScroll/VBoxContainer0"]
+custom_minimum_size = Vector2(0, 1)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Divider" type="ColorRect" parent="InspectorScroll/VBoxContainer0/DividerSlot"]
+unique_name_in_owner = true
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 1)
+
+[node name="GridContainer3" type="GridContainer" parent="InspectorScroll/VBoxContainer0"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 4
+columns = 2
+
+[node name="FieldStatusLabel" type="Label" parent="InspectorScroll/VBoxContainer0/GridContainer3"]
+custom_minimum_size = Vector2(26.4, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 10
+text = "STATUS"
+
+[node name="TooltipState" type="Label" parent="InspectorScroll/VBoxContainer0/GridContainer3"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.83137256, 0.6901961, 1)
+theme_override_fonts/font = ExtResource("R3")
+theme_override_font_sizes/font_size = 12
+
+[node name="FieldCostLabel" type="Label" parent="InspectorScroll/VBoxContainer0/GridContainer3"]
+custom_minimum_size = Vector2(26.4, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 10
+text = "COST"
+
+[node name="TooltipCost" type="Label" parent="InspectorScroll/VBoxContainer0/GridContainer3"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 12
+
+[node name="FieldEffectLabel" type="Label" parent="InspectorScroll/VBoxContainer0"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 10
+text = "EFFECT"
+
+[node name="TooltipDescription" type="Label" parent="InspectorScroll/VBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.8, 0.69411767, 0.627451, 1)
+theme_override_fonts/font = ExtResource("R3")
+theme_override_font_sizes/font_size = 12
+autowrap_mode = 3
+
+[node name="TooltipMeta" type="Label" parent="InspectorScroll/VBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.99607843, 0.6431373, 0.4862745, 1)
+theme_override_fonts/font = ExtResource("R6")
+theme_override_font_sizes/font_size = 14
+autowrap_mode = 3
+
+[node name="InspectorDetailsButton" type="Button" parent="InspectorScroll/VBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.99607843, 0.6431373, 0.4862745, 1)
+theme_override_colors/font_focus_color = Color(0.99607843, 0.6431373, 0.4862745, 1)
+theme_override_colors/font_hover_color = Color(0.99607843, 0.6431373, 0.4862745, 1)
+theme_override_fonts/font = ExtResource("R3")
+theme_override_font_sizes/font_size = 12
+toggle_mode = true
+text = "Star details & help +"
+flat = true
+alignment = 0
+
+[node name="InspectorDetails" type="VBoxContainer" parent="InspectorScroll/VBoxContainer0"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 7
+
+[node name="TooltipStar" type="Label" parent="InspectorScroll/VBoxContainer0/InspectorDetails"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.69411767, 0.627451, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 10
+autowrap_mode = 3
+
+[node name="Control1" type="Control" parent="InspectorScroll/VBoxContainer0/InspectorDetails"]
+custom_minimum_size = Vector2(0, 4.2)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="LegendTitle" type="Label" parent="InspectorScroll/VBoxContainer0/InspectorDetails"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 10
+text = "STAR STATES"
+
+[node name="HBoxContainer3" type="HBoxContainer" parent="InspectorScroll/VBoxContainer0/InspectorDetails"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 7
+
+[node name="Label0" type="Label" parent="InspectorScroll/VBoxContainer0/InspectorDetails/HBoxContainer3"]
+custom_minimum_size = Vector2(7.2, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.94509804, 0.84705883, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 12
+text = "●"
+
+[node name="LegendText0" type="Label" parent="InspectorScroll/VBoxContainer0/InspectorDetails/HBoxContainer3"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R3")
+theme_override_font_sizes/font_size = 12
+text = "INSTALLED"
+autowrap_mode = 3
+
+[node name="HBoxContainer4" type="HBoxContainer" parent="InspectorScroll/VBoxContainer0/InspectorDetails"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 7
+
+[node name="Label0" type="Label" parent="InspectorScroll/VBoxContainer0/InspectorDetails/HBoxContainer4"]
+custom_minimum_size = Vector2(7.2, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.69803923, 0.5058824, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 12
+text = "●"
+
+[node name="LegendText1" type="Label" parent="InspectorScroll/VBoxContainer0/InspectorDetails/HBoxContainer4"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R3")
+theme_override_font_sizes/font_size = 12
+text = "AVAILABLE · DATA READY"
+autowrap_mode = 3
+
+[node name="HBoxContainer5" type="HBoxContainer" parent="InspectorScroll/VBoxContainer0/InspectorDetails"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 7
+
+[node name="Label0" type="Label" parent="InspectorScroll/VBoxContainer0/InspectorDetails/HBoxContainer5"]
+custom_minimum_size = Vector2(7.2, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7019608, 0.45490196, 0.34509805, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 12
+text = "●"
+
+[node name="LegendText2" type="Label" parent="InspectorScroll/VBoxContainer0/InspectorDetails/HBoxContainer5"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R3")
+theme_override_font_sizes/font_size = 12
+text = "OPEN · NEEDS DATA"
+autowrap_mode = 3
+
+[node name="HBoxContainer6" type="HBoxContainer" parent="InspectorScroll/VBoxContainer0/InspectorDetails"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 7
+
+[node name="Label0" type="Label" parent="InspectorScroll/VBoxContainer0/InspectorDetails/HBoxContainer6"]
+custom_minimum_size = Vector2(7.2, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.68235296, 0.63529414, 0.59607846, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 12
+text = "○"
+
+[node name="LegendText3" type="Label" parent="InspectorScroll/VBoxContainer0/InspectorDetails/HBoxContainer6"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R3")
+theme_override_font_sizes/font_size = 12
+text = "PREREQUISITE RESEARCH REQUIRED"
+autowrap_mode = 3

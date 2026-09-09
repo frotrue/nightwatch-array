@@ -1,0 +1,8 @@
+[gd_resource type="Theme" format=3]
+
+[ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Regular.ttf" id="1_u60qu"]
+
+[resource]
+Label/colors/font_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+Label/font_sizes/font_size = 14
+Label/fonts/font = ExtResource("1_u60qu")

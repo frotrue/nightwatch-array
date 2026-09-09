@@ -1,0 +1,122 @@
+[gd_scene format=3]
+
+[ext_resource type="Resource" path="res://resources/ui/top_veil.tres" id="R1"]
+[ext_resource type="Resource" path="res://resources/ui/bottom_veil.tres" id="R2"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Regular.ttf" id="R4"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexMono-Regular.ttf" id="R6"]
+[ext_resource type="PackedScene" path="res://scenes/ui/phase_summary.tscn" id="R13"]
+[ext_resource type="PackedScene" path="res://scenes/ui/settings.tscn" id="Scene_settings"]
+[ext_resource type="PackedScene" path="res://scenes/ui/startup.tscn" id="Scene_startup"]
+[ext_resource type="PackedScene" path="res://scenes/ui/catalogue_ending.tscn" id="Scene_catalogue_ending"]
+[ext_resource type="PackedScene" path="res://scenes/ui/debug_hud.tscn" id="Scene_debug_hud"]
+[ext_resource type="PackedScene" path="res://scenes/ui/data_readout.tscn" id="Scene_data_readout"]
+[ext_resource type="PackedScene" path="res://scenes/ui/phase_clock.tscn" id="Scene_phase_clock"]
+[ext_resource type="PackedScene" path="res://scenes/ui/extension_readout.tscn" id="Scene_extension_readout"]
+[ext_resource type="PackedScene" path="res://scenes/ui/research_ready.tscn" id="Scene_research_ready"]
+[ext_resource type="PackedScene" path="res://scenes/ui/event_banner.tscn" id="Scene_event_banner"]
+[ext_resource type="PackedScene" path="res://scenes/ui/tracking_readout.tscn" id="Scene_tracking_readout"]
+
+[node name="Interface" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="TextureRect0" type="TextureRect" parent="."]
+layout_mode = 0
+anchor_right = 1.0
+offset_bottom = 90.0
+mouse_filter = 2
+texture = ExtResource("R1")
+
+[node name="TextureRect1" type="TextureRect" parent="."]
+layout_mode = 0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -48.0
+mouse_filter = 2
+texture = ExtResource("R2")
+
+[node name="DataReadout" parent="." instance=ExtResource("Scene_data_readout") ]
+unique_name_in_owner = true
+
+[node name="PhaseClock" parent="." instance=ExtResource("Scene_phase_clock") ]
+unique_name_in_owner = true
+
+[node name="ExtensionReadout" parent="." instance=ExtResource("Scene_extension_readout") ]
+unique_name_in_owner = true
+
+[node name="ReadySystems" parent="." instance=ExtResource("Scene_research_ready") ]
+unique_name_in_owner = true
+
+[node name="EventBanner" parent="." instance=ExtResource("Scene_event_banner") ]
+unique_name_in_owner = true
+
+[node name="FirstObservationHint" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -33.6
+offset_bottom = -16.8
+theme_override_colors/font_color = Color(0.6313726, 0.5568628, 0.5058824, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 9
+text = "Hold LMB and follow the meteor"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="TrackingCluster" parent="." instance=ExtResource("Scene_tracking_readout") ]
+unique_name_in_owner = true
+
+[node name="DebugPanel" parent="." instance=ExtResource("Scene_debug_hud") ]
+unique_name_in_owner = true
+
+[node name="EndOverlay" parent="." instance=ExtResource("Scene_catalogue_ending") ]
+unique_name_in_owner = true
+
+[node name="PhaseSummary" type="Control" parent="." instance=ExtResource("R13")]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="SettingsOverlay" parent="." instance=ExtResource("Scene_settings") ]
+unique_name_in_owner = true
+
+[node name="SettingsButton" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -120.0
+offset_top = -36.0
+offset_right = -33.6
+offset_bottom = -16.8
+focus_mode = 0
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_colors/font_focus_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_colors/font_pressed_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_colors/font_hover_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_fonts/font = ExtResource("R6")
+theme_override_font_sizes/font_size = 8
+text = "SETTINGS  [ESC]"
+flat = true
+alignment = 2
+
+[node name="StartupSaveSlots" parent="." instance=ExtResource("Scene_startup") ]
+unique_name_in_owner = true
+
+[node name="ResetDialog" type="ConfirmationDialog" parent="."]
+unique_name_in_owner = true
+title = "RESET SAVE SLOT?"
+transient = false
+exclusive = false
+ok_button_text = "RESET SLOT"
+cancel_button_text = "CANCEL"

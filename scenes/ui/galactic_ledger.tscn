@@ -1,0 +1,508 @@
+[gd_scene format=3]
+
+[ext_resource type="Resource" path="res://resources/ui/mono_tabular.tres" id="R1"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexMono-Regular.ttf" id="R2"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Light.ttf" id="R4"]
+
+[node name="GalacticCompletionLedger" type="Control"]
+visible = false
+modulate = Color(1, 1, 1, 0)
+z_index = 30
+anchors_preset = 0
+offset_left = 33.6
+offset_top = 111.6
+offset_right = 193.20001
+offset_bottom = 606.0
+mouse_filter = 2
+
+[node name="LedgerTitle" type="Label" parent="."]
+layout_mode = 0
+offset_right = 159.6
+offset_bottom = 10.0
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+text = "COMPLETION RECORD"
+
+[node name="SpanLabel" type="Label" parent="."]
+layout_mode = 0
+offset_top = 45.4
+offset_right = 108.52801
+offset_bottom = 57.4
+theme_override_colors/font_color = Color(0.49019608, 0.41568628, 0.36862746, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 8
+text = "OBSERVATION SPAN"
+
+[node name="SpanValue" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 87.78001
+offset_top = 45.4
+offset_right = 159.6
+offset_bottom = 57.4
+theme_override_colors/font_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 8
+text = "×1.0000"
+horizontal_alignment = 2
+
+[node name="Divider" type="ColorRect" parent="."]
+layout_mode = 0
+offset_top = 67.0
+offset_right = 159.6
+offset_bottom = 68.0
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.7)
+
+[node name="BranchTitle" type="Label" parent="."]
+layout_mode = 0
+offset_top = 76.6
+offset_right = 159.6
+offset_bottom = 86.6
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+text = "INSTALLS BY BRANCH"
+
+[node name="GalacticLedgerNames0" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_top = 90.799995
+offset_right = 46.0
+offset_bottom = 103.799995
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 8
+text = "CASSIOPEIA"
+
+[node name="GalacticLedgerLeaders0" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 52.0
+offset_top = 99.38
+offset_right = 136.8
+offset_bottom = 100.38
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="GalacticLedgerCounts0" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 142.8
+offset_top = 90.799995
+offset_right = 159.6
+offset_bottom = 100.799995
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0"
+horizontal_alignment = 2
+
+[node name="GalacticLedgerNames1" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_top = 108.0
+offset_right = 44.0
+offset_bottom = 121.0
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 8
+text = "BIG DIPPER"
+
+[node name="GalacticLedgerLeaders1" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 50.0
+offset_top = 116.58
+offset_right = 136.8
+offset_bottom = 117.58
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="GalacticLedgerCounts1" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 142.8
+offset_top = 108.0
+offset_right = 159.6
+offset_bottom = 118.0
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0"
+horizontal_alignment = 2
+
+[node name="GalacticLedgerNames2" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_top = 125.2
+offset_right = 25.0
+offset_bottom = 138.2
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 8
+text = "ORION"
+
+[node name="GalacticLedgerLeaders2" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 31.0
+offset_top = 133.78
+offset_right = 136.8
+offset_bottom = 134.78
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="GalacticLedgerCounts2" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 142.8
+offset_top = 125.2
+offset_right = 159.6
+offset_bottom = 135.2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0"
+horizontal_alignment = 2
+
+[node name="GalacticLedgerNames3" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_top = 142.4
+offset_right = 48.0
+offset_bottom = 155.4
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 8
+text = "ANDROMEDA"
+
+[node name="GalacticLedgerLeaders3" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 54.0
+offset_top = 150.98
+offset_right = 136.8
+offset_bottom = 151.98
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="GalacticLedgerCounts3" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 142.8
+offset_top = 142.4
+offset_right = 159.6
+offset_bottom = 152.4
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0"
+horizontal_alignment = 2
+
+[node name="GalacticLedgerNames4" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_top = 159.6
+offset_right = 34.0
+offset_bottom = 172.6
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 8
+text = "PERSEUS"
+
+[node name="GalacticLedgerLeaders4" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 40.0
+offset_top = 168.18
+offset_right = 136.8
+offset_bottom = 169.18
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="GalacticLedgerCounts4" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 142.8
+offset_top = 159.6
+offset_right = 159.6
+offset_bottom = 169.6
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0"
+horizontal_alignment = 2
+
+[node name="GalacticLedgerNames5" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_top = 176.8
+offset_right = 19.0
+offset_bottom = 189.8
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 8
+text = "LYRA"
+
+[node name="GalacticLedgerLeaders5" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 25.0
+offset_top = 185.38
+offset_right = 136.8
+offset_bottom = 186.38
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="GalacticLedgerCounts5" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 142.8
+offset_top = 176.8
+offset_right = 159.6
+offset_bottom = 186.8
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0"
+horizontal_alignment = 2
+
+[node name="GalacticLedgerNames6" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_top = 194.0
+offset_right = 29.0
+offset_bottom = 207.0
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 8
+text = "GEMINI"
+
+[node name="GalacticLedgerLeaders6" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 35.0
+offset_top = 202.58
+offset_right = 136.8
+offset_bottom = 203.58
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="GalacticLedgerCounts6" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 142.8
+offset_top = 194.0
+offset_right = 159.6
+offset_bottom = 204.0
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0"
+horizontal_alignment = 2
+
+[node name="GalacticLedgerNames7" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_top = 211.2
+offset_right = 30.0
+offset_bottom = 224.2
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 8
+text = "TAURUS"
+
+[node name="GalacticLedgerLeaders7" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 36.0
+offset_top = 219.78
+offset_right = 136.8
+offset_bottom = 220.78
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="GalacticLedgerCounts7" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 142.8
+offset_top = 211.2
+offset_right = 159.6
+offset_bottom = 221.2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0"
+horizontal_alignment = 2
+
+[node name="GalacticLedgerNames8" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_top = 228.4
+offset_right = 15.0
+offset_bottom = 241.4
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 8
+text = "LEO"
+
+[node name="GalacticLedgerLeaders8" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 21.0
+offset_top = 236.98
+offset_right = 136.8
+offset_bottom = 237.98
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="GalacticLedgerCounts8" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 142.8
+offset_top = 228.4
+offset_right = 159.6
+offset_bottom = 238.4
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0"
+horizontal_alignment = 2
+
+[node name="GalacticLedgerNames9" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_top = 245.59999
+offset_right = 48.0
+offset_bottom = 258.59998
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 8
+text = "URSA MINOR"
+
+[node name="GalacticLedgerLeaders9" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 54.0
+offset_top = 254.18
+offset_right = 136.8
+offset_bottom = 255.18
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="GalacticLedgerCounts9" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 142.8
+offset_top = 245.59999
+offset_right = 159.6
+offset_bottom = 255.59999
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0"
+horizontal_alignment = 2
+
+[node name="GalacticLedgerNames10" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_top = 262.8
+offset_right = 52.0
+offset_bottom = 275.8
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 8
+text = "CANIS MAJOR"
+
+[node name="GalacticLedgerLeaders10" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 58.0
+offset_top = 271.38
+offset_right = 136.8
+offset_bottom = 272.38
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="GalacticLedgerCounts10" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 142.8
+offset_top = 262.8
+offset_right = 159.6
+offset_bottom = 272.8
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0"
+horizontal_alignment = 2
+
+[node name="GalacticLedgerNames11" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_top = 280.0
+offset_right = 26.0
+offset_bottom = 293.0
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 8
+text = "DRACO"
+
+[node name="GalacticLedgerLeaders11" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 32.0
+offset_top = 288.58
+offset_right = 136.8
+offset_bottom = 289.58
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="GalacticLedgerCounts11" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 142.8
+offset_top = 280.0
+offset_right = 159.6
+offset_bottom = 290.0
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0"
+horizontal_alignment = 2
+
+[node name="GalacticLedgerNames12" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_top = 297.2
+offset_right = 52.0
+offset_bottom = 310.2
+theme_override_colors/font_color = Color(1, 0.83137256, 0.6901961, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 8
+text = "LOCAL GROUP"
+
+[node name="GalacticLedgerLeaders12" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 58.0
+offset_top = 305.78
+offset_right = 136.8
+offset_bottom = 306.78
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="GalacticLedgerCounts12" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 142.8
+offset_top = 297.2
+offset_right = 159.6
+offset_bottom = 307.2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0"
+horizontal_alignment = 2

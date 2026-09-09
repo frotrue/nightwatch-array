@@ -90,89 +90,14 @@ func hide_summary() -> void:
 
 
 func _build() -> void:
-	root_control = Control.new()
-	root_control.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	root_control.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(root_control)
-	var font := SystemFont.new()
-	font.font_names = PackedStringArray(["Pretendard", "Noto Sans CJK KR", "Malgun Gothic", "Segoe UI"])
-	root_control.add_theme_font_override("font", font)
-
-	var top := HBoxContainer.new()
-	top.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	top.offset_left = 22.0
-	top.offset_top = 16.0
-	top.add_theme_constant_override("separation", 34)
-	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root_control.add_child(top)
-	top.add_child(_stat_column("EARNED", "0", 30, Color("8fffe5"), true))
-	top.add_child(_stat_column("MISSED", "−0", 30, Color("ff7a6d"), false))
-	top.add_child(_stat_column("REMAINING", "01:30", 24, Color("bcd6e8"), false))
-
-	instrument_label = _label("", 13, Color("9fe0cf"))
-	instrument_label.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	instrument_label.offset_left = 22.0
-	instrument_label.offset_top = -76.0
-	instrument_label.offset_right = 320.0
-	instrument_label.offset_bottom = -26.0
-	root_control.add_child(instrument_label)
-
-	queue_label = _label("", 13, Color("cfe0f0"))
-	queue_label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	queue_label.offset_left = -290.0
-	queue_label.offset_top = 20.0
-	queue_label.offset_right = -20.0
-	queue_label.offset_bottom = 260.0
-	root_control.add_child(queue_label)
-
-	hint_label = _label("CLICK A SIGNAL TO COMMIT A DISH    ·    HOLD LMB TO OBSERVE BY HAND", 13, Color("7d94a8"))
-	hint_label.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	hint_label.offset_top = -34.0
-	hint_label.offset_bottom = -12.0
-	hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	root_control.add_child(hint_label)
-
-	summary_overlay = Control.new()
-	summary_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	summary_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	summary_overlay.visible = false
-	root_control.add_child(summary_overlay)
-	var dim := ColorRect.new()
-	dim.color = Color(0.002, 0.007, 0.02, 0.9)
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	summary_overlay.add_child(dim)
-	summary_label = _label("", 19, Color("dceefc"))
-	summary_label.set_anchors_preset(Control.PRESET_CENTER)
-	summary_label.offset_left = -230.0
-	summary_label.offset_top = -170.0
-	summary_label.offset_right = 230.0
-	summary_label.offset_bottom = 170.0
-	summary_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	summary_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	summary_overlay.add_child(summary_label)
-
-
-func _stat_column(caption: String, value: String, size: int, color: Color, is_earned: bool) -> VBoxContainer:
-	var column := VBoxContainer.new()
-	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	column.add_theme_constant_override("separation", -2)
-	column.add_child(_label(caption, 10, Color("6f8ba0")))
-	var value_label := _label(value, size, color)
-	column.add_child(value_label)
-	if is_earned:
-		earned_label = value_label
-	elif caption == "MISSED":
-		missed_label = value_label
-	else:
-		clock_label = value_label
-	return column
-
-
-func _label(text: String, size: int, color: Color) -> Label:
-	var label := Label.new()
-	label.text = text
-	label.add_theme_font_size_override("font_size", size)
-	label.add_theme_color_override("font_color", color)
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return label
+	var view = preload("res://scenes/ui/probe_hud.tscn").instantiate()
+	root_control = view
+	earned_label = view.get_node("%EarnedLabel")
+	missed_label = view.get_node("%MissedLabel")
+	clock_label = view.get_node("%ClockLabel")
+	instrument_label = view.get_node("%InstrumentLabel")
+	queue_label = view.get_node("%QueueLabel")
+	hint_label = view.get_node("%HintLabel")
+	summary_overlay = view.get_node("%SummaryOverlay")
+	summary_label = view.get_node("%SummaryLabel")
+	add_child(view)

@@ -1,0 +1,32 @@
+[gd_scene format=3]
+
+[ext_resource type="Resource" path="res://resources/ui/debug_panel.tres" id="R8"]
+
+[node name="DebugPanel" type="PanelContainer"]
+visible = false
+layout_mode = 0
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -350.0
+offset_top = 78.0
+offset_right = -18.0
+offset_bottom = 274.0
+mouse_filter = 2
+theme_override_styles/panel = ExtResource("R8")
+
+[node name="DebugLabel" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_font_sizes/font_size = 13
+text = "DEBUG ARRAY  [F9 hide]
+
+Ctrl+Shift+D   +100 data
+Ctrl+Shift+N   Purchase next available node
+Ctrl+Shift+A   Purchase all nodes
+Ctrl+Shift+M   Spawn meteor
+Ctrl+Shift+R   Spawn rare fireball
+Ctrl+Shift+S   Trigger shower
+Ctrl+Shift+F   Trigger Canis Major event
+Ctrl+Shift+E   Preview catalogue ending
+Ctrl+Shift+Backspace   Reset game"

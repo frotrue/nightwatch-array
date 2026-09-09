@@ -1,0 +1,101 @@
+[gd_scene format=3]
+
+[ext_resource type="FontFile" path="res://fonts/IBMPlexMono-Regular.ttf" id="R1"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Regular.ttf" id="R2"]
+[ext_resource type="Resource" path="res://resources/ui/tutorial_action_normal.tres" id="R3"]
+[ext_resource type="Resource" path="res://resources/ui/tutorial_action_focus.tres" id="R4"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Medium.ttf" id="R5"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Light.ttf" id="R6"]
+
+[node name="TutorialOverlay" type="Control"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="Dim" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.016, 0.008, 0.006, 0.9)
+
+[node name="Card" type="Control" parent="."]
+unique_name_in_owner = true
+anchors_preset = 0
+
+[node name="VBoxContainer0" type="VBoxContainer" parent="Card"]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/separation = 8
+
+[node name="HBoxContainer0" type="HBoxContainer" parent="Card/VBoxContainer0"]
+layout_mode = 2
+
+[node name="StepLabel" type="Label" parent="Card/VBoxContainer0/HBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 8
+
+[node name="SkipButton" type="Button" parent="Card/VBoxContainer0/HBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 0
+theme_override_colors/font_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_colors/font_focus_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_colors/font_pressed_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_colors/font_hover_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 9
+theme_override_styles/normal = ExtResource("R3")
+theme_override_styles/pressed = ExtResource("R3")
+theme_override_styles/hover = ExtResource("R4")
+theme_override_styles/focus = ExtResource("R3")
+text = "SKIP"
+flat = true
+
+[node name="TitleLabel" type="Label" parent="Card/VBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.83137256, 0.6901961, 1)
+theme_override_fonts/font = ExtResource("R5")
+theme_override_font_sizes/font_size = 20
+
+[node name="BodyLabel" type="Label" parent="Card/VBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_fonts/font = ExtResource("R6")
+theme_override_font_sizes/font_size = 11
+autowrap_mode = 3
+
+[node name="HintLabel" type="Label" parent="Card/VBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6313726, 0.5568628, 0.5058824, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 8
+autowrap_mode = 3
+
+[node name="PrimaryButton" type="Button" parent="Card/VBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+focus_mode = 0
+theme_override_colors/font_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_colors/font_focus_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_colors/font_pressed_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_colors/font_hover_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 13
+theme_override_styles/normal = ExtResource("R3")
+theme_override_styles/pressed = ExtResource("R3")
+theme_override_styles/hover = ExtResource("R4")
+theme_override_styles/focus = ExtResource("R3")
+flat = true

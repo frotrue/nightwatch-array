@@ -13,7 +13,6 @@ signal tutorial_replay_requested
 
 const Balance = preload("res://scripts/game_balance.gd")
 const UITheme = preload("res://scripts/ui_theme.gd")
-const PhaseSummaryScene = preload("res://scenes/ui/phase_summary.tscn")
 const CatalogueEndingCoda = preload("res://scripts/catalogue_ending_coda.gd")
 const ExtensionData = preload("res://scripts/expansion_data.gd")
 const END_REVEAL_TOTAL_SECONDS := 8.0
@@ -30,17 +29,7 @@ const SETTINGS_PAGE_TAB_KEYS := {
 }
 
 
-class TrackingCluster:
-	extends Control
-
-	# Text only. The gauge ring moved onto the software cursor, which is drawn at
-	# the observation radius and already sat at this same point — two rings a few
-	# pixels apart, both centred on the cursor, showing the same number.
-	# ring_radius is kept because the text block is placed clear of it.
-	var cursor := Vector2.ZERO
-	var ring_radius: float = 50.0
-
-
+const TrackingCluster = preload("res://scripts/ui/tracking_cluster.gd")
 
 var progression: Node
 var settings_controller: Node
@@ -1693,133 +1682,360 @@ func _apply_locale() -> void:
 
 
 func _build_interface() -> void:
-	root_control = Control.new()
-	root_control.name = "Interface"
-	root_control.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	root_control.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(root_control)
-	root_control.add_theme_font_override("font", UITheme.sans())
-	_build_sky_gradients()
-
-	_build_data_readout()
-	_build_phase_clock()
-	_build_extension_readout()
-	_build_ready_notice()
-
-	banner_root = Control.new()
-	banner_root.name = "EventBanner"
-	banner_root.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	banner_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	banner_root.visible = false
-	root_control.add_child(banner_root)
-	banner_rule = ColorRect.new()
-	banner_rule.color = UITheme.BANNER_RULE
-	banner_rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	banner_root.add_child(banner_rule)
-	banner_label = _spec_label("", UITheme.sans("light"), 27.0, UITheme.BANNER_TITLE, 0.22)
-	banner_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	banner_root.add_child(banner_label)
-	banner_subtitle = _spec_label("", UITheme.mono(), 13.0, UITheme.BANNER_SUB, 0.20)
-	banner_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	banner_root.add_child(banner_subtitle)
-	_layout_banner()
-
-	tutorial_label = _spec_label(tr("HUD_TUTORIAL_START"), UITheme.sans(), 15.0, UITheme.HINT)
-	tutorial_label.name = "FirstObservationHint"
-	tutorial_label.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	tutorial_label.anchor_left = 0.0
-	tutorial_label.anchor_right = 1.0
-	tutorial_label.offset_left = 0.0
-	tutorial_label.offset_right = 0.0
-	tutorial_label.offset_top = -UITheme.px(28.0) - UITheme.px(28.0)
-	tutorial_label.offset_bottom = -UITheme.px(28.0)
-	tutorial_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	tutorial_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	root_control.add_child(tutorial_label)
-
-	_build_tracking_cluster()
-
-	_build_debug_panel()
-	_build_end_overlay()
-	_build_phase_summary_overlay()
-	_build_settings_ui()
-	settings_button = Button.new()
-	settings_button.name = "SettingsButton"
-	settings_button.text = tr("SETTINGS_BUTTON")
-	settings_button.flat = true
-	settings_button.focus_mode = Control.FOCUS_NONE
-	settings_button.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	settings_button.offset_left = -UITheme.px(200.0)
-	settings_button.offset_top = -UITheme.px(28.0) - UITheme.px(32.0)
-	settings_button.offset_right = -UITheme.px(56.0)
-	settings_button.offset_bottom = -UITheme.px(28.0)
-	settings_button.alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	settings_button.add_theme_font_override("font", UITheme.mono())
-	settings_button.add_theme_font_size_override("font_size", UITheme.size_px(14.0))
-	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
-		settings_button.add_theme_color_override(state, UITheme.INK_MID)
-	settings_button.add_theme_color_override("font_hover_color", UITheme.INK_HIGH)
-	settings_button.pressed.connect(open_settings)
-	root_control.add_child(settings_button)
-	_build_startup_slots_ui()
-	_build_reset_dialog()
-
-
-func _gradient_veil(from_alpha: float, height_spec: float, at_top: bool) -> TextureRect:
-	# Legibility comes from two soft veils, not from bordered panels.
-	var gradient := Gradient.new()
-	var ink := Color(0.0078, 0.0118, 0.0235, from_alpha)
-	gradient.set_color(0, ink if at_top else Color(ink, 0.0))
-	gradient.set_color(1, Color(ink, 0.0) if at_top else ink)
-	var texture := GradientTexture2D.new()
-	texture.gradient = gradient
-	texture.fill_from = Vector2(0.0, 0.0)
-	texture.fill_to = Vector2(0.0, 1.0)
-	texture.width = 8
-	texture.height = 64
-	var rect := TextureRect.new()
-	rect.texture = texture
-	rect.stretch_mode = TextureRect.STRETCH_SCALE
-	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	if at_top:
-		rect.set_anchors_preset(Control.PRESET_TOP_WIDE)
-		rect.offset_bottom = UITheme.px(height_spec)
-	else:
-		rect.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-		rect.offset_top = -UITheme.px(height_spec)
-	return rect
-
-
-func _build_sky_gradients() -> void:
-	root_control.add_child(_gradient_veil(0.38, 150.0, true))
-	root_control.add_child(_gradient_veil(0.18, 80.0, false))
-
-
-func _spec_label(text: String, font: Font, spec_size: float, color: Color, em: float = 0.0) -> Label:
-	return UITheme.spec_label(text, font, spec_size, color, em)
-
-
-func _build_data_readout() -> void:
-	var column := Control.new()
-	column.name = "DataReadout"
-	column.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	column.offset_left = UITheme.px(64.0)
-	column.offset_top = -UITheme.px(126.0)
-	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root_control.add_child(column)
-
-	data_label = _spec_label("0", UITheme.mono_tabular(), 34.0, UITheme.INK_HIGH)
-	data_label.position = Vector2.ZERO
-	column.add_child(data_label)
-
-	data_gain_label = _spec_label(tr("HUD_DATA_GAIN") % 0, UITheme.mono_tabular(), 17.0, UITheme.GAIN)
-	data_gain_label.visible = false
-	column.add_child(data_gain_label)
-
-	data_caption_label = _spec_label(tr("HUD_DATA_CAPTION"), UITheme.sans(), 14.0, UITheme.INK_MID, 0.06)
-	column.add_child(data_caption_label)
+	var view = preload("res://scenes/ui/hud.tscn").instantiate()
+	audio_display_button = view.get_node("%SettingsOverlay").get_node("%SettingsTab_Audio")
+	audio_display_container = view.get_node("%SettingsOverlay").get_node("%SettingsPage_Audio")
+	banner_label = view.get_node("%EventBanner").get_node("%BannerLabel")
+	banner_root = view.get_node("%EventBanner")
+	banner_rule = view.get_node("%EventBanner").get_node("%BannerRule")
+	banner_subtitle = view.get_node("%EventBanner").get_node("%BannerSubtitle")
+	controls_action_widgets = {
+		"nw_observe": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls").get_node("%ControlsActionWidgetsNwObserve"),
+		"nw_dish": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls").get_node("%ControlsActionWidgetsNwDish"),
+		"nw_chart": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls").get_node("%Binding_nw_chart"),
+		"nw_menu_back": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls").get_node("%Binding_nw_menu_back"),
+		"nw_continue": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls").get_node("%Binding_nw_continue"),
+		"nw_fullscreen": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls").get_node("%Binding_nw_fullscreen"),
+	}
+	controls_button = view.get_node("%SettingsOverlay").get_node("%SettingsTab_Controls")
+	controls_clear_widgets = {"nw_menu_back": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls").get_node("%Clear_nw_menu_back")}
+	controls_hint = view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls").get_node("%ControlsHint")
+	controls_localized_text = [
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls").get_node("%ControlsLocalizedText0Label"),
+		"key": "CONTROL_OBSERVE"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls").get_node("%ControlsLocalizedText1Label"),
+		"key": "CONTROL_DISH"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls").get_node("%ControlsLocalizedText2Label"),
+		"key": "CONTROLS_REQUIRES",
+		"argument_key": "UPGRADE_SECONDARY_CAMERA_NAME"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls").get_node("%ControlsLocalizedText3Label"),
+		"key": "CONTROL_CHART"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls").get_node("%ControlsLocalizedText4Label"),
+		"key": "CONTROL_MENU_BACK"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls").get_node("%ControlsLocalizedText5Label"),
+		"key": "CONTROL_CONTINUE"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls").get_node("%ControlsLocalizedText6Label"),
+		"key": "CONTROL_FULLSCREEN"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls").get_node("%ControlsLocalizedText7Label"),
+		"key": "CONTROL_ROTATE"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls").get_node("%ControlsLocalizedText8Label"),
+		"key": "CONTROL_WHEEL"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls").get_node("%ControlsLocalizedText9Label"),
+		"key": "CONTROL_ZOOM"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls").get_node("%ControlsLocalizedText10Label"),
+		"key": "CONTROL_CTRL_WHEEL"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls").get_node("%ControlsLocalizedText11Label"),
+		"key": "CONTROL_INSTALL"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls").get_node("%ControlsLocalizedText12Label"),
+		"key": "CONTROL_POINTER_HOLD"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls").get_node("%ControlsLocalizedText13Label"),
+		"key": "CONTROL_SKY_SWEEP"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls").get_node("%ControlsLocalizedText14Label"),
+		"key": "CONTROLS_REQUIRES",
+		"argument_key": "UPGRADE_POLAR_SURVEY_NAME"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls").get_node("%ControlsLocalizedText15Label"),
+		"key": "CONTROL_POINTER_HOLD"},
+	]
+	controls_overlay = view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls")
+	controls_panel = view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls")
+	controls_reset_button = view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls").get_node("%ControlsResetButton")
+	controls_status = view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls").get_node("%ControlsStatus")
+	controls_subtitle = view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls").get_node("%PageDescription")
+	controls_title = view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls").get_node("%PageTitle")
+	data_caption_label = view.get_node("%DataReadout").get_node("%DataCaptionLabel")
+	data_gain_label = view.get_node("%DataReadout").get_node("%DataGainLabel")
+	data_label = view.get_node("%DataReadout").get_node("%DataLabel")
+	debug_label = view.get_node("%DebugPanel").get_node("%DebugLabel")
+	debug_panel = view.get_node("%DebugPanel")
+	end_actions = view.get_node("%EndOverlay").get_node("%EndActions")
+	end_body = view.get_node("%EndOverlay").get_node("%EndBody")
+	end_coda = view.get_node("%EndOverlay").get_node("%CatalogueEndingCoda")
+	end_continue_button = view.get_node("%EndOverlay").get_node("%EndContinueButton")
+	end_finish_button = view.get_node("%EndOverlay").get_node("%EndFinishButton")
+	end_overlay = view.get_node("%EndOverlay")
+	end_reveal_body = view.get_node("%EndOverlay").get_node("%EndRevealBody")
+	end_save_failure = view.get_node("%EndOverlay").get_node("%EndSaveFailure")
+	end_stats = view.get_node("%EndOverlay").get_node("%EndStats")
+	end_subtitle = view.get_node("%EndOverlay").get_node("%EndSubtitle")
+	end_title = view.get_node("%EndOverlay").get_node("%EndTitle")
+	extension_objective_label = view.get_node("%ExtensionReadout").get_node("%ExtensionObjectiveLabel")
+	extension_readout = view.get_node("%ExtensionReadout")
+	extension_samples_label = view.get_node("%ExtensionReadout").get_node("%ExtensionSamplesLabel")
+	fps_limit_selector = view.get_node("%SettingsOverlay").get_node("%SettingsPage_Display").get_node("%FpsLimitSelector")
+	fullscreen_button = view.get_node("%SettingsOverlay").get_node("%SettingsPage_Display").get_node("%FullscreenButton")
+	language_selector = view.get_node("%SettingsOverlay").get_node("%SettingsPage_General").get_node("%LanguageSelector")
+	load_slot_buttons = [
+		view.get_node("%SettingsOverlay").get_node("%SettingsPage_Save").get_node("%HBoxContainer5").get_node("%Load"),
+		view.get_node("%SettingsOverlay").get_node("%SettingsPage_Save").get_node("%HBoxContainer7").get_node("%Load"),
+		view.get_node("%SettingsOverlay").get_node("%SettingsPage_Save").get_node("%HBoxContainer9").get_node("%Load"),
+	]
+	master_volume_label = view.get_node("%SettingsOverlay").get_node("%SettingsPage_Audio").get_node("%SettingsPageLabels11Label")
+	master_volume_slider = view.get_node("%SettingsOverlay").get_node("%SettingsPage_Audio").get_node("%MasterVolume")
+	master_volume_value = view.get_node("%SettingsOverlay").get_node("%SettingsPage_Audio").get_node("%MasterVolumeValue")
+	motion_intensity_label = view.get_node("%SettingsOverlay").get_node("%SettingsPage_Accessibility").get_node("%SettingsPageLabels27Label")
+	motion_intensity_slider = view.get_node("%SettingsOverlay").get_node("%SettingsPage_Accessibility").get_node("%MotionIntensitySlider")
+	motion_intensity_value = view.get_node("%SettingsOverlay").get_node("%SettingsPage_Accessibility").get_node("%MotionIntensityValue")
+	mute_button = view.get_node("%SettingsOverlay").get_node("%SettingsPage_Audio").get_node("%MuteButton")
+	mute_unfocused_button = view.get_node("%SettingsOverlay").get_node("%SettingsPage_Audio").get_node("%MuteUnfocusedButton")
+	number_notation_selector = view.get_node("%SettingsOverlay").get_node("%SettingsPage_General").get_node("%NumberNotationSelector")
+	overwrite_dialog = view.get_node("%SettingsOverlay").get_node("%OverwriteDialog")
+	phase_round_label = view.get_node("%PhaseClock").get_node("%PhaseRoundLabel")
+	phase_summary_badges = view.get_node("%PhaseSummary").get_node("%Badges")
+	phase_summary_button = view.get_node("%PhaseSummary").get_node("%ContinueButton")
+	phase_summary_comparison = view.get_node("%PhaseSummary").get_node("%Comparison")
+	phase_summary_data = view.get_node("%PhaseSummary").get_node("%Data")
+	phase_summary_observations = view.get_node("%PhaseSummary").get_node("%Observations")
+	phase_summary_overlay = view.get_node("%PhaseSummary")
+	phase_summary_split = view.get_node("%PhaseSummary").get_node("%Split")
+	phase_summary_subtitle = view.get_node("%PhaseSummary").get_node("%Duration")
+	phase_summary_title = view.get_node("%PhaseSummary").get_node("%Title")
+	phase_window_fill = view.get_node("%PhaseClock").get_node("%PhaseWindowFill")
+	phase_window_track = view.get_node("%PhaseClock").get_node("%PhaseWindowTrack")
+	ready_label = view.get_node("%ReadySystems").get_node("%ReadyLabel")
+	ready_notice = view.get_node("%ReadySystems")
+	ready_pip = view.get_node("%ReadySystems").get_node("%ReadyPip")
+	reset_bindings_dialog = view.get_node("%SettingsOverlay").get_node("%ResetBindingsDialog")
+	reset_dialog = view.get_node("%ResetDialog")
+	reset_slot_buttons = [
+		view.get_node("%SettingsOverlay").get_node("%SettingsPage_Save").get_node("%HBoxContainer5").get_node("%Reset"),
+		view.get_node("%SettingsOverlay").get_node("%SettingsPage_Save").get_node("%HBoxContainer7").get_node("%Reset"),
+		view.get_node("%SettingsOverlay").get_node("%SettingsPage_Save").get_node("%HBoxContainer9").get_node("%Reset"),
+	]
+	root_control = view
+	save_feedback = view.get_node("%SettingsOverlay").get_node("%SettingsPage_Save").get_node("%SettingsPageLabels37Label")
+	save_management_button = view.get_node("%SettingsOverlay").get_node("%SettingsTab_Save")
+	save_management_container = view.get_node("%SettingsOverlay").get_node("%SettingsPage_Save")
+	save_mode_label = view.get_node("%PhaseClock").get_node("%SaveModeLabel")
+	save_section_label = view.get_node("%SettingsOverlay").get_node("%SettingsPage_Save").get_node("%SettingsPageLabels36Label")
+	save_slot_buttons = [
+		view.get_node("%SettingsOverlay").get_node("%SettingsPage_Save").get_node("%HBoxContainer5").get_node("%Save"),
+		view.get_node("%SettingsOverlay").get_node("%SettingsPage_Save").get_node("%HBoxContainer7").get_node("%Save"),
+		view.get_node("%SettingsOverlay").get_node("%SettingsPage_Save").get_node("%HBoxContainer9").get_node("%Save"),
+	]
+	save_slot_details = [
+		view.get_node("%SettingsOverlay").get_node("%SettingsPage_Save").get_node("%HBoxContainer5").get_node("%Details"),
+		view.get_node("%SettingsOverlay").get_node("%SettingsPage_Save").get_node("%HBoxContainer7").get_node("%Details"),
+		view.get_node("%SettingsOverlay").get_node("%SettingsPage_Save").get_node("%HBoxContainer9").get_node("%Details"),
+	]
+	save_slot_titles = [
+		view.get_node("%SettingsOverlay").get_node("%SettingsPage_Save").get_node("%HBoxContainer5").get_node("%Title"),
+		view.get_node("%SettingsOverlay").get_node("%SettingsPage_Save").get_node("%HBoxContainer7").get_node("%Title"),
+		view.get_node("%SettingsOverlay").get_node("%SettingsPage_Save").get_node("%HBoxContainer9").get_node("%Title"),
+	]
+	save_status_label = view.get_node("%SettingsOverlay").get_node("%SettingsPage_Save").get_node("%SaveStatusLabel")
+	screen_flashes_button = view.get_node("%SettingsOverlay").get_node("%SettingsPage_Accessibility").get_node("%ScreenFlashesButton")
+	settings_button = view.get_node("%SettingsButton")
+	settings_close_button = view.get_node("%SettingsOverlay").get_node("%SettingsCloseButton")
+	settings_hint = view.get_node("%SettingsOverlay").get_node("%SettingsPage_General").get_node("%SettingsPageLabels4Label")
+	settings_language_label = view.get_node("%SettingsOverlay").get_node("%SettingsPage_General").get_node("%SettingsPageLabels3Label")
+	settings_nav_buttons = {
+		"general": view.get_node("%SettingsOverlay").get_node("%SettingsTab_General"),
+		"audio": view.get_node("%SettingsOverlay").get_node("%SettingsTab_Audio"),
+		"display": view.get_node("%SettingsOverlay").get_node("%SettingsTab_Display"),
+		"accessibility": view.get_node("%SettingsOverlay").get_node("%SettingsTab_Accessibility"),
+		"controls": view.get_node("%SettingsOverlay").get_node("%SettingsTab_Controls"),
+		"save": view.get_node("%SettingsOverlay").get_node("%SettingsTab_Save"),
+	}
+	settings_overlay = view.get_node("%SettingsOverlay")
+	settings_page_labels = [
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPageLabels0Label"),
+		"key": "SETTINGS_NAVIGATION"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_General").get_node("%PageTitle"),
+		"key": "SETTINGS_PAGE_GENERAL_TITLE"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_General").get_node("%PageDescription"),
+		"key": "SETTINGS_PAGE_GENERAL_DESC"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_General").get_node("%SettingsPageLabels3Label"),
+		"key": "SETTINGS_LANGUAGE"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_General").get_node("%SettingsPageLabels4Label"),
+		"key": "SETTINGS_LANGUAGE_HINT"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_General").get_node("%SettingsPageLabels5Label"),
+		"key": "SETTINGS_NUMBER_NOTATION"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_General").get_node("%SettingsPageLabels6Label"),
+		"key": "SETTINGS_NUMBER_HINT"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_General").get_node("%SettingsPageLabels7Label"),
+		"key": "SETTINGS_TUTORIAL_TITLE"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_General").get_node("%SettingsPageLabels8Label"),
+		"key": "SETTINGS_TUTORIAL_DESC"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Audio").get_node("%PageTitle"),
+		"key": "SETTINGS_PAGE_AUDIO_TITLE"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Audio").get_node("%PageDescription"),
+		"key": "SETTINGS_PAGE_AUDIO_DESC"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Audio").get_node("%SettingsPageLabels11Label"),
+		"key": "SETTINGS_MASTER_VOLUME"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Audio").get_node("%SettingsPageLabels12Label"),
+		"key": "SETTINGS_MASTER_VOLUME_DESC"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Audio").get_node("%SettingsPageLabels13Label"),
+		"key": "SETTINGS_MUTE_TITLE"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Audio").get_node("%SettingsPageLabels14Label"),
+		"key": "SETTINGS_MUTE_DESC"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Audio").get_node("%SettingsPageLabels15Label"),
+		"key": "SETTINGS_MUTE_UNFOCUSED_TITLE"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Audio").get_node("%SettingsPageLabels16Label"),
+		"key": "SETTINGS_MUTE_UNFOCUSED_DESC"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Display").get_node("%PageTitle"),
+		"key": "SETTINGS_PAGE_DISPLAY_TITLE"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Display").get_node("%PageDescription"),
+		"key": "SETTINGS_PAGE_DISPLAY_DESC"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Display").get_node("%SettingsPageLabels19Label"),
+		"key": "SETTINGS_FULLSCREEN_TITLE"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Display").get_node("%SettingsPageLabels20Label"),
+		"key": "SETTINGS_FULLSCREEN_DESC"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Display").get_node("%SettingsPageLabels21Label"),
+		"key": "SETTINGS_VSYNC_TITLE"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Display").get_node("%SettingsPageLabels22Label"),
+		"key": "SETTINGS_VSYNC_DESC"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Display").get_node("%SettingsPageLabels23Label"),
+		"key": "SETTINGS_FPS_TITLE"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Display").get_node("%SettingsPageLabels24Label"),
+		"key": "SETTINGS_FPS_DESC"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Accessibility").get_node("%PageTitle"),
+		"key": "SETTINGS_PAGE_ACCESSIBILITY_TITLE"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Accessibility").get_node("%PageDescription"),
+		"key": "SETTINGS_PAGE_ACCESSIBILITY_DESC"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Accessibility").get_node("%SettingsPageLabels27Label"),
+		"key": "SETTINGS_MOTION_TITLE"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Accessibility").get_node("%SettingsPageLabels28Label"),
+		"key": "SETTINGS_MOTION_DESC"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Accessibility").get_node("%SettingsPageLabels29Label"),
+		"key": "SETTINGS_FLASHES_TITLE"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Accessibility").get_node("%SettingsPageLabels30Label"),
+		"key": "SETTINGS_FLASHES_DESC"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Accessibility").get_node("%SettingsPageLabels31Label"),
+		"key": "SETTINGS_ACCESSIBILITY_NOTE"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls").get_node("%PageTitle"),
+		"key": "CONTROLS_TITLE"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls").get_node("%PageDescription"),
+		"key": "CONTROLS_HINT"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Save").get_node("%PageTitle"),
+		"key": "SETTINGS_PAGE_SAVE_TITLE"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Save").get_node("%PageDescription"),
+		"key": "SETTINGS_PAGE_SAVE_DESC"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Save").get_node("%SettingsPageLabels36Label"),
+		"key": "SAVE_SECTION_TITLE"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Save").get_node("%SettingsPageLabels37Label"),
+		"key": "SAVE_SECTION_HINT"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPageLabels38Label"),
+		"key": "SETTINGS_AUTOSAVE_NOTE"},
+	]
+	settings_page_stack = view.get_node("%SettingsOverlay").get_node("%SettingsPages")
+	settings_pages = {
+		"general": view.get_node("%SettingsOverlay").get_node("%SettingsPage_General"),
+		"audio": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Audio"),
+		"display": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Display"),
+		"accessibility": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Accessibility"),
+		"controls": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls"),
+		"save": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Save"),
+	}
+	settings_panel = view.get_node("%SettingsOverlay").get_node("%SettingsConsole")
+	settings_subtitle = view.get_node("%SettingsOverlay").get_node("%SettingsSubtitle")
+	settings_title = view.get_node("%SettingsOverlay").get_node("%SettingsTitle")
+	startup_hint = view.get_node("%StartupSaveSlots").get_node("%StartupHint")
+	startup_overlay = view.get_node("%StartupSaveSlots")
+	startup_reset_buttons = [
+		view.get_node("%StartupSaveSlots").get_node("%HBoxContainer3").get_node("%Reset"),
+		view.get_node("%StartupSaveSlots").get_node("%HBoxContainer5").get_node("%Reset"),
+		view.get_node("%StartupSaveSlots").get_node("%HBoxContainer7").get_node("%Reset"),
+	]
+	startup_slot_buttons = [
+		view.get_node("%StartupSaveSlots").get_node("%HBoxContainer3").get_node("%Select"),
+		view.get_node("%StartupSaveSlots").get_node("%HBoxContainer5").get_node("%Select"),
+		view.get_node("%StartupSaveSlots").get_node("%HBoxContainer7").get_node("%Select"),
+	]
+	startup_slot_details = [
+		view.get_node("%StartupSaveSlots").get_node("%HBoxContainer3").get_node("%Details"),
+		view.get_node("%StartupSaveSlots").get_node("%HBoxContainer5").get_node("%Details"),
+		view.get_node("%StartupSaveSlots").get_node("%HBoxContainer7").get_node("%Details"),
+	]
+	startup_slot_titles = [
+		view.get_node("%StartupSaveSlots").get_node("%HBoxContainer3").get_node("%Title"),
+		view.get_node("%StartupSaveSlots").get_node("%HBoxContainer5").get_node("%Title"),
+		view.get_node("%StartupSaveSlots").get_node("%HBoxContainer7").get_node("%Title"),
+	]
+	startup_subtitle = view.get_node("%StartupSaveSlots").get_node("%StartupSubtitle")
+	startup_title = view.get_node("%StartupSaveSlots").get_node("%StartupTitle")
+	summary_details = view.get_node("%PhaseSummary").get_node("%Details")
+	summary_details_button = view.get_node("%PhaseSummary").get_node("%DetailsButton")
+	summary_highlight = view.get_node("%PhaseSummary").get_node("%Highlight")
+	summary_lead = view.get_node("%PhaseSummary").get_node("%Lead")
+	time_label = view.get_node("%PhaseClock").get_node("%TimeLabel")
+	tracking_cluster = view.get_node("%TrackingCluster")
+	tracking_divider = view.get_node("%TrackingCluster").get_node("%TrackingDivider")
+	tracking_multiplier = view.get_node("%TrackingCluster").get_node("%TrackingMultiplier")
+	tracking_percent = view.get_node("%TrackingCluster").get_node("%TrackingPercent")
+	tracking_quality = view.get_node("%TrackingCluster").get_node("%TrackingQuality")
+	tracking_target = view.get_node("%TrackingCluster").get_node("%TrackingTarget")
+	tutorial_label = view.get_node("%FirstObservationHint")
+	tutorial_replay_button = view.get_node("%SettingsOverlay").get_node("%SettingsPage_General").get_node("%TutorialReplayButton")
+	vsync_button = view.get_node("%SettingsOverlay").get_node("%SettingsPage_Display").get_node("%VsyncButton")
+	add_child(view)
+	view.get_node("%DataReadout").get_node("%DataLabel").resized.connect(_layout_data_readout)
+	view.get_node("%PhaseSummary").get_node("%DetailsButton").toggled.connect(_set_summary_details)
+	view.get_node("%PhaseSummary").get_node("%ContinueButton").pressed.connect(_on_phase_summary_continue_pressed)
+	view.get_node("%SettingsOverlay").get_node("%SettingsTab_General").pressed.connect(_set_settings_page.bind("general", true))
+	view.get_node("%SettingsOverlay").get_node("%SettingsTab_Audio").pressed.connect(_set_settings_page.bind("audio", true))
+	view.get_node("%SettingsOverlay").get_node("%SettingsTab_Display").pressed.connect(_set_settings_page.bind("display", true))
+	view.get_node("%SettingsOverlay").get_node("%SettingsTab_Accessibility").pressed.connect(_set_settings_page.bind("accessibility", true))
+	view.get_node("%SettingsOverlay").get_node("%SettingsTab_Controls").pressed.connect(_set_settings_page.bind("controls", true))
+	view.get_node("%SettingsOverlay").get_node("%SettingsTab_Save").pressed.connect(_set_settings_page.bind("save", true))
+	view.get_node("%SettingsOverlay").get_node("%SettingsPage_General").get_node("%LanguageSelector").item_selected.connect(_on_language_selected)
+	view.get_node("%SettingsOverlay").get_node("%SettingsPage_General").get_node("%NumberNotationSelector").item_selected.connect(_on_number_notation_selected)
+	view.get_node("%SettingsOverlay").get_node("%SettingsPage_Audio").get_node("%MasterVolume").value_changed.connect(_on_master_volume_changed)
+	view.get_node("%SettingsOverlay").get_node("%SettingsPage_Audio").get_node("%MuteButton").pressed.connect(_on_mute_pressed)
+	view.get_node("%SettingsOverlay").get_node("%SettingsPage_Audio").get_node("%MuteUnfocusedButton").pressed.connect(_on_mute_unfocused_pressed)
+	view.get_node("%SettingsOverlay").get_node("%SettingsPage_Display").get_node("%FullscreenButton").pressed.connect(_on_fullscreen_pressed)
+	view.get_node("%SettingsOverlay").get_node("%SettingsPage_Display").get_node("%VsyncButton").pressed.connect(_on_vsync_pressed)
+	view.get_node("%SettingsOverlay").get_node("%SettingsPage_Display").get_node("%FpsLimitSelector").item_selected.connect(_on_fps_limit_selected)
+	view.get_node("%SettingsOverlay").get_node("%SettingsPage_Accessibility").get_node("%MotionIntensitySlider").value_changed.connect(_on_motion_intensity_changed)
+	view.get_node("%SettingsOverlay").get_node("%SettingsPage_Accessibility").get_node("%ScreenFlashesButton").pressed.connect(_on_screen_flashes_pressed)
+	view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls").get_node("%Binding_nw_chart").pressed.connect(_begin_rebind.bind(&"nw_chart"))
+	view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls").get_node("%Binding_nw_menu_back").pressed.connect(_begin_rebind.bind(&"nw_menu_back"))
+	view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls").get_node("%Clear_nw_menu_back").pressed.connect(_clear_optional_binding.bind(&"nw_menu_back"))
+	view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls").get_node("%Binding_nw_continue").pressed.connect(_begin_rebind.bind(&"nw_continue"))
+	view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls").get_node("%Binding_nw_fullscreen").pressed.connect(_begin_rebind.bind(&"nw_fullscreen"))
+	view.get_node("%SettingsOverlay").get_node("%SettingsPage_Controls").get_node("%ControlsResetButton").pressed.connect(_on_controls_reset_pressed)
+	view.get_node("%SettingsOverlay").get_node("%SettingsPage_Save").get_node("%HBoxContainer5").get_node("%Save").pressed.connect(_on_save_slot_pressed.bind(1))
+	view.get_node("%SettingsOverlay").get_node("%SettingsPage_Save").get_node("%HBoxContainer5").get_node("%Load").pressed.connect(_on_load_slot_pressed.bind(1))
+	view.get_node("%SettingsOverlay").get_node("%SettingsPage_Save").get_node("%HBoxContainer5").get_node("%Reset").pressed.connect(_on_reset_slot_pressed.bind(1))
+	view.get_node("%SettingsOverlay").get_node("%SettingsPage_Save").get_node("%HBoxContainer7").get_node("%Save").pressed.connect(_on_save_slot_pressed.bind(2))
+	view.get_node("%SettingsOverlay").get_node("%SettingsPage_Save").get_node("%HBoxContainer7").get_node("%Load").pressed.connect(_on_load_slot_pressed.bind(2))
+	view.get_node("%SettingsOverlay").get_node("%SettingsPage_Save").get_node("%HBoxContainer7").get_node("%Reset").pressed.connect(_on_reset_slot_pressed.bind(2))
+	view.get_node("%SettingsOverlay").get_node("%SettingsPage_Save").get_node("%HBoxContainer9").get_node("%Save").pressed.connect(_on_save_slot_pressed.bind(3))
+	view.get_node("%SettingsOverlay").get_node("%SettingsPage_Save").get_node("%HBoxContainer9").get_node("%Load").pressed.connect(_on_load_slot_pressed.bind(3))
+	view.get_node("%SettingsOverlay").get_node("%SettingsPage_Save").get_node("%HBoxContainer9").get_node("%Reset").pressed.connect(_on_reset_slot_pressed.bind(3))
+	view.get_node("%SettingsOverlay").get_node("%SettingsCloseButton").pressed.connect(close_settings)
+	view.get_node("%SettingsOverlay").get_node("%OverwriteDialog").confirmed.connect(_on_overwrite_confirmed)
+	view.get_node("%SettingsOverlay").get_node("%ResetBindingsDialog").confirmed.connect(_on_controls_reset_confirmed)
+	view.get_node("%SettingsButton").pressed.connect(open_settings)
+	view.get_node("%StartupSaveSlots").get_node("%HBoxContainer3").get_node("%Select").pressed.connect(_on_startup_slot_pressed.bind(1))
+	view.get_node("%StartupSaveSlots").get_node("%HBoxContainer3").get_node("%Reset").pressed.connect(_on_reset_slot_pressed.bind(1))
+	view.get_node("%StartupSaveSlots").get_node("%HBoxContainer5").get_node("%Select").pressed.connect(_on_startup_slot_pressed.bind(2))
+	view.get_node("%StartupSaveSlots").get_node("%HBoxContainer5").get_node("%Reset").pressed.connect(_on_reset_slot_pressed.bind(2))
+	view.get_node("%StartupSaveSlots").get_node("%HBoxContainer7").get_node("%Select").pressed.connect(_on_startup_slot_pressed.bind(3))
+	view.get_node("%StartupSaveSlots").get_node("%HBoxContainer7").get_node("%Reset").pressed.connect(_on_reset_slot_pressed.bind(3))
+	view.get_node("%ResetDialog").confirmed.connect(_on_reset_confirmed)
+	view.get_node("%ResetDialog").canceled.connect(_on_reset_canceled)
+	end_finish_button.pressed.connect(func(): catalogue_finish_requested.emit())
+	end_continue_button.pressed.connect(func(): catalogue_continue_requested.emit())
+	tutorial_replay_button.pressed.connect(func(): tutorial_replay_requested.emit())
+	# Option metadata is live binding data; Godot does not serialize it.
+	for index in 2:
+		language_selector.set_item_metadata(index, ["en", "ko"][index])
+		number_notation_selector.set_item_metadata(index, ["compact", "scientific"][index])
+	for index in 4:
+		fps_limit_selector.set_item_metadata(index, [0, 30, 60, 120][index])
+	tracking_cluster.ring_radius = UITheme.px(84.0)
+	# Preserve localized initial rows before the slot controller is bound/opened.
+	for index in 3:
+		startup_slot_titles[index].text = tr("SAVE_SLOT_TITLE") % (index + 1)
+		startup_slot_details[index].text = tr("SAVE_SLOT_EMPTY")
+		startup_slot_buttons[index].text = tr("STARTUP_NEW_GAME")
+		startup_reset_buttons[index].text = tr("SAVE_RESET_ACTION")
+	for dialog in [reset_dialog, overwrite_dialog, reset_bindings_dialog]:
+		_style_confirm_dialog(dialog)
 	_layout_data_readout()
-	data_label.resized.connect(_layout_data_readout)
+	_layout_phase_clock()
+	_layout_banner()
+	_set_summary_details(false)
 
 
 func _layout_data_readout() -> void:
@@ -1838,36 +2054,6 @@ func _layout_data_readout() -> void:
 		value_size.x + UITheme.px(14.0),
 		value_top + value_size.y * 0.86 - gain_size.y
 	)
-
-
-func _build_phase_clock() -> void:
-	var column := Control.new()
-	column.name = "PhaseClock"
-	column.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	column.offset_left = UITheme.px(64.0)
-	column.offset_top = UITheme.px(48.0)
-	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root_control.add_child(column)
-
-	phase_round_label = _spec_label("", UITheme.sans(), 15.0, UITheme.INK_MID, 0.04)
-	column.add_child(phase_round_label)
-
-	time_label = _spec_label(tr("HUD_TIME") % [0, 0], UITheme.mono_tabular(), 32.0, UITheme.INK_HIGH)
-	column.add_child(time_label)
-
-	phase_window_track = ColorRect.new()
-	phase_window_track.color = UITheme.ACCENT_DEEP
-	phase_window_track.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	column.add_child(phase_window_track)
-	phase_window_fill = ColorRect.new()
-	phase_window_fill.color = Color(UITheme.ACCENT_LINE, 0.70)
-	phase_window_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	column.add_child(phase_window_fill)
-
-	save_mode_label = _spec_label("", UITheme.sans(), 14.0, UITheme.INK_MID)
-	save_mode_label.visible = false
-	column.add_child(save_mode_label)
-	_layout_phase_clock()
 
 
 func _layout_phase_clock() -> void:
@@ -1889,53 +2075,12 @@ func _layout_phase_clock() -> void:
 	save_mode_label.position.y = line_y + UITheme.px(12.0)
 
 
-func _build_extension_readout() -> void:
-	extension_readout = Control.new()
-	extension_readout.name = "ExtensionReadout"
-	extension_readout.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	extension_readout.offset_left = UITheme.px(64.0)
-	extension_readout.offset_top = UITheme.px(166.0)
-	extension_readout.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	extension_readout.visible = false
-	root_control.add_child(extension_readout)
-
-	extension_objective_label = _spec_label("", UITheme.sans(), 20.0, UITheme.INK_HIGH, 0.01)
-	extension_objective_label.size = Vector2(UITheme.px(900.0), UITheme.px(30.0))
-	extension_objective_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	extension_objective_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	extension_readout.add_child(extension_objective_label)
-
-	extension_samples_label = _spec_label("", UITheme.sans(), 20.0, UITheme.ACCENT_TEXT, 0.12)
-	extension_samples_label.position = Vector2(0.0, UITheme.px(34.0))
-	extension_samples_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	extension_samples_label.visible = false
-	extension_readout.add_child(extension_samples_label)
-
-
 func _layout_extension_readout() -> void:
 	if extension_readout == null:
 		return
 	var width := UITheme.px(900.0)
 	extension_objective_label.size = Vector2(width, UITheme.px(30.0))
 	extension_samples_label.size.x = width
-
-
-func _build_ready_notice() -> void:
-	ready_notice = Control.new()
-	ready_notice.name = "ReadySystems"
-	ready_notice.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	ready_notice.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	ready_notice.visible = false
-	root_control.add_child(ready_notice)
-
-	ready_pip = ColorRect.new()
-	ready_pip.color = UITheme.ACCENT_PIP
-	ready_pip.size = Vector2(UITheme.px(5.0), UITheme.px(5.0))
-	ready_pip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	ready_notice.add_child(ready_pip)
-
-	ready_label = _spec_label("", UITheme.sans(), 16.0, UITheme.ACCENT_TEXT)
-	ready_notice.add_child(ready_label)
 
 
 func _layout_ready_notice() -> void:
@@ -1949,35 +2094,6 @@ func _layout_ready_notice() -> void:
 	var top := UITheme.px(48.0)
 	ready_pip.position = Vector2(left, top + text_size.y * 0.5 - ready_pip.size.y * 0.5)
 	ready_label.position = Vector2(left + ready_pip.size.x + pip_gap, top)
-
-
-func _build_tracking_cluster() -> void:
-	tracking_cluster = TrackingCluster.new()
-	tracking_cluster.name = "TrackingCluster"
-	tracking_cluster.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	tracking_cluster.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	tracking_cluster.process_mode = Node.PROCESS_MODE_PAUSABLE
-	tracking_cluster.ring_radius = UITheme.px(84.0)
-	tracking_cluster.visible = false
-	root_control.add_child(tracking_cluster)
-
-	tracking_percent = _spec_label("0%", UITheme.mono_tabular(), 18.0, UITheme.INSTRUMENT_LABEL)
-	tracking_percent.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	tracking_cluster.add_child(tracking_percent)
-
-	tracking_target = _spec_label("", UITheme.sans(), 15.0, Color(UITheme.INSTRUMENT_LABEL, 0.88))
-	tracking_target.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	tracking_cluster.add_child(tracking_target)
-
-	tracking_quality = _spec_label("", UITheme.sans(), 14.0, UITheme.INSTRUMENT_QUALITY)
-	tracking_cluster.add_child(tracking_quality)
-	tracking_divider = ColorRect.new()
-	tracking_divider.color = UITheme.TOOLTIP_LABEL
-	tracking_divider.size = Vector2(1.0, UITheme.px(11.0))
-	tracking_divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	tracking_cluster.add_child(tracking_divider)
-	tracking_multiplier = _spec_label("", UITheme.mono_tabular(), 14.0, UITheme.INSTRUMENT_QUALITY)
-	tracking_cluster.add_child(tracking_multiplier)
 
 
 func _layout_tracking_cluster() -> void:
@@ -2023,238 +2139,15 @@ func _layout_tracking_cluster() -> void:
 		tracking_multiplier.position = Vector2(quality_left + tracking_quality_size.x + gap + 1.0 + gap, tracking_quality.position.y)
 
 
-func _build_startup_slots_ui() -> void:
-	startup_overlay = Control.new()
-	startup_overlay.name = "StartupSaveSlots"
-	startup_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	startup_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	startup_overlay.visible = false
-	root_control.add_child(startup_overlay)
-	var dim := ColorRect.new()
-	dim.color = Color(UITheme.SCRIM, 0.96)
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	dim.mouse_filter = Control.MOUSE_FILTER_STOP
-	startup_overlay.add_child(dim)
-	var frame := Control.new()
-	frame.name = "StartupColumn"
-	frame.set_anchors_preset(Control.PRESET_CENTER)
-	frame.offset_left = -UITheme.px(560.0)
-	frame.offset_right = UITheme.px(560.0)
-	frame.offset_top = -UITheme.px(390.0)
-	frame.offset_bottom = UITheme.px(390.0)
-	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	startup_overlay.add_child(frame)
-	var column := VBoxContainer.new()
-	column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	column.alignment = BoxContainer.ALIGNMENT_CENTER
-	column.add_theme_constant_override("separation", int(UITheme.px(12.0)))
-	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame.add_child(column)
-	startup_title = _spec_label(tr("STARTUP_SAVE_TITLE"), UITheme.sans("medium"), 40.0, UITheme.INK_MAX, -0.01)
-	startup_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	column.add_child(startup_title)
-	startup_subtitle = _spec_label(tr("STARTUP_SAVE_SUBTITLE"), UITheme.mono(), 13.0, UITheme.INK_MID, 0.30)
-	startup_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	column.add_child(startup_subtitle)
-	column.add_child(_hairline(1120.0))
-	for slot in range(1, 4):
-		_build_startup_slot_row(column, slot)
-	startup_hint = _spec_label(tr("STARTUP_SAVE_HINT"), UITheme.sans("light"), 14.0, UITheme.HINT)
-	startup_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	startup_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	column.add_child(startup_hint)
-
-
-func _build_startup_slot_row(parent: VBoxContainer, slot: int) -> void:
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", int(UITheme.px(24.0)))
-	parent.add_child(row)
-	var info := VBoxContainer.new()
-	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	info.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	info.add_theme_constant_override("separation", int(UITheme.px(4.0)))
-	row.add_child(info)
-	var title := _spec_label(tr("SAVE_SLOT_TITLE") % slot, UITheme.sans(), 20.0, UITheme.INK_HIGH)
-	var details := _spec_label(tr("SAVE_SLOT_EMPTY"), UITheme.mono(), 13.0, UITheme.INK_LOW, 0.06)
-	details.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	info.add_child(title)
-	info.add_child(details)
-	var select_button := Button.new()
-	select_button.text = tr("STARTUP_NEW_GAME")
-	_style_text_action(select_button, 18.0, UITheme.BANNER_TITLE)
-	select_button.pressed.connect(_on_startup_slot_pressed.bind(slot))
-	row.add_child(select_button)
-	var reset_button := Button.new()
-	reset_button.text = tr("SAVE_RESET_ACTION")
-	_style_text_action(reset_button, 16.0, UITheme.ALERT)
-	reset_button.pressed.connect(_on_reset_slot_pressed.bind(slot))
-	reset_button.visible = false
-	row.add_child(reset_button)
-	parent.add_child(_hairline(1120.0))
-	startup_slot_titles.append(title)
-	startup_slot_details.append(details)
-	startup_slot_buttons.append(select_button)
-	startup_reset_buttons.append(reset_button)
-
-
 func _style_confirm_dialog(dialog: ConfirmationDialog) -> void:
-	# These were the last two surfaces still wearing Godot's default theme, so a
-	# save prompt looked like an OS window dropped onto the observatory.
-	dialog.transient = false
-	dialog.exclusive = false
-	var panel := StyleBoxFlat.new()
-	panel.bg_color = Color(UITheme.SCRIM, 0.98)
-	panel.border_width_top = 1
-	panel.border_width_bottom = 1
-	panel.border_width_left = 1
-	panel.border_width_right = 1
-	panel.border_color = UITheme.ACCENT_DEEP
-	for side in ["content_margin_left", "content_margin_right"]:
-		panel.set(side, UITheme.px(34.0))
-	panel.content_margin_top = UITheme.px(26.0)
-	panel.content_margin_bottom = UITheme.px(22.0)
-	dialog.add_theme_stylebox_override("panel", panel)
-	dialog.add_theme_font_override("font", UITheme.sans())
-	dialog.add_theme_font_size_override("font_size", maxi(UITheme.size_px(19.0), 14))
-	dialog.add_theme_color_override("font_color", UITheme.INK_HIGH)
-	var label := dialog.get_label()
-	if label != null:
-		label.add_theme_font_override("font", UITheme.sans())
-		label.add_theme_font_size_override("font_size", maxi(UITheme.size_px(19.0), 14))
-		label.add_theme_color_override("font_color", UITheme.INK_HIGH)
-		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_style_settings_action(dialog.get_ok_button(), 18.0, UITheme.ALERT)
-	_style_settings_action(dialog.get_cancel_button(), 18.0, UITheme.INK_MID)
-
-
-func _build_reset_dialog() -> void:
-	reset_dialog = ConfirmationDialog.new()
-	reset_dialog.title = tr("SAVE_RESET_TITLE")
-	reset_dialog.ok_button_text = tr("SAVE_RESET_CONFIRM")
-	reset_dialog.cancel_button_text = tr("SAVE_CANCEL")
-	if reset_bindings_dialog != null:
-		reset_bindings_dialog.title = tr("CONTROLS_RESET_TITLE")
-		reset_bindings_dialog.dialog_text = tr("CONTROLS_RESET_PROMPT")
-		reset_bindings_dialog.ok_button_text = tr("CONTROLS_RESET_CONFIRM")
-		reset_bindings_dialog.cancel_button_text = tr("SAVE_CANCEL")
-	reset_dialog.confirmed.connect(_on_reset_confirmed)
-	reset_dialog.canceled.connect(_on_reset_canceled)
-	root_control.add_child(reset_dialog)
-	_style_confirm_dialog(reset_dialog)
-
-
-func _build_debug_panel() -> void:
-	debug_panel = PanelContainer.new()
-	debug_panel.name = "DebugPanel"
-	debug_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	debug_panel.offset_left = -350.0
-	debug_panel.offset_top = 78.0
-	debug_panel.offset_right = -18.0
-	debug_panel.offset_bottom = 274.0
-	debug_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	debug_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.03, 0.025, 0.07, 0.96), Color(0.62, 0.45, 0.94, 0.7), 8))
-	debug_panel.visible = false
-	root_control.add_child(debug_panel)
-	debug_label = _make_label(
-		"\n\n".join([tr("HUD_DEBUG_TITLE"), "\n".join([tr("HUD_DEBUG_DATA"), tr("HUD_DEBUG_NEXT"), tr("HUD_DEBUG_ALL"), tr("HUD_DEBUG_METEOR"), tr("HUD_DEBUG_RARE"), tr("HUD_DEBUG_SHOWER"), tr("HUD_DEBUG_FINAL"), tr("HUD_DEBUG_ENDING"), tr("HUD_DEBUG_RESET")])]),
-		13,
-		UITheme.INK_MID
-	)
-	debug_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 12)
-	debug_panel.add_child(debug_label)
-
-
-func _build_end_overlay() -> void:
-	end_overlay = ColorRect.new()
-	end_overlay.name = "EndOverlay"
-	end_overlay.color = Color(0.016, 0.008, 0.006, 0.94)
-	end_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	end_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	end_overlay.visible = false
-	root_control.add_child(end_overlay)
-	end_coda = CatalogueEndingCoda.new()
-	end_coda.name = "CatalogueEndingCoda"
-	end_coda.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	end_overlay.add_child(end_coda)
-	var frame := Control.new()
-	frame.name = "EndColumn"
-	# Keep the completed map unobscured on the left after its final pullback.
-	frame.anchor_left = 0.67
-	frame.anchor_right = 0.97
-	frame.anchor_top = 0.12
-	frame.anchor_bottom = 0.90
-	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	end_overlay.add_child(frame)
-	var column := VBoxContainer.new()
-	column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	column.alignment = BoxContainer.ALIGNMENT_CENTER
-	column.add_theme_constant_override("separation", int(UITheme.px(20.0)))
-	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame.add_child(column)
-
-	end_reveal_body = VBoxContainer.new()
-	end_reveal_body.alignment = BoxContainer.ALIGNMENT_CENTER
-	end_reveal_body.add_theme_constant_override("separation", int(UITheme.px(20.0)))
-	end_reveal_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	column.add_child(end_reveal_body)
-
-	end_subtitle = _spec_label(tr("HUD_END_SUBTITLE"), UITheme.mono(), 13.0, UITheme.INK_MID, 0.30)
-	end_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	end_subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	end_reveal_body.add_child(end_subtitle)
-
-	end_title = _spec_label(tr("HUD_END_TITLE"), UITheme.sans("medium"), 34.0, UITheme.INK_MAX, -0.01)
-	end_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	end_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	end_reveal_body.add_child(end_title)
-
-	var rule := CenterContainer.new()
-	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	end_reveal_body.add_child(rule)
-	var rule_line := ColorRect.new()
-	rule_line.color = UITheme.ACCENT_DEEP
-	rule_line.custom_minimum_size = Vector2(UITheme.px(420.0), 1.0)
-	rule_line.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	rule.add_child(rule_line)
-
-	end_body = _spec_label(tr("HUD_END_BODY"), UITheme.sans("light"), 17.0, UITheme.INK_MID, 0.02)
-	end_body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	end_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	end_reveal_body.add_child(end_body)
-
-	# The catalogue tally is a column of figures, so it takes the tabular mono the
-	# rest of the instrument layer uses. Proportional digits would leave the
-	# values ragged against each other.
-	end_stats = _spec_label("", UITheme.mono_tabular(), 20.0, UITheme.INK_HIGH, 0.04)
-	end_stats.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	end_reveal_body.add_child(end_stats)
-
-	end_save_failure = _spec_label(tr("HUD_END_SAVE_FAILURE"), UITheme.sans(), 15.0, UITheme.ALERT, 0.02)
-	end_save_failure.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	end_save_failure.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	end_save_failure.visible = false
-	end_reveal_body.add_child(end_save_failure)
-
-	end_actions = VBoxContainer.new()
-	end_actions.alignment = BoxContainer.ALIGNMENT_CENTER
-	end_actions.add_theme_constant_override("separation", int(UITheme.px(16.0)))
-	column.add_child(end_actions)
-
-	end_finish_button = Button.new()
-	end_finish_button.text = tr("HUD_END_FINISH")
-	end_finish_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	_style_text_action(end_finish_button, 22.0, UITheme.BANNER_TITLE)
-	end_finish_button.focus_mode = Control.FOCUS_ALL
-	end_finish_button.pressed.connect(func(): catalogue_finish_requested.emit())
-	end_actions.add_child(end_finish_button)
-
-	end_continue_button = Button.new()
-	end_continue_button.text = tr("HUD_END_CONTINUE")
-	end_continue_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	_style_text_action(end_continue_button, 20.0, UITheme.INK_MID)
-	end_continue_button.focus_mode = Control.FOCUS_ALL
-	end_continue_button.pressed.connect(func(): catalogue_continue_requested.emit())
-	end_actions.add_child(end_continue_button)
+	# Native dialog children are created by Godot, outside the authored scene.
+	dialog.theme = preload("res://resources/ui/native_dialog.tres")
+	dialog.get_label().theme = preload("res://resources/ui/native_dialog_label.tres")
+	dialog.get_label().horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	dialog.get_ok_button().theme = preload("res://resources/ui/native_dialog_confirm.tres")
+	dialog.get_cancel_button().theme = preload("res://resources/ui/native_dialog_cancel.tres")
+	dialog.get_ok_button().flat = true
+	dialog.get_cancel_button().flat = true
 
 
 func _set_summary_details(expanded: bool) -> void:
@@ -2262,585 +2155,6 @@ func _set_summary_details(expanded: bool) -> void:
 	summary_lead.visible = not expanded
 	summary_highlight.visible = not expanded and not summary_highlight.text.is_empty()
 	summary_details_button.text = tr("UI_DETAILS_HIDE" if expanded else "PHASE_DETAILS_SHOW")
-
-
-func _build_phase_summary_overlay() -> void:
-	# The scene owns fixed presentation; HUD keeps result binding and game requests.
-	phase_summary_overlay = PhaseSummaryScene.instantiate()
-	root_control.add_child(phase_summary_overlay)
-	phase_summary_title = phase_summary_overlay.get_node("%Title")
-	phase_summary_subtitle = phase_summary_overlay.get_node("%Duration")
-	phase_summary_data = phase_summary_overlay.get_node("%Data")
-	summary_lead = phase_summary_overlay.get_node("%Lead")
-	summary_highlight = phase_summary_overlay.get_node("%Highlight")
-	summary_details_button = phase_summary_overlay.get_node("%DetailsButton")
-	summary_details = phase_summary_overlay.get_node("%Details")
-	phase_summary_comparison = phase_summary_overlay.get_node("%Comparison")
-	phase_summary_observations = phase_summary_overlay.get_node("%Observations")
-	phase_summary_split = phase_summary_overlay.get_node("%Split")
-	phase_summary_badges = phase_summary_overlay.get_node("%Badges")
-	phase_summary_button = phase_summary_overlay.get_node("%ContinueButton")
-	summary_details_button.toggled.connect(_set_summary_details)
-	phase_summary_button.pressed.connect(_on_phase_summary_continue_pressed)
-	_set_summary_details(false)
-
-func _hairline(spec_width: float = 420.0) -> CenterContainer:
-	var holder := CenterContainer.new()
-	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var line := ColorRect.new()
-	line.color = UITheme.ACCENT_DEEP
-	line.custom_minimum_size = Vector2(UITheme.px(spec_width), 1.0)
-	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	holder.add_child(line)
-	return holder
-
-
-func _style_text_action(button: Button, spec_size: float, color: Color) -> void:
-	# Controls in the red-light layer are text with a rule under them, the same
-	# as the research chart header action. A filled, bordered, rounded button is
-	# the shape the observatory redesign removed.
-	var font_size := UITheme.size_px(spec_size)
-	button.flat = true
-	button.focus_mode = Control.FOCUS_ALL
-	button.add_theme_font_override("font", UITheme.sans())
-	button.add_theme_font_size_override("font_size", font_size)
-	button.add_theme_constant_override("spacing_glyph", UITheme.tracking(font_size, 0.06))
-	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
-		button.add_theme_color_override(state, color)
-	button.add_theme_color_override("font_disabled_color", UITheme.INK_LOW)
-	for state in ["normal", "hover", "pressed", "focus", "disabled"]:
-		button.add_theme_stylebox_override(state, _action_underline_style(state in ["hover", "focus"]))
-
-
-func _style_settings_action(button: Button, spec_size: float, color: Color, minimum_font_size: int = 14) -> void:
-	_style_text_action(button, spec_size, color)
-	var font_size := maxi(UITheme.size_px(spec_size), minimum_font_size)
-	button.add_theme_font_size_override("font_size", font_size)
-	button.add_theme_constant_override("spacing_glyph", UITheme.tracking(font_size, 0.06))
-
-
-func _settings_label(
-	text: String,
-	font: Font,
-	spec_size: float,
-	color: Color,
-	em: float = 0.0,
-	minimum_font_size: int = 12
-) -> Label:
-	var label := _spec_label(text, font, spec_size, color, em)
-	var font_size := maxi(UITheme.size_px(spec_size), minimum_font_size)
-	label.add_theme_font_size_override("font_size", font_size)
-	if not is_zero_approx(em):
-		label.add_theme_constant_override("spacing_glyph", UITheme.tracking(font_size, em))
-	return label
-
-
-func _action_underline_style(bright: bool) -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0, 0, 0, 0)
-	style.draw_center = false
-	style.border_width_bottom = 1
-	style.border_color = UITheme.ACCENT_TEXT if bright else UITheme.ACCENT_DEEP
-	style.content_margin_left = UITheme.px(10.0)
-	style.content_margin_right = UITheme.px(10.0)
-	style.content_margin_top = UITheme.px(12.0)
-	style.content_margin_bottom = UITheme.px(9.0)
-	return style
-
-
-func _style_red_slider(slider: HSlider) -> void:
-	var track := StyleBoxFlat.new()
-	track.bg_color = Color(UITheme.ACCENT_DEEP, 0.72)
-	track.content_margin_top = UITheme.px(2.0)
-	track.content_margin_bottom = UITheme.px(2.0)
-	var fill := StyleBoxFlat.new()
-	fill.bg_color = UITheme.BANNER_TITLE
-	fill.content_margin_top = UITheme.px(3.0)
-	fill.content_margin_bottom = UITheme.px(3.0)
-	var fill_focus: StyleBoxFlat = fill.duplicate()
-	fill_focus.bg_color = UITheme.INK_MAX
-	fill_focus.content_margin_top = UITheme.px(5.0)
-	fill_focus.content_margin_bottom = UITheme.px(5.0)
-	fill_focus.border_width_top = 1
-	fill_focus.border_width_bottom = 1
-	fill_focus.border_color = UITheme.ACCENT_PIP
-	slider.add_theme_stylebox_override("slider", track)
-	slider.add_theme_stylebox_override("grabber_area", fill)
-	slider.add_theme_stylebox_override("grabber_area_highlight", fill_focus)
-
-
-func _build_settings_ui() -> void:
-	settings_nav_buttons.clear()
-	settings_pages.clear()
-	settings_page_labels.clear()
-	settings_overlay = Control.new()
-	settings_overlay.name = "SettingsOverlay"
-	settings_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	settings_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	settings_overlay.visible = false
-	root_control.add_child(settings_overlay)
-	var dim := ColorRect.new()
-	dim.color = Color(0.012, 0.006, 0.004, 0.84)
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	dim.mouse_filter = Control.MOUSE_FILTER_STOP
-	settings_overlay.add_child(dim)
-	# A single instrument console replaces the former accordion and nested
-	# controls modal. It keeps sharp observatory lines and one stable frame.
-	settings_panel = Control.new()
-	settings_panel.name = "SettingsConsole"
-	settings_panel.set_anchors_preset(Control.PRESET_CENTER)
-	settings_panel.offset_left = -UITheme.px(850.0)
-	settings_panel.offset_right = UITheme.px(850.0)
-	settings_panel.offset_top = -UITheme.px(480.0)
-	settings_panel.offset_bottom = UITheme.px(480.0)
-	settings_panel.mouse_filter = Control.MOUSE_FILTER_STOP
-	settings_overlay.add_child(settings_panel)
-	var console_background := ColorRect.new()
-	console_background.color = Color(0.027, 0.014, 0.010, 0.975)
-	console_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	console_background.mouse_filter = Control.MOUSE_FILTER_STOP
-	settings_panel.add_child(console_background)
-	for anchor_top in [0.0, 1.0]:
-		var edge := ColorRect.new()
-		edge.color = UITheme.BANNER_RULE
-		edge.anchor_right = 1.0
-		edge.anchor_top = anchor_top
-		edge.anchor_bottom = anchor_top
-		edge.offset_top = -1.0 if anchor_top > 0.0 else 0.0
-		edge.offset_bottom = 0.0 if anchor_top > 0.0 else 1.0
-		edge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		settings_panel.add_child(edge)
-	var frame_margin := MarginContainer.new()
-	frame_margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	frame_margin.add_theme_constant_override("margin_left", int(UITheme.px(42.0)))
-	frame_margin.add_theme_constant_override("margin_right", int(UITheme.px(42.0)))
-	frame_margin.add_theme_constant_override("margin_top", int(UITheme.px(28.0)))
-	frame_margin.add_theme_constant_override("margin_bottom", int(UITheme.px(24.0)))
-	settings_panel.add_child(frame_margin)
-	var console := VBoxContainer.new()
-	console.add_theme_constant_override("separation", int(UITheme.px(12.0)))
-	frame_margin.add_child(console)
-	var header := HBoxContainer.new()
-	header.custom_minimum_size.y = UITheme.px(78.0)
-	header.add_theme_constant_override("separation", int(UITheme.px(24.0)))
-	console.add_child(header)
-	settings_title = _settings_label(tr("SETTINGS_TITLE"), UITheme.sans("medium"), 32.0, UITheme.INK_MAX, -0.01, 19)
-	settings_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	settings_title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	header.add_child(settings_title)
-	settings_subtitle = _settings_label(tr("SETTINGS_PAUSED"), UITheme.mono(true), 14.0, UITheme.ACCENT_TEXT, 0.18, 12)
-	settings_subtitle.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	settings_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	header.add_child(settings_subtitle)
-	console.add_child(_hairline(1616.0))
-	var body := HBoxContainer.new()
-	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	body.add_theme_constant_override("separation", int(UITheme.px(28.0)))
-	console.add_child(body)
-	var navigation := VBoxContainer.new()
-	navigation.name = "SettingsNavigation"
-	navigation.custom_minimum_size.x = UITheme.px(300.0)
-	navigation.add_theme_constant_override("separation", int(UITheme.px(5.0)))
-	body.add_child(navigation)
-	var navigation_label := _settings_label(tr("SETTINGS_NAVIGATION"), UITheme.mono(true), 12.0, UITheme.INK_MID, 0.22)
-	navigation_label.custom_minimum_size.y = UITheme.px(56.0)
-	navigation_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	navigation.add_child(navigation_label)
-	settings_page_labels.append({"label": navigation_label, "key": "SETTINGS_NAVIGATION"})
-	for page_name in SETTINGS_PAGE_ORDER:
-		var nav_button := Button.new()
-		nav_button.name = "SettingsTab_%s" % page_name.capitalize()
-		nav_button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		nav_button.custom_minimum_size.y = UITheme.px(66.0)
-		nav_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		_style_settings_action(nav_button, 17.0, UITheme.INK_MID)
-		nav_button.pressed.connect(_set_settings_page.bind(page_name, true))
-		navigation.add_child(nav_button)
-		settings_nav_buttons[page_name] = nav_button
-	var separator := ColorRect.new()
-	separator.color = UITheme.ACCENT_DEEP
-	separator.custom_minimum_size.x = 1.0
-	separator.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	body.add_child(separator)
-	var page_margin := MarginContainer.new()
-	page_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	page_margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	page_margin.add_theme_constant_override("margin_left", int(UITheme.px(10.0)))
-	page_margin.add_theme_constant_override("margin_right", int(UITheme.px(6.0)))
-	body.add_child(page_margin)
-	settings_page_stack = Control.new()
-	settings_page_stack.name = "SettingsPages"
-	settings_page_stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	settings_page_stack.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	settings_page_stack.clip_contents = true
-	page_margin.add_child(settings_page_stack)
-
-	_build_general_settings_page()
-	_build_audio_settings_page()
-	_build_display_settings_page()
-	_build_accessibility_settings_page()
-	_build_controls_ui()
-	_build_save_settings_page()
-
-	console.add_child(_hairline(1616.0))
-	var footer := HBoxContainer.new()
-	footer.custom_minimum_size.y = UITheme.px(68.0)
-	footer.add_theme_constant_override("separation", int(UITheme.px(24.0)))
-	console.add_child(footer)
-	var footer_hint := _settings_label(tr("SETTINGS_AUTOSAVE_NOTE"), UITheme.mono(), 12.0, UITheme.INK_MID, 0.08)
-	footer_hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	footer_hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	footer.add_child(footer_hint)
-	settings_page_labels.append({"label": footer_hint, "key": "SETTINGS_AUTOSAVE_NOTE"})
-	settings_close_button = Button.new()
-	settings_close_button.text = tr("SETTINGS_CLOSE")
-	_style_settings_action(settings_close_button, 19.0, UITheme.BANNER_TITLE)
-	settings_close_button.pressed.connect(close_settings)
-	footer.add_child(settings_close_button)
-
-	overwrite_dialog = ConfirmationDialog.new()
-	overwrite_dialog.title = tr("SAVE_OVERWRITE_TITLE")
-	overwrite_dialog.ok_button_text = tr("SAVE_OVERWRITE_CONFIRM")
-	overwrite_dialog.cancel_button_text = tr("SAVE_CANCEL")
-	overwrite_dialog.confirmed.connect(_on_overwrite_confirmed)
-	settings_overlay.add_child(overwrite_dialog)
-	_style_confirm_dialog(overwrite_dialog)
-	reset_bindings_dialog = ConfirmationDialog.new()
-	reset_bindings_dialog.title = tr("CONTROLS_RESET_TITLE")
-	reset_bindings_dialog.dialog_text = tr("CONTROLS_RESET_PROMPT")
-	reset_bindings_dialog.ok_button_text = tr("CONTROLS_RESET_CONFIRM")
-	reset_bindings_dialog.cancel_button_text = tr("SAVE_CANCEL")
-	reset_bindings_dialog.confirmed.connect(_on_controls_reset_confirmed)
-	settings_overlay.add_child(reset_bindings_dialog)
-	_style_confirm_dialog(reset_bindings_dialog)
-	_set_settings_page("general", false)
-
-
-func _build_settings_page(page_name: String, title_key: String, description_key: String) -> VBoxContainer:
-	var page := VBoxContainer.new()
-	page.name = "SettingsPage_%s" % page_name.capitalize()
-	page.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	page.add_theme_constant_override("separation", int(UITheme.px(10.0)))
-	page.visible = false
-	settings_page_stack.add_child(page)
-	settings_pages[page_name] = page
-	var title := _settings_label(tr(title_key), UITheme.sans("medium"), 27.0, UITheme.INK_MAX, 0.0, 16)
-	title.name = "PageTitle"
-	page.add_child(title)
-	var description := _settings_label(tr(description_key), UITheme.sans("light"), 15.0, UITheme.INK_MID)
-	description.name = "PageDescription"
-	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	description.custom_minimum_size.y = UITheme.px(44.0)
-	page.add_child(description)
-	page.add_child(_hairline(1180.0))
-	settings_page_labels.append({"label": title, "key": title_key})
-	settings_page_labels.append({"label": description, "key": description_key})
-	return page
-
-
-func _add_settings_action_row(
-	parent: VBoxContainer,
-	title_key: String,
-	description_key: String,
-	action: Control
-) -> Dictionary:
-	var row := HBoxContainer.new()
-	row.custom_minimum_size.y = UITheme.px(88.0)
-	row.add_theme_constant_override("separation", int(UITheme.px(28.0)))
-	parent.add_child(row)
-	var copy := VBoxContainer.new()
-	copy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	copy.alignment = BoxContainer.ALIGNMENT_CENTER
-	copy.add_theme_constant_override("separation", int(UITheme.px(2.0)))
-	row.add_child(copy)
-	var title := _settings_label(tr(title_key), UITheme.sans("medium"), 17.0, UITheme.INK_HIGH, 0.0, 14)
-	copy.add_child(title)
-	var description := _settings_label(tr(description_key), UITheme.sans("light"), 13.0, UITheme.INK_MID)
-	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	copy.add_child(description)
-	action.custom_minimum_size.x = maxf(action.custom_minimum_size.x, UITheme.px(300.0))
-	action.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	row.add_child(action)
-	parent.add_child(_hairline(1180.0))
-	settings_page_labels.append({"label": title, "key": title_key})
-	settings_page_labels.append({"label": description, "key": description_key})
-	return {"title": title, "description": description, "row": row}
-
-
-func _build_general_settings_page() -> void:
-	var page := _build_settings_page("general", "SETTINGS_PAGE_GENERAL_TITLE", "SETTINGS_PAGE_GENERAL_DESC")
-	language_selector = OptionButton.new()
-	language_selector.alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	language_selector.add_item(tr("SETTINGS_ENGLISH"))
-	language_selector.set_item_metadata(0, "en")
-	language_selector.add_item(tr("SETTINGS_KOREAN"))
-	language_selector.set_item_metadata(1, "ko")
-	_style_settings_action(language_selector, 17.0, UITheme.BANNER_TITLE)
-	language_selector.item_selected.connect(_on_language_selected)
-	var language_row := _add_settings_action_row(page, "SETTINGS_LANGUAGE", "SETTINGS_LANGUAGE_HINT", language_selector)
-	settings_language_label = language_row["title"]
-	settings_hint = language_row["description"]
-	number_notation_selector = OptionButton.new()
-	number_notation_selector.alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	for notation in ["compact", "scientific"]:
-		var index := number_notation_selector.item_count
-		number_notation_selector.add_item(tr("SETTINGS_NUMBER_" + notation.to_upper()))
-		number_notation_selector.set_item_metadata(index, notation)
-	_style_settings_action(number_notation_selector, 17.0, UITheme.BANNER_TITLE)
-	number_notation_selector.item_selected.connect(_on_number_notation_selected)
-	_add_settings_action_row(page, "SETTINGS_NUMBER_NOTATION", "SETTINGS_NUMBER_HINT", number_notation_selector)
-	tutorial_replay_button = Button.new()
-	tutorial_replay_button.text = tr("TUTORIAL_REPLAY")
-	tutorial_replay_button.alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_style_settings_action(tutorial_replay_button, 16.0, UITheme.BANNER_TITLE)
-	tutorial_replay_button.pressed.connect(func(): tutorial_replay_requested.emit())
-	_add_settings_action_row(page, "SETTINGS_TUTORIAL_TITLE", "SETTINGS_TUTORIAL_DESC", tutorial_replay_button)
-
-
-func _build_audio_settings_page() -> void:
-	var page := _build_settings_page("audio", "SETTINGS_PAGE_AUDIO_TITLE", "SETTINGS_PAGE_AUDIO_DESC")
-	audio_display_container = page
-	var volume_row := HBoxContainer.new()
-	volume_row.custom_minimum_size.x = UITheme.px(430.0)
-	volume_row.add_theme_constant_override("separation", int(UITheme.px(14.0)))
-	master_volume_slider = HSlider.new()
-	master_volume_slider.name = "MasterVolume"
-	master_volume_slider.min_value = 0.0
-	master_volume_slider.max_value = 100.0
-	master_volume_slider.step = 1.0
-	master_volume_slider.custom_minimum_size = Vector2(UITheme.px(340.0), UITheme.px(34.0))
-	master_volume_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	master_volume_slider.focus_mode = Control.FOCUS_ALL
-	_style_red_slider(master_volume_slider)
-	master_volume_slider.value_changed.connect(_on_master_volume_changed)
-	volume_row.add_child(master_volume_slider)
-	master_volume_value = _settings_label("100", UITheme.mono(), 13.0, UITheme.BANNER_TITLE, 0.10)
-	master_volume_value.custom_minimum_size.x = UITheme.px(52.0)
-	master_volume_value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	master_volume_value.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	volume_row.add_child(master_volume_value)
-	var volume_copy := _add_settings_action_row(page, "SETTINGS_MASTER_VOLUME", "SETTINGS_MASTER_VOLUME_DESC", volume_row)
-	master_volume_label = volume_copy["title"]
-	mute_button = Button.new()
-	mute_button.alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_style_settings_action(mute_button, 16.0, UITheme.INK_HIGH)
-	mute_button.pressed.connect(_on_mute_pressed)
-	_add_settings_action_row(page, "SETTINGS_MUTE_TITLE", "SETTINGS_MUTE_DESC", mute_button)
-	mute_unfocused_button = Button.new()
-	mute_unfocused_button.alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_style_settings_action(mute_unfocused_button, 16.0, UITheme.INK_HIGH)
-	mute_unfocused_button.pressed.connect(_on_mute_unfocused_pressed)
-	_add_settings_action_row(page, "SETTINGS_MUTE_UNFOCUSED_TITLE", "SETTINGS_MUTE_UNFOCUSED_DESC", mute_unfocused_button)
-
-
-func _build_display_settings_page() -> void:
-	var page := _build_settings_page("display", "SETTINGS_PAGE_DISPLAY_TITLE", "SETTINGS_PAGE_DISPLAY_DESC")
-	fullscreen_button = Button.new()
-	fullscreen_button.alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_style_settings_action(fullscreen_button, 16.0, UITheme.INK_HIGH)
-	fullscreen_button.pressed.connect(_on_fullscreen_pressed)
-	_add_settings_action_row(page, "SETTINGS_FULLSCREEN_TITLE", "SETTINGS_FULLSCREEN_DESC", fullscreen_button)
-	vsync_button = Button.new()
-	vsync_button.alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_style_settings_action(vsync_button, 16.0, UITheme.INK_HIGH)
-	vsync_button.pressed.connect(_on_vsync_pressed)
-	_add_settings_action_row(page, "SETTINGS_VSYNC_TITLE", "SETTINGS_VSYNC_DESC", vsync_button)
-	fps_limit_selector = OptionButton.new()
-	fps_limit_selector.alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_style_settings_action(fps_limit_selector, 16.0, UITheme.BANNER_TITLE)
-	for limit in [0, 30, 60, 120]:
-		fps_limit_selector.add_item(tr("SETTINGS_FPS_UNLIMITED") if limit == 0 else tr("SETTINGS_FPS_VALUE") % limit)
-		fps_limit_selector.set_item_metadata(fps_limit_selector.item_count - 1, limit)
-	fps_limit_selector.item_selected.connect(_on_fps_limit_selected)
-	_add_settings_action_row(page, "SETTINGS_FPS_TITLE", "SETTINGS_FPS_DESC", fps_limit_selector)
-func _build_accessibility_settings_page() -> void:
-	var page := _build_settings_page("accessibility", "SETTINGS_PAGE_ACCESSIBILITY_TITLE", "SETTINGS_PAGE_ACCESSIBILITY_DESC")
-	var motion_row := HBoxContainer.new()
-	motion_row.custom_minimum_size.x = UITheme.px(430.0)
-	motion_row.add_theme_constant_override("separation", int(UITheme.px(14.0)))
-	motion_intensity_slider = HSlider.new()
-	motion_intensity_slider.min_value = 0.0
-	motion_intensity_slider.max_value = 100.0
-	motion_intensity_slider.step = 10.0
-	motion_intensity_slider.custom_minimum_size = Vector2(UITheme.px(340.0), UITheme.px(34.0))
-	motion_intensity_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	motion_intensity_slider.focus_mode = Control.FOCUS_ALL
-	_style_red_slider(motion_intensity_slider)
-	motion_intensity_slider.value_changed.connect(_on_motion_intensity_changed)
-	motion_row.add_child(motion_intensity_slider)
-	motion_intensity_value = _settings_label("100%", UITheme.mono(), 13.0, UITheme.BANNER_TITLE, 0.08)
-	motion_intensity_value.custom_minimum_size.x = UITheme.px(70.0)
-	motion_intensity_value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	motion_intensity_value.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	motion_row.add_child(motion_intensity_value)
-	var motion_copy := _add_settings_action_row(page, "SETTINGS_MOTION_TITLE", "SETTINGS_MOTION_DESC", motion_row)
-	motion_intensity_label = motion_copy["title"]
-	screen_flashes_button = Button.new()
-	screen_flashes_button.alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_style_settings_action(screen_flashes_button, 16.0, UITheme.INK_HIGH)
-	screen_flashes_button.pressed.connect(_on_screen_flashes_pressed)
-	_add_settings_action_row(page, "SETTINGS_FLASHES_TITLE", "SETTINGS_FLASHES_DESC", screen_flashes_button)
-	var note := _settings_label(tr("SETTINGS_ACCESSIBILITY_NOTE"), UITheme.sans("light"), 14.0, UITheme.INK_MID)
-	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	note.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	note.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
-	page.add_child(note)
-	settings_page_labels.append({"label": note, "key": "SETTINGS_ACCESSIBILITY_NOTE"})
-
-
-func _build_controls_ui() -> void:
-	var column := _build_settings_page("controls", "CONTROLS_TITLE", "CONTROLS_HINT")
-	controls_overlay = column
-	controls_panel = column
-	controls_title = column.get_node("PageTitle") as Label
-	controls_subtitle = column.get_node("PageDescription") as Label
-	controls_hint = _settings_label(tr("CONTROLS_HINT"), UITheme.sans("light"), 14.0, UITheme.INK_MID)
-	controls_hint.visible = false
-	controls_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	column.add_child(controls_hint)
-	var scroll := ScrollContainer.new()
-	scroll.name = "ControlsScroll"
-	scroll.custom_minimum_size.y = UITheme.px(360.0)
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	scroll.focus_mode = Control.FOCUS_NONE
-	column.add_child(scroll)
-	var rows_margin := MarginContainer.new()
-	rows_margin.name = "ControlRowsMargin"
-	rows_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	rows_margin.add_theme_constant_override("margin_right", int(UITheme.px(40.0)))
-	scroll.add_child(rows_margin)
-	var rows := VBoxContainer.new()
-	rows.name = "ControlRows"
-	rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	rows.add_theme_constant_override("separation", int(UITheme.px(5.0)))
-	rows_margin.add_child(rows)
-	_build_control_row(rows, "CONTROL_OBSERVE", &"nw_observe")
-	_build_control_row(rows, "CONTROL_DISH", &"nw_dish", false, "UPGRADE_SECONDARY_CAMERA_NAME")
-	_build_control_row(rows, "CONTROL_CHART", &"nw_chart", true)
-	_build_control_row(rows, "CONTROL_MENU_BACK", &"nw_menu_back", true)
-	_build_control_row(rows, "CONTROL_CONTINUE", &"nw_continue", true)
-	_build_control_row(rows, "CONTROL_FULLSCREEN", &"nw_fullscreen", true)
-	_build_static_control_row(rows, "CONTROL_ROTATE", "CONTROL_WHEEL")
-	_build_static_control_row(rows, "CONTROL_ZOOM", "CONTROL_CTRL_WHEEL")
-	_build_static_control_row(rows, "CONTROL_INSTALL", "CONTROL_POINTER_HOLD")
-	_build_static_control_row(rows, "CONTROL_SKY_SWEEP", "CONTROL_POINTER_HOLD", "UPGRADE_POLAR_SURVEY_NAME")
-	controls_status = _settings_label("", UITheme.sans("light"), 13.0, UITheme.INK_MID)
-	controls_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	controls_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	controls_status.visible = false
-	column.add_child(controls_status)
-	var actions := HBoxContainer.new()
-	actions.alignment = BoxContainer.ALIGNMENT_END
-	actions.add_theme_constant_override("separation", int(UITheme.px(28.0)))
-	column.add_child(actions)
-	controls_reset_button = Button.new()
-	controls_reset_button.text = tr("CONTROLS_RESET")
-	_style_settings_action(controls_reset_button, 16.0, UITheme.INK_MID)
-	controls_reset_button.pressed.connect(_on_controls_reset_pressed)
-	actions.add_child(controls_reset_button)
-
-
-func _build_save_settings_page() -> void:
-	var page := _build_settings_page("save", "SETTINGS_PAGE_SAVE_TITLE", "SETTINGS_PAGE_SAVE_DESC")
-	save_management_container = page
-	save_section_label = _settings_label(tr("SAVE_SECTION_TITLE"), UITheme.mono(true), 12.0, UITheme.INK_MID, 0.18)
-	page.add_child(save_section_label)
-	settings_page_labels.append({"label": save_section_label, "key": "SAVE_SECTION_TITLE"})
-	save_status_label = _settings_label("", UITheme.mono(), 13.0, UITheme.ACCENT_TEXT, 0.06)
-	save_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	page.add_child(save_status_label)
-	for slot in range(1, 4):
-		_build_save_slot_row(page, slot)
-	save_feedback = _settings_label(tr("SAVE_SECTION_HINT"), UITheme.sans("light"), 13.0, UITheme.INK_MID)
-	save_feedback.visible = false
-	page.add_child(save_feedback)
-	settings_page_labels.append({"label": save_feedback, "key": "SAVE_SECTION_HINT"})
-	audio_display_button = settings_nav_buttons.get("audio")
-	controls_button = settings_nav_buttons.get("controls")
-	save_management_button = settings_nav_buttons.get("save")
-
-
-func _build_control_row(
-	parent: VBoxContainer,
-	title_key: String,
-	action: StringName,
-	editable: bool = false,
-	requirement_key: String = ""
-) -> void:
-	var row := HBoxContainer.new()
-	row.custom_minimum_size.y = UITheme.px(46.0)
-	row.add_theme_constant_override("separation", int(UITheme.px(18.0)))
-	parent.add_child(row)
-	var text_column := VBoxContainer.new()
-	text_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	text_column.add_theme_constant_override("separation", 0)
-	row.add_child(text_column)
-	var title := _settings_label(tr(title_key), UITheme.sans(), 16.0, UITheme.INK_HIGH, 0.0, 13)
-	text_column.add_child(title)
-	controls_localized_text.append({"label": title, "key": title_key})
-	if not requirement_key.is_empty():
-		var requirement := _settings_label(tr("CONTROLS_REQUIRES") % tr(requirement_key), UITheme.mono(), 10.0, UITheme.INK_MID, 0.10)
-		text_column.add_child(requirement)
-		controls_localized_text.append({"label": requirement, "key": "CONTROLS_REQUIRES", "argument_key": requirement_key})
-	var value: Control
-	if editable:
-		var button := Button.new()
-		button.name = "Binding_%s" % String(action)
-		button.custom_minimum_size.x = UITheme.px(300.0)
-		button.alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		_style_settings_action(button, 15.0, UITheme.BANNER_TITLE)
-		button.pressed.connect(_begin_rebind.bind(action))
-		row.add_child(button)
-		value = button
-		if action == &"nw_menu_back":
-			var clear_button := Button.new()
-			clear_button.name = "Clear_%s" % String(action)
-			clear_button.text = tr("CONTROLS_REMOVE")
-			clear_button.tooltip_text = tr("CONTROLS_REMOVE")
-			_style_settings_action(clear_button, 12.0, UITheme.INK_MID, 12)
-			clear_button.pressed.connect(_clear_optional_binding.bind(action))
-			row.add_child(clear_button)
-			controls_clear_widgets[String(action)] = clear_button
-	else:
-		var label := _settings_label("", UITheme.mono(), 13.0, UITheme.INK_MID, 0.08)
-		label.custom_minimum_size.x = UITheme.px(300.0)
-		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		row.add_child(label)
-		value = label
-	controls_action_widgets[String(action)] = value
-	parent.add_child(_hairline(1040.0))
-
-
-func _build_static_control_row(
-	parent: VBoxContainer,
-	title_key: String,
-	value_key: String,
-	requirement_key: String = ""
-) -> void:
-	var row := HBoxContainer.new()
-	row.custom_minimum_size.y = UITheme.px(46.0)
-	row.add_theme_constant_override("separation", int(UITheme.px(18.0)))
-	parent.add_child(row)
-	var text_column := VBoxContainer.new()
-	text_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	text_column.add_theme_constant_override("separation", 0)
-	row.add_child(text_column)
-	var title := _settings_label(tr(title_key), UITheme.sans(), 16.0, UITheme.INK_HIGH, 0.0, 13)
-	text_column.add_child(title)
-	controls_localized_text.append({"label": title, "key": title_key})
-	if not requirement_key.is_empty():
-		var requirement := _settings_label(tr("CONTROLS_REQUIRES") % tr(requirement_key), UITheme.mono(), 10.0, UITheme.INK_MID, 0.10)
-		text_column.add_child(requirement)
-		controls_localized_text.append({"label": requirement, "key": "CONTROLS_REQUIRES", "argument_key": requirement_key})
-	var value := _settings_label(tr(value_key), UITheme.mono(), 13.0, UITheme.INK_MID, 0.08)
-	value.custom_minimum_size.x = UITheme.px(300.0)
-	value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	value.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	row.add_child(value)
-	controls_localized_text.append({"label": value, "key": value_key})
-	parent.add_child(_hairline(1040.0))
 
 
 func open_controls() -> void:
@@ -3074,64 +2388,6 @@ func _on_controls_reset_confirmed() -> void:
 	controls_status.visible = true
 
 
-func _build_save_slot_row(parent: VBoxContainer, slot: int) -> void:
-	# A row of type on the sky, separated by a hairline, rather than a card.
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", int(UITheme.px(18.0)))
-	parent.add_child(row)
-	var info := VBoxContainer.new()
-	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	info.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	info.add_theme_constant_override("separation", int(UITheme.px(3.0)))
-	row.add_child(info)
-	var title := _settings_label(tr("SAVE_SLOT_TITLE") % slot, UITheme.sans(), 17.0, UITheme.INK_HIGH, 0.0, 13)
-	var details := _settings_label(tr("SAVE_SLOT_EMPTY"), UITheme.mono(), 12.0, UITheme.INK_MID, 0.06)
-	details.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	info.add_child(title)
-	info.add_child(details)
-	var save_button := Button.new()
-	save_button.text = tr("SAVE_ACTION")
-	_style_settings_action(save_button, 15.0, UITheme.INK_HIGH)
-	save_button.pressed.connect(_on_save_slot_pressed.bind(slot))
-	row.add_child(save_button)
-	var load_button := Button.new()
-	load_button.text = tr("LOAD_ACTION")
-	_style_settings_action(load_button, 15.0, UITheme.INK_HIGH)
-	load_button.disabled = true
-	load_button.pressed.connect(_on_load_slot_pressed.bind(slot))
-	row.add_child(load_button)
-	var reset_button := Button.new()
-	reset_button.text = tr("SAVE_RESET_ACTION")
-	# Destructive, so it takes the one saturated ink in the palette instead of a
-	# red box the red-light layer cannot spare.
-	_style_settings_action(reset_button, 15.0, UITheme.GAIN)
-	reset_button.pressed.connect(_on_reset_slot_pressed.bind(slot))
-	reset_button.visible = false
-	row.add_child(reset_button)
-	parent.add_child(_hairline(840.0))
-	save_slot_titles.append(title)
-	save_slot_details.append(details)
-	save_slot_buttons.append(save_button)
-	load_slot_buttons.append(load_button)
-	reset_slot_buttons.append(reset_button)
 
-
-func _make_label(text: String, font_size: int, color: Color) -> Label:
-	var label := Label.new()
-	label.text = text
-	label.add_theme_font_size_override("font_size", font_size)
-	label.add_theme_color_override("font_color", color)
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return label
-
-
-func _panel_style(background: Color, border: Color, radius: int) -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = background
-	style.border_color = border
-	style.set_border_width_all(1)
-	style.corner_radius_top_left = radius
-	style.corner_radius_top_right = radius
-	style.corner_radius_bottom_left = radius
-	style.corner_radius_bottom_right = radius
-	return style
+func _action_underline_style(bright: bool) -> StyleBoxFlat:
+	return preload("res://resources/ui/action_focus.tres") if bright else preload("res://resources/ui/action_normal.tres")

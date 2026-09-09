@@ -94,20 +94,6 @@ static func tracking(font_size: int, em: float) -> int:
 	return int(round(float(font_size) * em))
 
 
-# Shared label construction keeps HUD and chart typography on the same spec units.
-static func spec_label(text: String, font: Font, spec_size: float, color: Color, em: float = 0.0) -> Label:
-	var label := Label.new()
-	label.text = text
-	var font_size := size_px(spec_size)
-	label.add_theme_font_override("font", font)
-	label.add_theme_font_size_override("font_size", font_size)
-	label.add_theme_color_override("font_color", color)
-	if not is_zero_approx(em):
-		label.add_theme_constant_override("spacing_glyph", tracking(font_size, em))
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return label
-
-
 # Data readouts and research costs share the same locale-independent grouping.
 static func grouped_integer(value: int) -> String:
 	var digits := str(absi(value))
@@ -171,22 +157,7 @@ static func data_tooltip(control: Control, value: float, decimals: int = 0) -> v
 	# propagate to the existing parent/sky input path.
 	control.mouse_filter = Control.MOUSE_FILTER_PASS
 	control.set_meta("passive_data_readout", true)
-	if not _cache.has("data_tooltip_theme"):
-		var tooltip_theme := Theme.new()
-		tooltip_theme.set_font("font", "TooltipLabel", mono_tabular())
-		tooltip_theme.set_font_size("font_size", "TooltipLabel", 14)
-		tooltip_theme.set_color("font_color", "TooltipLabel", TOOLTIP_BODY)
-		var panel := StyleBoxFlat.new()
-		panel.bg_color = TOOLTIP_BACKGROUND
-		panel.border_color = TOOLTIP_BORDER
-		panel.set_border_width_all(1)
-		panel.content_margin_left = 10
-		panel.content_margin_right = 10
-		panel.content_margin_top = 6
-		panel.content_margin_bottom = 6
-		tooltip_theme.set_stylebox("panel", "TooltipPanel", panel)
-		_cache["data_tooltip_theme"] = tooltip_theme
-	control.theme = _cache["data_tooltip_theme"]
+	control.theme = preload("res://resources/ui/data_tooltip.tres")
 
 
 static func is_passive_data_readout(control: Control) -> bool:
@@ -217,6 +188,8 @@ static func sans(weight: String = "regular") -> FontFile:
 
 # Tabular figures. Counters, clocks and costs must not shift width as they tick.
 static func mono_tabular(medium: bool = false) -> FontVariation:
+	if not medium:
+		return preload("res://resources/ui/mono_tabular.tres")
 	var key := "tnum_medium" if medium else "tnum_regular"
 	if _cache.has(key):
 		return _cache[key]

@@ -1,0 +1,137 @@
+[gd_scene format=3]
+
+[node name="@Control@3" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="HBoxContainer0" type="HBoxContainer" parent="."]
+layout_mode = 0
+offset_left = 22.0
+offset_top = 16.0
+mouse_filter = 2
+theme_override_constants/separation = 34
+
+[node name="VBoxContainer0" type="VBoxContainer" parent="HBoxContainer0"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = -2
+
+[node name="Label0" type="Label" parent="HBoxContainer0/VBoxContainer0"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.43529412, 0.54509807, 0.627451, 1)
+theme_override_font_sizes/font_size = 10
+text = "EARNED"
+
+[node name="EarnedLabel" type="Label" parent="HBoxContainer0/VBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.56078434, 1, 0.8980392, 1)
+theme_override_font_sizes/font_size = 30
+text = "0"
+
+[node name="VBoxContainer1" type="VBoxContainer" parent="HBoxContainer0"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = -2
+
+[node name="Label0" type="Label" parent="HBoxContainer0/VBoxContainer1"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.43529412, 0.54509807, 0.627451, 1)
+theme_override_font_sizes/font_size = 10
+text = "MISSED"
+
+[node name="MissedLabel" type="Label" parent="HBoxContainer0/VBoxContainer1"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.47843137, 0.42745098, 1)
+theme_override_font_sizes/font_size = 30
+text = "−0"
+
+[node name="VBoxContainer2" type="VBoxContainer" parent="HBoxContainer0"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = -2
+
+[node name="Label0" type="Label" parent="HBoxContainer0/VBoxContainer2"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.43529412, 0.54509807, 0.627451, 1)
+theme_override_font_sizes/font_size = 10
+text = "REMAINING"
+
+[node name="ClockLabel" type="Label" parent="HBoxContainer0/VBoxContainer2"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7372549, 0.8392157, 0.9098039, 1)
+theme_override_font_sizes/font_size = 24
+text = "01:30"
+
+[node name="InstrumentLabel" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 22.0
+offset_top = -76.0
+offset_right = 320.0
+offset_bottom = -26.0
+theme_override_colors/font_color = Color(0.62352943, 0.8784314, 0.8117647, 1)
+theme_override_font_sizes/font_size = 13
+
+[node name="QueueLabel" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -290.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = 260.0
+theme_override_colors/font_color = Color(0.8117647, 0.8784314, 0.9411765, 1)
+theme_override_font_sizes/font_size = 13
+
+[node name="HintLabel" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -34.0
+offset_bottom = -12.0
+theme_override_colors/font_color = Color(0.49019608, 0.5803922, 0.65882355, 1)
+theme_override_font_sizes/font_size = 13
+text = "CLICK A SIGNAL TO COMMIT A DISH    ·    HOLD LMB TO OBSERVE BY HAND"
+horizontal_alignment = 1
+
+[node name="SummaryOverlay" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="ColorRect0" type="ColorRect" parent="SummaryOverlay"]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0.002, 0.007, 0.02, 0.9)
+
+[node name="SummaryLabel" type="Label" parent="SummaryOverlay"]
+unique_name_in_owner = true
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -230.0
+offset_top = -170.0
+offset_right = 230.0
+offset_bottom = 170.0
+theme_override_colors/font_color = Color(0.8627451, 0.93333334, 0.9882353, 1)
+theme_override_font_sizes/font_size = 19
+horizontal_alignment = 1
+vertical_alignment = 1

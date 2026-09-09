@@ -1,0 +1,45 @@
+[gd_scene format=3]
+
+[ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Light.ttf" id="R5"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexMono-Regular.ttf" id="R6"]
+
+[node name="EventBanner" type="Control"]
+visible = false
+anchors_preset = 0
+anchor_left = 0.5
+anchor_right = 0.5
+mouse_filter = 2
+
+[node name="BannerRule" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = -72.0
+offset_top = 45.6
+offset_right = 72.0
+offset_bottom = 46.6
+mouse_filter = 2
+color = Color(0.6313726, 0.3647059, 0.24313726, 1)
+
+[node name="BannerLabel" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = -270.0
+offset_top = 57.6
+offset_right = 270.0
+offset_bottom = 82.6
+theme_override_colors/font_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_fonts/font = ExtResource("R5")
+theme_override_font_sizes/font_size = 16
+horizontal_alignment = 1
+
+[node name="BannerSubtitle" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = -270.0
+offset_top = 91.0
+offset_right = 270.0
+offset_bottom = 103.0
+theme_override_colors/font_color = Color(0.64705884, 0.4862745, 0.40392157, 1)
+theme_override_fonts/font = ExtResource("R6")
+theme_override_font_sizes/font_size = 8
+horizontal_alignment = 1

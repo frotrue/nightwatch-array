@@ -1,0 +1,285 @@
+[gd_scene format=3]
+
+[ext_resource type="Resource" path="res://resources/ui/mono_tabular.tres" id="R1"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexMono-Regular.ttf" id="R2"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Regular.ttf" id="R3"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Light.ttf" id="R4"]
+
+[node name="ChartHeader" type="Control"]
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="DataReadout" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 33.6
+offset_top = 40.0
+offset_right = 52.6
+offset_bottom = 81.0
+theme_override_colors/font_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 31
+text = "0"
+
+[node name="TitleLabel" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 33.6
+offset_top = 26.4
+offset_right = 101.6
+offset_bottom = 36.4
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+text = "OBSERVATION DATA"
+
+[node name="DataContextLabel" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 33.6
+offset_top = 85.2
+offset_right = 249.6
+offset_bottom = 95.2
+theme_override_colors/font_color = Color(0.49019608, 0.41568628, 0.36862746, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+
+[node name="InstalledCaption" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 384.0
+offset_top = 24.0
+offset_right = 768.0
+offset_bottom = 34.0
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+text = "INSTALLED"
+horizontal_alignment = 1
+
+[node name="SystemsReadout" type="Label" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 0
+offset_left = 384.0
+offset_top = 40.0
+offset_right = 768.0
+offset_bottom = 71.0
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 23
+text = "0 / 107"
+horizontal_alignment = 1
+
+[node name="GalacticProgressInstalled" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 519.2
+offset_top = 40.0
+offset_right = 560.2
+offset_bottom = 71.0
+theme_override_colors/font_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 23
+text = "000"
+
+[node name="GalacticProgressSeparator" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 571.0
+offset_top = 47.0
+offset_right = 581.0
+offset_bottom = 69.0
+theme_override_colors/font_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 16
+text = "/"
+
+[node name="GalacticProgressTotal" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 591.8
+offset_top = 40.0
+offset_right = 632.8
+offset_bottom = 71.0
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 23
+text = "107"
+
+[node name="ProgressTrack" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 444.0
+offset_top = 77.0
+offset_right = 708.0
+offset_bottom = 78.2
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 1)
+
+[node name="ProgressFill" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 444.0
+offset_top = 77.0
+offset_right = 444.0
+offset_bottom = 78.2
+mouse_filter = 2
+color = Color(1, 0.67058825, 0.50980395, 1)
+
+[node name="CloseButton" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 912.0
+offset_top = 26.4
+offset_right = 1128.0
+offset_bottom = 51.4
+focus_mode = 0
+theme_override_colors/font_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_colors/font_focus_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_colors/font_pressed_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_colors/font_hover_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_fonts/font = ExtResource("R3")
+theme_override_font_sizes/font_size = 11
+text = "CLOSE  [U]"
+flat = true
+alignment = 2
+
+[node name="CloseUnderline" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 1067.8
+offset_top = 53.800003
+offset_right = 1128.0
+offset_bottom = 54.800003
+mouse_filter = 2
+color = Color(1, 0.7058824, 0.5568628, 1)
+
+[node name="SubtitleLabel" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 912.0
+offset_top = 60.4
+offset_right = 1128.0
+offset_bottom = 70.4
+theme_override_colors/font_color = Color(0.48235294, 0.35686275, 0.2901961, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+text = "OBSERVATION 1 · 20S"
+horizontal_alignment = 2
+
+[node name="TreeStatus" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 384.0
+offset_top = 84.2
+offset_right = 768.0
+offset_bottom = 97.2
+theme_override_colors/font_color = Color(1, 0.7058824, 0.5568628, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 8
+horizontal_alignment = 1
+
+[node name="CompletionDetailLabel" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 384.0
+offset_top = 103.2
+offset_right = 768.0
+offset_bottom = 116.2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 8
+text = "All research is installed. The night continues."
+horizontal_alignment = 1
+
+[node name="ControlsLabel" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_top = 615.2
+offset_right = 1152.0
+offset_bottom = 625.2
+theme_override_colors/font_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+text = "WHEEL ROTATE · CTRL+WHEEL ZOOM · HOLD A STAR TO INSTALL"
+horizontal_alignment = 1
+
+[node name="ConstellationHorizonHint" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 33.6
+offset_top = 615.2
+offset_right = 291.6
+offset_bottom = 625.2
+theme_override_colors/font_color = Color(0.49019608, 0.41568628, 0.36862746, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+
+[node name="ConstellationBottomAction" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 870.0
+offset_top = 615.2
+offset_right = 1128.0
+offset_bottom = 625.2
+theme_override_colors/font_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+horizontal_alignment = 2
+
+[node name="GalacticInnerHint" type="Label" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 0
+offset_left = 33.6
+offset_top = 615.2
+offset_right = 291.6
+offset_bottom = 625.2
+theme_override_colors/font_color = Color(0.49019608, 0.41568628, 0.36862746, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+text = "INNER MILKY WAY · LATER RESEARCH OUTWARD"
+
+[node name="GalacticReturnHint" type="Label" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 0
+offset_left = 870.0
+offset_top = 615.2
+offset_right = 1128.0
+offset_bottom = 625.2
+theme_override_colors/font_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+text = "[U] RETURN TO OBSERVATION"
+horizontal_alignment = 2
+
+[node name="GalacticWatermark" type="Label" parent="."]
+unique_name_in_owner = true
+visible = false
+modulate = Color(1, 1, 1, 0)
+layout_mode = 0
+offset_left = 708.0
+offset_top = 530.0
+offset_right = 900.0
+offset_bottom = 540.0
+theme_override_colors/font_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+text = "LOCAL GROUP"
+horizontal_alignment = 2
+
+[node name="NorthLabel" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_top = 563.244
+offset_right = 1152.0
+offset_bottom = 573.244
+theme_override_colors/font_color = Color(0.48235294, 0.35686275, 0.2901961, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+text = "NORTH"
+horizontal_alignment = 1

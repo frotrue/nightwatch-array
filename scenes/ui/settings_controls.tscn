@@ -1,0 +1,557 @@
+[gd_scene format=3]
+
+[ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Regular.ttf" id="R4"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Light.ttf" id="R5"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexMono-Regular.ttf" id="R6"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Medium.ttf" id="R10"]
+[ext_resource type="Resource" path="res://resources/ui/action_normal.tres" id="R11"]
+[ext_resource type="Resource" path="res://resources/ui/action_focus.tres" id="R12"]
+
+[node name="SettingsPage_Controls" type="VBoxContainer"]
+visible = false
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/separation = 6
+
+[node name="PageTitle" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.83137256, 0.6901961, 1)
+theme_override_fonts/font = ExtResource("R10")
+theme_override_font_sizes/font_size = 16
+text = "CONTROLS"
+
+[node name="PageDescription" type="Label" parent="."]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 26.4)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R5")
+theme_override_font_sizes/font_size = 12
+text = "Select an editable key and press its replacement. Esc cancels capture."
+autowrap_mode = 3
+
+[node name="CenterContainer2" type="CenterContainer" parent="."]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ColorRect0" type="ColorRect" parent="CenterContainer2"]
+custom_minimum_size = Vector2(708, 1)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 1)
+
+[node name="ControlsHint" type="Label" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R5")
+theme_override_font_sizes/font_size = 12
+text = "Select an editable key and press its replacement. Esc cancels capture."
+autowrap_mode = 3
+
+[node name="ControlsScroll" type="ScrollContainer" parent="."]
+custom_minimum_size = Vector2(0, 216)
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="ControlRowsMargin" type="MarginContainer" parent="ControlsScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_right = 24
+
+[node name="ControlRows" type="VBoxContainer" parent="ControlsScroll/ControlRowsMargin"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 3
+
+[node name="HBoxContainer0" type="HBoxContainer" parent="ControlsScroll/ControlRowsMargin/ControlRows"]
+custom_minimum_size = Vector2(0, 27.6)
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="VBoxContainer0" type="VBoxContainer" parent="ControlsScroll/ControlRowsMargin/ControlRows/HBoxContainer0"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+
+[node name="ControlsLocalizedText0Label" type="Label" parent="ControlsScroll/ControlRowsMargin/ControlRows/HBoxContainer0/VBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 13
+text = "OBSERVE / TRACK"
+
+[node name="ControlsActionWidgetsNwObserve" type="Label" parent="ControlsScroll/ControlRowsMargin/ControlRows/HBoxContainer0"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R6")
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="CenterContainer1" type="CenterContainer" parent="ControlsScroll/ControlRowsMargin/ControlRows"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ColorRect0" type="ColorRect" parent="ControlsScroll/ControlRowsMargin/ControlRows/CenterContainer1"]
+custom_minimum_size = Vector2(624, 1)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 1)
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="ControlsScroll/ControlRowsMargin/ControlRows"]
+custom_minimum_size = Vector2(0, 27.6)
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="VBoxContainer0" type="VBoxContainer" parent="ControlsScroll/ControlRowsMargin/ControlRows/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+
+[node name="ControlsLocalizedText1Label" type="Label" parent="ControlsScroll/ControlRowsMargin/ControlRows/HBoxContainer2/VBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 13
+text = "MOVE DISH"
+
+[node name="ControlsLocalizedText2Label" type="Label" parent="ControlsScroll/ControlRowsMargin/ControlRows/HBoxContainer2/VBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R6")
+theme_override_font_sizes/font_size = 12
+text = "REQUIRES Secondary Camera"
+
+[node name="ControlsActionWidgetsNwDish" type="Label" parent="ControlsScroll/ControlRowsMargin/ControlRows/HBoxContainer2"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R6")
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="CenterContainer3" type="CenterContainer" parent="ControlsScroll/ControlRowsMargin/ControlRows"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ColorRect0" type="ColorRect" parent="ControlsScroll/ControlRowsMargin/ControlRows/CenterContainer3"]
+custom_minimum_size = Vector2(624, 1)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 1)
+
+[node name="HBoxContainer4" type="HBoxContainer" parent="ControlsScroll/ControlRowsMargin/ControlRows"]
+custom_minimum_size = Vector2(0, 27.6)
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="VBoxContainer0" type="VBoxContainer" parent="ControlsScroll/ControlRowsMargin/ControlRows/HBoxContainer4"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+
+[node name="ControlsLocalizedText3Label" type="Label" parent="ControlsScroll/ControlRowsMargin/ControlRows/HBoxContainer4/VBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 13
+text = "RESEARCH CHART"
+
+[node name="Binding_nw_chart" type="Button" parent="ControlsScroll/ControlRowsMargin/ControlRows/HBoxContainer4"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_colors/font_focus_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_colors/font_pressed_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_colors/font_hover_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_colors/font_disabled_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = ExtResource("R11")
+theme_override_styles/pressed = ExtResource("R11")
+theme_override_styles/hover = ExtResource("R12")
+theme_override_styles/disabled = ExtResource("R11")
+theme_override_styles/focus = ExtResource("R12")
+flat = true
+alignment = 2
+
+[node name="CenterContainer5" type="CenterContainer" parent="ControlsScroll/ControlRowsMargin/ControlRows"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ColorRect0" type="ColorRect" parent="ControlsScroll/ControlRowsMargin/ControlRows/CenterContainer5"]
+custom_minimum_size = Vector2(624, 1)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 1)
+
+[node name="HBoxContainer6" type="HBoxContainer" parent="ControlsScroll/ControlRowsMargin/ControlRows"]
+custom_minimum_size = Vector2(0, 27.6)
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="VBoxContainer0" type="VBoxContainer" parent="ControlsScroll/ControlRowsMargin/ControlRows/HBoxContainer6"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+
+[node name="ControlsLocalizedText4Label" type="Label" parent="ControlsScroll/ControlRowsMargin/ControlRows/HBoxContainer6/VBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 13
+text = "MENU / BACK"
+
+[node name="Binding_nw_menu_back" type="Button" parent="ControlsScroll/ControlRowsMargin/ControlRows/HBoxContainer6"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_colors/font_focus_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_colors/font_pressed_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_colors/font_hover_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_colors/font_disabled_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = ExtResource("R11")
+theme_override_styles/pressed = ExtResource("R11")
+theme_override_styles/hover = ExtResource("R12")
+theme_override_styles/disabled = ExtResource("R11")
+theme_override_styles/focus = ExtResource("R12")
+flat = true
+alignment = 2
+
+[node name="Clear_nw_menu_back" type="Button" parent="ControlsScroll/ControlRowsMargin/ControlRows/HBoxContainer6"]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "REMOVE"
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_colors/font_focus_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_colors/font_pressed_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_colors/font_hover_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_colors/font_disabled_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 12
+theme_override_styles/normal = ExtResource("R11")
+theme_override_styles/pressed = ExtResource("R11")
+theme_override_styles/hover = ExtResource("R12")
+theme_override_styles/disabled = ExtResource("R11")
+theme_override_styles/focus = ExtResource("R12")
+text = "REMOVE"
+flat = true
+
+[node name="CenterContainer7" type="CenterContainer" parent="ControlsScroll/ControlRowsMargin/ControlRows"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ColorRect0" type="ColorRect" parent="ControlsScroll/ControlRowsMargin/ControlRows/CenterContainer7"]
+custom_minimum_size = Vector2(624, 1)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 1)
+
+[node name="HBoxContainer8" type="HBoxContainer" parent="ControlsScroll/ControlRowsMargin/ControlRows"]
+custom_minimum_size = Vector2(0, 27.6)
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="VBoxContainer0" type="VBoxContainer" parent="ControlsScroll/ControlRowsMargin/ControlRows/HBoxContainer8"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+
+[node name="ControlsLocalizedText5Label" type="Label" parent="ControlsScroll/ControlRowsMargin/ControlRows/HBoxContainer8/VBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 13
+text = "CONTINUE SUMMARY"
+
+[node name="Binding_nw_continue" type="Button" parent="ControlsScroll/ControlRowsMargin/ControlRows/HBoxContainer8"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_colors/font_focus_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_colors/font_pressed_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_colors/font_hover_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_colors/font_disabled_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = ExtResource("R11")
+theme_override_styles/pressed = ExtResource("R11")
+theme_override_styles/hover = ExtResource("R12")
+theme_override_styles/disabled = ExtResource("R11")
+theme_override_styles/focus = ExtResource("R12")
+flat = true
+alignment = 2
+
+[node name="CenterContainer9" type="CenterContainer" parent="ControlsScroll/ControlRowsMargin/ControlRows"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ColorRect0" type="ColorRect" parent="ControlsScroll/ControlRowsMargin/ControlRows/CenterContainer9"]
+custom_minimum_size = Vector2(624, 1)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 1)
+
+[node name="HBoxContainer10" type="HBoxContainer" parent="ControlsScroll/ControlRowsMargin/ControlRows"]
+custom_minimum_size = Vector2(0, 27.6)
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="VBoxContainer0" type="VBoxContainer" parent="ControlsScroll/ControlRowsMargin/ControlRows/HBoxContainer10"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+
+[node name="ControlsLocalizedText6Label" type="Label" parent="ControlsScroll/ControlRowsMargin/ControlRows/HBoxContainer10/VBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 13
+text = "FULLSCREEN"
+
+[node name="Binding_nw_fullscreen" type="Button" parent="ControlsScroll/ControlRowsMargin/ControlRows/HBoxContainer10"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_colors/font_focus_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_colors/font_pressed_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_colors/font_hover_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_colors/font_disabled_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = ExtResource("R11")
+theme_override_styles/pressed = ExtResource("R11")
+theme_override_styles/hover = ExtResource("R12")
+theme_override_styles/disabled = ExtResource("R11")
+theme_override_styles/focus = ExtResource("R12")
+flat = true
+alignment = 2
+
+[node name="CenterContainer11" type="CenterContainer" parent="ControlsScroll/ControlRowsMargin/ControlRows"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ColorRect0" type="ColorRect" parent="ControlsScroll/ControlRowsMargin/ControlRows/CenterContainer11"]
+custom_minimum_size = Vector2(624, 1)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 1)
+
+[node name="HBoxContainer12" type="HBoxContainer" parent="ControlsScroll/ControlRowsMargin/ControlRows"]
+custom_minimum_size = Vector2(0, 27.6)
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="VBoxContainer0" type="VBoxContainer" parent="ControlsScroll/ControlRowsMargin/ControlRows/HBoxContainer12"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+
+[node name="ControlsLocalizedText7Label" type="Label" parent="ControlsScroll/ControlRowsMargin/ControlRows/HBoxContainer12/VBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 13
+text = "ROTATE CHART"
+
+[node name="ControlsLocalizedText8Label" type="Label" parent="ControlsScroll/ControlRowsMargin/ControlRows/HBoxContainer12"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R6")
+theme_override_font_sizes/font_size = 12
+text = "WHEEL"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="CenterContainer13" type="CenterContainer" parent="ControlsScroll/ControlRowsMargin/ControlRows"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ColorRect0" type="ColorRect" parent="ControlsScroll/ControlRowsMargin/ControlRows/CenterContainer13"]
+custom_minimum_size = Vector2(624, 1)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 1)
+
+[node name="HBoxContainer14" type="HBoxContainer" parent="ControlsScroll/ControlRowsMargin/ControlRows"]
+custom_minimum_size = Vector2(0, 27.6)
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="VBoxContainer0" type="VBoxContainer" parent="ControlsScroll/ControlRowsMargin/ControlRows/HBoxContainer14"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+
+[node name="ControlsLocalizedText9Label" type="Label" parent="ControlsScroll/ControlRowsMargin/ControlRows/HBoxContainer14/VBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 13
+text = "ZOOM CHART"
+
+[node name="ControlsLocalizedText10Label" type="Label" parent="ControlsScroll/ControlRowsMargin/ControlRows/HBoxContainer14"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R6")
+theme_override_font_sizes/font_size = 12
+text = "CTRL + WHEEL"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="CenterContainer15" type="CenterContainer" parent="ControlsScroll/ControlRowsMargin/ControlRows"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ColorRect0" type="ColorRect" parent="ControlsScroll/ControlRowsMargin/ControlRows/CenterContainer15"]
+custom_minimum_size = Vector2(624, 1)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 1)
+
+[node name="HBoxContainer16" type="HBoxContainer" parent="ControlsScroll/ControlRowsMargin/ControlRows"]
+custom_minimum_size = Vector2(0, 27.6)
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="VBoxContainer0" type="VBoxContainer" parent="ControlsScroll/ControlRowsMargin/ControlRows/HBoxContainer16"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+
+[node name="ControlsLocalizedText11Label" type="Label" parent="ControlsScroll/ControlRowsMargin/ControlRows/HBoxContainer16/VBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 13
+text = "INSTALL SYSTEM"
+
+[node name="ControlsLocalizedText12Label" type="Label" parent="ControlsScroll/ControlRowsMargin/ControlRows/HBoxContainer16"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R6")
+theme_override_font_sizes/font_size = 12
+text = "POINTER / HOLD"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="CenterContainer17" type="CenterContainer" parent="ControlsScroll/ControlRowsMargin/ControlRows"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ColorRect0" type="ColorRect" parent="ControlsScroll/ControlRowsMargin/ControlRows/CenterContainer17"]
+custom_minimum_size = Vector2(624, 1)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 1)
+
+[node name="HBoxContainer18" type="HBoxContainer" parent="ControlsScroll/ControlRowsMargin/ControlRows"]
+custom_minimum_size = Vector2(0, 27.6)
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="VBoxContainer0" type="VBoxContainer" parent="ControlsScroll/ControlRowsMargin/ControlRows/HBoxContainer18"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+
+[node name="ControlsLocalizedText13Label" type="Label" parent="ControlsScroll/ControlRowsMargin/ControlRows/HBoxContainer18/VBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 13
+text = "SKY SWEEP"
+
+[node name="ControlsLocalizedText14Label" type="Label" parent="ControlsScroll/ControlRowsMargin/ControlRows/HBoxContainer18/VBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R6")
+theme_override_font_sizes/font_size = 12
+text = "REQUIRES Sky Sweep"
+
+[node name="ControlsLocalizedText15Label" type="Label" parent="ControlsScroll/ControlRowsMargin/ControlRows/HBoxContainer18"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R6")
+theme_override_font_sizes/font_size = 12
+text = "POINTER / HOLD"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="CenterContainer19" type="CenterContainer" parent="ControlsScroll/ControlRowsMargin/ControlRows"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ColorRect0" type="ColorRect" parent="ControlsScroll/ControlRowsMargin/ControlRows/CenterContainer19"]
+custom_minimum_size = Vector2(624, 1)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 1)
+
+[node name="ControlsStatus" type="Label" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R5")
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="HBoxContainer6" type="HBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 16
+alignment = 2
+
+[node name="ControlsResetButton" type="Button" parent="HBoxContainer6"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_colors/font_focus_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_colors/font_pressed_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_colors/font_hover_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_colors/font_disabled_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = ExtResource("R11")
+theme_override_styles/pressed = ExtResource("R11")
+theme_override_styles/hover = ExtResource("R12")
+theme_override_styles/disabled = ExtResource("R11")
+theme_override_styles/focus = ExtResource("R12")
+text = "RESTORE DEFAULT KEYS"
+flat = true

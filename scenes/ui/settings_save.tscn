@@ -1,0 +1,115 @@
+[gd_scene format=3]
+
+[ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Light.ttf" id="R5"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexMono-Regular.ttf" id="R6"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Medium.ttf" id="R10"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexMono-Medium.ttf" id="R14"]
+[ext_resource type="PackedScene" path="res://scenes/ui/save_slot.tscn" id="Scene_save_slot"]
+
+[node name="SettingsPage_Save" type="VBoxContainer"]
+visible = false
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/separation = 6
+
+[node name="PageTitle" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.83137256, 0.6901961, 1)
+theme_override_fonts/font = ExtResource("R10")
+theme_override_font_sizes/font_size = 16
+text = "SAVE MANAGEMENT"
+
+[node name="PageDescription" type="Label" parent="."]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 26.4)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R5")
+theme_override_font_sizes/font_size = 12
+text = "Current slot status and manual save controls."
+autowrap_mode = 3
+
+[node name="CenterContainer2" type="CenterContainer" parent="."]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ColorRect0" type="ColorRect" parent="CenterContainer2"]
+custom_minimum_size = Vector2(708, 1)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 1)
+
+[node name="SettingsPageLabels36Label" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R14")
+theme_override_font_sizes/font_size = 12
+text = "SAVE SLOTS"
+
+[node name="SaveStatusLabel" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.7058824, 0.5568628, 1)
+theme_override_fonts/font = ExtResource("R6")
+theme_override_font_sizes/font_size = 12
+autowrap_mode = 3
+
+[node name="HBoxContainer5" parent="." instance=ExtResource("Scene_save_slot")]
+unique_name_in_owner = true
+
+[node name="Title" parent="HBoxContainer5/Info" index="0"]
+text = "SLOT 1"
+
+[node name="CenterContainer6" type="CenterContainer" parent="."]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ColorRect0" type="ColorRect" parent="CenterContainer6"]
+custom_minimum_size = Vector2(504, 1)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 1)
+
+[node name="HBoxContainer7" parent="." instance=ExtResource("Scene_save_slot")]
+unique_name_in_owner = true
+
+[node name="Title" parent="HBoxContainer7/Info" index="0"]
+text = "SLOT 2"
+
+[node name="CenterContainer8" type="CenterContainer" parent="."]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ColorRect0" type="ColorRect" parent="CenterContainer8"]
+custom_minimum_size = Vector2(504, 1)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 1)
+
+[node name="HBoxContainer9" parent="." instance=ExtResource("Scene_save_slot")]
+unique_name_in_owner = true
+
+[node name="Title" parent="HBoxContainer9/Info" index="0"]
+text = "SLOT 3"
+
+[node name="CenterContainer10" type="CenterContainer" parent="."]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ColorRect0" type="ColorRect" parent="CenterContainer10"]
+custom_minimum_size = Vector2(504, 1)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 1)
+
+[node name="SettingsPageLabels37Label" type="Label" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R5")
+theme_override_font_sizes/font_size = 12
+text = "Choose one of three save slots."

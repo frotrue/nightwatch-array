@@ -77,7 +77,7 @@ Each file below is under `tests/`. Run one while iterating with:
 | `effect_feedback_test.gd` | `EFFECT_FEEDBACK_PASS` | Routine/accent routing, real visible installation rule, pause/selection cancellation, capacity limits and dawn/summary pause, load, next-round and zero-motion lifecycle |
 | `reference_capture_test.gd` | `REFERENCE_CAPTURE_TEST_PASS` | Thirteen isolated scenario states, malformed image/manifest/Git rejection; no PNG rendering |
 | `research_visual_test.gd` | `RESEARCH_VISUAL_PASS` | Actual marker draw paths, branch/state color bindings, alpha/radii and tutorial claims |
-| `ui_presentation_test.gd` | `UI_PRESENTATION_PASS` | Shared font/spec/spacing, full integer formatting, compact/scientific thresholds, rounding carries and signed rates |
+| `ui_presentation_test.gd` | `UI_PRESENTATION_PASS` | Authored readout fonts/ink, independent scene state, collapsed summary defaults, initial slot localization, procedural type conversion, full integer formatting and compact/scientific notation |
 | `game_fixture_test.gd` | `GAME_FIXTURE_PASS` | Pre-ready isolation, rejected persistence, settings/binding schemas, conflict checks, notation persistence/live refresh and pointer-through numeric tooltips |
 | `meteor_render_cache_test.gd` | `METEOR_RENDER_CACHE_PASS` | Packed geometry against independent pre-optimization arithmetic across types, trails and direct mutation |
 

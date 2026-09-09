@@ -1,0 +1,53 @@
+[gd_scene format=3]
+
+[ext_resource type="Resource" path="res://resources/ui/mono_tabular.tres" id="R3"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Regular.ttf" id="R4"]
+[ext_resource type="Script" path="res://scripts/ui/tracking_cluster.gd" id="R7"]
+
+[node name="TrackingCluster" type="Control"]
+process_mode = 1
+visible = false
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("R7")
+
+[node name="TrackingPercent" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.7764706, 0.76862746, 0.7411765, 1)
+theme_override_fonts/font = ExtResource("R3")
+theme_override_font_sizes/font_size = 11
+text = "0%"
+horizontal_alignment = 1
+
+[node name="TrackingTarget" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.7764706, 0.76862746, 0.7411765, 0.88)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 9
+horizontal_alignment = 1
+
+[node name="TrackingQuality" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(1, 0.7294118, 0.5803922, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 8
+
+[node name="TrackingDivider" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_right = 1.0
+offset_bottom = 6.6
+mouse_filter = 2
+color = Color(0.49019608, 0.41568628, 0.36862746, 1)
+
+[node name="TrackingMultiplier" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(1, 0.7294118, 0.5803922, 1)
+theme_override_fonts/font = ExtResource("R3")
+theme_override_font_sizes/font_size = 8

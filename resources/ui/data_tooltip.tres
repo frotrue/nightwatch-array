@@ -1,0 +1,27 @@
+[gd_resource type="Theme" format=3]
+
+[ext_resource type="FontFile" path="res://fonts/IBMPlexMono-Regular.ttf" id="1_uvpel"]
+
+[sub_resource type="FontVariation" id="FontVariation_u710s"]
+base_font = ExtResource("1_uvpel")
+opentype_features = {
+1953396077: 1
+}
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_u37l7"]
+content_margin_left = 10.0
+content_margin_top = 6.0
+content_margin_right = 10.0
+content_margin_bottom = 6.0
+bg_color = Color(0.0157, 0.0235, 0.0392, 0.95)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.36862746, 0.2509804, 0.18431373, 1)
+
+[resource]
+TooltipLabel/colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+TooltipLabel/font_sizes/font_size = 14
+TooltipLabel/fonts/font = SubResource("FontVariation_u710s")
+TooltipPanel/styles/panel = SubResource("StyleBoxFlat_u37l7")

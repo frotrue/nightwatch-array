@@ -1,0 +1,352 @@
+[gd_scene format=3]
+
+[ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Regular.ttf" id="R4"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexMono-Regular.ttf" id="R6"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Medium.ttf" id="R10"]
+[ext_resource type="Resource" path="res://resources/ui/action_normal.tres" id="R11"]
+[ext_resource type="Resource" path="res://resources/ui/action_focus.tres" id="R12"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexMono-Medium.ttf" id="R14"]
+[ext_resource type="PackedScene" path="res://scenes/ui/settings_general.tscn" id="Scene_settings_general"]
+[ext_resource type="PackedScene" path="res://scenes/ui/settings_audio.tscn" id="Scene_settings_audio"]
+[ext_resource type="PackedScene" path="res://scenes/ui/settings_display.tscn" id="Scene_settings_display"]
+[ext_resource type="PackedScene" path="res://scenes/ui/settings_accessibility.tscn" id="Scene_settings_accessibility"]
+[ext_resource type="PackedScene" path="res://scenes/ui/settings_controls.tscn" id="Scene_settings_controls"]
+[ext_resource type="PackedScene" path="res://scenes/ui/settings_save.tscn" id="Scene_settings_save"]
+
+[node name="SettingsOverlay" type="Control"]
+visible = false
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="ColorRect0" type="ColorRect" parent="."]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.012, 0.006, 0.004, 0.84)
+
+[node name="SettingsConsole" type="Control" parent="."]
+unique_name_in_owner = true
+anchors_preset = 0
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -510.0
+offset_top = -288.0
+offset_right = 510.0
+offset_bottom = 288.0
+
+[node name="ColorRect0" type="ColorRect" parent="SettingsConsole"]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.027, 0.014, 0.01, 0.975)
+
+[node name="ColorRect1" type="ColorRect" parent="SettingsConsole"]
+layout_mode = 0
+anchor_right = 1.0
+offset_bottom = 1.0
+mouse_filter = 2
+color = Color(0.6313726, 0.3647059, 0.24313726, 1)
+
+[node name="ColorRect2" type="ColorRect" parent="SettingsConsole"]
+layout_mode = 0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -1.0
+mouse_filter = 2
+color = Color(0.6313726, 0.3647059, 0.24313726, 1)
+
+[node name="MarginContainer3" type="MarginContainer" parent="SettingsConsole"]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/margin_left = 25
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 25
+theme_override_constants/margin_bottom = 14
+
+[node name="VBoxContainer0" type="VBoxContainer" parent="SettingsConsole/MarginContainer3"]
+layout_mode = 2
+theme_override_constants/separation = 7
+
+[node name="HBoxContainer0" type="HBoxContainer" parent="SettingsConsole/MarginContainer3/VBoxContainer0"]
+custom_minimum_size = Vector2(0, 46.8)
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="SettingsTitle" type="Label" parent="SettingsConsole/MarginContainer3/VBoxContainer0/HBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 0.83137256, 0.6901961, 1)
+theme_override_fonts/font = ExtResource("R10")
+theme_override_font_sizes/font_size = 19
+text = "SETTINGS"
+vertical_alignment = 1
+
+[node name="SettingsSubtitle" type="Label" parent="SettingsConsole/MarginContainer3/VBoxContainer0/HBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.7058824, 0.5568628, 1)
+theme_override_fonts/font = ExtResource("R14")
+theme_override_font_sizes/font_size = 12
+text = "OBSERVATION PAUSED"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="CenterContainer1" type="CenterContainer" parent="SettingsConsole/MarginContainer3/VBoxContainer0"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ColorRect0" type="ColorRect" parent="SettingsConsole/MarginContainer3/VBoxContainer0/CenterContainer1"]
+custom_minimum_size = Vector2(969.6, 1)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 1)
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="SettingsConsole/MarginContainer3/VBoxContainer0"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 16
+
+[node name="SettingsNavigation" type="VBoxContainer" parent="SettingsConsole/MarginContainer3/VBoxContainer0/HBoxContainer2"]
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="SettingsPageLabels0Label" type="Label" parent="SettingsConsole/MarginContainer3/VBoxContainer0/HBoxContainer2/SettingsNavigation"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 33.6)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R14")
+theme_override_font_sizes/font_size = 12
+text = "SETTINGS PAGES"
+vertical_alignment = 1
+
+[node name="SettingsTab_General" type="Button" parent="SettingsConsole/MarginContainer3/VBoxContainer0/HBoxContainer2/SettingsNavigation"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 39.6)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 0.7058824, 0.5568628, 1)
+theme_override_colors/font_focus_color = Color(1, 0.7058824, 0.5568628, 1)
+theme_override_colors/font_pressed_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_colors/font_hover_color = Color(1, 0.7058824, 0.5568628, 1)
+theme_override_colors/font_disabled_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = ExtResource("R12")
+theme_override_styles/pressed = ExtResource("R11")
+theme_override_styles/hover = ExtResource("R12")
+theme_override_styles/disabled = ExtResource("R11")
+theme_override_styles/focus = ExtResource("R12")
+text = ">  GENERAL"
+flat = true
+alignment = 0
+
+[node name="SettingsTab_Audio" type="Button" parent="SettingsConsole/MarginContainer3/VBoxContainer0/HBoxContainer2/SettingsNavigation"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 39.6)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_colors/font_focus_color = Color(1, 0.7058824, 0.5568628, 1)
+theme_override_colors/font_pressed_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_colors/font_hover_color = Color(1, 0.7058824, 0.5568628, 1)
+theme_override_colors/font_disabled_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = ExtResource("R11")
+theme_override_styles/pressed = ExtResource("R11")
+theme_override_styles/hover = ExtResource("R12")
+theme_override_styles/disabled = ExtResource("R11")
+theme_override_styles/focus = ExtResource("R12")
+text = "   AUDIO"
+flat = true
+alignment = 0
+
+[node name="SettingsTab_Display" type="Button" parent="SettingsConsole/MarginContainer3/VBoxContainer0/HBoxContainer2/SettingsNavigation"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 39.6)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_colors/font_focus_color = Color(1, 0.7058824, 0.5568628, 1)
+theme_override_colors/font_pressed_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_colors/font_hover_color = Color(1, 0.7058824, 0.5568628, 1)
+theme_override_colors/font_disabled_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = ExtResource("R11")
+theme_override_styles/pressed = ExtResource("R11")
+theme_override_styles/hover = ExtResource("R12")
+theme_override_styles/disabled = ExtResource("R11")
+theme_override_styles/focus = ExtResource("R12")
+text = "   DISPLAY"
+flat = true
+alignment = 0
+
+[node name="SettingsTab_Accessibility" type="Button" parent="SettingsConsole/MarginContainer3/VBoxContainer0/HBoxContainer2/SettingsNavigation"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 39.6)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_colors/font_focus_color = Color(1, 0.7058824, 0.5568628, 1)
+theme_override_colors/font_pressed_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_colors/font_hover_color = Color(1, 0.7058824, 0.5568628, 1)
+theme_override_colors/font_disabled_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = ExtResource("R11")
+theme_override_styles/pressed = ExtResource("R11")
+theme_override_styles/hover = ExtResource("R12")
+theme_override_styles/disabled = ExtResource("R11")
+theme_override_styles/focus = ExtResource("R12")
+text = "   ACCESSIBILITY"
+flat = true
+alignment = 0
+
+[node name="SettingsTab_Controls" type="Button" parent="SettingsConsole/MarginContainer3/VBoxContainer0/HBoxContainer2/SettingsNavigation"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 39.6)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_colors/font_focus_color = Color(1, 0.7058824, 0.5568628, 1)
+theme_override_colors/font_pressed_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_colors/font_hover_color = Color(1, 0.7058824, 0.5568628, 1)
+theme_override_colors/font_disabled_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = ExtResource("R11")
+theme_override_styles/pressed = ExtResource("R11")
+theme_override_styles/hover = ExtResource("R12")
+theme_override_styles/disabled = ExtResource("R11")
+theme_override_styles/focus = ExtResource("R12")
+text = "   CONTROLS"
+flat = true
+alignment = 0
+
+[node name="SettingsTab_Save" type="Button" parent="SettingsConsole/MarginContainer3/VBoxContainer0/HBoxContainer2/SettingsNavigation"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 39.6)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_colors/font_focus_color = Color(1, 0.7058824, 0.5568628, 1)
+theme_override_colors/font_pressed_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_colors/font_hover_color = Color(1, 0.7058824, 0.5568628, 1)
+theme_override_colors/font_disabled_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = ExtResource("R11")
+theme_override_styles/pressed = ExtResource("R11")
+theme_override_styles/hover = ExtResource("R12")
+theme_override_styles/disabled = ExtResource("R11")
+theme_override_styles/focus = ExtResource("R12")
+text = "   SAVE"
+flat = true
+alignment = 0
+
+[node name="ColorRect1" type="ColorRect" parent="SettingsConsole/MarginContainer3/VBoxContainer0/HBoxContainer2"]
+custom_minimum_size = Vector2(1, 0)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 1)
+
+[node name="MarginContainer2" type="MarginContainer" parent="SettingsConsole/MarginContainer3/VBoxContainer0/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_right = 3
+
+[node name="SettingsPages" type="Control" parent="SettingsConsole/MarginContainer3/VBoxContainer0/HBoxContainer2/MarginContainer2"]
+unique_name_in_owner = true
+clip_contents = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="SettingsPage_General" parent="SettingsConsole/MarginContainer3/VBoxContainer0/HBoxContainer2/MarginContainer2/SettingsPages" instance=ExtResource("Scene_settings_general") ]
+unique_name_in_owner = true
+
+[node name="SettingsPage_Audio" parent="SettingsConsole/MarginContainer3/VBoxContainer0/HBoxContainer2/MarginContainer2/SettingsPages" instance=ExtResource("Scene_settings_audio") ]
+unique_name_in_owner = true
+
+[node name="SettingsPage_Display" parent="SettingsConsole/MarginContainer3/VBoxContainer0/HBoxContainer2/MarginContainer2/SettingsPages" instance=ExtResource("Scene_settings_display") ]
+unique_name_in_owner = true
+
+[node name="SettingsPage_Accessibility" parent="SettingsConsole/MarginContainer3/VBoxContainer0/HBoxContainer2/MarginContainer2/SettingsPages" instance=ExtResource("Scene_settings_accessibility") ]
+unique_name_in_owner = true
+
+[node name="SettingsPage_Controls" parent="SettingsConsole/MarginContainer3/VBoxContainer0/HBoxContainer2/MarginContainer2/SettingsPages" instance=ExtResource("Scene_settings_controls") ]
+unique_name_in_owner = true
+
+[node name="SettingsPage_Save" parent="SettingsConsole/MarginContainer3/VBoxContainer0/HBoxContainer2/MarginContainer2/SettingsPages" instance=ExtResource("Scene_settings_save") ]
+unique_name_in_owner = true
+
+[node name="CenterContainer3" type="CenterContainer" parent="SettingsConsole/MarginContainer3/VBoxContainer0"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ColorRect0" type="ColorRect" parent="SettingsConsole/MarginContainer3/VBoxContainer0/CenterContainer3"]
+custom_minimum_size = Vector2(969.6, 1)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 1)
+
+[node name="HBoxContainer4" type="HBoxContainer" parent="SettingsConsole/MarginContainer3/VBoxContainer0"]
+custom_minimum_size = Vector2(0, 40.8)
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="SettingsPageLabels38Label" type="Label" parent="SettingsConsole/MarginContainer3/VBoxContainer0/HBoxContainer4"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R6")
+theme_override_font_sizes/font_size = 12
+text = "CHANGES APPLY IMMEDIATELY  •  PREFERENCES SAVE AUTOMATICALLY"
+vertical_alignment = 1
+
+[node name="SettingsCloseButton" type="Button" parent="SettingsConsole/MarginContainer3/VBoxContainer0/HBoxContainer4"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_colors/font_focus_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_colors/font_pressed_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_colors/font_hover_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_colors/font_disabled_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = ExtResource("R11")
+theme_override_styles/pressed = ExtResource("R11")
+theme_override_styles/hover = ExtResource("R12")
+theme_override_styles/disabled = ExtResource("R11")
+theme_override_styles/focus = ExtResource("R12")
+text = "RESUME  [ESC]"
+flat = true
+
+[node name="OverwriteDialog" type="ConfirmationDialog" parent="."]
+unique_name_in_owner = true
+title = "OVERWRITE SAVE?"
+transient = false
+exclusive = false
+ok_button_text = "OVERWRITE"
+cancel_button_text = "CANCEL"
+
+[node name="ResetBindingsDialog" type="ConfirmationDialog" parent="."]
+unique_name_in_owner = true
+title = "RESTORE DEFAULT KEYS"
+transient = false
+exclusive = false
+ok_button_text = "RESTORE"
+dialog_text = "Restore every editable Nightwatch key to its default?"
+cancel_button_text = "CANCEL"

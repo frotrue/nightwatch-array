@@ -227,83 +227,16 @@ func _on_input_bindings_changed() -> void:
 
 
 func _build_interface() -> void:
-	overlay = Control.new()
-	overlay.name = "TutorialOverlay"
-	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	overlay.visible = false
-	add_child(overlay)
-	# The embedded faces are the ones the rest of the red-light layer uses; a
-	# system font here made the tutorial the only screen in a different voice.
-	dim = ColorRect.new()
-	dim.color = UITheme.SCRIM
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	overlay.add_child(dim)
-	# No card. Type on the dimmed sky, like every other overlay.
-	card = Control.new()
-	card.mouse_filter = Control.MOUSE_FILTER_STOP
-	overlay.add_child(card)
-	var column := VBoxContainer.new()
-	column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	column.add_theme_constant_override("separation", int(UITheme.px(14.0)))
-	card.add_child(column)
-	var header := HBoxContainer.new()
-	column.add_child(header)
-	step_label = _spec_label("", UITheme.mono(), 13.0, UITheme.INK_MID, 0.30)
-	step_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	header.add_child(step_label)
-	skip_button = Button.new()
-	skip_button.text = tr("TUTORIAL_SKIP")
-	_style_text_action(skip_button, 15.0, UITheme.INK_LOW)
-	skip_button.pressed.connect(skip_tutorial)
-	header.add_child(skip_button)
-	title_label = _spec_label("", UITheme.sans("medium"), 34.0, UITheme.INK_MAX, -0.01)
-	column.add_child(title_label)
-	body_label = _spec_label("", UITheme.sans("light"), 19.0, UITheme.INK_HIGH)
-	body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	column.add_child(body_label)
-	hint_label = _spec_label("", UITheme.mono(), 14.0, UITheme.HINT, 0.10)
-	hint_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	column.add_child(hint_label)
-	primary_button = Button.new()
-	primary_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	_style_text_action(primary_button, 22.0, UITheme.BANNER_TITLE)
-	primary_button.pressed.connect(_on_primary_pressed)
-	column.add_child(primary_button)
-
-
-func _spec_label(text: String, font: Font, spec_size: float, color: Color, em: float = 0.0) -> Label:
-	var label := Label.new()
-	label.text = text
-	var font_size := UITheme.size_px(spec_size)
-	label.add_theme_font_override("font", font)
-	label.add_theme_font_size_override("font_size", font_size)
-	label.add_theme_color_override("font_color", color)
-	if not is_zero_approx(em):
-		label.add_theme_constant_override("spacing_glyph", UITheme.tracking(font_size, em))
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return label
-
-
-func _style_text_action(button: Button, spec_size: float, color: Color) -> void:
-	var font_size := UITheme.size_px(spec_size)
-	button.flat = true
-	button.focus_mode = Control.FOCUS_NONE
-	button.add_theme_font_override("font", UITheme.sans())
-	button.add_theme_font_size_override("font_size", font_size)
-	button.add_theme_constant_override("spacing_glyph", UITheme.tracking(font_size, 0.06))
-	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
-		button.add_theme_color_override(state, color)
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0, 0, 0, 0)
-	style.border_width_bottom = 1
-	style.border_color = UITheme.ACCENT_DEEP
-	style.content_margin_left = UITheme.px(10.0)
-	style.content_margin_right = UITheme.px(10.0)
-	style.content_margin_top = UITheme.px(12.0)
-	style.content_margin_bottom = UITheme.px(9.0)
-	var hover := style.duplicate()
-	hover.border_color = UITheme.ACCENT_TEXT
-	for state in ["normal", "pressed", "focus"]:
-		button.add_theme_stylebox_override(state, style)
-	button.add_theme_stylebox_override("hover", hover)
+	var view = preload("res://scenes/ui/tutorial_controller.tscn").instantiate()
+	body_label = view.get_node("%BodyLabel")
+	card = view.get_node("%Card")
+	dim = view.get_node("%Dim")
+	hint_label = view.get_node("%HintLabel")
+	overlay = view
+	primary_button = view.get_node("%PrimaryButton")
+	skip_button = view.get_node("%SkipButton")
+	step_label = view.get_node("%StepLabel")
+	title_label = view.get_node("%TitleLabel")
+	add_child(view)
+	view.get_node("%SkipButton").pressed.connect(skip_tutorial)
+	view.get_node("%PrimaryButton").pressed.connect(_on_primary_pressed)

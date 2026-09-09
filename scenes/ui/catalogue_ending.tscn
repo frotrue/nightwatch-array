@@ -1,0 +1,151 @@
+[gd_scene format=3]
+
+[ext_resource type="Resource" path="res://resources/ui/mono_tabular.tres" id="R3"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Regular.ttf" id="R4"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Light.ttf" id="R5"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexMono-Regular.ttf" id="R6"]
+[ext_resource type="Script" path="res://scripts/catalogue_ending_coda.gd" id="R9"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Medium.ttf" id="R10"]
+[ext_resource type="Resource" path="res://resources/ui/action_normal.tres" id="R11"]
+[ext_resource type="Resource" path="res://resources/ui/action_focus.tres" id="R12"]
+
+[node name="EndOverlay" type="ColorRect"]
+visible = false
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.016, 0.008, 0.006, 0.94)
+
+[node name="CatalogueEndingCoda" type="Control" parent="."]
+unique_name_in_owner = true
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("R9")
+
+[node name="EndColumn" type="Control" parent="."]
+anchors_preset = 0
+anchor_left = 0.67
+anchor_top = 0.12
+anchor_right = 0.97
+anchor_bottom = 0.9
+mouse_filter = 2
+
+[node name="VBoxContainer0" type="VBoxContainer" parent="EndColumn"]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="EndRevealBody" type="VBoxContainer" parent="EndColumn/VBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="EndSubtitle" type="Label" parent="EndColumn/VBoxContainer0/EndRevealBody"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R6")
+theme_override_font_sizes/font_size = 8
+text = "LOCAL GROUP OBSERVATION RECORD COMPLETE"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="EndTitle" type="Label" parent="EndColumn/VBoxContainer0/EndRevealBody"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.83137256, 0.6901961, 1)
+theme_override_fonts/font = ExtResource("R10")
+theme_override_font_sizes/font_size = 20
+text = "NIGHTWATCH RECORD COMPLETE"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="CenterContainer2" type="CenterContainer" parent="EndColumn/VBoxContainer0/EndRevealBody"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ColorRect0" type="ColorRect" parent="EndColumn/VBoxContainer0/EndRevealBody/CenterContainer2"]
+custom_minimum_size = Vector2(252, 1)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 1)
+
+[node name="EndBody" type="Label" parent="EndColumn/VBoxContainer0/EndRevealBody"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R5")
+theme_override_font_sizes/font_size = 10
+text = "The night sky does not end; the record of this night is complete."
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="EndStats" type="Label" parent="EndColumn/VBoxContainer0/EndRevealBody"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_fonts/font = ExtResource("R3")
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+
+[node name="EndSaveFailure" type="Label" parent="EndColumn/VBoxContainer0/EndRevealBody"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.4392157, 0.2627451, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 9
+text = "The record could not be saved. Check the save slot and try again."
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="EndActions" type="VBoxContainer" parent="EndColumn/VBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 9
+alignment = 1
+
+[node name="EndFinishButton" type="Button" parent="EndColumn/VBoxContainer0/EndActions"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_colors/font_focus_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_colors/font_pressed_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_colors/font_hover_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_colors/font_disabled_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 13
+theme_override_styles/normal = ExtResource("R11")
+theme_override_styles/pressed = ExtResource("R11")
+theme_override_styles/hover = ExtResource("R12")
+theme_override_styles/disabled = ExtResource("R11")
+theme_override_styles/focus = ExtResource("R12")
+text = "ARCHIVE RECORD AND FINISH"
+flat = true
+
+[node name="EndContinueButton" type="Button" parent="EndColumn/VBoxContainer0/EndActions"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_colors/font_focus_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_colors/font_pressed_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_colors/font_hover_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_colors/font_disabled_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 12
+theme_override_styles/normal = ExtResource("R11")
+theme_override_styles/pressed = ExtResource("R11")
+theme_override_styles/hover = ExtResource("R12")
+theme_override_styles/disabled = ExtResource("R11")
+theme_override_styles/focus = ExtResource("R12")
+text = "CONTINUE OBSERVING THE OPEN NIGHT"
+flat = true

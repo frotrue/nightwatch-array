@@ -1,0 +1,180 @@
+[gd_scene format=3]
+
+[ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Regular.ttf" id="R4"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Light.ttf" id="R5"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexMono-Regular.ttf" id="R6"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Medium.ttf" id="R10"]
+[ext_resource type="Resource" path="res://resources/ui/action_normal.tres" id="R11"]
+[ext_resource type="Resource" path="res://resources/ui/action_focus.tres" id="R12"]
+[ext_resource type="Resource" path="res://resources/ui/slider_track.tres" id="R15"]
+[ext_resource type="Resource" path="res://resources/ui/slider_grabber.tres" id="R16"]
+[ext_resource type="Resource" path="res://resources/ui/slider_grabber_focus.tres" id="R17"]
+
+[node name="SettingsPage_Accessibility" type="VBoxContainer"]
+visible = false
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/separation = 6
+
+[node name="PageTitle" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.83137256, 0.6901961, 1)
+theme_override_fonts/font = ExtResource("R10")
+theme_override_font_sizes/font_size = 16
+text = "ACCESSIBILITY"
+
+[node name="PageDescription" type="Label" parent="."]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 26.4)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R5")
+theme_override_font_sizes/font_size = 12
+text = "Reduce camera impact and bright full-screen feedback."
+autowrap_mode = 3
+
+[node name="CenterContainer2" type="CenterContainer" parent="."]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ColorRect0" type="ColorRect" parent="CenterContainer2"]
+custom_minimum_size = Vector2(708, 1)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 1)
+
+[node name="HBoxContainer3" type="HBoxContainer" parent="."]
+custom_minimum_size = Vector2(0, 52.8)
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="VBoxContainer0" type="VBoxContainer" parent="HBoxContainer3"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 1
+alignment = 1
+
+[node name="SettingsPageLabels27Label" type="Label" parent="HBoxContainer3/VBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_fonts/font = ExtResource("R10")
+theme_override_font_sizes/font_size = 14
+text = "CAMERA IMPACT INTENSITY"
+
+[node name="SettingsPageLabels28Label" type="Label" parent="HBoxContainer3/VBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R5")
+theme_override_font_sizes/font_size = 12
+text = "Scales camera kick and shake. 0% removes both."
+autowrap_mode = 3
+
+[node name="HBoxContainer1" type="HBoxContainer" parent="HBoxContainer3"]
+custom_minimum_size = Vector2(258, 0)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 8
+
+[node name="MotionIntensitySlider" type="HSlider" parent="HBoxContainer3/HBoxContainer1"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(204, 20.4)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/slider = ExtResource("R15")
+theme_override_styles/grabber_area = ExtResource("R16")
+theme_override_styles/grabber_area_highlight = ExtResource("R17")
+step = 10.0
+
+[node name="MotionIntensityValue" type="Label" parent="HBoxContainer3/HBoxContainer1"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(42, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_fonts/font = ExtResource("R6")
+theme_override_font_sizes/font_size = 12
+text = "100%"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="CenterContainer4" type="CenterContainer" parent="."]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ColorRect0" type="ColorRect" parent="CenterContainer4"]
+custom_minimum_size = Vector2(708, 1)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 1)
+
+[node name="HBoxContainer5" type="HBoxContainer" parent="."]
+custom_minimum_size = Vector2(0, 52.8)
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="VBoxContainer0" type="VBoxContainer" parent="HBoxContainer5"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 1
+alignment = 1
+
+[node name="SettingsPageLabels29Label" type="Label" parent="HBoxContainer5/VBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_fonts/font = ExtResource("R10")
+theme_override_font_sizes/font_size = 14
+text = "SCREEN FLASHES"
+
+[node name="SettingsPageLabels30Label" type="Label" parent="HBoxContainer5/VBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R5")
+theme_override_font_sizes/font_size = 12
+text = "Disables bright full-screen flashes while retaining other feedback."
+autowrap_mode = 3
+
+[node name="ScreenFlashesButton" type="Button" parent="HBoxContainer5"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_colors/font_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_colors/font_focus_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_colors/font_pressed_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_colors/font_hover_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_colors/font_disabled_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = ExtResource("R11")
+theme_override_styles/pressed = ExtResource("R11")
+theme_override_styles/hover = ExtResource("R12")
+theme_override_styles/disabled = ExtResource("R11")
+theme_override_styles/focus = ExtResource("R12")
+flat = true
+alignment = 2
+
+[node name="CenterContainer6" type="CenterContainer" parent="."]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ColorRect0" type="ColorRect" parent="CenterContainer6"]
+custom_minimum_size = Vector2(708, 1)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 1)
+
+[node name="SettingsPageLabels31Label" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R5")
+theme_override_font_sizes/font_size = 12
+text = "Rings • particles • banners • sound still identify important observations when flashes are off."
+vertical_alignment = 2
+autowrap_mode = 3

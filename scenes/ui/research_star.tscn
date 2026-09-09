@@ -1,0 +1,28 @@
+[gd_scene format=3]
+
+[ext_resource type="Resource" path="res://resources/ui/empty.tres" id="R1"]
+[ext_resource type="Script" path="res://scripts/research_star_visual.gd" id="R2"]
+
+[node name="Node_better_lens" type="Button"]
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 0
+offset_left = 381.51178
+offset_top = 620.8426
+offset_right = 425.51178
+offset_bottom = 664.8426
+pivot_offset = Vector2(22, 22)
+focus_mode = 0
+theme_override_styles/normal = ExtResource("R1")
+theme_override_styles/pressed = ExtResource("R1")
+theme_override_styles/hover = ExtResource("R1")
+theme_override_styles/disabled = ExtResource("R1")
+theme_override_styles/focus = ExtResource("R1")
+metadata/node_id = "better_lens"
+metadata/visual_state = "hidden"
+
+[node name="StarVisual" type="Control" parent="."]
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("R2")

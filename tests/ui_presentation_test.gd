@@ -19,12 +19,13 @@ func _run() -> void:
 	var chart := Chart.new()
 	_test_grouped_integers(hud, chart)
 	_test_data_notation(hud, chart)
-	_test_spec_labels(hud, chart)
+	_test_authored_views()
+	_test_initial_slot_locale()
 	_test_renderer_alias()
 	hud.free()
 	chart.free()
 	if failures.is_empty():
-		print("UI_PRESENTATION_PASS: shared labels and grouped integers preserve HUD/chart contracts; research marker aliases remain compatible")
+		print("UI_PRESENTATION_PASS: authored scenes and grouped integers preserve HUD/chart contracts; research marker aliases remain compatible")
 		quit(0)
 	else:
 		print("UI_PRESENTATION_FAIL: %d failure(s)" % failures.size())
@@ -55,40 +56,46 @@ func _test_grouped_integers(hud, chart) -> void:
 	TranslationServer.set_locale(original_locale)
 
 
-func _test_spec_labels(hud, chart) -> void:
-	# Expected pixels are literal contract values, not calculated with the helper.
-	var cases := [
-		{"spec": 13.0, "em": 0.0, "size": 8, "spacing": 0, "override": false},
-		{"spec": 52.0, "em": -0.03, "size": 31, "spacing": -1, "override": true},
-		{"spec": 12.0, "em": 0.30, "size": 7, "spacing": 2, "override": true},
-		{"spec": 0.0, "em": 0.16, "size": 1, "spacing": 0, "override": true},
-		{"spec": 20.0, "em": 0.0000001, "size": 12, "spacing": 0, "override": false},
-	]
-	var font: Font = UITheme.sans("light")
-	var ink := Color(0.63, 0.42, 0.21, 0.37)
-	var text := "OBSERVATION / 관측"
-	for item in cases:
-		var labels: Array[Label] = [
-			UITheme.spec_label(text, font, item.spec, ink, item.em),
-			hud._spec_label(text, font, item.spec, ink, item.em),
-			chart._spec_label(text, font, item.spec, ink, item.em),
-		]
-		_check(labels[0] != labels[1] and labels[1] != labels[2], "label factories return independent controls")
-		for label in labels:
-			_check(label.text == text, "label text is unchanged")
-			_check(label.has_theme_font_override("font") and label.get_theme_font("font") == font, "font identity is unchanged")
-			_check(label.get_theme_font_size("font_size") == int(item.size), "spec size conversion is unchanged")
-			_check(label.get_theme_color("font_color") == ink, "ink including alpha is unchanged")
-			_check(label.has_theme_constant_override("spacing_glyph") == bool(item.override), "near-zero em preserves absence of an override")
-			if bool(item.override):
-				_check(label.get_theme_constant("spacing_glyph") == int(item.spacing), "glyph tracking is unchanged")
-			_check(label.mouse_filter == Control.MOUSE_FILTER_IGNORE, "labels do not intercept input")
-			_check(label.get_parent() == null, "factory leaves layout and ownership to the caller")
-			label.free()
-	var default_label := UITheme.spec_label("default", UITheme.mono_tabular(), 54.0, UITheme.INK_HIGH)
-	_check(not default_label.has_theme_constant_override("spacing_glyph"), "omitted em retains the original default")
-	_check(default_label.get_theme_font("font") == UITheme.mono_tabular(), "tabular font identity is preserved")
-	default_label.free()
+func _test_authored_views() -> void:
+	# Check the shipped scenes, rather than the removed code-building wrappers.
+	_check(preload("res://resources/ui/native_dialog.tres").has_stylebox("panel", "AcceptDialog"), "native dialog keeps its authored panel instead of engine defaults")
+	var hud_view = preload("res://scenes/ui/hud.tscn").instantiate()
+	var chart_view = preload("res://scenes/ui/upgrade_tree.tscn").instantiate()
+	var data: Label = hud_view.get_node("DataReadout/DataLabel")
+	var chart_data: Label = chart_view.get_node("ChartHeader/DataReadout")
+	for label in [data, chart_data]:
+		_check(label.mouse_filter == Control.MOUSE_FILTER_IGNORE, "authored readout starts passive until data tooltip binding")
+		_check(label.get_theme_color("font_color").is_equal_approx(UITheme.INK_HIGH), "authored readout retains shared ink")
+		var font = label.get_theme_font("font")
+		_check(font is FontVariation and font.base_font == UITheme.mono(), "authored readout retains the embedded mono font")
+		_check(font.opentype_features.get(1953396077) == 1, "authored readout retains tabular digits")
+	_check(data.get_theme_font_size("font_size") == 20, "HUD data type remains 20px")
+	_check(chart_data.get_theme_font_size("font_size") == 31, "chart data type remains 31px")
+	var summary = hud_view.get_node("PhaseSummary")
+	_check(not summary.visible and not summary.get_node("SummaryColumn/Content/Details").visible, "summary is initially hidden with collapsed details")
+	_check(summary.get_node("SummaryColumn/Content/DetailsButton").toggle_mode, "authored detail control retains toggle behavior")
+	var other = preload("res://scenes/ui/hud.tscn").instantiate()
+	data.text = "changed"
+	_check(other.get_node("DataReadout/DataLabel").text != data.text, "scene instances keep independent live text")
+	other.free()
+	hud_view.free()
+	chart_view.free()
+	for item in [[13.0, 8], [52.0, 31], [12.0, 7], [0.0, 1], [20.0, 12]]:
+		_check(UITheme.size_px(item[0]) == item[1], "procedural type retains design-to-viewport conversion")
+	_check(UITheme.tracking(31, -0.03) == -1 and UITheme.tracking(7, 0.30) == 2, "procedural tracking conversion is unchanged")
+
+
+func _test_initial_slot_locale() -> void:
+	var original_locale := TranslationServer.get_locale()
+	for locale in ["ko", "en"]:
+		TranslationServer.set_locale(locale)
+		var hud := HUD.new()
+		root.add_child(hud)
+		for index in 3:
+			_check(hud.startup_slot_titles[index].text == tr("SAVE_SLOT_TITLE") % (index + 1), "initial authored slot title uses active locale")
+			_check(hud.startup_slot_buttons[index].text == tr("STARTUP_NEW_GAME"), "initial authored slot action uses active locale")
+		hud.free()
+	TranslationServer.set_locale(original_locale)
 
 
 func _test_data_notation(hud, chart) -> void:

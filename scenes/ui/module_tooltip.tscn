@@ -1,0 +1,63 @@
+[gd_scene format=3]
+
+[ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Regular.ttf" id="R1"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexMono-Regular.ttf" id="R4"]
+[ext_resource type="Resource" path="res://resources/ui/module_tooltip_panel.tres" id="R12"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Medium.ttf" id="R13"]
+
+[node name="TooltipPanel" type="PanelContainer"]
+visible = false
+custom_minimum_size = Vector2(240, 0)
+layout_mode = 0
+mouse_filter = 2
+theme_override_styles/panel = ExtResource("R12")
+
+[node name="VBoxContainer0" type="VBoxContainer" parent="."]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 5
+
+[node name="TooltipName" type="Label" parent="VBoxContainer0"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(208.8, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9843137, 0.90588236, 0.84705883, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 14
+autowrap_mode = 3
+
+[node name="TooltipCode" type="Label" parent="VBoxContainer0"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(208.8, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 10
+autowrap_mode = 3
+
+[node name="TooltipEffect" type="Label" parent="VBoxContainer0"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(208.8, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 12
+autowrap_mode = 3
+
+[node name="TooltipCombo" type="Label" parent="VBoxContainer0"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(208.8, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 12
+autowrap_mode = 3
+
+[node name="TooltipAction" type="Label" parent="VBoxContainer0"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(208.8, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.99607843, 0.6431373, 0.4862745, 1)
+theme_override_fonts/font = ExtResource("R13")
+theme_override_font_sizes/font_size = 14
+autowrap_mode = 3

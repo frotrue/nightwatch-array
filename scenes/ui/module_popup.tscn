@@ -1,0 +1,364 @@
+[gd_scene format=3]
+
+[ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Regular.ttf" id="R1"]
+[ext_resource type="Resource" path="res://resources/ui/empty.tres" id="R2"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexMono-Regular.ttf" id="R4"]
+[ext_resource type="PackedScene" path="res://scenes/ui/module_draw.tscn" id="Scene_module_draw"]
+[ext_resource type="PackedScene" path="res://scenes/ui/module_tooltip.tscn" id="Scene_module_tooltip"]
+
+[node name="@Control@549" type="Control"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="ColorRect0" type="ColorRect" parent="."]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.016, 0.008, 0.006, 0.9)
+
+[node name="Surface" type="Control" parent="."]
+unique_name_in_owner = true
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="Heading" type="Label" parent="Surface"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 84.0
+offset_top = 166.20001
+offset_right = 684.0
+offset_bottom = 189.20001
+theme_override_colors/font_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 14
+
+[node name="CloseButton" type="Button" parent="Surface"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 948.00006
+offset_top = 162.0
+offset_right = 1068.0001
+offset_bottom = 186.0
+theme_override_colors/font_color = Color(0.99607843, 0.6431373, 0.4862745, 1)
+theme_override_colors/font_focus_color = Color(1, 0.7058824, 0.5568628, 1)
+theme_override_colors/font_hover_color = Color(1, 0.7058824, 0.5568628, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = ExtResource("R2")
+theme_override_styles/pressed = ExtResource("R2")
+theme_override_styles/hover = ExtResource("R2")
+theme_override_styles/disabled = ExtResource("R2")
+theme_override_styles/focus = ExtResource("R2")
+flat = true
+
+[node name="SlotCaptions0" type="Label" parent="Surface"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 363.0
+offset_top = 207.00002
+offset_right = 477.0
+offset_bottom = 230.00002
+theme_override_colors/font_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+
+[node name="SlotCaptions1" type="Label" parent="Surface"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 465.71414
+offset_top = 350.6262
+offset_right = 579.7141
+offset_bottom = 373.6262
+theme_override_colors/font_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+
+[node name="SlotCaptions2" type="Label" parent="Surface"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 426.4808
+offset_top = 471.37384
+offset_right = 540.48083
+offset_bottom = 494.37384
+theme_override_colors/font_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+
+[node name="SlotCaptions3" type="Label" parent="Surface"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 299.51923
+offset_top = 471.37384
+offset_right = 413.51923
+offset_bottom = 494.37384
+theme_override_colors/font_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+
+[node name="SlotCaptions4" type="Label" parent="Surface"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 260.2859
+offset_top = 350.6262
+offset_right = 374.2859
+offset_bottom = 373.6262
+theme_override_colors/font_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+
+[node name="InventoryHeading" type="Label" parent="Surface"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 708.0
+offset_top = 206.40001
+offset_right = 960.0
+offset_bottom = 229.40001
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 12
+
+[node name="InventoryCount" type="Label" parent="Surface"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 984.00006
+offset_top = 206.40001
+offset_right = 1068.0
+offset_bottom = 229.40001
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 2
+
+[node name="FilterButtonsAll" type="Button" parent="Surface"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 708.0
+offset_top = 225.6
+offset_right = 792.0
+offset_bottom = 243.6
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_colors/font_focus_color = Color(1, 0.7058824, 0.5568628, 1)
+theme_override_colors/font_hover_color = Color(1, 0.7058824, 0.5568628, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 10
+theme_override_styles/normal = ExtResource("R2")
+theme_override_styles/pressed = ExtResource("R2")
+theme_override_styles/hover = ExtResource("R2")
+theme_override_styles/disabled = ExtResource("R2")
+theme_override_styles/focus = ExtResource("R2")
+flat = true
+
+[node name="FilterButtonsTrace" type="Button" parent="Surface"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 798.00006
+offset_top = 225.6
+offset_right = 882.00006
+offset_bottom = 243.6
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_colors/font_focus_color = Color(1, 0.7058824, 0.5568628, 1)
+theme_override_colors/font_hover_color = Color(1, 0.7058824, 0.5568628, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 10
+theme_override_styles/normal = ExtResource("R2")
+theme_override_styles/pressed = ExtResource("R2")
+theme_override_styles/hover = ExtResource("R2")
+theme_override_styles/disabled = ExtResource("R2")
+theme_override_styles/focus = ExtResource("R2")
+flat = true
+
+[node name="FilterButtonsSweep" type="Button" parent="Surface"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 888.00006
+offset_top = 225.6
+offset_right = 972.00006
+offset_bottom = 243.6
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_colors/font_focus_color = Color(1, 0.7058824, 0.5568628, 1)
+theme_override_colors/font_hover_color = Color(1, 0.7058824, 0.5568628, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 10
+theme_override_styles/normal = ExtResource("R2")
+theme_override_styles/pressed = ExtResource("R2")
+theme_override_styles/hover = ExtResource("R2")
+theme_override_styles/disabled = ExtResource("R2")
+theme_override_styles/focus = ExtResource("R2")
+flat = true
+
+[node name="FilterButtonsLink" type="Button" parent="Surface"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 978.00006
+offset_top = 225.6
+offset_right = 1062.0
+offset_bottom = 243.6
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_colors/font_focus_color = Color(1, 0.7058824, 0.5568628, 1)
+theme_override_colors/font_hover_color = Color(1, 0.7058824, 0.5568628, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 10
+theme_override_styles/normal = ExtResource("R2")
+theme_override_styles/pressed = ExtResource("R2")
+theme_override_styles/hover = ExtResource("R2")
+theme_override_styles/disabled = ExtResource("R2")
+theme_override_styles/focus = ExtResource("R2")
+flat = true
+
+[node name="InventoryScroll" type="ScrollContainer" parent="Surface"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 704.4
+offset_top = 248.40001
+offset_right = 1076.4
+offset_bottom = 451.2
+horizontal_scroll_mode = 0
+
+[node name="InventoryGrid" type="GridContainer" parent="Surface/InventoryScroll"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(360, 0)
+layout_mode = 2
+theme_override_constants/h_separation = 6
+theme_override_constants/v_separation = 6
+columns = 3
+
+[node name="InventoryEmpty" type="Label" parent="Surface"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 726.0
+offset_top = 322.80002
+offset_right = 1050.0
+offset_bottom = 345.80002
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="SummaryHeading" type="Label" parent="Surface"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 240.00002
+offset_top = 505.2
+offset_right = 600.0
+offset_bottom = 528.2
+theme_override_colors/font_color = Color(0.49019608, 0.41568628, 0.36862746, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+
+[node name="Summary" type="Label" parent="Surface"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 150.0
+offset_top = 523.2
+offset_right = 690.0
+offset_bottom = 546.2
+theme_override_colors/font_color = Color(0.8, 0.69411767, 0.627451, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+
+[node name="SummaryDetails" type="Label" parent="Surface"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 150.0
+offset_top = 541.2
+offset_right = 690.0
+offset_bottom = 560.2
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+text_overrun_behavior = 3
+
+[node name="CapacityLabel" type="Label" parent="Surface"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 240.00002
+offset_top = 566.4
+offset_right = 600.0
+offset_bottom = 589.4
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+
+[node name="Instructions" type="Label" parent="Surface"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 708.0
+offset_top = 459.6
+offset_right = 1068.0
+offset_bottom = 482.6
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 12
+autowrap_mode = 3
+
+[node name="Hint" type="Label" parent="Surface"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 708.0
+offset_top = 544.80005
+offset_right = 1068.0
+offset_bottom = 567.80005
+theme_override_colors/font_color = Color(0.8, 0.69411767, 0.627451, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 12
+autowrap_mode = 3
+
+[node name="HelpButton" type="Button" parent="Surface"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 708.0
+offset_top = 526.80005
+offset_right = 1074.0
+offset_bottom = 544.80005
+theme_override_colors/font_color = Color(0.99607843, 0.6431373, 0.4862745, 1)
+theme_override_colors/font_focus_color = Color(1, 0.7058824, 0.5568628, 1)
+theme_override_colors/font_hover_color = Color(1, 0.7058824, 0.5568628, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = ExtResource("R2")
+theme_override_styles/pressed = ExtResource("R2")
+theme_override_styles/hover = ExtResource("R2")
+theme_override_styles/disabled = ExtResource("R2")
+theme_override_styles/focus = ExtResource("R2")
+toggle_mode = true
+flat = true
+
+[node name="DrawButton" type="Button" parent="Surface"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 708.0
+offset_top = 487.80002
+offset_right = 1074.0
+offset_bottom = 520.2
+theme_override_colors/font_color = Color(0.99607843, 0.6431373, 0.4862745, 1)
+theme_override_colors/font_focus_color = Color(1, 0.7058824, 0.5568628, 1)
+theme_override_colors/font_hover_color = Color(1, 0.7058824, 0.5568628, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = ExtResource("R2")
+theme_override_styles/pressed = ExtResource("R2")
+theme_override_styles/hover = ExtResource("R2")
+theme_override_styles/disabled = ExtResource("R2")
+theme_override_styles/focus = ExtResource("R2")
+flat = true
+
+[node name="DrawWindow" parent="." instance=ExtResource("Scene_module_draw") ]
+unique_name_in_owner = true
+
+[node name="TooltipPanel" parent="." instance=ExtResource("Scene_module_tooltip") ]
+unique_name_in_owner = true

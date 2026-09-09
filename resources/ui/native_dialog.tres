@@ -1,0 +1,21 @@
+[gd_resource type="Theme" format=3]
+
+[ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Regular.ttf" id="1_hari8"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ac64l"]
+content_margin_left = 20.4
+content_margin_top = 15.6
+content_margin_right = 20.4
+content_margin_bottom = 13.2
+bg_color = Color(0.016, 0.008, 0.006, 0.98)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.33333334, 0.23529412, 0.19215687, 1)
+
+[resource]
+AcceptDialog/colors/font_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+AcceptDialog/font_sizes/font_size = 14
+AcceptDialog/fonts/font = ExtResource("1_hari8")
+AcceptDialog/styles/panel = SubResource("StyleBoxFlat_ac64l")

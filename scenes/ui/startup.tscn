@@ -1,0 +1,124 @@
+[gd_scene format=3]
+
+[ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Light.ttf" id="R5"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexMono-Regular.ttf" id="R6"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Medium.ttf" id="R10"]
+[ext_resource type="PackedScene" path="res://scenes/ui/startup_slot.tscn" id="Scene_startup_slot"]
+
+[node name="StartupSaveSlots" type="Control"]
+visible = false
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="ColorRect0" type="ColorRect" parent="."]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.016, 0.008, 0.006, 0.96)
+
+[node name="StartupColumn" type="Control" parent="."]
+anchors_preset = 0
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -336.0
+offset_top = -234.0
+offset_right = 336.0
+offset_bottom = 234.0
+mouse_filter = 2
+
+[node name="VBoxContainer0" type="VBoxContainer" parent="StartupColumn"]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+theme_override_constants/separation = 7
+alignment = 1
+
+[node name="StartupTitle" type="Label" parent="StartupColumn/VBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.83137256, 0.6901961, 1)
+theme_override_fonts/font = ExtResource("R10")
+theme_override_font_sizes/font_size = 24
+text = "SELECT SAVE SLOT"
+horizontal_alignment = 1
+
+[node name="StartupSubtitle" type="Label" parent="StartupColumn/VBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R6")
+theme_override_font_sizes/font_size = 8
+text = "NIGHTWATCH RECORDS"
+horizontal_alignment = 1
+
+[node name="CenterContainer2" type="CenterContainer" parent="StartupColumn/VBoxContainer0"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ColorRect0" type="ColorRect" parent="StartupColumn/VBoxContainer0/CenterContainer2"]
+custom_minimum_size = Vector2(672, 1)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 1)
+
+[node name="HBoxContainer3" parent="StartupColumn/VBoxContainer0" instance=ExtResource("Scene_startup_slot")]
+unique_name_in_owner = true
+
+[node name="Title" parent="StartupColumn/VBoxContainer0/HBoxContainer3/Info" index="0"]
+text = "SLOT 1"
+
+[node name="CenterContainer4" type="CenterContainer" parent="StartupColumn/VBoxContainer0"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ColorRect0" type="ColorRect" parent="StartupColumn/VBoxContainer0/CenterContainer4"]
+custom_minimum_size = Vector2(672, 1)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 1)
+
+[node name="HBoxContainer5" parent="StartupColumn/VBoxContainer0" instance=ExtResource("Scene_startup_slot")]
+unique_name_in_owner = true
+
+[node name="Title" parent="StartupColumn/VBoxContainer0/HBoxContainer5/Info" index="0"]
+text = "SLOT 2"
+
+[node name="CenterContainer6" type="CenterContainer" parent="StartupColumn/VBoxContainer0"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ColorRect0" type="ColorRect" parent="StartupColumn/VBoxContainer0/CenterContainer6"]
+custom_minimum_size = Vector2(672, 1)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 1)
+
+[node name="HBoxContainer7" parent="StartupColumn/VBoxContainer0" instance=ExtResource("Scene_startup_slot")]
+unique_name_in_owner = true
+
+[node name="Title" parent="StartupColumn/VBoxContainer0/HBoxContainer7/Info" index="0"]
+text = "SLOT 3"
+
+[node name="CenterContainer8" type="CenterContainer" parent="StartupColumn/VBoxContainer0"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ColorRect0" type="ColorRect" parent="StartupColumn/VBoxContainer0/CenterContainer8"]
+custom_minimum_size = Vector2(672, 1)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 1)
+
+[node name="StartupHint" type="Label" parent="StartupColumn/VBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6313726, 0.5568628, 0.5058824, 1)
+theme_override_fonts/font = ExtResource("R5")
+theme_override_font_sizes/font_size = 8
+text = "The active slot is saved automatically every 60 seconds."
+horizontal_alignment = 1
+autowrap_mode = 3

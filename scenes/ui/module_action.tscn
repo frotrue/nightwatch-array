@@ -1,0 +1,18 @@
+[gd_scene format=3]
+
+[ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Regular.ttf" id="R1"]
+[ext_resource type="Resource" path="res://resources/ui/empty.tres" id="R2"]
+
+[node name="ModuleAction" type="Button"]
+layout_mode = 0
+theme_override_colors/font_color = Color(0.99607843, 0.6431373, 0.4862745, 1)
+theme_override_colors/font_focus_color = Color(1, 0.7058824, 0.5568628, 1)
+theme_override_colors/font_hover_color = Color(1, 0.7058824, 0.5568628, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = ExtResource("R2")
+theme_override_styles/pressed = ExtResource("R2")
+theme_override_styles/hover = ExtResource("R2")
+theme_override_styles/disabled = ExtResource("R2")
+theme_override_styles/focus = ExtResource("R2")
+flat = true

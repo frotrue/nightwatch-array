@@ -1972,205 +1972,278 @@ func _upgrade_description(definition: Dictionary) -> String:
 
 
 func _build_interface() -> void:
-	overlay = Control.new()
-	overlay.name = "UpgradeTreeOverlay"
-	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	overlay.visible = false
-	add_child(overlay)
-	overlay.add_theme_font_override("font", UITheme.sans())
-
-	var background := ColorRect.new()
-	background.color = UITheme.GROUND
-	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	background.mouse_filter = Control.MOUSE_FILTER_STOP
-	overlay.add_child(background)
-
-	# The chart fills the frame. Information is set on the sky, not inside plates.
-	content_clip = Control.new()
-	content_clip.name = "TreeViewport"
-	content_clip.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	content_clip.clip_contents = true
-	content_clip.mouse_filter = Control.MOUSE_FILTER_PASS
-	content_clip.resized.connect(_on_content_resized)
-	content_clip.gui_input.connect(_on_tree_viewport_gui_input)
-	overlay.add_child(content_clip)
-
-	tree_canvas = Control.new()
-	tree_canvas.name = "TreeCanvas"
-	tree_canvas.custom_minimum_size = TREE_SIZE
-	tree_canvas.size = TREE_SIZE
-	tree_canvas.mouse_filter = Control.MOUSE_FILTER_PASS
-	tree_canvas.draw.connect(_draw_tree)
-	content_clip.add_child(tree_canvas)
-
-	var header := Control.new()
-	header.name = "ChartHeader"
-	header.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	header.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	overlay.add_child(header)
-
-	data_readout = _spec_label("0", UITheme.mono_tabular(), 52.0, UITheme.INK_HIGH, -0.03)
-	data_readout.position = Vector2(UITheme.px(56.0), UITheme.px(44.0))
-	header.add_child(data_readout)
-	title_label = _spec_label(tr("HUD_DATA_CAPTION"), UITheme.mono(), 12.0, UITheme.INK_MID, 0.28)
-	header.add_child(title_label)
-	data_context_label = _spec_label("", UITheme.mono(), 12.0, UITheme.TOOLTIP_LABEL, 2.0 / 12.0)
-	header.add_child(data_context_label)
-
-	installed_caption = _spec_label(tr("TREE_INSTALLED_CAPTION"), UITheme.mono(), 12.0, UITheme.INK_MID, 0.30)
-	installed_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	header.add_child(installed_caption)
-	systems_readout = _spec_label(
-		tr("TREE_PROGRESS_COUNT") % [0, Balance.research_node_count()],
-		UITheme.mono_tabular(),
-		38.0,
-		UITheme.INK_MID
-	)
-	systems_readout.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	systems_readout.visible = false
-	header.add_child(systems_readout)
-	galactic_progress_installed = _spec_label("000", UITheme.mono_tabular(), 38.0, UITheme.INK_HIGH)
-	galactic_progress_installed.name = "GalacticProgressInstalled"
-	header.add_child(galactic_progress_installed)
-	galactic_progress_separator = _spec_label("/", UITheme.mono(), 26.0, UITheme.INK_LOW)
-	galactic_progress_separator.name = "GalacticProgressSeparator"
-	header.add_child(galactic_progress_separator)
-	galactic_progress_total = _spec_label("%03d" % Balance.research_node_count(), UITheme.mono_tabular(), 38.0, UITheme.INK_MID)
-	galactic_progress_total.name = "GalacticProgressTotal"
-	header.add_child(galactic_progress_total)
-	progress_track = ColorRect.new()
-	progress_track.color = UITheme.ACCENT_DEEP
-	progress_track.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	header.add_child(progress_track)
-	progress_fill = ColorRect.new()
-	progress_fill.color = UITheme.ACCENT_LINE
-	progress_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	header.add_child(progress_fill)
-
-	close_button = Button.new()
-	close_button.text = _chart_action_text("TREE_CLOSE")
-	close_button.flat = true
-	close_button.focus_mode = Control.FOCUS_NONE
-	close_button.alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	close_button.add_theme_font_override("font", UITheme.sans())
-	close_button.add_theme_font_size_override("font_size", UITheme.size_px(19.0))
-	close_button.add_theme_constant_override("spacing_glyph", UITheme.tracking(UITheme.size_px(19.0), 0.06))
-	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
-		close_button.add_theme_color_override(state, UITheme.BANNER_TITLE)
-	close_button.pressed.connect(close_tree)
-	header.add_child(close_button)
-	close_underline = ColorRect.new()
-	close_underline.color = UITheme.ACCENT_TEXT
-	close_underline.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	header.add_child(close_underline)
-	subtitle_label = _spec_label(
-		tr("TREE_NEXT_OBSERVATION") % [1, 20],
-		UITheme.mono(),
-		12.0,
-		UITheme.HORIZON_LABEL,
-		0.18
-	)
-	header.add_child(subtitle_label)
-	subtitle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-
-	tree_status = _spec_label("", UITheme.sans("light"), 14.0, UITheme.ACCENT_TEXT, 0.11)
-	tree_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	header.add_child(tree_status)
-	completion_detail_label = _spec_label(tr("TREE_GALACTIC_COMPLETE_DETAIL"), UITheme.sans("light"), 13.0, UITheme.INK_MID)
-	completion_detail_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	header.add_child(completion_detail_label)
-	controls_label = _spec_label(tr("TREE_CONTROLS_FULL"), UITheme.mono(), 12.0, UITheme.INK_LOW, 0.18)
-	controls_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	header.add_child(controls_label)
-	constellation_horizon_hint = _spec_label("", UITheme.mono(), 12.0, UITheme.TOOLTIP_LABEL, 0.10)
-	header.add_child(constellation_horizon_hint)
-	constellation_bottom_action = _spec_label("", UITheme.mono(), 12.0, UITheme.INK_HIGH, 0.10)
-	constellation_bottom_action.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	header.add_child(constellation_bottom_action)
-	galactic_inner_hint = _spec_label(tr("TREE_GALACTIC_INNER_HINT"), UITheme.mono(), 12.0, UITheme.TOOLTIP_LABEL, 0.10)
-	header.add_child(galactic_inner_hint)
-	galactic_return_hint = _spec_label(_chart_action_text("TREE_GALACTIC_RETURN"), UITheme.mono(), 12.0, UITheme.INK_HIGH, 0.10)
-	galactic_return_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	header.add_child(galactic_return_hint)
-	galactic_watermark = _spec_label(tr("TREE_GALACTIC_WATERMARK"), UITheme.mono(), 12.0, UITheme.INK_LOW, 2.6 / 12.0)
-	galactic_watermark.name = "GalacticWatermark"
-	galactic_watermark.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	galactic_watermark.visible = false
-	header.add_child(galactic_watermark)
-	north_label = _spec_label(tr("TREE_NORTH"), UITheme.mono(), 11.0, UITheme.HORIZON_LABEL, 0.24)
-	north_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	header.add_child(north_label)
-
-	header.resized.connect(_layout_chart_header)
-	_layout_chart_header()
-
+	var view = preload("res://scenes/ui/upgrade_tree.tscn").instantiate()
+	atlas_actions = [view.get_node("%AtlasActions0")]
+	atlas_navigation = view.get_node("%AtlasNavigation")
+	close_button = view.get_node("%ChartHeader").get_node("%CloseButton")
+	close_underline = view.get_node("%ChartHeader").get_node("%CloseUnderline")
+	completion_detail_label = view.get_node("%ChartHeader").get_node("%CompletionDetailLabel")
+	constellation_bottom_action = view.get_node("%ChartHeader").get_node("%ConstellationBottomAction")
+	constellation_horizon_hint = view.get_node("%ChartHeader").get_node("%ConstellationHorizonHint")
+	constellation_installation_rule = view.get_node("%ConstellationInspector").get_node("%Divider")
+	constellation_ledger = view.get_node("%ConstellationInstallLedger")
+	constellation_ledger_counts = [
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerCounts0"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerCounts1"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerCounts2"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerCounts3"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerCounts4"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerCounts5"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerCounts6"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerCounts7"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerCounts8"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerCounts9"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerCounts10"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerCounts11"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerCounts12"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerCounts13"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerCounts14"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerCounts15"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerCounts16"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerCounts17"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerCounts18"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerCounts19"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerCounts20"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerCounts21"),
+	]
+	constellation_ledger_hits = [
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits0"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits1"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits2"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits3"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits4"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits5"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits6"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits7"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits8"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits9"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits10"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits11"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits12"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits13"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits14"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits15"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits16"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits17"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits18"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits19"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits20"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits21"),
+	]
+	constellation_ledger_leaders = [
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders0"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders1"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders2"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders3"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders4"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders5"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders6"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders7"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders8"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders9"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders10"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders11"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders12"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders13"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders14"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders15"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders16"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders17"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders18"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders19"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders20"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders21"),
+	]
+	constellation_ledger_names = [
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames0"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames1"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames2"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames3"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames4"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames5"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames6"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames7"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames8"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames9"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames10"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames11"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames12"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames13"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames14"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames15"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames16"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames17"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames18"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames19"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames20"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames21"),
+	]
+	constellation_ledger_notes = [
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes0"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes1"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes2"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes3"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes4"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes5"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes6"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes7"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes8"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes9"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes10"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes11"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes12"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes13"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes14"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes15"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes16"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes17"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes18"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes19"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes20"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes21"),
+	]
+	content_clip = view.get_node("%TreeViewport")
+	controls_label = view.get_node("%ChartHeader").get_node("%ControlsLabel")
+	data_context_label = view.get_node("%ChartHeader").get_node("%DataContextLabel")
+	data_readout = view.get_node("%ChartHeader").get_node("%DataReadout")
+	galactic_core_hit = view.get_node("%GalacticCoreHit")
+	galactic_inner_hint = view.get_node("%ChartHeader").get_node("%GalacticInnerHint")
+	galactic_installation_rule = view.get_node("%Divider")
+	galactic_ledger = view.get_node("%GalacticCompletionLedger")
+	galactic_ledger_counts = [
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerCounts0"),
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerCounts1"),
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerCounts2"),
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerCounts3"),
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerCounts4"),
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerCounts5"),
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerCounts6"),
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerCounts7"),
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerCounts8"),
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerCounts9"),
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerCounts10"),
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerCounts11"),
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerCounts12"),
+	]
+	galactic_ledger_leaders = [
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerLeaders0"),
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerLeaders1"),
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerLeaders2"),
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerLeaders3"),
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerLeaders4"),
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerLeaders5"),
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerLeaders6"),
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerLeaders7"),
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerLeaders8"),
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerLeaders9"),
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerLeaders10"),
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerLeaders11"),
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerLeaders12"),
+	]
+	galactic_ledger_names = [
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerNames0"),
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerNames1"),
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerNames2"),
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerNames3"),
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerNames4"),
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerNames5"),
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerNames6"),
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerNames7"),
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerNames8"),
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerNames9"),
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerNames10"),
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerNames11"),
+		view.get_node("%GalacticCompletionLedger").get_node("%GalacticLedgerNames12"),
+	]
+	galactic_panel = view.get_node("%GalacticInspector")
+	galactic_panel_code = view.get_node("%Code")
+	galactic_panel_cost = view.get_node("%FieldCostValue")
+	galactic_panel_effect = view.get_node("%FieldEffectValue")
+	galactic_panel_group = view.get_node("%Group")
+	galactic_panel_name = view.get_node("%Name")
+	galactic_panel_order = view.get_node("%Order")
+	galactic_panel_state = view.get_node("%FieldStatusValue")
+	galactic_progress_installed = view.get_node("%ChartHeader").get_node("%GalacticProgressInstalled")
+	galactic_progress_separator = view.get_node("%ChartHeader").get_node("%GalacticProgressSeparator")
+	galactic_progress_total = view.get_node("%ChartHeader").get_node("%GalacticProgressTotal")
+	galactic_return_hint = view.get_node("%ChartHeader").get_node("%GalacticReturnHint")
+	galactic_span_value = view.get_node("%GalacticCompletionLedger").get_node("%SpanValue")
+	galactic_watermark = view.get_node("%ChartHeader").get_node("%GalacticWatermark")
+	hub_return_button = view.get_node("%HubReturnButton")
+	inspector_details = view.get_node("%ConstellationInspector").get_node("%InspectorDetails")
+	inspector_details_button = view.get_node("%ConstellationInspector").get_node("%InspectorDetailsButton")
+	inspector_scroll = view.get_node("%ConstellationInspector").get_node("%InspectorScroll")
+	installed_caption = view.get_node("%ChartHeader").get_node("%InstalledCaption")
+	north_label = view.get_node("%ChartHeader").get_node("%NorthLabel")
+	overlay = view
+	progress_fill = view.get_node("%ChartHeader").get_node("%ProgressFill")
+	progress_track = view.get_node("%ChartHeader").get_node("%ProgressTrack")
+	subtitle_label = view.get_node("%ChartHeader").get_node("%SubtitleLabel")
+	systems_readout = view.get_node("%ChartHeader").get_node("%SystemsReadout")
+	title_label = view.get_node("%ChartHeader").get_node("%TitleLabel")
+	tooltip_action = view.get_node("%ConstellationInspector").get_node("%TooltipMeta")
+	tooltip_branch = view.get_node("%ConstellationInspector").get_node("%TooltipBranch")
+	tooltip_cost = view.get_node("%ConstellationInspector").get_node("%TooltipCost")
+	tooltip_description = view.get_node("%ConstellationInspector").get_node("%TooltipDescription")
+	tooltip_meta = view.get_node("%ConstellationInspector").get_node("%TooltipMeta")
+	tooltip_name = view.get_node("%ConstellationInspector").get_node("%TooltipName")
+	tooltip_panel = view.get_node("%ConstellationInspector")
+	tooltip_star = view.get_node("%ConstellationInspector").get_node("%TooltipStar")
+	tooltip_state = view.get_node("%ConstellationInspector").get_node("%TooltipState")
+	tree_canvas = view.get_node("%TreeCanvas")
+	tree_status = view.get_node("%ChartHeader").get_node("%TreeStatus")
+	add_child(view)
+	view.get_node("%TreeViewport").resized.connect(_on_content_resized)
+	view.get_node("%TreeViewport").gui_input.connect(_on_tree_viewport_gui_input)
+	view.get_node("%TreeCanvas").draw.connect(_draw_tree)
+	view.get_node("%ChartHeader").resized.connect(_layout_chart_header)
+	view.get_node("%ChartHeader").get_node("%CloseButton").pressed.connect(close_tree)
+	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits0").pressed.connect(focus_constellation.bind("cassiopeia"))
+	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits1").pressed.connect(focus_constellation.bind("big_dipper"))
+	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits2").pressed.connect(focus_constellation.bind("orion"))
+	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits3").pressed.connect(focus_constellation.bind("andromeda"))
+	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits4").pressed.connect(focus_constellation.bind("perseus"))
+	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits5").pressed.connect(focus_constellation.bind("lyra"))
+	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits6").pressed.connect(focus_constellation.bind("gemini"))
+	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits7").pressed.connect(focus_constellation.bind("taurus"))
+	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits8").pressed.connect(focus_constellation.bind("leo"))
+	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits9").pressed.connect(focus_constellation.bind("ursa_minor"))
+	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits10").pressed.connect(focus_constellation.bind("canis_major"))
+	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits11").pressed.connect(focus_constellation.bind("draco"))
+	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits12").pressed.connect(focus_constellation.bind("pegasus"))
+	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits13").pressed.connect(focus_constellation.bind("lacerta"))
+	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits14").pressed.connect(focus_constellation.bind("cygnus"))
+	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits15").pressed.connect(focus_constellation.bind("aquila"))
+	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits16").pressed.connect(focus_constellation.bind("vulpecula"))
+	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits17").pressed.connect(focus_constellation.bind("delphinus"))
+	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits18").pressed.connect(focus_constellation.bind("sagitta"))
+	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits19").pressed.connect(focus_constellation.bind("equuleus"))
+	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits20").pressed.connect(focus_constellation.bind("cepheus"))
+	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits21").pressed.connect(focus_constellation.bind("triangulum"))
+	view.get_node("%ConstellationInspector").get_node("%InspectorDetailsButton").toggled.connect(_set_inspector_details)
+	view.get_node("%GalacticCoreHit").mouse_entered.connect(_on_node_hovered.bind("galactic_reference_frame"))
+	view.get_node("%GalacticCoreHit").mouse_exited.connect(_on_node_unhovered.bind("galactic_reference_frame"))
+	view.get_node("%HubReturnButton").pressed.connect(_frame_galaxy)
+	view.get_node("%AtlasActions0").pressed.connect(_atlas_action.bind(0))
 	for definition in Balance.UPGRADE_NODES + extension_definitions:
 		_build_node_button(definition)
-	_build_constellation_ledger()
-	_build_node_tooltip()
-	_build_galactic_overlays()
-
-	hub_return_button = Button.new()
-	hub_return_button.flat = true
-	hub_return_button.add_theme_font_override("font", UITheme.sans())
-	hub_return_button.add_theme_font_size_override("font_size", 14)
-	hub_return_button.add_theme_color_override("font_color", UITheme.ACCENT_TEXT)
-	hub_return_button.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	hub_return_button.offset_left = -80
-	hub_return_button.offset_right = 80
-	hub_return_button.offset_top = -82
-	hub_return_button.offset_bottom = -42
-	hub_return_button.pressed.connect(_frame_galaxy)
-	hub_return_button.visible = false
-	overlay.add_child(hub_return_button)
-	atlas_navigation = ColorRect.new()
-	atlas_navigation.position = ATLAS_ACTION_ORIGIN - Vector2(10, 14)
-	atlas_navigation.size = Vector2(192, 154)
-	atlas_navigation.color = UITheme.GROUND
-	atlas_navigation.mouse_filter = Control.MOUSE_FILTER_STOP
-	atlas_navigation.z_index = 30
-	overlay.add_child(atlas_navigation)
-	for index in range(1):
-		var action := Button.new()
-		action.flat = true
-		action.position = ATLAS_ACTION_ORIGIN + ATLAS_ACTION_STEP * (index + 2)
-		action.size = ATLAS_ACTION_SIZE
-		action.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		action.z_index = 31
-		action.add_theme_font_size_override("font_size", 12)
-		action.add_theme_color_override("font_color", UITheme.ACCENT_TEXT)
-		action.pressed.connect(_atlas_action.bind(index))
-		overlay.add_child(action)
-		atlas_actions.append(action)
+	_layout_chart_header()
 	_layout_chart()
 
 
 func _build_node_button(definition: Dictionary) -> void:
 	var node_id := String(definition.id)
-	var button := Button.new()
+	var button: Button = preload("res://scenes/ui/research_star.tscn").instantiate()
 	button.name = "Node_" + node_id
-	button.position = Vector2.ZERO
-	button.size = STAR_HIT_SIZE
-	button.custom_minimum_size = STAR_HIT_SIZE
-	button.pivot_offset = STAR_HIT_SIZE * 0.5
-	button.clip_contents = false
-	button.mouse_filter = Control.MOUSE_FILTER_STOP
-	button.focus_mode = Control.FOCUS_NONE
 	button.set_meta("node_id", node_id)
 	button.set_meta("visual_state", "hidden")
-	for style_name in ["normal", "hover", "pressed", "focus", "disabled"]:
-		button.add_theme_stylebox_override(style_name, StyleBoxEmpty.new())
 	button.button_down.connect(_on_node_hold_started.bind(node_id))
 	button.button_up.connect(_on_node_hold_released.bind(node_id))
 	button.mouse_entered.connect(_on_node_hovered.bind(node_id))
 	button.mouse_exited.connect(_on_node_unhovered.bind(node_id))
 	tree_canvas.add_child(button)
 
-	var star_visual := StarNodeVisual.new()
-	star_visual.name = "StarVisual"
-	star_visual.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	star_visual.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var star_visual = button.get_node("StarVisual")
 	var branch_color: Color = _research_branch_color(String(definition.branch))
 	var star_record: Dictionary = node_star_records[node_id]
 	var star: Dictionary = star_record.star
@@ -2185,276 +2258,9 @@ func _build_node_button(definition: Dictionary) -> void:
 	if local_group_node_order.has(node_id):
 		var galaxy: Dictionary = ChartData.LOCAL_GROUP_GALAXIES[int(local_group_node_order[node_id])]
 		star_visual.galaxy_rotation = Vector2(galaxy.local_position).angle() + deg_to_rad(58.0)
-	button.add_child(star_visual)
 
 	node_buttons[node_id] = button
 	node_hold_bars[node_id] = star_visual
-
-
-func _build_constellation_ledger() -> void:
-	constellation_ledger = Control.new()
-	constellation_ledger.name = "ConstellationInstallLedger"
-	constellation_ledger.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	constellation_ledger.z_index = 30
-	overlay.add_child(constellation_ledger)
-	var ledger_title := _spec_label(tr("TREE_CONSTELLATION_LEDGER"), UITheme.mono(), 11.0, UITheme.INK_MID, 0.31)
-	ledger_title.name = "LedgerTitle"
-	constellation_ledger.add_child(ledger_title)
-	var ledger_ids: Array[String] = []
-	for constellation_id in _constellation_order():
-		ledger_ids.append(String(constellation_id))
-	for constellation_id in ledger_ids:
-		var label_text := ""
-		if constellation_id == "local_group":
-			label_text = tr(ChartData.LOCAL_GROUP_LABEL_KEY).split(" / ")[0]
-		else:
-			label_text = tr(String(chart_constellations[constellation_id].label_key)).split("  /  ")[0]
-		var name_label := _spec_label(label_text, UITheme.sans("light"), 18.0, UITheme.TOOLTIP_BODY)
-		constellation_ledger.add_child(name_label)
-		constellation_ledger_names.append(name_label)
-		var leader := ColorRect.new()
-		leader.color = Color(UITheme.ACCENT_DEEP, 0.55)
-		leader.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		constellation_ledger.add_child(leader)
-		constellation_ledger_leaders.append(leader)
-		var note_label := _spec_label("", UITheme.mono(), 11.0, UITheme.INK_LOW, 1.0 / 11.0)
-		note_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		constellation_ledger.add_child(note_label)
-		constellation_ledger_notes.append(note_label)
-		var count_label := _spec_label("0 / 0", UITheme.mono_tabular(), 12.0, UITheme.INK_MID)
-		count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		constellation_ledger.add_child(count_label)
-		constellation_ledger_counts.append(count_label)
-		var hit := Button.new()
-		hit.flat = true
-		hit.tooltip_text = label_text
-		for style in ["normal", "hover", "pressed", "focus"]:
-			hit.add_theme_stylebox_override(style, StyleBoxEmpty.new())
-		hit.pressed.connect(focus_constellation.bind(constellation_id))
-		constellation_ledger.add_child(hit)
-		constellation_ledger_hits.append(hit)
-
-
-func _build_node_tooltip() -> void:
-	tooltip_panel = PanelContainer.new()
-	tooltip_panel.name = "ConstellationInspector"
-	tooltip_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	tooltip_panel.custom_minimum_size = Vector2(UITheme.px(292.0), 0.0)
-	tooltip_panel.z_index = 100
-	tooltip_panel.visible = false
-	tooltip_panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
-	overlay.add_child(tooltip_panel)
-	var scroll := ScrollContainer.new()
-	inspector_scroll = scroll
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	scroll.follow_focus = true
-	tooltip_panel.add_child(scroll)
-	var column := VBoxContainer.new()
-	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	column.add_theme_constant_override("separation", UITheme.size_px(11.0))
-	scroll.add_child(column)
-	tooltip_branch = _spec_label("", UITheme.mono(), 17.0, UITheme.INK_MID)
-	tooltip_branch.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	column.add_child(tooltip_branch)
-	tooltip_name = _spec_label("", UITheme.sans(), 26.0, UITheme.TOOLTIP_NAME)
-	tooltip_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	column.add_child(tooltip_name)
-	tooltip_star = _spec_label("", UITheme.mono(), 17.0, UITheme.TOOLTIP_VALUE)
-	tooltip_star.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	# Attached to the optional details below, after the decision information.
-	# The VBox owns the slot's geometry, not the animated rule's transform.
-	# Otherwise its deferred sort resets the in-flight scale after a purchase.
-	var divider_slot := Control.new()
-	divider_slot.name = "DividerSlot"
-	divider_slot.custom_minimum_size.y = 1.0
-	divider_slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	column.add_child(divider_slot)
-	constellation_installation_rule = ColorRect.new()
-	constellation_installation_rule.name = "Divider"
-	constellation_installation_rule.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	constellation_installation_rule.color = UITheme.ACCENT_DEEP
-	constellation_installation_rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	divider_slot.add_child(constellation_installation_rule)
-	var fields := GridContainer.new()
-	fields.columns = 2
-	fields.add_theme_constant_override("h_separation", UITheme.size_px(14.0))
-	fields.add_theme_constant_override("v_separation", UITheme.size_px(7.0))
-	fields.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	column.add_child(fields)
-	for field_key in ["STATUS", "COST"]:
-		var field_label := _spec_label(tr("TREE_CONSTELLATION_FIELD_%s" % field_key), UITheme.mono(), 17.0, UITheme.INK_MID)
-		field_label.name = "Field%sLabel" % field_key.capitalize()
-		field_label.custom_minimum_size.x = UITheme.px(44.0)
-		fields.add_child(field_label)
-		match field_key:
-			"STATUS":
-				tooltip_state = _spec_label("", UITheme.sans(), 20.0, UITheme.INK_MAX)
-				fields.add_child(tooltip_state)
-			"COST":
-				tooltip_cost = _spec_label("", UITheme.mono_tabular(), 20.0, UITheme.TOOLTIP_BODY)
-				fields.add_child(tooltip_cost)
-	# The effect is the purchase decision: give it the full inspector width.
-	# Readable at the default window: 20/24 spec pixels become 12/14 logical.
-	var effect_label := _spec_label(tr("TREE_CONSTELLATION_FIELD_EFFECT"), UITheme.mono(), 17.0, UITheme.INK_MID)
-	effect_label.name = "FieldEffectLabel"
-	column.add_child(effect_label)
-	tooltip_description = _spec_label("", UITheme.sans(), 20.0, UITheme.TOOLTIP_VALUE)
-	tooltip_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	tooltip_description.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	column.add_child(tooltip_description)
-	tooltip_action = _spec_label("", UITheme.sans("medium"), 24.0, UITheme.TOOLTIP_ACTION)
-	tooltip_action.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	column.add_child(tooltip_action)
-	inspector_details_button = Button.new()
-	inspector_details_button.flat = true
-	inspector_details_button.toggle_mode = true
-	inspector_details_button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	inspector_details_button.add_theme_font_override("font", UITheme.sans())
-	inspector_details_button.add_theme_font_size_override("font_size", UITheme.size_px(20))
-	for state in ["font_color", "font_hover_color", "font_focus_color"]:
-		inspector_details_button.add_theme_color_override(state, UITheme.TOOLTIP_ACTION)
-	inspector_details_button.toggled.connect(_set_inspector_details)
-	column.add_child(inspector_details_button)
-	inspector_details = VBoxContainer.new()
-	inspector_details.add_theme_constant_override("separation", UITheme.size_px(11.0))
-	column.add_child(inspector_details)
-	inspector_details.add_child(tooltip_star)
-	_set_inspector_details(false)
-	var legend_spacer := Control.new()
-	legend_spacer.custom_minimum_size.y = UITheme.px(7.0)
-	legend_spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	inspector_details.add_child(legend_spacer)
-	var legend_title := _spec_label(tr("TREE_CONSTELLATION_STAR_STATES"), UITheme.mono(), 17.0, UITheme.INK_MID)
-	legend_title.name = "LegendTitle"
-	inspector_details.add_child(legend_title)
-	var legend_rows := [
-		["●", UITheme.STAR_INSTALLED, "TREE_CONSTELLATION_LEGEND_INSTALLED"],
-		["●", UITheme.STAR_READY_FILL, "TREE_CONSTELLATION_LEGEND_READY"],
-		["●", UITheme.STAR_SHORT_BORDER, "TREE_CONSTELLATION_LEGEND_SHORT"],
-		["○", UITheme.STAR_LOCKED, "TREE_CONSTELLATION_LEGEND_LOCKED"],
-	]
-	for legend_index in range(legend_rows.size()):
-		var row_variant = legend_rows[legend_index]
-		var row: Array = row_variant
-		var legend_row := HBoxContainer.new()
-		legend_row.add_theme_constant_override("separation", UITheme.size_px(11.0))
-		legend_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		inspector_details.add_child(legend_row)
-		var marker := _spec_label(String(row[0]), UITheme.mono(), 20.0, Color(row[1]))
-		marker.custom_minimum_size.x = UITheme.px(12.0)
-		legend_row.add_child(marker)
-		var legend_text := _spec_label(tr(String(row[2])), UITheme.sans(), 20.0, UITheme.TOOLTIP_BODY)
-		legend_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		legend_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		legend_text.name = "LegendText%d" % legend_index
-		legend_row.add_child(legend_text)
-	tooltip_meta = tooltip_action
-
-
-func _build_galactic_overlays() -> void:
-	galactic_core_hit = Button.new()
-	galactic_core_hit.name = "GalacticCoreHit"
-	galactic_core_hit.flat = true
-	galactic_core_hit.focus_mode = Control.FOCUS_NONE
-	galactic_core_hit.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	galactic_core_hit.visible = false
-	galactic_core_hit.z_index = 20
-	for style_name in ["normal", "hover", "pressed", "focus", "disabled"]:
-		galactic_core_hit.add_theme_stylebox_override(style_name, StyleBoxEmpty.new())
-	galactic_core_hit.mouse_entered.connect(_on_node_hovered.bind("galactic_reference_frame"))
-	galactic_core_hit.mouse_exited.connect(_on_node_unhovered.bind("galactic_reference_frame"))
-	overlay.add_child(galactic_core_hit)
-
-	galactic_ledger = Control.new()
-	galactic_ledger.name = "GalacticCompletionLedger"
-	galactic_ledger.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	galactic_ledger.z_index = 30
-	overlay.add_child(galactic_ledger)
-	var ledger_title := _spec_label(tr("TREE_GALACTIC_LEDGER"), UITheme.mono(), 11.0, UITheme.INK_MID, 0.31)
-	ledger_title.name = "LedgerTitle"
-	galactic_ledger.add_child(ledger_title)
-	var span_label := _spec_label(tr("TREE_GALACTIC_SPAN"), UITheme.mono(), 13.0, UITheme.TOOLTIP_LABEL)
-	span_label.name = "SpanLabel"
-	galactic_ledger.add_child(span_label)
-	galactic_span_value = _spec_label("×1.0000", UITheme.mono_tabular(), 13.0, UITheme.INK_HIGH)
-	galactic_span_value.name = "SpanValue"
-	galactic_span_value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	galactic_ledger.add_child(galactic_span_value)
-	var ledger_divider := ColorRect.new()
-	ledger_divider.name = "Divider"
-	ledger_divider.color = Color(UITheme.ACCENT_DEEP, 0.70)
-	ledger_divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	galactic_ledger.add_child(ledger_divider)
-	var branch_title := _spec_label(tr("TREE_GALACTIC_BRANCH_INSTALLS"), UITheme.mono(), 11.0, UITheme.INK_MID, 0.31)
-	branch_title.name = "BranchTitle"
-	galactic_ledger.add_child(branch_title)
-	for constellation_id in GALACTIC_LEDGER_ORDER:
-		var constellation: Dictionary = chart_constellations[constellation_id]
-		var name_label := _spec_label(tr(String(constellation.label_key)).split("  /  ")[0], UITheme.sans("light"), 13.0, UITheme.TOOLTIP_BODY)
-		galactic_ledger.add_child(name_label)
-		galactic_ledger_names.append(name_label)
-		var leader := ColorRect.new()
-		leader.color = Color(UITheme.ACCENT_DEEP, 0.55)
-		leader.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		galactic_ledger.add_child(leader)
-		galactic_ledger_leaders.append(leader)
-		var count_label := _spec_label("0", UITheme.mono_tabular(), 12.0, UITheme.INK_MID)
-		count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		galactic_ledger.add_child(count_label)
-		galactic_ledger_counts.append(count_label)
-	var local_group_name := _spec_label(tr(ChartData.LOCAL_GROUP_LABEL_KEY).split(" / ")[0], UITheme.sans("light"), 13.0, UITheme.INK_MAX)
-	galactic_ledger.add_child(local_group_name)
-	galactic_ledger_names.append(local_group_name)
-	var local_group_leader := ColorRect.new()
-	local_group_leader.color = Color(UITheme.ACCENT_DEEP, 0.55)
-	local_group_leader.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	galactic_ledger.add_child(local_group_leader)
-	galactic_ledger_leaders.append(local_group_leader)
-	var local_group_count := _spec_label("0", UITheme.mono_tabular(), 12.0, UITheme.INK_MID)
-	local_group_count.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	galactic_ledger.add_child(local_group_count)
-	galactic_ledger_counts.append(local_group_count)
-
-	galactic_panel = Control.new()
-	galactic_panel.name = "GalacticInspector"
-	galactic_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	galactic_panel.z_index = 30
-	overlay.add_child(galactic_panel)
-	galactic_panel_group = _spec_label("", UITheme.mono(), 11.0, UITheme.INK_MID, 0.31)
-	galactic_panel_group.name = "Group"
-	galactic_panel.add_child(galactic_panel_group)
-	galactic_panel_name = _spec_label("", UITheme.sans(), 26.0, UITheme.TOOLTIP_NAME)
-	galactic_panel_name.name = "Name"
-	galactic_panel_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	galactic_panel.add_child(galactic_panel_name)
-	galactic_panel_code = _spec_label("", UITheme.mono(), 13.0, UITheme.TOOLTIP_VALUE)
-	galactic_panel_code.name = "Code"
-	galactic_panel.add_child(galactic_panel_code)
-	galactic_panel_order = _spec_label("", UITheme.mono(), 13.0, UITheme.TOOLTIP_LABEL)
-	galactic_panel_order.name = "Order"
-	galactic_panel.add_child(galactic_panel_order)
-	galactic_installation_rule = ColorRect.new()
-	galactic_installation_rule.name = "Divider"
-	galactic_installation_rule.color = UITheme.ACCENT_DEEP
-	galactic_installation_rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	galactic_panel.add_child(galactic_installation_rule)
-	for field_name in ["Status", "Cost", "Effect"]:
-		var field_label := _spec_label(tr("TREE_GALACTIC_FIELD_%s" % field_name.to_upper()), UITheme.mono(), 11.0, UITheme.TOOLTIP_LABEL, 0.18)
-		field_label.name = "Field%sLabel" % field_name
-		galactic_panel.add_child(field_label)
-	galactic_panel_state = _spec_label("", UITheme.sans("light"), 13.0, UITheme.INK_MAX)
-	galactic_panel_state.name = "FieldStatusValue"
-	galactic_panel.add_child(galactic_panel_state)
-	galactic_panel_cost = _spec_label("", UITheme.mono_tabular(), 13.0, UITheme.TOOLTIP_BODY)
-	galactic_panel_cost.name = "FieldCostValue"
-	galactic_panel.add_child(galactic_panel_cost)
-	galactic_panel_effect = _spec_label("", UITheme.sans(), 15.0, UITheme.TOOLTIP_VALUE)
-	galactic_panel_effect.name = "FieldEffectValue"
-	galactic_panel_effect.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	galactic_panel.add_child(galactic_panel_effect)
-	_layout_galactic_overlays()
-	_refresh_galactic_overlays()
 
 
 func _request_tooltip_refit() -> void:
@@ -2977,55 +2783,6 @@ func _draw_dashed_connection(start: Vector2, finish: Vector2, color: Color) -> v
 		tree_canvas.draw_line(start + direction * cursor, start + direction * dash_end, Color(color, 0.58), 1.4, true)
 		cursor += 14.0
 
-
-func _style_header_button(button: Button) -> void:
-	# Text with a rule under it, matching the chart's own close action and the
-	# HUD overlays. The bordered box was the last cyan-era shape on this screen.
-	var font_size := UITheme.size_px(15.0)
-	button.flat = true
-	button.focus_mode = Control.FOCUS_NONE
-	button.add_theme_font_override("font", UITheme.mono())
-	button.add_theme_font_size_override("font_size", font_size)
-	button.add_theme_constant_override("spacing_glyph", UITheme.tracking(font_size, 0.16))
-	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
-		button.add_theme_color_override(state, UITheme.INK_MID)
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0, 0, 0, 0)
-	style.border_width_bottom = 1
-	style.border_color = UITheme.ACCENT_DEEP
-	style.content_margin_left = UITheme.px(9.0)
-	style.content_margin_right = UITheme.px(9.0)
-	style.content_margin_top = UITheme.px(7.0)
-	style.content_margin_bottom = UITheme.px(6.0)
-	var hover := style.duplicate()
-	hover.border_color = UITheme.ACCENT_TEXT
-	for state in ["normal", "pressed", "focus"]:
-		button.add_theme_stylebox_override(state, style)
-	button.add_theme_stylebox_override("hover", hover)
-
-func _spec_label(text: String, font: Font, spec_size: float, color: Color, em: float = 0.0) -> Label:
-	return UITheme.spec_label(text, font, spec_size, color, em)
-
-
-func _make_label(text: String, font_size: int, color: Color) -> Label:
-	var label := Label.new()
-	label.text = text
-	label.add_theme_font_size_override("font_size", font_size)
-	label.add_theme_color_override("font_color", color)
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return label
-
-
-func _panel_style(background: Color, border: Color, radius: int, width: int) -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = background
-	style.border_color = border
-	style.set_border_width_all(width)
-	style.corner_radius_top_left = radius
-	style.corner_radius_top_right = radius
-	style.corner_radius_bottom_left = radius
-	style.corner_radius_bottom_right = radius
-	return style
 
 func bind_extension(research: Node) -> void:
 	extension_research = research

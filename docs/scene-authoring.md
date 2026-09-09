@@ -15,8 +15,10 @@ to Nightwatch Array. It does not change the visual direction or gameplay contrac
   child indices. Separate views by a coherent responsibility, not by every label.
 - Keep shared presentation consistent with `ui_theme.gd`. Authored values use the
   existing 1152×648 viewport units (1920×1080 design values × `UITheme.SCALE`).
-  A future shared-theme migration must cover both authored and existing code UI;
-  do not independently retune one copy during a structural refactor.
+  Shared control styles and fonts live in `resources/ui/`; `ui_theme.gd` loads
+  the same tabular font and data-tooltip theme for runtime bindings. Its color
+  constants also support procedural drawing. Palette changes must cover scene
+  role overrides and drawing together; do not retune either during refactoring.
 
 ## Deliberate exceptions
 
@@ -42,10 +44,35 @@ and English, including collapsed/expanded or other relevant states. Inspect the
 images and compare stable pixels; run relevant interaction/lifecycle checks and
 the required Windows export. A match in screenshots does not prove input behavior.
 
-## First migrated surface
+## Authored surfaces
 
-`scenes/ui/phase_summary.tscn` owns the round summary's fixed structure and styles.
-`hud.gd` instantiates it and binds named nodes; it retains result formatting,
-detail disclosure, reveal cancellation and the continue request. Game still owns
-round transitions, pause and saves. Other HUD surfaces remain on their existing
-construction path until separately migrated.
+All fixed UI, including the retained ending and probe HUD, follows this boundary.
+Controllers bind scene-owned named nodes and connect live requests. Do not add
+another code-built fixed surface alongside these scenes.
+
+| Surface | Scene under `scenes/ui/` | Runtime owner |
+|---|---|---|
+| Observation HUD | `hud.tscn` and its readout/banner scenes | `hud.gd` |
+| Settings and six pages | `settings.tscn`, `settings_*.tscn` | `hud.gd` |
+| Startup/save rows | `startup.tscn`, `startup_slot.tscn`, `save_slot.tscn` | HUD binds slot summaries/actions |
+| Round summary | `phase_summary.tscn` | HUD binds result, disclosure and reveal lifecycle |
+| Retained ending/debug display | `catalogue_ending.tscn`, `debug_hud.tscn` | HUD and procedural coda |
+| Research chart | `upgrade_tree.tscn`, `chart_header.tscn`, inspector/ledger scenes | `upgrade_tree.gd` |
+| Repeated research star | `research_star.tscn` | Catalogue-driven instantiation and procedural marker |
+| Module loadout | `module_popup.tscn`, `module_tooltip.tscn` | `module_popup.gd` |
+| Repeated module controls | `module_inventory_tile.tscn`, `module_ring_slot.tscn`, `module_action.tscn` | Catalogue/slot data and chart-relative placement |
+| Module draw | `module_draw.tscn` | `module_draw_window.gd` |
+| Tutorial | `tutorial_controller.tscn` | Tutorial step/pause controller |
+| Layer 2 diagnostic | `probe_hud.tscn` | `probe/probe_hud.gd` |
+
+`scripts/ui/` contains the custom ring, inventory tile and tracking control
+scripts needed by these scenes. They preserve the original drawing and runtime
+state. The chart still derives research content/positions from its catalogue.
+Native confirmation dialogs generate their internal controls inside Godot;
+HUD attaches the `native_dialog*.tres` themes to those controls after instantiation.
+Option-button metadata and translated initial slot values are bound in code,
+because scene serialization does not preserve that runtime metadata/localization.
+
+Game retains all progression, round transitions, pause ownership and persistence.
+The migration tools and before/after captures in `build/` are diagnostic artifacts;
+no generated-tree loader or migration tool is part of the shipped runtime.
