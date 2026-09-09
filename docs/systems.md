@@ -45,6 +45,11 @@ All script names below are under `scripts/`.
 | Retained distant-target / phenomenon paths | `host_star_controller.gd`, `galactic_phenomena_controller.gd`, `supernova_target.gd`, `black_hole_target.gd` |
 | Presentation-only legacy ending animation | `catalogue_ending_coda.gd` |
 
+The round summary's fixed hierarchy and presentation live in
+`scenes/ui/phase_summary.tscn`. HUD instantiates the scene and binds its named
+nodes, retaining result formatting, disclosure and reveal lifecycle. Continue
+still emits the HUD request to Game. See [scene authoring](scene-authoring.md).
+
 The independent Layer 2 scene uses `scripts/probe/probe_controller.gd` and
 `probe_hud.gd`; it is a testbed, not another stage of the main game.
 

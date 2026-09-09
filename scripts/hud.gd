@@ -13,6 +13,7 @@ signal tutorial_replay_requested
 
 const Balance = preload("res://scripts/game_balance.gd")
 const UITheme = preload("res://scripts/ui_theme.gd")
+const PhaseSummaryScene = preload("res://scenes/ui/phase_summary.tscn")
 const CatalogueEndingCoda = preload("res://scripts/catalogue_ending_coda.gd")
 const ExtensionData = preload("res://scripts/expansion_data.gd")
 const END_REVEAL_TOTAL_SECONDS := 8.0
@@ -2264,104 +2265,24 @@ func _set_summary_details(expanded: bool) -> void:
 
 
 func _build_phase_summary_overlay() -> void:
-	phase_summary_overlay = Control.new()
-	phase_summary_overlay.name = "PhaseSummary"
-	phase_summary_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	phase_summary_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	phase_summary_overlay.visible = false
+	# The scene owns fixed presentation; HUD keeps result binding and game requests.
+	phase_summary_overlay = PhaseSummaryScene.instantiate()
 	root_control.add_child(phase_summary_overlay)
-	# No bordered panel. The round summary is typeset straight onto the dimmed
-	# sky, the same way the in-round readouts and the research chart are. A panel
-	# here was the last surface still speaking the old cyan HUD language.
-	var dim := ColorRect.new()
-	dim.color = Color(0.016, 0.008, 0.006, 0.62)
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	dim.mouse_filter = Control.MOUSE_FILTER_STOP
-	phase_summary_overlay.add_child(dim)
-	var frame := Control.new()
-	frame.name = "SummaryColumn"
-	frame.set_anchors_preset(Control.PRESET_CENTER)
-	frame.offset_left = -UITheme.px(640.0)
-	frame.offset_right = UITheme.px(640.0)
-	frame.offset_top = -UITheme.px(300.0)
-	frame.offset_bottom = UITheme.px(300.0)
-	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	phase_summary_overlay.add_child(frame)
-	var column := VBoxContainer.new()
-	column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	column.alignment = BoxContainer.ALIGNMENT_CENTER
-	column.add_theme_constant_override("separation", int(UITheme.px(14.0)))
-	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame.add_child(column)
-
-	phase_summary_title = _spec_label("", UITheme.sans("medium"), 44.0, UITheme.INK_MAX, -0.01)
-	phase_summary_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	column.add_child(phase_summary_title)
-
-	phase_summary_subtitle = _spec_label("", UITheme.mono(), 13.0, UITheme.INK_MID, 0.30)
-	phase_summary_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	# Duration is part of the optional round breakdown below.
-
-	var rule := CenterContainer.new()
-	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	column.add_child(rule)
-	var rule_line := ColorRect.new()
-	rule_line.color = UITheme.ACCENT_DEEP
-	rule_line.custom_minimum_size = Vector2(UITheme.px(420.0), 1.0)
-	rule_line.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	rule.add_child(rule_line)
-
-	# The round's output is a gain, so it takes the gain ink the data counter
-	# already uses when it ticks up.
-	phase_summary_data = _spec_label("", UITheme.sans("medium"), 40.0, UITheme.GAIN, 0.0)
-	phase_summary_data.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	column.add_child(phase_summary_data)
-
-	summary_lead = _spec_label("", UITheme.sans(), 22.0, UITheme.INK_HIGH)
-	summary_lead.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	summary_lead.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	column.add_child(summary_lead)
-	summary_highlight = _spec_label("", UITheme.sans(), 20.0, UITheme.ACCENT_TEXT)
-	summary_highlight.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	column.add_child(summary_highlight)
-	summary_details_button = Button.new()
-	summary_details_button.toggle_mode = true
-	summary_details_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	_style_text_action(summary_details_button, 20.0, UITheme.INK_MID)
+	phase_summary_title = phase_summary_overlay.get_node("%Title")
+	phase_summary_subtitle = phase_summary_overlay.get_node("%Duration")
+	phase_summary_data = phase_summary_overlay.get_node("%Data")
+	summary_lead = phase_summary_overlay.get_node("%Lead")
+	summary_highlight = phase_summary_overlay.get_node("%Highlight")
+	summary_details_button = phase_summary_overlay.get_node("%DetailsButton")
+	summary_details = phase_summary_overlay.get_node("%Details")
+	phase_summary_comparison = phase_summary_overlay.get_node("%Comparison")
+	phase_summary_observations = phase_summary_overlay.get_node("%Observations")
+	phase_summary_split = phase_summary_overlay.get_node("%Split")
+	phase_summary_badges = phase_summary_overlay.get_node("%Badges")
+	phase_summary_button = phase_summary_overlay.get_node("%ContinueButton")
 	summary_details_button.toggled.connect(_set_summary_details)
-	column.add_child(summary_details_button)
-	summary_details = VBoxContainer.new()
-	summary_details.add_theme_constant_override("separation", UITheme.px(12))
-	column.add_child(summary_details)
-	summary_details.add_child(phase_summary_subtitle)
-	_set_summary_details(false)
-
-	phase_summary_comparison = _spec_label("", UITheme.sans(), 20.0, UITheme.INK_MID, 0.02)
-	phase_summary_comparison.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	phase_summary_comparison.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	summary_details.add_child(phase_summary_comparison)
-
-	phase_summary_observations = _spec_label("", UITheme.sans("medium"), 22.0, UITheme.INK_HIGH, 0.0)
-	phase_summary_observations.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	summary_details.add_child(phase_summary_observations)
-
-	phase_summary_split = _spec_label("", UITheme.sans(), 20.0, UITheme.INK_MID, 0.0)
-	phase_summary_split.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	summary_details.add_child(phase_summary_split)
-
-	phase_summary_badges = _spec_label("", UITheme.sans(), 20.0, UITheme.ACCENT_TEXT, 0.12)
-	phase_summary_badges.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	phase_summary_badges.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	summary_details.add_child(phase_summary_badges)
-
-	# Text with a rule under it, matching the research chart header action rather
-	# than a filled button.
-	phase_summary_button = Button.new()
-	phase_summary_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	_style_text_action(phase_summary_button, 22.0, UITheme.BANNER_TITLE)
 	phase_summary_button.pressed.connect(_on_phase_summary_continue_pressed)
-	column.add_child(phase_summary_button)
-
+	_set_summary_details(false)
 
 func _hairline(spec_width: float = 420.0) -> CenterContainer:
 	var holder := CenterContainer.new()

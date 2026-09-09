@@ -84,6 +84,8 @@ a specific decision, not a routine prerequisite.
   consult only the feature being changed. These values are starting points within
   the design brief's adjustment boundary, not blanket approval gates.
 - [docs/systems.md](docs/systems.md) — scene tree, signal wiring, ownership.
+- [docs/scene-authoring.md](docs/scene-authoring.md) — use for UI/object authoring;
+  stable scene/resource structure, project drawing exceptions, and behavior-preserving migration.
 - [docs/probes.md](docs/probes.md) — what each test and probe measures.
 - [docs/legacy-contracts.md](docs/legacy-contracts.md) — retained compatibility
   and diagnostic paths; read when touching those paths, not as future content requirements.

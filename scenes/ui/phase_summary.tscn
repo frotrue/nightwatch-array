@@ -1,0 +1,186 @@
+[gd_scene format=3]
+
+[ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Medium.ttf" id="SansMedium"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Regular.ttf" id="SansRegular"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexMono-Regular.ttf" id="MonoRegular"]
+
+[sub_resource type="StyleBoxFlat" id="ActionNormal"]
+content_margin_left = 6.0
+content_margin_top = 7.2
+content_margin_right = 6.0
+content_margin_bottom = 5.4
+bg_color = Color(0, 0, 0, 0)
+draw_center = false
+border_width_bottom = 1
+border_color = Color(0.33333334, 0.23529412, 0.19215687, 1)
+
+[sub_resource type="StyleBoxFlat" id="ActionFocus"]
+content_margin_left = 6.0
+content_margin_top = 7.2
+content_margin_right = 6.0
+content_margin_bottom = 5.4
+bg_color = Color(0, 0, 0, 0)
+draw_center = false
+border_width_bottom = 1
+border_color = Color(1, 0.7058824, 0.5568628, 1)
+
+[node name="PhaseSummary" type="Control"]
+visible = false
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Dim" type="ColorRect" parent="."]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.016, 0.008, 0.006, 0.62)
+
+[node name="SummaryColumn" type="Control" parent="."]
+anchors_preset = 0
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -384.0
+offset_top = -180.0
+offset_right = 384.0
+offset_bottom = 180.0
+mouse_filter = 2
+
+[node name="Content" type="VBoxContainer" parent="SummaryColumn"]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="Title" type="Label" parent="SummaryColumn/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.83137256, 0.6901961, 1)
+theme_override_fonts/font = ExtResource("SansMedium")
+theme_override_font_sizes/font_size = 26
+horizontal_alignment = 1
+
+[node name="Rule" type="CenterContainer" parent="SummaryColumn/Content"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Line" type="ColorRect" parent="SummaryColumn/Content/Rule"]
+custom_minimum_size = Vector2(252, 1)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 1)
+
+[node name="Data" type="Label" parent="SummaryColumn/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9098039, 0.5294118, 0.38039216, 1)
+theme_override_fonts/font = ExtResource("SansMedium")
+theme_override_font_sizes/font_size = 24
+horizontal_alignment = 1
+
+[node name="Lead" type="Label" parent="SummaryColumn/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_fonts/font = ExtResource("SansRegular")
+theme_override_font_sizes/font_size = 13
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Highlight" type="Label" parent="SummaryColumn/Content"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.7058824, 0.5568628, 1)
+theme_override_fonts/font = ExtResource("SansRegular")
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+
+[node name="DetailsButton" type="Button" parent="SummaryColumn/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_colors/font_focus_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_colors/font_pressed_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_colors/font_hover_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_colors/font_disabled_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("SansRegular")
+theme_override_font_sizes/font_size = 12
+theme_override_styles/normal = SubResource("ActionNormal")
+theme_override_styles/pressed = SubResource("ActionNormal")
+theme_override_styles/hover = SubResource("ActionFocus")
+theme_override_styles/disabled = SubResource("ActionNormal")
+theme_override_styles/focus = SubResource("ActionFocus")
+toggle_mode = true
+flat = true
+
+[node name="Details" type="VBoxContainer" parent="SummaryColumn/Content"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 7
+
+[node name="Duration" type="Label" parent="SummaryColumn/Content/Details"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("MonoRegular")
+theme_override_font_sizes/font_size = 8
+horizontal_alignment = 1
+
+[node name="Comparison" type="Label" parent="SummaryColumn/Content/Details"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("SansRegular")
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Observations" type="Label" parent="SummaryColumn/Content/Details"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_fonts/font = ExtResource("SansMedium")
+theme_override_font_sizes/font_size = 13
+horizontal_alignment = 1
+
+[node name="Split" type="Label" parent="SummaryColumn/Content/Details"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("SansRegular")
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+
+[node name="Badges" type="Label" parent="SummaryColumn/Content/Details"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.7058824, 0.5568628, 1)
+theme_override_fonts/font = ExtResource("SansRegular")
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="ContinueButton" type="Button" parent="SummaryColumn/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_colors/font_focus_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_colors/font_pressed_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_colors/font_hover_color = Color(1, 0.81960785, 0.6745098, 1)
+theme_override_colors/font_disabled_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("SansRegular")
+theme_override_font_sizes/font_size = 13
+theme_override_styles/normal = SubResource("ActionNormal")
+theme_override_styles/pressed = SubResource("ActionNormal")
+theme_override_styles/hover = SubResource("ActionFocus")
+theme_override_styles/disabled = SubResource("ActionNormal")
+theme_override_styles/focus = SubResource("ActionFocus")
+flat = true
