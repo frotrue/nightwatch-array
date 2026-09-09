@@ -1,6 +1,7 @@
 extends Node2D
 
 const UITheme = preload("res://scripts/ui_theme.gd")
+const ArrivalVisual = preload("res://scripts/arrival_visual.gd")
 
 signal packet_landed(amount: float)
 
@@ -403,9 +404,7 @@ func _draw() -> void:
 		# One fading stroke is enough to indicate the entry direction.
 		var ink := UITheme.ACCENT_LINE
 		var reach := 38.0 if forecast else 26.0
-		var axis := PackedVector2Array([p - direction * 4.0 * visual_scale, p + direction * 8.0 * visual_scale, p + direction * reach * visual_scale])
-		var colors := PackedColorArray([Color(ink, alpha * 0.28), Color(ink, alpha * 0.8), Color(ink, 0.0)])
-		draw_polyline_colors(axis, colors, 1.1 * visual_scale, true)
+		ArrivalVisual.draw_direction(self, p, direction, visual_scale, ink, alpha, reach)
 	if flash_strength > 0.001:
 		# Grown by the shake budget so a displaced canvas cannot expose an
 		# unpainted strip along the edge the screen shook away from.

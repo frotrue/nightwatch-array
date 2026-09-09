@@ -121,8 +121,8 @@ const UPGRADE_NODES: Array[Dictionary] = [
 		"major": false
 	},
 	{
-		"id": "trajectory", "name": "Trajectory Prediction", "icon": "➤", "cost": 220,
-		"description": "Base maximum arrival-position error decreases by about 31%. Adds direction markers.",
+		"id": "trajectory", "name": "Arrival Position Calibration", "icon": "➤", "cost": 220,
+		"description": "Base maximum arrival-position error decreases by about 31%. Shows approach direction before arrival.",
 		"branch": "detection", "prerequisites": ["wide_field", "contact_ledger"],
 		"hidden_until": ["wide_field"], "effect_type": "unlock", "effect_notes": {"trajectory_line": true},
 		"major": true

@@ -1,6 +1,7 @@
 extends Node2D
 
 const UITheme = preload("res://scripts/ui_theme.gd")
+const ArrivalVisual = preload("res://scripts/arrival_visual.gd")
 
 # Forecast information can arrive before the player owns hardware to act on it.
 # Secondary Camera adds the player-aimed dish and extends the warning to fund
@@ -468,7 +469,6 @@ func _draw_abandonment_mark(point: Vector2, tether_start: Vector2, alpha: float)
 
 func _draw_contact(contact: Dictionary) -> void:
 	var visual_scale := _world_px(1.0)
-	var font := UITheme.sans()
 	var lead: float = maxf(float(contact.lead_time), 0.001)
 	var certainty: float = clampf(1.0 - float(contact.countdown) / lead, 0.0, 1.0)
 	var estimate := _estimate_of(contact)
@@ -477,26 +477,36 @@ func _draw_contact(contact: Dictionary) -> void:
 	var base_color := UITheme.INK_MID.lerp(UITheme.ACCENT_TEXT, certainty)
 	if float(contact.get("abandoned_flash", 0.0)) > 0.0:
 		base_color = UITheme.ALERT
-	var hovered: bool = int(contact.id) == hovered_contact_id
-	var pulse := 1.0 + sin(Time.get_ticks_msec() * 0.006) * 0.08
+	var hovered: bool = int(contact.id) == hovered_contact_id or get_local_mouse_position().distance_to(estimate) <= _world_px(CONTACT_HIT_RADIUS)
 
+	# The error footprint is inspection detail; a quiet mark locates the
+	# forecast without surrounding every incoming object with two rings.
 	var error_radius: float = lerpf(float(contact.max_error), _world_px(6.0), certainty)
-	if error_radius > _world_px(7.0):
-		draw_arc(estimate, error_radius * pulse, 0.0, TAU, 40, Color(base_color, 0.20), 1.0 * visual_scale, true)
-	draw_arc(estimate, 20.0 * visual_scale * pulse, 0.0, TAU, 32,
-		Color(base_color, 0.85 if hovered else 0.6), (2.0 if hovered else 1.5) * visual_scale, true)
+	if hovered and error_radius > _world_px(7.0):
+		draw_arc(estimate, error_radius, 0.0, TAU, 40, Color(base_color, 0.20), visual_scale, true)
 	if bool(contact.get("trajectory_known", false)):
-		draw_line(estimate, estimate + Vector2(contact.direction) * 34.0 * visual_scale, Color(base_color, 0.45), 1.2 * visual_scale, true)
+		ArrivalVisual.draw_direction(self, estimate, Vector2(contact.direction), visual_scale, base_color, 1.0 if hovered else 0.85)
+	else:
+		# No approach vector is revealed before the direction research.
+		draw_line(estimate - Vector2(0, 4) * visual_scale, estimate + Vector2(0, 4) * visual_scale, Color(base_color, 0.75), visual_scale, true)
 
-	var label := tr("CONTACT_UNCLASSIFIED")
+	var label := ""
 	if bool(contact.classified):
 		label = tr("METEOR_%s" % String(contact.type_id).to_upper())
-	draw_string(font, estimate + Vector2(-60.0, -28.0) * visual_scale, label,
-		HORIZONTAL_ALIGNMENT_CENTER, 120.0 * visual_scale, int(round(14.0 * visual_scale)), Color(base_color, 0.95))
-	# Tabular figures: a countdown that reflows its own width every tenth of a
-	# second is the exact jitter the red-light spec rules out.
-	draw_string(UITheme.mono_tabular(), estimate + Vector2(-60.0, 40.0) * visual_scale, "%.1fs" % maxf(0.0, float(contact.countdown)),
-		HORIZONTAL_ALIGNMENT_CENTER, 120.0 * visual_scale, int(round(13.0 * visual_scale)), Color(base_color, 0.7))
+	elif hovered:
+		label = tr("CONTACT_UNCLASSIFIED")
+	if not label.is_empty():
+		label += " · "
+	label += "%.1fs" % maxf(0.0, float(contact.countdown))
+	var font := UITheme.mono_tabular()
+	var font_size := maxi(1, int(round(12.0 * visual_scale)))
+	var width := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	var rect := _atmospheric_rect().grow(-8.0 * visual_scale)
+	var label_offset := maxf(22.0 * visual_scale, error_radius + 18.0 * visual_scale) if hovered else 22.0 * visual_scale
+	var label_position := estimate + Vector2(-width * 0.5, label_offset)
+	label_position.x = clampf(label_position.x, rect.position.x, maxf(rect.position.x, rect.end.x - width))
+	label_position.y = clampf(label_position.y, rect.position.y + font.get_ascent(font_size), rect.end.y - font.get_descent(font_size))
+	draw_string(font, label_position, label, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, Color(base_color, 0.82))
 
 
 func _atmospheric_rect() -> Rect2:

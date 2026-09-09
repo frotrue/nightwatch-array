@@ -1,6 +1,7 @@
 extends Node2D
 
 const UITheme = preload("res://scripts/ui_theme.gd")
+const ArrivalVisual = preload("res://scripts/arrival_visual.gd")
 const Data = preload("res://scripts/expansion_data.gd")
 var research: Node
 var kind := "rare"
@@ -180,8 +181,10 @@ func _draw() -> void:
 		color.a = clampf(_linger / 0.45, 0.0, 1.0)
 	var pulse := 0.75 + sin(age * 3.0) * 0.1
 	if age < warning_time and kind != "afterglow":
-		draw_arc(Vector2.ZERO, 15.0 * scale_factor, 0.0, TAU, 32, Color(color, 0.4), scale_factor, true)
-		draw_line(Vector2(-22, 0) * scale_factor, Vector2(22, 0) * scale_factor, Color(color, 0.25), scale_factor, true)
+		color = UITheme.ACCENT_LINE
+		var rect: Rect2 = research.game.observation_view.atmospheric_rect()
+		var direction := ((end_uv - start_uv) * rect.size).normalized()
+		ArrivalVisual.draw_direction(self, Vector2.ZERO, direction, scale_factor, UITheme.ACCENT_LINE, lerpf(0.55, 1.0, clampf(age / maxf(warning_time, 0.001), 0.0, 1.0)))
 	else:
 		if kind == "afterglow":
 			var opacity := 0.7 if discovered else 0.27

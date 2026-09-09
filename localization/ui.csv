@@ -425,8 +425,8 @@ UPGRADE_EDGE_DETECTION_NAME,Edge Detection,경계 탐지
 UPGRADE_EDGE_DETECTION_DESC,Unlocks fast meteors.,고속 유성이 나타납니다.
 UPGRADE_WIDE_FIELD_NAME,Wide Field Sensor,광시야 센서
 UPGRADE_WIDE_FIELD_DESC,Shows predicted arrival positions at least 2 seconds before meteors appear.,유성 출현 위치를 최소 2초 전에 예고합니다.
-UPGRADE_TRAJECTORY_NAME,Trajectory Prediction,궤적 예측
-UPGRADE_TRAJECTORY_DESC,Base maximum arrival-position error decreases by about 31%. Adds direction markers.,기본 최대 예고 오차가 약 31% 줄어듭니다. 이동 방향도 표시합니다.
+UPGRADE_TRAJECTORY_NAME,Arrival Position Calibration,진입 위치 보정
+UPGRADE_TRAJECTORY_DESC,Base maximum arrival-position error decreases by about 31%. Shows approach direction before arrival.,기본 최대 예고 위치 오차가 약 31% 줄어듭니다. 출현 전 진입 방향을 표시합니다.
 UPGRADE_RARE_DETECTION_NAME,Rare Meteor Detection,희귀 유성 탐지
 UPGRADE_RARE_DETECTION_DESC,Unlocks fireballs and identifies incoming target types.,화구가 나타납니다. 출현 예고에 천체 종류를 표시합니다.
 UPGRADE_FRAGMENT_ANALYSIS_NAME,Fragment Tracking,파편 추적
