@@ -185,7 +185,7 @@ $gates = @(
     @('constellation_extension_test', 'CONSTELLATION_EXTENSION_PASS'),
     @('expansion_integration_test', 'EXPANSION_INTEGRATION_PASS'),
     @('observation_span_probe', 'OBSERVATION_SPAN_PASS'),
-    @('galactic_slice_test', 'GALACTIC_SLICE_PASS'),
+    @('content_retirement_test', 'CONTENT_RETIREMENT_PASS'),
     @('probe_layer2_test', 'PROBE_TEST_PASS'),
     @('sound_feedback_test', 'SOUND_FEEDBACK_PASS'),
     @('effect_feedback_test', 'EFFECT_FEEDBACK_PASS'),

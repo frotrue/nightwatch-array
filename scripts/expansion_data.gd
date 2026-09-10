@@ -1,12 +1,13 @@
 extends RefCounted
 
-const CATALOGUE_VERSION := 3
+const CATALOGUE_VERSION := 4
+const RETIRED_RESEARCH_IDS := ["ext_link_study", "record", "revisit", "ext_cep_core", "ext_cep_depth"]
 const DRAW_COST := 8
-const SAMPLE_MODULES := ["long_baseline", "dual_processor", "afterglow_archive", "wide_correlation", "reference_bus", "shutter_weave", "focus", "wide", "precision", "record", "revisit", "trail_integrator", "sweep_optics", "relay_bus"]
+const SAMPLE_MODULES := ["long_baseline", "dual_processor", "afterglow_archive", "wide_correlation", "focus", "wide", "precision", "trail_integrator", "sweep_optics", "relay_bus"]
 const MODULE_BRANCHES := ["pegasus", "lacerta"]
 const LEGACY_PURCHASE_IDS := ["focus", "wide", "precision", "record", "revisit"]
 const LEGACY_GRANTS := {"ext_trace_study": "trail_integrator", "ext_sweep_study": "sweep_optics", "ext_link_study": "relay_bus"}
-const RESEARCH_ORDER := ["ext_protocol", "slot_3", "slot_4", "slot_5", "ext_record_complete", "ext_trace_advanced", "ext_sweep_advanced", "ext_link_advanced", "ext_synthesis", "ext_combined_watch", "ext_trace_study", "focus", "precision", "ext_cyg_lock", "ext_cyg_aperture", "ext_link_study", "record", "revisit", "ext_cep_core", "ext_cep_depth", "ext_sweep_study", "wide", "ext_aql_pair", "ext_aql_stride", "ext_aql_stream", "ext_vul_memory", "ext_vul_rhythm", "ext_vul_arc", "ext_vul_cadence", "ext_vul_flow", "ext_del_signal", "ext_del_companion", "ext_del_debris", "ext_del_resonance", "ext_del_school", "ext_sge_cadence", "ext_sge_forecast", "ext_sge_solution", "ext_sge_window", "ext_sge_stream", "ext_equ_focus", "ext_equ_mount", "ext_equ_array", "ext_equ_link", "ext_tri_photometry", "ext_tri_analysis", "ext_tri_catalogue"]
+const RESEARCH_ORDER := ["ext_protocol", "slot_3", "slot_4", "slot_5", "ext_record_complete", "ext_trace_advanced", "ext_sweep_advanced", "ext_link_advanced", "ext_synthesis", "ext_combined_watch", "ext_trace_study", "focus", "precision", "ext_cyg_lock", "ext_cyg_aperture", "ext_sweep_study", "wide", "ext_aql_pair", "ext_aql_stride", "ext_aql_stream", "ext_vul_memory", "ext_vul_rhythm", "ext_vul_arc", "ext_vul_cadence", "ext_vul_flow", "ext_del_signal", "ext_del_companion", "ext_del_debris", "ext_del_resonance", "ext_del_school", "ext_sge_cadence", "ext_sge_forecast", "ext_sge_solution", "ext_sge_window", "ext_sge_stream", "ext_equ_focus", "ext_equ_mount", "ext_equ_array", "ext_equ_link", "ext_tri_photometry", "ext_tri_analysis", "ext_tri_catalogue"]
 const RESEARCH := {
 	"ext_protocol": {"cost": 0.0, "requires": [], "branch": "pegasus", "effects": {}},
 	"slot_3": {"cost": 240000000.0, "requires": ["ext_protocol"], "branch": "pegasus", "effects": {"slot_capacity": 3}},
@@ -23,11 +24,6 @@ const RESEARCH := {
 	"precision": {"cost": 180000000.0, "requires": ["focus"], "branch": "cygnus", "effects": {"secondary_speed": 1.2}},
 	"ext_cyg_lock": {"cost": 180000000.0, "requires": ["focus"], "branch": "cygnus", "effects": {"tracking_grace": 0.1}},
 	"ext_cyg_aperture": {"cost": 300000000.0, "requires": ["precision", "ext_cyg_lock"], "branch": "cygnus", "effects": {"tracking_radius": 1.18}},
-	"ext_link_study": {"cost": 60000000.0, "requires": ["ext_protocol"], "branch": "cepheus", "effects": {"m31_speed": 1.15}},
-	"record": {"cost": 180000000.0, "requires": ["ext_link_study"], "branch": "cepheus", "effects": {"m31_data": 1.25}},
-	"revisit": {"cost": 240000000.0, "requires": ["record"], "branch": "cepheus", "effects": {"m31_wait": 0.85}},
-	"ext_cep_core": {"cost": 180000000.0, "requires": ["ext_link_study"], "branch": "cepheus", "effects": {"m31_radius": 1.25}},
-	"ext_cep_depth": {"cost": 360000000.0, "requires": ["revisit", "ext_cep_core"], "branch": "cepheus", "effects": {"m31_speed": 1.2, "m31_data": 1.15}},
 	"ext_sweep_study": {"cost": 60000000.0, "requires": ["ext_protocol"], "branch": "aquila", "effects": {"survey_distance": 0.9}},
 	"wide": {"cost": 120000000.0, "requires": ["ext_sweep_study"], "branch": "aquila", "effects": {"survey_cooldown": 0.9}},
 	"ext_aql_pair": {"cost": 180000000.0, "requires": ["wide"], "branch": "aquila", "effects": {"survey_count": 1}},

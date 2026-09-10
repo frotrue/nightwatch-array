@@ -45,7 +45,7 @@ func _run() -> void:
 	_test_tutorial_copy()
 	game.free()
 	if failures.is_empty():
-		print("RESEARCH_VISUAL_PASS: 107 legacy and 47 extension bindings, state-ink hierarchy, star/cluster/galaxy draw routing and bilingual tutorial truth")
+		print("RESEARCH_VISUAL_PASS: 95 base and 42 extension bindings, state-ink hierarchy, star/cluster/galaxy draw routing and bilingual tutorial truth")
 		quit(0)
 	else:
 		print("RESEARCH_VISUAL_FAIL: %d failure(s)" % failures.size())
@@ -63,8 +63,8 @@ func _test_live_binding(game) -> void:
 	var chart = game.upgrade_tree
 	var branches := {}
 	var kinds := {}
-	_check(Balance.UPGRADE_NODES.size() == 107 and chart.node_hold_bars.size() == 154, "binding gate covers 107 legacy and 47 extension research markers")
-	_check(Balance.BRANCHES.size() == 13, "current research has thirteen branch families")
+	_check(Balance.UPGRADE_NODES.size() == 95 and chart.node_hold_bars.size() == 137, "binding gate covers 95 base and 42 extension research markers")
+	_check(Balance.BRANCHES.size() == 12, "current research has twelve branch families")
 	for definition in Balance.UPGRADE_NODES:
 		game.progression.purchased_nodes[String(definition.id)] = true
 	for definition in Balance.UPGRADE_NODES:
@@ -85,7 +85,7 @@ func _test_live_binding(game) -> void:
 				_check(visual.visual_state == state and visual.affordable == affordable, "live refresh keeps state and affordability independent: %s/%s" % [node_id, state])
 				_check(visual.star_kind == String(star.kind) and is_equal_approx(visual.magnitude, float(star.magnitude)), "branch binding preserves astronomical marker kind and magnitude: " + node_id)
 		game.progression.purchased_nodes[node_id] = true
-	_check(branches.size() == 13, "live bindings visit all thirteen branch families")
+	_check(branches.size() == 12, "live bindings visit all twelve branch families")
 	for kind in ["star", "cluster", "galaxy"]:
 		_check(kinds.has(kind), "live bindings cover marker kind: " + kind)
 	for definition in chart.extension_definitions:
@@ -151,7 +151,7 @@ func _test_state_ink() -> void:
 	var unique_inks := {}
 	for ink in available_inks.values():
 		unique_inks[Color(ink).to_html(false)] = true
-	_check(unique_inks.size() == 13, "all thirteen affordable branch bindings remain distinct at eight-bit RGB precision")
+	_check(unique_inks.size() == 12, "all twelve affordable branch bindings remain distinct at eight-bit RGB precision")
 	visual.free()
 
 

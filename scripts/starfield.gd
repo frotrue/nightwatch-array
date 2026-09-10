@@ -5,9 +5,9 @@ signal background_visibility_changed(alpha: float)
 const Balance = preload("res://scripts/game_balance.gd")
 const SUNRISE_SECONDS := 1.1
 
-# Keep a small overscan reserve around the final camera limit so changing the
-# single balance constant cannot silently reveal an unpainted border.
-const BACKGROUND_COVERAGE_SPAN := Balance.GALACTIC_FINAL_OBSERVATION_SPAN * 1.02
+# Keep an overscan reserve for camera motion and diagnostic zoom so the
+# painted background continues beyond the normal observation field.
+const BACKGROUND_COVERAGE_SPAN := 1.5 * 1.02
 
 # The live sky shares the research chart's sparse astronomical typesetting,
 # without becoming a photograph. Most stars sit in loose, authored groupings;

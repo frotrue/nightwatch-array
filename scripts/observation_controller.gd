@@ -72,11 +72,6 @@ func _exit_tree() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 
-func _notification(what: int) -> void:
-	if what == NOTIFICATION_PAUSED:
-		_set_m31_manual_contact(false)
-
-
 func reset() -> void:
 	selected_meteor = null
 	hovered_meteor = null
@@ -89,7 +84,7 @@ func reset() -> void:
 	interaction_mode = InteractionMode.NONE
 	pending_blank_distance = 0.0
 	_reset_primary_tracking()
-	_set_m31_manual_contact(false)
+
 	if survey != null:
 		survey.set_scanning(false, cursor_position)
 	if hud != null:
@@ -109,10 +104,7 @@ func _process(delta: float) -> void:
 		previous_cursor_position = cursor_position
 		cursor_position = sampled_cursor
 	var holding: bool = Input.is_action_pressed(&"nw_observe")
-	# The flag describes this rendered input frame, never a past M31 selection.
-	# Resetting it before contact evaluation also prevents paused/modal state from
-	# leaving Reference Bus eligible after input has stopped.
-	_set_m31_manual_contact(false)
+
 	var cursor_on_ui := _cursor_is_on_ui()
 	_set_native_cursor_visible(cursor_on_ui)
 	if holding and not cursor_on_ui:
@@ -201,7 +193,7 @@ func _clear_interaction_mode() -> void:
 	interaction_mode = InteractionMode.NONE
 	pending_blank_distance = 0.0
 	_reset_primary_tracking()
-	_set_m31_manual_contact(false)
+
 	if survey != null:
 		survey.set_scanning(false, cursor_position)
 
@@ -324,8 +316,6 @@ func _note_manual_contact(target, effective_delta: float) -> void:
 		return
 	if target == selected_meteor:
 		primary_tracking_seconds += maxf(0.0, effective_delta)
-	if String(target.get("type_id")) == "andromeda":
-		_set_m31_manual_contact(true)
 
 
 func _trail_integrator_eligible(target) -> bool:
@@ -333,7 +323,7 @@ func _trail_integrator_eligible(target) -> bool:
 		return false
 	if not target.has_method("get_recent_observation_trail"):
 		return false
-	return String(target.get("type_id")) not in ["andromeda", "fireball", "major"]
+	return String(target.get("type_id")) not in ["fireball", "major"]
 
 
 func _trail_cursor_path_distance(target) -> float:
@@ -378,7 +368,7 @@ func release_target(target = null) -> void:
 	if target == null or selected_meteor == target:
 		selected_meteor = null
 		_reset_primary_tracking()
-		_set_m31_manual_contact(false)
+
 		if target == null:
 			tracked_meteors.clear()
 			interaction_mode = InteractionMode.NONE
@@ -470,11 +460,6 @@ func _sync_primary_tracking(target) -> void:
 func _reset_primary_tracking() -> void:
 	primary_tracking_id = 0
 	primary_tracking_seconds = 0.0
-
-
-func _set_m31_manual_contact(active: bool) -> void:
-	if modules != null and modules.has_method("set_m31_manual_active"):
-		modules.set_m31_manual_active(active)
 
 
 func _cursor_is_on_ui() -> bool:
@@ -695,11 +680,6 @@ func _module_manual_speed_for_target(target) -> float:
 			new_multiplier *= modules.stacked_effect("dual_processor", "secondary_speed")
 	if modules.has("wide_correlation"):
 		new_multiplier *= modules.stacked_effect("wide_correlation", "primary_speed" if is_primary else "secondary_speed")
-	if String(target.get("type_id")) == "andromeda":
-		if modules.has("reference_bus"):
-			new_multiplier *= modules.stacked_effect("reference_bus", "m31_manual_speed")
-		if modules.has_method("shutter_active") and modules.shutter_active():
-			new_multiplier *= modules.stacked_effect("shutter_weave", "shutter_speed")
 	# New mechanics may combine only inside this bounded range. The old module
 	# multiplier remains outside it so existing loadouts retain exact behavior.
 	return legacy_speed * clampf(new_multiplier, 0.25, 2.5)

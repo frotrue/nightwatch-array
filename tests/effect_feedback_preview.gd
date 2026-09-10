@@ -73,10 +73,10 @@ func _run() -> void:
 	game.upgrade_tree.configure_galactic_state(true, true)
 	game.upgrade_tree.open_tree()
 	await _settle_layout()
-	if not game.upgrade_tree.content_clip.is_visible_in_tree() or game.upgrade_tree.galactic_panel.is_visible_in_tree():
+	if not game.upgrade_tree.content_clip.is_visible_in_tree():
 		_fail("Constellation chart must keep its own canvas.")
 		return
-	if not await _save_frame("04_deep_sky_chart", {"kind": "chart_continuation", "selection": "m31", "purchase_feedback": false}):
+	if not await _save_frame("04_deep_sky_chart", {"kind": "chart_continuation", "selection": "ext_protocol", "purchase_feedback": false}):
 		return
 	if source.files_sha256 != _source_hashes():
 		_fail("Source files changed during capture; do not treat this image set as one revision.")
@@ -196,7 +196,7 @@ func _capture_installation(case_prefix: String, node_id: String, rule: ColorRect
 		if not await _save_frame(case_prefix + "_" + String(sample[0]), {
 			"kind": "chart_installation", "purchased_node": node_id,
 			"installed_count": game.progression.upgrade_level,
-			"chart_scale": "galaxy" if chart._galactic_panel_active() else "constellation",
+			"chart_scale": "constellation",
 			"rule_scale_x": rule.scale.x, "rule_unscaled_width": rule.size.x,
 			"rule_global_rect": [rect.position.x, rect.position.y, rect.size.x, rect.size.y],
 			"chart_canvas_layer": chart.layer, "hud_canvas_layer": game.hud.layer,

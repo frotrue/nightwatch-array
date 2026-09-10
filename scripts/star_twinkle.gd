@@ -4,7 +4,7 @@ const Balance = preload("res://scripts/game_balance.gd")
 
 const TWINKLE_FPS := 30.0
 const TWINKLE_COUNT := 16
-const BACKGROUND_COVERAGE_SPAN := Balance.GALACTIC_FINAL_OBSERVATION_SPAN * 1.02
+const BACKGROUND_COVERAGE_SPAN := 1.5 * 1.02
 
 var stars: Array[Dictionary] = []
 var outer_stars: Array[Dictionary] = []

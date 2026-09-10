@@ -26,7 +26,7 @@ func _run() -> void:
 	while advanced:
 		advanced = false
 		for definition in Balance.UPGRADE_NODES:
-			if definition.branch != "local_group" and not game.progression.has_upgrade(definition.id):
+			if not game.progression.has_upgrade(definition.id):
 				advanced = game.progression.debug_purchase_node(definition.id) or advanced
 	game.spawner.reset()
 	game.galactic_pullback_seen = true
@@ -34,9 +34,14 @@ func _run() -> void:
 	tree.focus_outer_constellations()
 	game.progression.observation_data = 2000000000.0
 	tree._refresh()
-	_check(tree.chart_constellations.size() == 22 and tree.extension_definitions.size() == 47, "ten figures and forty-seven stars extend the original chart")
+	_check(tree.chart_constellations.size() == 21 and tree.extension_definitions.size() == 42, "nine figures and forty-two stars extend the original chart")
 	_check(original_geometry == tree.base_star_positions, "unlock preserves the original positions")
 	_check(tree.base_star_positions["pegasus/alpheratz"] == tree.base_star_positions["andromeda/alpheratz"], "Pegasus shares the original Alpheratz corner")
+	_check(tree.constellation_ledger_hits.size() == tree._constellation_order().size(), "ledger has exactly one hit target per active constellation")
+	for constellation in Extension.ORDER:
+		var row: int = tree._constellation_order().find(constellation)
+		tree.constellation_ledger_hits[row].pressed.emit()
+		_check(tree.node_star_records[tree.selected_node_id].constellation_id == constellation, "ledger click focuses its displayed constellation: " + constellation)
 	var seen: Dictionary = {}
 	for constellation in Extension.ORDER:
 		for star in Extension.CONSTELLATIONS[constellation].stars:
@@ -46,19 +51,15 @@ func _run() -> void:
 			seen[id] = true
 			_check(Data.RESEARCH[id].branch == constellation, "research effect belongs to its displayed constellation: " + id)
 			_check(tree.node_buttons[id].get_parent() == tree.tree_canvas, "original and new stars share the same canvas")
-			_check(tree._research_state(id) == "locked", "first M31 observation gates the stars: " + id)
 	for id in Modules.RESEARCH_IDS + Data.RESEARCH_ORDER:
 		_check(seen.has(id), "acquisition remains reachable: " + id)
-	_check(Data.MODULE_BRANCHES.size() == 2 and Extension.ORDER.size() - Data.MODULE_BRANCHES.size() == 8, "only two of ten branches support modules")
+	_check(Data.MODULE_BRANCHES.size() == 2 and Extension.ORDER.size() - Data.MODULE_BRANCHES.size() == 7, "only two of nine branches support modules")
 	_check(tree.content_clip.visible and tree.constellation_ledger.visible, "research opens on the constellation chart")
 	_check(tree.node_positions.better_lens.distance_to(tree.CHART_ORIGIN) > 100.0, "original geometry does not collapse into a miniature")
 	var visible_original := 0
 	for definition in Balance.UPGRADE_NODES:
-		if definition.branch != "local_group" and tree.node_buttons[definition.id].is_visible_in_tree(): visible_original += 1
+		if tree.node_buttons[definition.id].is_visible_in_tree(): visible_original += 1
 	_check(visible_original > 0, "original stars remain visible beside new figures")
-	research.target._process(0.0)
-	research.target.apply_manual_observation(10.0, 0.0, 100.0)
-	_check(research.observations == 1 and tree._research_state("ext_protocol") == "purchased", "first M31 lights the protocol star")
 	tree.select_extension("ext_trace_study")
 	_check(tree.tooltip_name.text == research.research_name("ext_trace_study") and tree.tooltip_star.text.contains("α Cyg"), "inspector shows the star identity and research effect")
 	var balance_before: float = game.progression.observation_data

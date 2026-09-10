@@ -66,7 +66,7 @@ func meteor_shake_scale() -> float:
 
 
 func set_observation_span(value: float) -> void:
-	var next_span := clampf(value, 1.0, GameBalance.GALACTIC_FINAL_OBSERVATION_SPAN)
+	var next_span := clampf(value, 1.0, 1.5)
 	if is_equal_approx(next_span, observation_span):
 		return
 	observation_span = next_span

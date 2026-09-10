@@ -30,7 +30,7 @@ func _run() -> void:
 	await process_frame
 
 	var popup = game.module_popup
-	_check(Modules.DEFINITIONS.size() == 14, "expanded definitions expose all fourteen modules")
+	_check(Modules.DEFINITIONS.size() == 10, "expanded definitions expose all ten modules")
 	popup.launcher.grab_focus()
 	popup.open()
 	await process_frame
@@ -87,7 +87,7 @@ func _run() -> void:
 	for tile in popup.owned_buttons.values():
 		_check(tile.visible, "acquired module appears in storage")
 	var scrollbar: Range = popup.inventory_scroll.get_v_scroll_bar()
-	_check(scrollbar.max_value <= scrollbar.page, "all fourteen owned modules fit in the default storage view")
+	_check(scrollbar.max_value <= scrollbar.page, "all ten owned modules fit in the default storage view")
 	# Retain the overflow/focus contract for constrained views or a larger catalog.
 	var authored_scroll_height: float = popup.inventory_scroll.size.y
 	popup.inventory_scroll.size.y = 200.0

@@ -1,12 +1,10 @@
 keys,en,ko
 EXT_RESEARCH_PROTOCOL_NAME,Module interface,모듈 접속
-EXT_RESEARCH_PROTOCOL_DESC,Unlock rare meteors and module draws after the first M31 observation.,M31 첫 관측 후 특수 유성과 모듈 뽑기를 엽니다.
+EXT_RESEARCH_PROTOCOL_DESC,Unlock rare meteors and module draws with Galactic Reference Frame.,은하 기준 좌표계 연구로 특수 유성과 모듈 뽑기를 엽니다.
 EXT_RESEARCH_TRACE_STUDY_NAME,Continuous tracking,연속 추적
 EXT_RESEARCH_TRACE_STUDY_DESC,Manual observation speed ×1.15. Always active without a module.,수동 관측 속도 ×1.15. 모듈 장착 없이 적용.
 EXT_RESEARCH_SWEEP_STUDY_NAME,Survey sensitivity,훑기 감도
 EXT_RESEARCH_SWEEP_STUDY_DESC,Required empty-sky sweep distance ×0.90.,빈 하늘 훑기 필요 이동 거리 ×0.90.
-EXT_RESEARCH_LINK_STUDY_NAME,Deep exposure,심층 노출
-EXT_RESEARCH_LINK_STUDY_DESC,M31 observation speed ×1.15.,M31 관측 속도 ×1.15.
 EXT_RESEARCH_TRACE_ADVANCED_NAME,Rare meteor tracking,특수 유성 추적
 EXT_RESEARCH_TRACE_ADVANCED_DESC,Rare meteor observation time ×0.75.,특수 유성 관측 시간 ×0.75.
 EXT_RESEARCH_SWEEP_ADVANCED_NAME,Rare meteor discovery,특수 유성 탐색
@@ -20,11 +18,8 @@ EXT_RESEARCH_COMBINED_WATCH_DESC,Rare meteor observation window +4s.,특수 유�
 EXT_RESEARCH_RECORD_COMPLETE_NAME,Fabrication efficiency,제작 효율화
 EXT_RESEARCH_RECORD_COMPLETE_DESC,Module draw cost 8 → 6 samples.,모듈 뽑기 표본 비용 8 → 6.
 EXT_PLAN_TRACE_1_NAME,Spectrum pass I,분광 관측 I
-EXT_PLAN_TRACE_1_DESC,Follow the spectrum trail and return to M31.,분광 궤적을 따라간 뒤 M31로 돌아갑니다.
 EXT_PLAN_SWEEP_1_NAME,Afterglow pass I,잔광 탐색 I
-EXT_PLAN_SWEEP_1_DESC,Sweep the sky to reveal afterglows and return to M31.,하늘을 훑어 잔광을 발견한 뒤 M31로 돌아갑니다.
 EXT_PLAN_LINK_1_NAME,Paired relay I,쌍체 연계 I
-EXT_PLAN_LINK_1_DESC,Coordinate a paired target and return to M31.,쌍체 표적을 연계한 뒤 M31로 돌아갑니다.
 EXT_PLAN_TRACE_2_NAME,Spectrum pass II,분광 관측 II
 EXT_PLAN_TRACE_2_DESC,Trace two spectrum components in sequence.,두 분광 구성체를 순서대로 추적합니다.
 EXT_PLAN_SWEEP_2_NAME,Afterglow pass II,잔광 탐색 II
@@ -35,7 +30,6 @@ EXT_PLAN_INTEGRATED_1_NAME,Integrated watch,통합 관측
 EXT_PLAN_INTEGRATED_1_DESC,"Combine spectrum, afterglow and paired observations.",분광·잔광·쌍체 관측을 결합합니다.
 EXT_FIELD_PROGRESS,Field %d / %d · %s,관측장 %d / %d · %s
 EXT_PLAN_DONE,Plan complete,계획 완료
-EXT_FIELD_LOOP,M31 preparation → field evidence → M31 synthesis,M31 준비 → 현장 증거 → M31 합성
 EXT_HELP_SPECTRUM,Observe the body then the rear spectrum; manual work ≥25%.,본체 다음 후방 분광을 관측하세요. 수동 작업 ≥25%.
 EXT_HELP_AFTERGLOW,Hold LMB and sweep to reveal the afterglow; then complete it.,좌클릭을 누른 채 훑어 잔광을 발견하고 관측을 완료하세요.
 EXT_HELP_PAIR,Complete both components; mean manual work ≥25%.,두 구성체를 완료하세요. 쌍체의 평균 수동 작업 ≥25%.
@@ -60,18 +54,14 @@ EXT_FIELD_LINK_HANDOFF,Pair handoff,쌍체 인계
 EXT_FIELD_LINK_PARALLEL,Parallel paired watch,쌍체 병행 관측
 EXT_FIELD_INTEGRATED_TRACE,Spectrum and pair,분광과 쌍체
 EXT_FIELD_INTEGRATED_SWEEP,Two afterglows and ordinary meteor,잔광 2개와 일반 유성
-EXT_FIELD_INTEGRATED_LINK,"M31, pair and afterglow","M31, 쌍체와 잔광"
 EXT_REQUIRE_BASIC,Complete %d basic plan(s),기초 계획 %d개 완료
 EXT_REQUIRE_ADVANCED,Complete %d advanced plan(s),응용 계획 %d개 완료
 EXT_REQUIRE_PLAN,Complete %s,계획 %s 완료
 EXT_REQUIRE_PROTOCOL,Install the continuation protocol,후속 관측 프로토콜 설치
 EXT_SELECT_PLAN,Choose a plan to continue,계속할 계획을 선택하세요
 EXT_RECORD_DONE,Record complete · more observations remain optional,기록 완료 · 추가 관측은 선택 사항
-EXT_NEED_EXPOSURE,Observe M31 to prepare the next field,M31을 관측해 다음 관측장을 준비하세요
-EXT_READY_SYNTHESIS,Return to M31 to synthesize the field,M31로 돌아가 관측장을 합성하세요
 EXT_TASK_SPLIT,Complete one component with ≥25% manual work and the other with ≥75% automatic work,한 구성체는 수동 작업 ≥25%·다른 구성체는 자동 작업 ≥75%로 완성하세요
 EXT_TASK_HANDOFF,Give the same component ≥25% manual and ≥25% automatic work,같은 구성체에 수동·자동 작업을 각각 ≥25% 넣으세요
-EXT_TASK_PARALLEL,Record 25% of M31 while automatic pair progress continues,쌍체 자동 진행을 유지하며 M31을 25% 기록하세요
 EXT_TASK_ORDINARY,Record one ordinary meteor as well,일반 유성도 하나 기록하세요
 EXT_FIELD_COMPLETED,Field complete · %s,관측장 완료 · %s
 EXT_SAMPLES_GAINED,+%d specimen(s),+%d개 표본
@@ -112,14 +102,6 @@ EXT_RESEARCH_CYG_LOCK_NAME,Tracking continuity,추적 유지
 EXT_RESEARCH_CYG_LOCK_DESC,Keep the selected target for an extra 0.10s after leaving its range.,범위를 벗어나도 선택 표적을 유지하는 시간 +0.10초.
 EXT_RESEARCH_CYG_APERTURE_NAME,Open aperture,확장 개구
 EXT_RESEARCH_CYG_APERTURE_DESC,Cursor observation radius ×1.18.,커서 관측 반경 ×1.18.
-EXT_RESEARCH_RECORD_NAME,Core photometry,중심부 측광
-EXT_RESEARCH_RECORD_DESC,"M31 Data ×1.25, weighted by exposure progress.",M31 데이터 ×1.25. 관측 진행량에 비례해 적용.
-EXT_RESEARCH_REVISIT_NAME,Exposure cadence,노출 주기
-EXT_RESEARCH_REVISIT_DESC,"Next M31 waiting time ×0.85, weighted by exposure progress.",다음 M31 대기 시간 ×0.85. 관측 진행량에 비례해 적용.
-EXT_RESEARCH_CEP_CORE_NAME,Core acquisition,중심부 포착
-EXT_RESEARCH_CEP_CORE_DESC,M31 cursor observation radius ×1.25.,M31 커서 관측 반경 ×1.25.
-EXT_RESEARCH_CEP_DEPTH_NAME,Integrated deep watch,심층 통합 관측
-EXT_RESEARCH_CEP_DEPTH_DESC,M31 observation speed ×1.20 and Data ×1.15.,M31 관측 속도 ×1.20 · 데이터 ×1.15.
 EXT_RESEARCH_WIDE_NAME,Survey cycle,훑기 주기
 EXT_RESEARCH_WIDE_DESC,Sky sweep cooldown ×0.90.,하늘 훑기 재사용 대기 ×0.90.
 EXT_RESEARCH_AQL_PAIR_NAME,Companion sweep,동반 훑기

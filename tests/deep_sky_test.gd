@@ -21,18 +21,14 @@ func _run() -> void:
 	game.spawner.set_process(false)
 	game.events.set_process(false)
 	var research = game.deep_sky
-	var target = research.target
-	target.set_process(false)
-	_check(not research.available() and not target.can_be_tracked(), "M31 is gated by the existing galaxy research")
 	var made_progress := true
 	while made_progress:
 		made_progress = false
 		for definition in Balance.UPGRADE_NODES:
-			if definition.branch != "local_group" and not game.progression.has_upgrade(definition.id):
+			if not game.progression.has_upgrade(definition.id):
 				if game.progression.debug_purchase_node(definition.id):
 					made_progress = true
-	_check(game.progression.upgrade_level == 95 and research.available(), "the original 95-node path unlocks M31 without legacy local-group research")
-	target._process(0)
+	_check(game.progression.upgrade_level == 95 and research.available(), "the original 95-node path unlocks follow-up research directly")
 	_check(game.hud.visible and game.observer.visible and game.observation_phase_active and not game.has_method("_enter_andromeda"), "the ordinary sky and observer remain active; there is no stage entry")
 	var tree = game.upgrade_tree
 	game.galactic_pullback_seen = true
@@ -51,27 +47,16 @@ func _run() -> void:
 	chart.select_extension("focus")
 	game.progression.observation_data = 240000000.0
 	_hold_chart_star(game)
-	_check(research.modules.purchased.is_empty(), "module purchases require an actual first observation")
 	for definition in Balance.UPGRADE_NODES:
 		if definition.branch == "local_group":
-			_check(not tree._node_interaction_ready(definition.id), "retired research stays non-interactive")
+			_check(false, "retired research cannot be in the catalogue")
 	tree.close_tree()
 	_check(not paused and not tree.is_open() and game.observation_phase_active, "chart returns to the ordinary ongoing round")
-	var before_total: float = game.progression.total_data_earned
-	var before_round: int = game.observation_round
-	var before_clock: float = game.observation_phase_remaining
-	game.observer.previous_cursor_position = target.global_position
-	game.observer.cursor_position = target.global_position
-	game.observer.selected_meteor = target
-	game.observer._update_manual_tracking(10.0)
-	_check(research.observations == 1 and research.modules_unlocked(), "the existing observer records M31 and unlocks modules")
-	_check(game.progression.total_data_earned > before_total and game._build_round_result().data > 0, "M31 income belongs to the ordinary round summary")
-	_check(game.observation_round == before_round and game.observation_phase_remaining == before_clock, "recording does not replace or restart the round clock")
 	tree.open_tree()
 	await process_frame
 	await process_frame
 	game.progression.observation_data = 60000000.0
-	_check(research.purchase("ext_trace_study"), "permanent tracking research is available after M31")
+	_check(research.purchase("ext_trace_study"), "permanent tracking research is available after coordinate research")
 	game.progression.observation_data = 119999999.0
 	_check(not research.purchase("focus"), "insufficient balance is rejected")
 	game.progression.observation_data = 240000000.0
@@ -140,13 +125,10 @@ func _run() -> void:
 			_check(is_equal_approx(meteor.observation_progress / baseline, expected), "module multiplier applies to ordinary live meteors: " + str(ids))
 	_check(is_equal_approx(game.observer._module_tracking_radius(), game.progression.get_tracking_radius() * 1.65), "wide expands the real cursor radius")
 	_check(game.progression.has_upgrade("multi_target_analysis"), "existing multi-target research is retained")
-	target.progress = 0.37
-	target.cooldown = 2.0
 	var snapshot: Dictionary = game._build_save_data()
 	_check(snapshot.has("deep_sky") and not snapshot.has("andromeda"), "new saves no longer contain an active stage")
 	game._apply_save_data(snapshot)
 	await process_frame
-	_check(research.modules.installed_ids() == ["focus", "wide"] and research.observations == 1 and is_equal_approx(target.progress, 0.37), "game save/load preserves inventory, equipment, M31 record and partial progress")
 	snapshot.erase("deep_sky")
 	snapshot.andromeda = {"active": true, "modules": {"purchased": ["focus"], "equipped": "focus"}}
 	game._apply_save_data(snapshot)
@@ -154,7 +136,6 @@ func _run() -> void:
 	_check(research.modules.slots == ["focus", "", "", "", ""] and research.modules.unlocked_slots == 2 and game.hud.visible and not popup.is_open(), "legacy stage save restores equipment into the ordinary sky without re-entering a stage")
 	await _check_ring_research(game)
 	game.reset_run()
-	_check(research.modules.purchased.is_empty() and research.observations == 0 and not target.can_be_tracked(), "reset clears the extension and hides its target")
 	game.free()
 	paused = false
 	await process_frame
@@ -336,8 +317,8 @@ func _check_slot_saves() -> void:
 	model.load_save_data({"purchased": Modules.DEFINITIONS.keys(), "slots": Modules.DEFINITIONS.keys(), "unlocked_slots": 5})
 	var encoded: Dictionary = JSON.parse_string(JSON.stringify(model.get_save_data()))
 	model.load_save_data(encoded)
-	_check(model.unlocked_slots == 5 and model.slots == ["focus", "wide", "precision", "record", "revisit"], "five positions and researched capacity survive real JSON serialization")
-	_check(is_equal_approx(model.effect("speed"), 0.9) and is_equal_approx(model.effect("radius"), 1.155), "all five effects compose without losing original multipliers")
+	_check(model.unlocked_slots == 5 and model.slots == ["focus", "wide", "precision", "trail_integrator", "sweep_optics"], "five positions and researched capacity survive real JSON serialization")
+	_check(is_equal_approx(model.effect("speed"), 1.125) and is_equal_approx(model.effect("radius"), 1.155), "all five effects compose without losing original multipliers")
 	model.unlocked_slots = 2
 	_check(is_equal_approx(model.effect("speed"), 0.75), "capacity changes invalidate cache and exclude locked equipment")
 	model.load_save_data({"purchased": ["focus", "focus", "wide", "bad", 7], "slots": ["focus", "focus", "wide", "record", "bad", "wide"], "unlocked_slots": 5})
@@ -362,7 +343,7 @@ func _check_ring_research(game: Node) -> void:
 	_check(research.research_ready("slot_3") and not research.purchase("slot_4") and not research.purchase("slot_5"), "module capacity is a sequential permanent research branch")
 	# Acquisition is tested by the draw integration gate. These known five
 	# copies let this gate isolate equip, slot holds, JSON and legacy effects.
-	for id in ["focus", "wide", "precision", "record", "revisit"]:
+	for id in ["focus", "wide", "precision", "trail_integrator", "sweep_optics"]:
 		research.modules.grant(id)
 	popup.open()
 	popup.owned_buttons.focus.pressed.emit()
@@ -372,7 +353,7 @@ func _check_ring_research(game: Node) -> void:
 	popup.owned_buttons.precision.pressed.emit()
 	popup.owned_buttons.focus.pressed.emit()
 	_check(research.modules.slots == ["focus", "wide", "", "", ""], "full and already-mounted tile clicks never replace equipment")
-	_check(not research.equip("record", 2) and not research.purchase("slot_3"), "popup cannot equip a locked position or purchase chart research")
+	_check(not research.equip("trail_integrator", 2) and not research.purchase("slot_3"), "popup cannot equip a locked position or purchase chart research")
 	popup.show_module_tooltip("focus")
 	_check(popup.tooltip_action.text == tr("RING_EQUIPPED_ACTION"), "mounted inventory tile explains its no-op")
 	popup.slots[0].pressed.emit()
@@ -381,7 +362,7 @@ func _check_ring_research(game: Node) -> void:
 	popup.set_process(false)
 	for locale in ["ko", "en"]:
 		game.settings.set_language(locale, false)
-		popup.show_module_tooltip("record")
+		popup.show_module_tooltip("trail_integrator")
 		await _frames(3)
 		popup.tooltip_pointer = popup.overlay.size - Vector2.ONE
 		popup._place_tooltip()
@@ -399,34 +380,17 @@ func _check_ring_research(game: Node) -> void:
 		popup.remove_module(index)
 	for id in Modules.DEFINITIONS:
 		popup.owned_buttons[id].pressed.emit()
-	_check(research.modules.slots == ["focus", "wide", "precision", "record", "revisit"], "five unlocked positions fill clockwise through popup controls")
+	_check(research.modules.slots == ["focus", "wide", "precision", "trail_integrator", "sweep_optics"], "five unlocked positions fill clockwise through popup controls")
 	var snapshot: Dictionary = JSON.parse_string(JSON.stringify(game._build_save_data()))
 	popup.close()
 	game.upgrade_tree.close_tree()
 	game._apply_save_data(snapshot)
 	await _frames(2)
 	_check(research.modules.unlocked_slots == 5 and research.modules.installed_ids().size() == 5 and not paused, "full game JSON restores researched capacity and observation")
-	_check(not research.research_owned("record") and not research.research_owned("revisit"), "new inventory ownership does not grant permanent research on load")
+	_check(not research.research_owned("trail_integrator") and not research.research_owned("sweep_optics"), "new inventory ownership does not grant permanent research on load")
 	game.set_process(false)
 	game.spawner.set_process(false)
 	game.events.set_process(false)
-	research.target.set_process(false)
-	var full_slots: Array = research.modules.slots.duplicate()
-	research.modules.slots.fill("")
-	research.target.cooldown = 0
-	research.target.progress = 0
-	var before: float = game.progression.total_data_earned
-	research.target.apply_manual_observation(100, 0, 52)
-	var base_reward: float = game.progression.total_data_earned - before
-	_check(is_equal_approx(research.target.cooldown, 7.0), "base M31 cooldown remains seven seconds")
-	research.modules.slots.assign(full_slots)
-	_check(is_equal_approx(research.target.cooldown, 7.0), "equipping revisit does not shorten an already running cooldown")
-	research.target.cooldown = 0
-	before = game.progression.total_data_earned
-	research.target.apply_manual_observation(100, 0, 52)
-	_check(base_reward > 0 and is_equal_approx((game.progression.total_data_earned - before) / base_reward, 1.5), "record module increases actual M31 income")
-	_check(is_equal_approx(research.target.cooldown, 4.2), "revisit changes the next actual completion cooldown")
-
 
 func _hold_chart_star(game: Node) -> void:
 	var tree: Node = game.upgrade_tree

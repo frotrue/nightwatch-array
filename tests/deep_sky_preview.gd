@@ -26,13 +26,12 @@ func _run() -> void:
 	while made_progress:
 		made_progress = false
 		for definition in Balance.UPGRADE_NODES:
-			if definition.branch != "local_group" and not game.progression.has_upgrade(definition.id):
+			if not game.progression.has_upgrade(definition.id):
 				if game.progression.debug_purchase_node(definition.id):
 					made_progress = true
 	game.progression.observation_data = 240000000.0
 	game.galactic_pullback_seen = true
 	game.upgrade_tree.configure_galactic_state(true, true)
-	game.deep_sky.target._process(0)
 	game.effects.reset()
 	game.hud.banner_root.hide()
 	for spec in [["common", Vector2(240, 250)], ["binary_star", Vector2(420, 365)], ["fireball", Vector2(140, 440)]]:
@@ -51,10 +50,9 @@ func _run() -> void:
 	game.upgrade_tree.open_tree()
 	await process_frame
 	await process_frame
-	game.upgrade_tree.select_extension("m31")
-	await _capture(game, "ko_chart_locked")
+	game.upgrade_tree.select_extension("ext_protocol")
+	await _capture(game, "ko_chart_unlocked")
 	game.upgrade_tree.close_tree()
-	game.deep_sky.target.apply_manual_observation(10.0, 0.0, 52.0)
 	game.effects.reset()
 	game.hud.banner_root.hide()
 	game.progression.observation_data = 360000000.0
@@ -100,25 +98,25 @@ func _run() -> void:
 	game.module_popup.show_module_tooltip("precision")
 	await _capture(game, "ko_popup_full_two")
 	game.module_popup.close()
-	for id in ["ext_link_study", "record"]:
+	for id in ["ext_trace_advanced", "ext_sweep_advanced"]:
 		if not game.deep_sky.purchase(id):
 			failures.append("expansion purchase failed: " + id)
-	for id in ["slot_3", "revisit"]:
+	for id in ["slot_3", "ext_link_advanced"]:
 		if not game.deep_sky.purchase(id):
 			failures.append("expansion purchase failed: " + id)
 	if not game.deep_sky.purchase("slot_4"):
 		failures.append("expansion purchase failed: slot_4")
 	if not game.deep_sky.purchase("slot_5"):
 		failures.append("expansion purchase failed: slot_5")
-	game.deep_sky.modules.grant("record")
-	game.deep_sky.modules.grant("revisit")
+	game.deep_sky.modules.grant("trail_integrator")
+	game.deep_sky.modules.grant("sweep_optics")
 	game.module_popup.open()
-	for id in ["precision", "record", "revisit"]:
+	for id in ["precision", "trail_integrator", "sweep_optics"]:
 		game.module_popup.owned_buttons[id].pressed.emit()
 	game.module_popup.hide_tooltip()
 	await _capture(game, "ko_popup_full_five")
 	game.module_popup.show_slot_tooltip(3)
-	await _capture(game, "ko_popup_record_hover")
+	await _capture(game, "ko_popup_trail_hover")
 	game.module_popup.tooltip_pointer = Vector2(1148, 644)
 	game.module_popup._place_tooltip()
 	await _capture(game, "ko_popup_edge_tooltip")
@@ -128,7 +126,7 @@ func _run() -> void:
 	_set_locale(game, "en")
 	await _capture(game, "en_chart_five_unlocked")
 	game.module_popup.open()
-	game.module_popup.show_module_tooltip("record")
+	game.module_popup.show_module_tooltip("trail_integrator")
 	await _capture(game, "en_popup_full_five")
 	if source != Capture.source_snapshot(failures):
 		failures.append("source changed during capture")
@@ -149,7 +147,6 @@ func _set_locale(game: Node, locale: String) -> void:
 	game.settings.set_language(locale, false)
 	game.upgrade_tree._refresh()
 	game.module_popup.refresh()
-	game.deep_sky.target.queue_redraw()
 
 func _freeze(node: Node) -> void:
 	node.set_process(false)

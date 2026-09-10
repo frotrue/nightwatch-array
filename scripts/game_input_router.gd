@@ -116,7 +116,7 @@ func _route_menu_back() -> void:
 	# Ending choices, startup recovery, and modal tutorial steps must not be
 	# dismissed by a global Escape. A phase summary is intentionally absent from
 	# this list: opening Settings over it is the pause-menu behavior.
-	if _hud_state(&"is_end_open") or _hud_state(&"is_startup_slots_open") or _tutorial_is_modal():
+	if _hud_state(&"is_startup_slots_open") or _tutorial_is_modal():
 		return
 	if _hud_state(&"is_settings_open") or _hud_state(&"is_controls_open"):
 		return
@@ -135,8 +135,7 @@ func _route_chart() -> void:
 
 func _hud_blocks_game_navigation() -> bool:
 	return (
-		_hud_state(&"is_end_open")
-		or _hud_state(&"is_startup_slots_open")
+		_hud_state(&"is_startup_slots_open")
 		or _hud_state(&"is_settings_open")
 		or _hud_state(&"is_controls_open")
 	)

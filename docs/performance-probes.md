@@ -13,11 +13,11 @@ Use matching workloads before/after; run GPU measurements sequentially.
 & $godot --headless --path . --script res://tests/full_tree_economy_test.gd
 ```
 
-This checks the retained 107-research/5-phenomenon path, not the full current
-M31/module progression or its future ending. Simulation uses 0.05s steps and a
-scripted engaged cursor: phenomena, hosts, then uncovered meteors. Additional-target
-analysis uses the same cursor position and real radius. Production dishes, sweep,
-research effects, target clocks and lens observation still execute.
+This checks all 95 base research nodes; outer research and module collection are
+covered by separate integration gates. Simulation uses 0.05s steps and a scripted
+engaged cursor targeting uncovered meteors. Additional-target analysis uses the
+same cursor position and real radius. Production dishes, sweep, research effects
+and meteor clocks execute. Retired celestial objects no longer run.
 
 | Environment | Default | Meaning |
 |---|---|---|
@@ -28,19 +28,19 @@ Strategies rank currently affordable research at intermissions. They do not rese
 money for a preferred unaffordable node or optimize human behavior. Sweep transitions
 preserve held-button charge, but direct target calls do not test the input state machine.
 
-Each sample must have 107/107 purchases and 5/5 canonical records, complete research/content
-times, final ×8192 value and 1.4774554 span, positive manual/automatic meteor/host/phenomenon
-income, nonnegative bank, complete R/A/F/P timelines and source/bank reconciliation within 0.5 Data.
+Each sample must have 95/95 purchases, a complete research time, final ×8192
+value and 1.0 span, positive manual/automatic meteor income, nonnegative bank,
+complete R/A/F/P timelines and source/bank reconciliation within 0.5 Data.
 New-research availability gaps must stay within twice the maximum observation duration
-(currently 120s). Automatic-host income stays zero. A 14,400s simulated watchdog detects stalls.
+(currently 120s). A 14,400s simulated watchdog detects stalls.
 
 R/A/F/P means revealed / prerequisites available / first affordable / purchased.
-Output includes `FULL_TREE_ECONOMY_ENV`, `RESULT`, `INCOME`, `PACING`, `LOCAL_GROUP`,
-`TIMELINE`, `SUMMARY`, then `FULL_TREE_ECONOMY_PASS`; errors use `INVALID`/`FAIL` suffixes.
+Output includes `FULL_TREE_ECONOMY_ENV`, JSON result records, `SUMMARY`, then
+`FULL_TREE_ECONOMY_PASS`; errors use `INVALID`/`FAIL` suffixes.
 The normal runner also checks exit status and unexpected errors.
 
 The clock counts active observation only. It omits reading, decisions, intermissions,
-the final full-research watch and ending UI. Completion time, strategy deltas and purchase
+and optional observation after completing base research. Completion time, strategy deltas and purchase
 batches are diagnostics, not approved price/playtime targets. The historical
 [2026-08-30 baseline](history/full-tree-economy-baseline.md) is a dated comparison.
 
@@ -114,7 +114,7 @@ Live hover pulses use real time; use [fixed captures](visual-validation.md) for 
 
 The fixture preserves chart layer 100 over HUD 80 and checks unchanged sources.
 Use real `inspector_selection` refreshes; old `tooltip_motion` samples did not exercise
-the current fixed inspector. The final frame is the M31 continuation; older 29-marker
+the current fixed inspector. The final frame is the outer constellation continuation; older 29-marker
 galaxy frames are not comparable workloads. The documented candidate limit is
 windowed pull-back/final-frame p95 below 16.7ms.
 

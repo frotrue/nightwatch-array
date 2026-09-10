@@ -22,7 +22,7 @@ MODX_CONDITIONAL,Conditional effects,조건부 효과
 MODX_CONDITIONAL_NONE,No conditional effects active.,활성 조건부 효과 없음
 MODULE_TRAIL_INTEGRATOR_NAME,Trail integrator,궤적 적분기
 MODULE_TRAIL_INTEGRATOR_SHORT,Trail integrator,궤적 적분
-MODULE_TRAIL_INTEGRATOR_DESC,Observe the last 1s of trail at 60% speed. Manual speed -10%. Excludes M31 and fireballs.,최근 1초 꼬리에서도 60% 속도로 관측. 수동 속도 -10%. M31·화구·거대 유성 제외.
+MODULE_TRAIL_INTEGRATOR_DESC,Observe the last 1s of trail at 60% speed. Manual speed -10%. Excludes fireballs.,최근 1초 꼬리에서도 60% 속도로 관측. 수동 속도 -10%. 화구·거대 유성 제외.
 MODULE_TRAIL_INTEGRATOR_COMBO,Hold over the recent trail when the moving head leaves your cursor.,움직이는 본체를 놓쳤다면 최근 궤적 위에서 관측을 이어갑니다.
 MODULE_SWEEP_OPTICS_NAME,Sweep optics,훑기 광학
 MODULE_SWEEP_OPTICS_SHORT,Sweep optics,훑기 광학
@@ -48,14 +48,6 @@ MODULE_WIDE_CORRELATION_NAME,Wide correlation,광역 상관
 MODULE_WIDE_CORRELATION_SHORT,Correlation,광역 상관
 MODULE_WIDE_CORRELATION_DESC,Extra target speed +35%. Primary target speed -25%.,주변 대상 관측 속도 +35%. 조준 대상 속도 -25%.
 MODULE_WIDE_CORRELATION_COMBO,Spread work across the available field instead of concentrating on one target.,한 표적에 집중하는 대신 보이는 영역 전체에 작업을 분산합니다.
-MODULE_REFERENCE_BUS_NAME,Reference bus,기준 버스
-MODULE_REFERENCE_BUS_SHORT,Reference bus,기준 버스
-MODULE_REFERENCE_BUS_DESC,While observing M31 manually: dish speed +60%. Manual M31 speed -25%.,M31 직접 관측 중 접시 속도 +60%. M31 수동 속도 -25%.
-MODULE_REFERENCE_BUS_COMBO,Manually observe M31 while your dishes work on other targets.,M31을 직접 관측하는 동안 접시가 다른 표적을 더 빠르게 관측합니다.
-MODULE_SHUTTER_WEAVE_NAME,Shutter weave,셔터 직조
-MODULE_SHUTTER_WEAVE_SHORT,Shutter weave,셔터 직조
-MODULE_SHUTTER_WEAVE_DESC,Complete a natural target with at least 25% manual work: M31 speed +35% for 5s. M31 wait +25%. Excludes fragments and M31.,직접 25% 이상 관측한 자연 천체 완료 시 M31 속도 +35%(5초). M31 대기 +25%. 파편·M31 제외.
-MODULE_SHUTTER_WEAVE_COMBO,Finish a qualifying target directly before the next M31 window.,다음 M31 창 전에 자격 표적을 직접 완료합니다.
 DRAW_TITLE,Module draw,모듈 뽑기
 DRAW_OPEN,Draw →,뽑기 →
 DRAW_POOL,%d modules · equal chance (1/%d) · duplicates allowed,모듈 %d종 · 각각 같은 확률 (1/%d) · 중복 획득 가능

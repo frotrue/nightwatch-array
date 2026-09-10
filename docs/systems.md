@@ -1,9 +1,8 @@
 # Systems Reference
 
-Implementation map for the original sky, constellation chart, and M31/module
+Implementation map for the original sky, constellation chart, and module
 continuation. Read the relevant section after [design.md](design.md).
-Current values live in [design-details.md](design-details.md); old Local Group
-and ending behavior lives in [legacy-contracts.md](legacy-contracts.md).
+Current values live in [design-details.md](design-details.md); retired-content save handling lives in [legacy-contracts.md](legacy-contracts.md).
 
 ## Scene and ownership
 
@@ -30,10 +29,10 @@ All script names below are under `scripts/`.
 | Particles, packets, kick and shake | `effects_layer.gd` |
 | Synthesized cues and automatic-success aggregation | `sound_synth.gd` |
 | Global dispatch and binding metadata | `game_input_router.gd`, `game_input_bindings.gd` |
-| HUD, settings, dialogs, summary and legacy ending UI | `hud.gd` |
+| HUD, settings, dialogs and summary UI | `hud.gd` |
 | Research layout, selection, purchase and chart input | `upgrade_tree.gd` |
 | Shared astronomical records; marker rendering | `research_chart_data.gd`; `research_star_visual.gd` |
-| M31 lifecycle, first record, module validation and accounting | `deep_sky_research.gd`, `andromeda_target.gd` |
+| Module unlock, validation and accounting | `deep_sky_research.gd` |
 | Stable extension catalogue, research graph, currency and draw state | `expansion_data.gd`, `expansion_state.gd` |
 | Independent anomaly scheduler, persistent tickets and concrete targets | `anomaly_director.gd`, `anomaly_target.gd` |
 | Outer figure geometry and stable research/star mapping | `constellation_extension_data.gd` |
@@ -42,8 +41,6 @@ All script names below are under `scripts/`.
 | Palette, fonts, spec coordinates and integer formatting | `ui_theme.gd` |
 | Onboarding steps and tutorial modal focus | `tutorial_controller.gd` |
 | Slot files; persisted settings | `save_game_controller.gd`; `game_settings.gd` |
-| Retained distant-target / phenomenon paths | `host_star_controller.gd`, `galactic_phenomena_controller.gd`, `supernova_target.gd`, `black_hole_target.gd` |
-| Presentation-only legacy ending animation | `catalogue_ending_coda.gd` |
 
 Fixed UI hierarchy and presentation live in `scenes/ui/`, with shared styles
 and fonts in `resources/ui/`. HUD, chart, loadout/draw, tutorial and probe
@@ -62,7 +59,7 @@ The independent Layer 2 scene uses `scripts/probe/probe_controller.gd` and
 query progression for effective upgrades rather than duplicating balance logic.
 HUD/chart bind settings and progression; tutorial also binds to chart events.
 
-The observer's additional target layers include hosts, phenomena and DeepSkyResearch.
+The observer's additional target layers include DeepSkyResearch.
 The survey discovery guard also includes these layers. `observer.modules` points
 to `deep_sky.modules`; the chart's continuation binds DeepSkyResearch and the chart.
 ModulePopup receives the game and is exposed to the chart for input/modal ownership.
@@ -73,7 +70,7 @@ Alpheratz is one shared coordinate/state at the Andromeda/Pegasus corner.
 The original 95-star geometry stays intact when the wider sky is revealed.
 ModulePopup owns the shared pause/focus boundary. Its equipment surface and ModuleDrawWindow
 are separate views with separate chart launchers; closing preserves chart rotation/zoom.
-DeepSkyResearch owns all 47 extension research IDs. ProgressionController references its
+DeepSkyResearch owns all 42 active extension research IDs. ProgressionController references its
 ExpansionState for cached permanent effects, so equipment cannot remove research gains.
 
 ## Signal wiring
@@ -90,7 +87,7 @@ ExpansionState for cached permanent effects, so equipment cannot remove research
 | `events.forecast_requested` / `shower_started` | Game's shower presentation |
 | `upgrade_tree.tree_opened` / `tree_closed` | Tutorial / Game's resume-or-next-round routing |
 | `upgrade_tree.galactic_pullback_finished` | Game persists the presentation flag |
-| HUD slot, summary, tutorial and ending requests | Game owns state transitions |
+| HUD slot, summary, tutorial requests | Game owns state transitions |
 | Settings language/accessibility changes | UI refresh / effects configuration |
 
 Signals within a controller remain local to its `setup` or `bind` method.
@@ -121,14 +118,14 @@ _on_upgrade_tree_closed
   load restores finished dawn directly. These are unsaved presentation states.
 - Canis scheduling begins with a new round. Showers and the 2.6-second Sirius
   warning plus 14-second Major lifetime must fit, or defer to a viable round.
-- Atmospheric long-watch objects do not carry across rounds. M31 records,
-  partial progress and cooldown are separate deep-sky state.
+- Atmospheric long-watch objects do not carry across rounds. Retired M31 records
+  remain inert save data.
 - Loading an active save over an intermission reconciles stale pause state.
-  Resume only when settings, startup slots, summary, ending, tutorial and module
+  Resume only when settings, startup slots, summary, tutorial and module
   popup no longer own a pause.
 
-The retained catalogue ending adds a completion branch after the final chart;
-its conditions and final-watch rules are in [legacy contracts](legacy-contracts.md#이전-카탈로그-엔딩).
+The retired catalogue ending has no runtime entry point. Save migration is
+documented in [legacy contracts](legacy-contracts.md).
 
 ## Observation flow
 
@@ -171,9 +168,7 @@ The chart yields first-refusal input while the popup is active.
 `observation_modules.gd` caches effects against all slots, ownership and capacity.
 Reads detect direct fixture mutation, duplicate/unowned slots and capacity changes.
 Manual speed/radius can have positive penalties below one; dishes keep their own rules.
-Record and revisit are integrated by actual M31 exposure progress; completion
-uses those accumulated weights for income and the next cooldown.
-Definitions, prerequisites and placement behavior are in [module details](design-details.md#m31과-모듈).
+
 
 The expansion catalogue separates research, quantities and installed copies. A draw
 spends eight specimens (six after efficiency research) for one uniformly selected
@@ -182,7 +177,7 @@ together, restoring all three on failure. Same-ID bonuses/penalties add; differe
 IDs retain multiplicative composition. The loadout displays owned/installed counts. ModuleDrawWindow only presents an already
 committed draw: its 1.8s scan/align animation can be skipped or closed, and reduced motion
 reveals immediately. It never performs an extra transaction while closing/reopening.
-`AnomalyDirector` schedules one conventional rare meteor kind after the first M31.
+`AnomalyDirector` schedules one conventional rare meteor kind after coordinate research.
 It reserves three components including module-created archive afterglows, defers
 around Major warnings and insufficient round time, and awards 2/3 samples per
 completed natural rare meteor for both manual and automatic work. Persistent tickets
@@ -198,13 +193,13 @@ Write/rename failures preserve the last committed file and cached summary.
 Uncommitted staging files are ignored; corrupt existing slots are occupied, not empty.
 
 Game owns run timing, round bookkeeping, clean-round baseline and presentation flags.
-Nested payloads belong to progression, host targets, phenomena and deep sky.
+Nested payloads belong to progression and module/rare-target state.
 Validate version, containers, numbers and IDs before applying state; restore target
 progress/clocks rather than rerolling them. A resumed round becomes its own comparison baseline.
 
 Deep sky saves unique module IDs plus quantities, five slots, research, specimens,
-M31 partial progress/weighted reward/cooldown and live rare targets. Its nested version
-is 3; the outer slot version stays 1. Extension catalogue version 3 separates permanent
+inert M31 records and live rare targets. Its nested version
+is 4; the outer slot version stays 1. Extension catalogue version 4 removes M31-only research; version 3 separated permanent
 research IDs from the five legacy direct-purchase module IDs. Old saves copy those
 completed IDs and preserve their three research-granted modules once; current-catalogue
 module ownership never implies research. The progression effect-state reference is
@@ -226,7 +221,7 @@ Autosave runs every 60 observation seconds, on purchases, round end and slot cha
 Quick start uses the newest valid slot, then the first empty slot. If all existing
 slots are invalid, show recovery instead of starting an unsavable slot-zero run.
 Presentation flags such as `galactic_pullback_seen` are distinct from progression.
-The legacy seen/pending/final-watch flags remain covered by [compatibility rules](legacy-contracts.md#저장과-검증).
+Retired ending flags are ignored and omitted from new saves.
 
 Settings use separate `SETTINGS_VERSION = 3` data in `user://settings.cfg`.
 Input schemas, fixed fallbacks, focus and modal dispatch are in [settings.md](settings.md).
@@ -235,7 +230,7 @@ Input schemas, fixed fallbacks, focus and modal dispatch are in [settings.md](se
 
 Immutable ID lookup and constellation geometry are cached. Meteor ribbon weights
 rebuild when station count changes, while position/type/age remain live.
-M31 art redraws on visual changes; hidden panels refresh when opened or when needed.
+Hidden panels refresh when opened or when needed.
 These caches must tolerate the direct mutations covered by their regression gates.
 
 Use the pre-ready no-persistence fixture for tests, captures and probes.

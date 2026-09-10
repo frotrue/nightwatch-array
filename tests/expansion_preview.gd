@@ -17,13 +17,11 @@ func _run() -> void:
 	while progressed:
 		progressed = false
 		for definition in Balance.UPGRADE_NODES:
-			if definition.branch != "local_group" and not game.progression.has_upgrade(definition.id):
+			if not game.progression.has_upgrade(definition.id):
 				progressed = game.progression.debug_purchase_node(definition.id) or progressed
 	game.spawner.reset()
 	game.galactic_pullback_seen = true
 	game.upgrade_tree.configure_galactic_state(true, true)
-	game.deep_sky.target._process(0.0)
-	game.deep_sky.target.apply_manual_observation(10.0, 0.0, 100.0)
 	game.upgrade_tree.open_tree()
 	game.progression.observation_data = 100000000000.0
 	game.effects.reset()
@@ -70,7 +68,7 @@ func _run() -> void:
 		for research_id in game.deep_sky.Data.RESEARCH_ORDER:
 			if game.deep_sky.can_purchase(research_id):
 				progressed = game.deep_sky.purchase(research_id) or progressed
-	if game.deep_sky.state.research_ids.size() != 47: failures.append("not all outer research purchased")
+	if game.deep_sky.state.research_ids.size() != 42: failures.append("not all outer research purchased")
 	for locale in ["en", "ko"]:
 		_set_locale(game, locale)
 		for figure in game.upgrade_tree.ExtensionChart.ORDER:
@@ -80,7 +78,7 @@ func _run() -> void:
 		await _capture(game, locale + "_chart_overview")
 	for module_id in game.deep_sky.Modules.DEFINITIONS: game.deep_sky.modules.grant(module_id)
 	popup.open()
-	for module_id in ["focus", "relay_bus", "reference_bus"]: game.deep_sky.equip(module_id)
+	for module_id in ["focus", "relay_bus", "precision"]: game.deep_sky.equip(module_id)
 	for locale in ["en", "ko"]:
 		_set_locale(game, locale)
 		await _capture(game, locale + "_popup_five_slots")
@@ -110,8 +108,8 @@ func _run() -> void:
 	game.free()
 	paused = false
 	await process_frame
-	if failures.is_empty() and records.size() == 38:
-		print("EXPANSION_PREVIEW_PASS: 38 frames at " + ProjectSettings.globalize_path(output))
+	if failures.is_empty() and records.size() == 36:
+		print("EXPANSION_PREVIEW_PASS: 36 frames at " + ProjectSettings.globalize_path(output))
 		quit(0)
 	else:
 		push_error(str(failures))

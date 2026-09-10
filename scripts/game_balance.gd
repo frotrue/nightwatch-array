@@ -12,40 +12,6 @@ const CANIS_FINAL_ACTIVE_CAPACITY_DELTA := 2
 const CANIS_FINAL_REGULAR_SPAWN_INTERVAL_FLOOR := 0.70
 const REGULAR_SPAWN_INTERVAL_MIN := 1.6
 const REGULAR_SPAWN_INTERVAL_MAX := 2.4
-const GALACTIC_OBSERVATION_SPAN_STEP := 1.1025
-# These are the galaxy nodes that move the observation camera. Keeping the list
-# here makes the automatic screen-space compensation and the research effects
-# share one source of truth.
-const GALACTIC_SPAN_NODE_IDS: Array[String] = [
-	"m33_transit_network",
-	"ic1613_supernova_ephemeris",
-	"phoenix_lensed_meteors",
-	"aquarius_local_group_record",
-]
-const GALACTIC_OBSERVATION_PROFILES := {
-	"lmc_transit_watch": {
-		"tracking_time_multiplier": 1.0, "visual_scale": 1.0,
-		"brightness": 1.0, "reward_multiplier": 1.0,
-	},
-	"smc_reference_baseline": {
-		"tracking_time_multiplier": 1.35, "visual_scale": 0.82,
-		"brightness": 0.70, "reward_multiplier": 1.15,
-	},
-	"m31_hidden_decoy_survey": {
-		"tracking_time_multiplier": 1.12, "visual_scale": 1.36,
-		"brightness": 0.90, "reward_multiplier": 1.25,
-		"drift_radius_screen": 30.0, "drift_speed": 0.34,
-	},
-	"m33_transit_network": {
-		"tracking_time_multiplier": 1.0, "visual_scale": 1.04,
-		"brightness": 1.0, "reward_multiplier": 1.30,
-	},
-}
-# pow(1.1025, 4): the single upper bound for the four chapter milestones.
-# Like CANIS_FINAL_REGULAR_SPAWN_INTERVAL_FLOOR, this is the rollback handle:
-# setting it to 1.0 disables the whole observation expansion without touching
-# research ids, prices, or saves.
-const GALACTIC_FINAL_OBSERVATION_SPAN := 1.4774554
 const BRANCHES := {
 	"optics": {"name": "OPTICS / MANUAL", "color": Color("53d6ff")},
 	"detection": {"name": "DETECTION / DISCOVERY", "color": Color("b379ff")},
@@ -59,7 +25,6 @@ const BRANCHES := {
 	"leo": {"name": "LEO / METEOR STORM", "color": Color("ff9a66")},
 	"canis_major": {"name": "CANIS MAJOR / CADENCE", "color": Color("8ad9ff")},
 	"draco": {"name": "DRACO / CULMINATION", "color": Color("e8a6ff")},
-	"local_group": {"name": "LOCAL GROUP / PHENOMENA", "color": Color("ffd7a0")}
 }
 
 # Existing upgrade ids are preserved so every gameplay consumer migrates without
@@ -98,7 +63,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "perfect_observation", "name": "Perfect Observation", "icon": "✦", "cost": 800,
-		"description": "Manual grade bonus: Excellent +25% Data, Perfect +55%. Observation Data ×2 (automatic included; Local Group excluded).",
+		"description": "Manual grade bonus: Excellent +25% Data, Perfect +55%. Observation Data ×2 (automatic included).",
 		"branch": "optics", "prerequisites": ["precision_multiplier"],
 		"hidden_until": ["precision_multiplier"], "effect_type": "transformation",
 		"effect_notes": {"excellent_bonus": 1.25, "perfect_bonus": 1.55},
@@ -143,7 +108,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "shower_detector", "name": "Meteor Shower Forecast", "icon": "☄", "cost": 1800,
-		"description": "Unlocks meteor showers: 2.6-second warning, 9-second duration. Observation Data ×2 (automatic included; Local Group excluded).",
+		"description": "Unlocks meteor showers: 2.6-second warning, 9-second duration. Observation Data ×2 (automatic included).",
 		"branch": "detection", "prerequisites": ["fragment_analysis"],
 		"hidden_until": ["fragment_analysis"], "effect_type": "discovery",
 		"effect_notes": {"event": "meteor_shower"},
@@ -505,7 +470,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "perseid_outburst", "name": "Perseid Outburst", "icon": "✺", "cost": 50000,
-		"description": "Unlocks Perseid bursts: 8 meteors over 3.4 seconds, after a warning. Observation Data ×2 (automatic included; Local Group excluded).",
+		"description": "Unlocks Perseid bursts: 8 meteors over 3.4 seconds, after a warning. Observation Data ×2 (automatic included).",
 		"branch": "perseus", "prerequisites": ["perseid_survey"],
 		"hidden_until": ["perseid_survey"], "effect_type": "discovery",
 		"effect_notes": {"event": "perseid_outburst"},
@@ -515,7 +480,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "double_star_resolution", "name": "Double-Star Resolution", "icon": "⁚", "cost": 12000,
-		"description": "Unlocks binary stars and their arrival forecasts. Maximum error: about 2% of screen width. Observation Data ×2 (automatic included; Local Group excluded).",
+		"description": "Unlocks binary stars and their arrival forecasts. Maximum error: about 2% of screen width. Observation Data ×2 (automatic included).",
 		"branch": "lyra", "prerequisites": ["filter_wheel"],
 		"hidden_until": ["filter_wheel"], "effect_type": "discovery",
 		"effect_notes": {"target_type": "binary_star"},
@@ -525,7 +490,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "galaxy_imaging", "name": "Distant Galaxy Imaging", "icon": "M31", "cost": 90000,
-		"description": "Unlocks distant galaxies as long-watch targets. Observation Data ×2 (automatic included; Local Group excluded).",
+		"description": "Unlocks distant galaxies as long-watch targets. Observation Data ×2 (automatic included).",
 		"branch": "andromeda", "prerequisites": ["andromeda_deep_survey"],
 		"hidden_until": ["andromeda_deep_survey"], "effect_type": "discovery",
 		"effect_notes": {"target_type": "galaxy"},
@@ -549,7 +514,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "fireball_tail", "name": "Fireball Tail", "icon": "★", "cost": 32000,
-		"description": "Each meteor storm ends with a manual-only fireball. Observation Data ×2 (automatic included; Local Group excluded).",
+		"description": "Each meteor storm ends with a manual-only fireball. Observation Data ×2 (automatic included).",
 		"branch": "leo", "prerequisites": ["fragment_front"],
 		"hidden_until": ["fragment_front"], "effect_type": "discovery",
 		"effect_notes": {"storm_tail_type": "fireball"},
@@ -573,7 +538,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "echo_delay_line", "name": "Echo Delay Line", "icon": "⋯", "cost": 22000,
-		"description": "Echo meteors arrive 0.75 seconds apart. Observation Data ×2 (automatic included; Local Group excluded).",
+		"description": "Echo meteors arrive 0.75 seconds apart. Observation Data ×2 (automatic included).",
 		"branch": "gemini", "prerequisites": ["mirror_echo_solution"],
 		"hidden_until": ["mirror_echo_solution"], "effect_type": "unlock",
 		"effect_notes": {"echo_delay_line": true},
@@ -646,7 +611,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "taurus_full_gallop", "name": "Full Gallop", "icon": "×10", "cost": 140000,
-		"description": "Observation Streak time limit: 4 → 5 seconds. Bonus steps: 7 → 10. Observation Data ×2 (automatic included; Local Group excluded).",
+		"description": "Observation Streak time limit: 4 → 5 seconds. Bonus steps: 7 → 10. Observation Data ×2 (automatic included).",
 		"branch": "taurus", "prerequisites": ["sustained_charge"],
 		"hidden_until": ["sustained_charge"], "effect_type": "transformation",
 		"effect_notes": {"combo_window": 5.0, "combo_cap": 10},
@@ -719,7 +684,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "draco_synthesis", "name": "All-Sky Synthesis", "icon": "×4", "cost": 2000000,
-		"description": "Observation Data ×4 (automatic included; Local Group excluded).",
+		"description": "Observation Data ×4 (automatic included).",
 		"branch": "draco", "prerequisites": [],
 		"hidden_until": [{"type": "other_constellations_complete", "excluded_branch": "draco"}],
 		"effect_type": "transformation", "effect_notes": {"culmination_gate": true},
@@ -773,7 +738,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "draco_apotheosis", "name": "Dragon's Eye", "icon": "×8", "cost": 85000000,
-		"description": "Observation Data ×8 (automatic included; Local Group excluded).",
+		"description": "Observation Data ×8 (automatic included).",
 		"branch": "draco", "prerequisites": ["draco_array"],
 		"hidden_until": ["draco_array"], "effect_type": "transformation", "effect_notes": {"culmination_multiplier": true},
 		"runtime_parameters": {"observation_value_multiplier": 8.0},
@@ -781,99 +746,12 @@ const UPGRADE_NODES: Array[Dictionary] = [
 		"major": true, "affects_pacing": false
 	},
 	{
-		"id": "galactic_reference_frame", "name": "Galaxy Map", "icon": "MW", "cost": 400000000,
-		"description": "Opens the galaxy map and Local Group research.",
+		"id": "galactic_reference_frame", "name": "Galactic Reference Frame", "icon": "MW", "cost": 400000000,
+		"description": "Unlocks outer research, rare meteors and modules.",
 		"branch": "draco", "prerequisites": ["draco_apotheosis"],
 		"hidden_until": ["draco_apotheosis"], "effect_type": "unlock", "effect_notes": {"galactic_survey": true},
 		"major": true, "affects_pacing": false
 	},
-	{
-		"id": "lmc_transit_watch", "name": "LMC Distant Watch", "icon": "LMC", "cost": 550000000,
-		"description": "Unlocks 1 distant target, observed with aim-and-hold tracking.",
-		"branch": "local_group", "prerequisites": ["galactic_reference_frame"],
-		"hidden_until": ["galactic_reference_frame"], "effect_type": "unlock",
-		"effect_notes": {"distant_targets": 1, "active_targets": 1},
-		"effect_contract": {"kind": "galactic_observation_profile", "value": 1.0, "max_host_stars": 1, "max_active_transits": 1, "scope": "aim_and_hold"},
-		"major": true, "affects_pacing": false
-	},
-	{
-		"id": "smc_reference_baseline", "name": "SMC Faint Watch", "icon": "SMC", "cost": 800000000,
-		"description": "Unlocks a faint target: observation takes 35% longer and gives 15% more Data than the first type.",
-		"branch": "local_group", "prerequisites": ["lmc_transit_watch"],
-		"hidden_until": ["lmc_transit_watch"], "effect_type": "unlock",
-		"effect_contract": {"kind": "galactic_observation_profile", "value": 1.35, "scope": "faint_aim_and_hold"},
-		"major": true, "affects_pacing": false
-	},
-	{
-		"id": "m31_hidden_decoy_survey", "name": "M31 Drift Watch", "icon": "M31", "cost": 1100000000,
-		"description": "Unlocks a large, slowly drifting target for manual tracking.",
-		"branch": "local_group", "prerequisites": ["smc_reference_baseline"], "hidden_until": ["smc_reference_baseline"],
-		"effect_type": "unlock", "effect_contract": {"kind": "galactic_observation_profile", "value": 30.0, "scope": "drifting_aim_and_hold"},
-		"major": true, "affects_pacing": false
-	},
-	{
-		"id": "m33_transit_network", "name": "M33 Twin Watch", "icon": "M33", "cost": 3200000000,
-		"description": "Simultaneous distant targets: 1 → 2. Visible field +10.25%.",
-		"branch": "local_group", "prerequisites": ["m31_hidden_decoy_survey"], "hidden_until": ["m31_hidden_decoy_survey"],
-		"effect_type": "transformation", "effect_contract": {"kind": "galactic_chapter_milestone", "value": 1.1025, "max_host_stars": 2, "max_active_transits": 2, "scope": "visible_world+host_star_layer"},
-		"major": true, "affects_pacing": false
-	},
-	{
-		"id": "ngc6822_supernova_watch", "name": "NGC 6822 Supernova Watch", "icon": "SN-I", "cost": 3600000000,
-		"description": "Unlocks a supernova. Peak-brightness reward ×1.5; missed peaks leave an observable remnant.",
-		"branch": "local_group", "prerequisites": ["m33_transit_network"], "hidden_until": ["m33_transit_network"],
-		"effect_type": "unlock", "effect_contract": {"kind": "supernova_watch", "value": 1.0, "scope": "galactic_phenomena_layer"},
-		"major": true, "affects_pacing": false
-	},
-	{
-		"id": "ic10_supernova_overlap", "name": "IC 10 Supernova Overlap", "icon": "SN-II", "cost": 4000000000,
-		"description": "Allows two supernovae to appear at once.",
-		"branch": "local_group", "prerequisites": ["ngc6822_supernova_watch"], "hidden_until": ["ngc6822_supernova_watch"],
-		"effect_type": "unlock", "effect_contract": {"kind": "supernova_overlap", "value": 2.0, "scope": "galactic_phenomena_layer"},
-		"major": true, "affects_pacing": false
-	},
-	{
-		"id": "ic1613_supernova_ephemeris", "name": "IC 1613 Supernova Ephemeris", "icon": "SN-III", "cost": 4300000000,
-		"description": "Displays supernova phase time remaining. Visible field +10.25%.",
-		"branch": "local_group", "prerequisites": ["ic10_supernova_overlap"], "hidden_until": ["ic10_supernova_overlap"],
-		"effect_type": "transformation", "effect_contract": {"kind": "galactic_chapter_milestone", "value": 1.1025, "scope": "visible_world+supernova_ephemeris"},
-		"major": true, "affects_pacing": false
-	},
-	{
-		"id": "wlm_einstein_ring", "name": "WLM Einstein Ring", "icon": "ER-I", "cost": 4600000000,
-		"description": "Unlocks a full lens ring. Aim-and-hold on its bright edge to observe.",
-		"branch": "local_group", "prerequisites": ["ic1613_supernova_ephemeris"], "hidden_until": ["ic1613_supernova_ephemeris"],
-		"effect_type": "unlock", "effect_contract": {"kind": "lens_observation", "value": 1.0, "scope": "aim_and_hold"},
-		"major": true, "affects_pacing": false
-	},
-	{
-		"id": "pegasus_partial_lens", "name": "Pegasus Partial Lens", "icon": "ER-II", "cost": 4600000000,
-		"description": "Unlocks a partial lens ring. Aim-and-hold on its bright arc to observe.",
-		"branch": "local_group", "prerequisites": ["wlm_einstein_ring"], "hidden_until": ["wlm_einstein_ring"],
-		"effect_type": "transformation", "effect_contract": {"kind": "lens_observation", "value": 0.62, "scope": "aim_and_hold"},
-		"major": true, "affects_pacing": false
-	},
-	{
-		"id": "phoenix_lensed_meteors", "name": "Phoenix Lensed Paths", "icon": "LENS", "cost": 4600000000,
-		"description": "Meteors curve through gravitational lenses. Visible field +10.25%.",
-		"branch": "local_group", "prerequisites": ["pegasus_partial_lens"], "hidden_until": ["pegasus_partial_lens"],
-		"effect_type": "transformation", "effect_contract": {"kind": "galactic_chapter_milestone", "value": 1.1025, "scope": "visible_world+lensed_meteor_field"},
-		"major": true, "affects_pacing": false
-	},
-	{
-		"id": "leo_a_lensed_supernova", "name": "Leo A Lensed Supernova", "icon": "LSN", "cost": 4600000000,
-		"description": "Unlocks a lensed supernova. Observe its bright arc; peak-brightness reward ×1.5.",
-		"branch": "local_group", "prerequisites": ["phoenix_lensed_meteors"], "hidden_until": ["phoenix_lensed_meteors"],
-		"effect_type": "transformation", "effect_contract": {"kind": "lensed_supernova", "value": 1.0, "scope": "galactic_phenomena_layer"},
-		"major": true, "affects_pacing": false
-	},
-	{
-		"id": "aquarius_local_group_record", "name": "Local Group Record", "icon": "REC", "cost": 4600000000,
-		"description": "Completes Local Group research. Visible field +10.25% (final expansion).",
-		"branch": "local_group", "prerequisites": ["leo_a_lensed_supernova"], "hidden_until": ["leo_a_lensed_supernova"],
-		"effect_type": "capstone", "effect_contract": {"kind": "galactic_chapter_milestone", "value": 1.1025, "scope": "visible_world+local_group_record"},
-		"major": true, "affects_pacing": false
-	}
 ]
 
 
@@ -903,13 +781,6 @@ static func upgrade_definition(id: String) -> Dictionary:
 static func research_node_count() -> int:
 	return UPGRADE_NODES.size()
 
-
-static func local_group_functional_node_count() -> int:
-	var count := 0
-	for definition in UPGRADE_NODES:
-		if String(definition.get("branch", "")) == "local_group":
-			count += 1
-	return count
 
 static func meteor_spec(type_id: String) -> Dictionary:
 	match type_id:

@@ -2,7 +2,6 @@ extends Node2D
 
 signal changed
 const Modules = preload("res://scripts/observation_modules.gd")
-const Target = preload("res://scripts/andromeda_target.gd")
 const UITheme = preload("res://scripts/ui_theme.gd")
 const Data = preload("res://scripts/expansion_data.gd")
 const State = preload("res://scripts/expansion_state.gd")
@@ -11,7 +10,7 @@ var game: Node
 var modules = Modules.new()
 var state = State.new()
 var observations := 0
-var target: Node2D
+var retired_m31: Dictionary = {}
 var director: Node
 var _last_available := false
 var samples: int:
@@ -22,24 +21,15 @@ var record_complete: bool:
 func setup(controller: Node) -> void:
 	game = controller
 	game.progression.extension_state = state
-	target = Target.new()
-	target.research = self
-	add_child(target)
 	director = Director.new()
 	add_child(director)
 	director.setup(self)
 	game.progression.state_changed.connect(_on_progression_changed)
-	game.settings.language_changed.connect(func(_locale): target.queue_redraw(); changed.emit())
+	game.settings.language_changed.connect(func(_locale): changed.emit())
 	_last_available = available()
-	target.visible = _last_available
-
-func _process(delta: float) -> void:
-	if game != null and game.observation_phase_active:
-		modules.advance_time(delta / maxf(Engine.time_scale, 0.001))
 
 func _on_progression_changed() -> void:
 	var unlocked := available()
-	target.visible = unlocked
 	_sync_protocol()
 	if unlocked != _last_available:
 		_last_available = unlocked
@@ -55,7 +45,7 @@ func available() -> bool:
 	return game != null and game.progression.galaxy_unlocked()
 
 func modules_unlocked() -> bool:
-	return available() and (observations > 0 or not modules.purchased.is_empty())
+	return available()
 
 func research_owned(id: String) -> bool:
 	return id in state.research_ids
@@ -163,32 +153,7 @@ func prerequisite_text(id: String) -> String:
 func current_objective() -> String:
 	if not modules_unlocked():
 		return tr("DEEP_FIRST_HINT") if available() else ""
-	return "" # The acquisition route is introduced once when M31 unlocks modules.
-
-func m31_value_multiplier() -> float:
-	return float(modules.effect("m31_value")) * state.effect("m31_data")
-
-func m31_cooldown_multiplier() -> float:
-	return float(modules.effect("m31_cooldown")) * state.effect("m31_wait")
-
-func record_observation(value_multiplier: float = -1.0) -> void:
-	if value_multiplier < 0.0:
-		value_multiplier = m31_value_multiplier()
-	observations += 1
-	game.observer.release_target(target)
-	var reward: float = 8000.0 * game.progression.get_observation_value_multiplier("common", 1) * value_multiplier
-	reward = game.progression.add_galactic_observation(reward)
-	game.effects.spawn_success(target.global_position, reward, Color("D4DAE5"), 1.0, 1.0, "GOOD", game.hud.get_data_anchor(), 0.4, true)
-	game.sound.play_success(1.0, 1, 0.4)
-	_sync_protocol()
-	if observations == 1:
-		game.hud.show_banner(tr("DEEP_FIRST_RECORD") + "\n" + tr("MODX_DRAW_HINT"), UITheme.ACCENT_TEXT, 4.0)
-	target.queue_redraw()
-	changed.emit()
-	game._autosave_active_slot()
-
-func record_ordinary_observation(meteor: Node) -> void:
-	modules.notify_completed(meteor)
+	return ""
 
 func award_anomaly_data(anomaly: Node) -> void:
 	var manual: bool = anomaly.get_manual_contribution() >= 0.25 or anomaly.discovered
@@ -211,34 +176,27 @@ func archive_meteor(meteor: Node) -> void:
 
 func end_round() -> void:
 	director.end_round()
-	modules.set_m31_manual_active(false)
 
 func resume_targets() -> void:
 	director.resume_targets()
 
 func reset() -> void:
 	observations = 0
+	retired_m31.clear()
 	modules.load_save_data({})
 	state = State.new()
 	game.progression.extension_state = state
 	if director != null:
 		director.reset()
-	target.progress = 0.0
-	target.cooldown = 0.0
-	target.value_integral = 0.0
-	target.cooldown_integral = 0.0
-	target.integrated_progress = 0.0
-	target.visible = available()
-	target.queue_redraw()
 	_sync_protocol()
 	changed.emit()
 
 func get_save_data() -> Dictionary:
-	return {"version": 3, "observations": observations, "modules": modules.get_save_data(), "progress": target.progress, "cooldown": target.cooldown, "value_integral": target.value_integral, "cooldown_integral": target.cooldown_integral, "extension": state.get_save_data(), "anomalies": director.get_save_data()}
+	return {"version": 4, "observations": observations, "retired_m31": retired_m31.duplicate(true), "modules": modules.get_save_data(), "extension": state.get_save_data(), "anomalies": director.get_save_data()}
 
 static func supports_save(data: Dictionary) -> bool:
 	var version = data.get("version", 1)
-	if not (version is int or version is float) or version not in [1, 2, 3]:
+	if not (version is int or version is float) or version not in [1, 2, 3, 4]:
 		return false
 	var extension = data.get("extension", {})
 	if extension is Dictionary and extension.has("catalogue_version"):
@@ -254,9 +212,10 @@ func load_save_data(data: Dictionary, legacy: Dictionary = {}) -> bool:
 	var owned = data.get("modules", legacy.get("modules", {}))
 	modules.load_save_data(owned if owned is Dictionary else {})
 	observations = Data.integer(data.get("observations", 0), 1000000000)
-	target.progress = Data.number(data.get("progress", 0), 0.999999)
-	target.integrated_progress = target.progress
-	target.cooldown = Data.number(data.get("cooldown", 0), 15.75)
+	var retired = data.get("retired_m31", {})
+	retired_m31 = retired.duplicate(true) if retired is Dictionary else {}
+	for key in ["progress", "cooldown", "value_integral", "cooldown_integral"]:
+		if data.has(key): retired_m31[key] = Data.number(data[key], 1000000000.0)
 	if data.get("version", 1) >= 2:
 		var extension = data.get("extension", {})
 		state.load_save_data(extension if extension is Dictionary else {}, data.get("version", 1) == 2)
@@ -266,24 +225,21 @@ func load_save_data(data: Dictionary, legacy: Dictionary = {}) -> bool:
 	var old_catalogue := not saved_extension is Dictionary or Data.integer(saved_extension.get("catalogue_version", 0), 1000) < 3
 	if old_catalogue:
 		for id in Data.LEGACY_PURCHASE_IDS:
-			if id in modules.purchased and id not in state.research_ids:
+			if Data.RESEARCH.has(id) and id in modules.purchased and id not in state.research_ids:
 				state.research_ids.append(id)
+		for id in Data.RETIRED_RESEARCH_IDS:
+			if id in modules.purchased and id not in state.retired_research_ids:
+				state.retired_research_ids.append(id)
 		for id in Data.LEGACY_GRANTS:
-			if id in state.research_ids: modules.grant(Data.LEGACY_GRANTS[id])
+			if id in state.research_ids or id in state.retired_research_ids: modules.grant(Data.LEGACY_GRANTS[id])
 	for capacity in range(3, modules.unlocked_slots + 1):
 		var id := "slot_%d" % capacity
 		if id not in state.research_ids: state.research_ids.append(id)
 	modules.unlocked_slots = maxi(modules.unlocked_slots, int(state.effect("slot_capacity", 2.0)))
-	var value: float = modules.effect("m31_value") if old_catalogue else m31_value_multiplier()
-	var delay: float = modules.effect("m31_cooldown") if old_catalogue else m31_cooldown_multiplier()
-	# Five record copies (×3.5), with both permanent M31 value upgrades.
-	target.value_integral = Data.number(data.get("value_integral", target.progress * value), target.progress * 3.5 * 1.25 * 1.15)
-	target.cooldown_integral = Data.number(data.get("cooldown_integral", target.progress * delay), target.progress * 2.25)
 	_sync_protocol()
 	var anomalies = data.get("anomalies", {})
 	if not anomalies is Dictionary: anomalies = {}
 	if data.get("version", 1) == 2: anomalies = Director.migrate_v2(anomalies)
 	director.load_save_data(anomalies)
-	target.queue_redraw()
 	changed.emit()
 	return true

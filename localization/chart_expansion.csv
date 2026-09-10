@@ -26,14 +26,12 @@ CHX_NODE_LINK_ADVANCED,Relay II,연계 II
 CHX_NODE_SYNTHESIS,Synthesis,종합
 CHX_NODE_COMBINED_WATCH,Combined watch,통합 관측
 CHX_NODE_RECORD_COMPLETE,Record closure,기록 마감
-CHX_RECORDED_OBJECTIVE,%d M31 records · %s,M31 관측 %d회 · %s
 CHX_PLAN_PROGRESS,%d / %d fields,%d / %d 관측장
 CHX_PLAN_SELECT,Choose an available plan,가능한 계획을 선택하세요
 CHX_PLAN_UNAVAILABLE,This plan is still locked by its research or field record.,이 계획은 연구 또는 관측장 기록으로 아직 잠겨 있습니다.
 CHX_ACTIVE_PLAN,Active · %s,활성 계획 · %s
 CHX_PLAN_NONE,No active plan,활성 계획 없음
 CHX_CURRENT_OBJECTIVE,Next observation,다음 관측
-CHX_RECORD_LAYERS,M31 record layers,M31 기록 층
 CHX_CATEGORY_TRACE,Tracking,추적
 CHX_CATEGORY_SWEEP,Survey,훑기
 CHX_CATEGORY_LINK,Relay,연계

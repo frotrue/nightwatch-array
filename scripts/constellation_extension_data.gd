@@ -3,10 +3,10 @@ extends RefCounted
 # Stylized figure geometry, not an equatorial coordinate projection. Figure
 # membership/Bayer labels follow the IAU charts linked in expansion-design.md.
 # Alpheratz is the SAME existing Andromeda star at the shared Pegasus corner.
-const ORDER := ["pegasus", "lacerta", "cygnus", "aquila", "vulpecula", "delphinus", "sagitta", "equuleus", "cepheus", "triangulum"]
+const ORDER := ["pegasus", "lacerta", "cygnus", "aquila", "vulpecula", "delphinus", "sagitta", "equuleus", "triangulum"]
 const COLORS := {
+	"aquila": Color("C7A6C5"),
 	"pegasus": Color("D4DAE5"), "cygnus": Color("8BB8D5"),
-	"cepheus": Color("D9C78E"), "aquila": Color("C7A6C5"),
 	"lacerta": Color("BFC4A6"),
 	"vulpecula": Color("D2B090"),
 	"delphinus": Color("99C7C8"),
@@ -37,17 +37,6 @@ const CONSTELLATIONS := {
 			{"id": "delta_cyg", "name_key": "ATLAS_DELTA_CYG", "bayer": "δ Cyg", "local_position": Vector2(-1.05, 0.12), "node_id": "ext_cyg_aperture", "kind": "star", "magnitude": 3.0},
 		],
 		"segments": [["deneb", "sadr"], ["sadr", "albireo"], ["sadr", "gienah"], ["sadr", "delta_cyg"]],
-	},
-	"cepheus": {
-		"label_key": "ATLAS_CEPHEUS", "branch": "cepheus",
-		"stars": [
-			{"id": "alderamin", "name_key": "ATLAS_ALDERAMIN", "bayer": "α Cep", "local_position": Vector2(-0.85, 0.8), "node_id": "ext_link_study", "kind": "star", "magnitude": 3.0},
-			{"id": "alfirk", "name_key": "ATLAS_ALFIRK", "bayer": "β Cep", "local_position": Vector2(-0.9, -0.2), "node_id": "record", "kind": "star", "magnitude": 3.0},
-			{"id": "errai", "name_key": "ATLAS_ERRAI", "bayer": "γ Cep", "local_position": Vector2(0.0, -1.15), "node_id": "revisit", "kind": "star", "magnitude": 3.0},
-			{"id": "iota_cep", "name_key": "ATLAS_IOTA_CEP", "bayer": "ι Cep", "local_position": Vector2(0.8, -0.2), "node_id": "ext_cep_core", "kind": "star", "magnitude": 3.0},
-			{"id": "zeta_cep", "name_key": "ATLAS_ZETA_CEP", "bayer": "ζ Cep", "local_position": Vector2(0.75, 0.9), "node_id": "ext_cep_depth", "kind": "star", "magnitude": 3.0},
-		],
-		"segments": [["alderamin", "alfirk"], ["alfirk", "errai"], ["errai", "iota_cep"], ["iota_cep", "zeta_cep"], ["zeta_cep", "alderamin"]],
 	},
 	"aquila": {
 		"label_key": "ATLAS_AQUILA", "branch": "aquila",
@@ -128,7 +117,6 @@ const CONSTELLATIONS := {
 const PLACEMENTS := {
 	"pegasus": {"anchor_angle": 2.879, "anchor_radius": 713.86, "scale": 115.0, "tilt": 0.0},
 	"cygnus": {"anchor_angle": 2.247, "anchor_radius": 846.46, "scale": 112.0, "tilt": -0.32},
-	"cepheus": {"anchor_angle": 1.681, "anchor_radius": 905.54, "scale": 102.0, "tilt": -0.25},
 	"aquila": {"anchor_angle": 2.449, "anchor_radius": 1065.27, "scale": 100.0, "tilt": 0.10},
 	"lacerta": {"anchor_angle": 3.55, "anchor_radius": 900, "scale": 95, "tilt": 0.12},
 	"vulpecula": {"anchor_angle": 0.97, "anchor_radius": 930, "scale": 106, "tilt": -0.15},

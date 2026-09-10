@@ -1,6 +1,7 @@
 extends RefCounted
 
 const Data = preload("res://scripts/expansion_data.gd")
+var retired_research_ids: Array[String] = []
 var research_ids: Array[String] = []
 var samples := 0
 var samples_earned := 0
@@ -65,15 +66,23 @@ func draw_module() -> String:
 	return id
 
 func get_save_data() -> Dictionary:
-	return {"research_ids": research_ids.duplicate(), "samples": samples, "samples_earned": samples_earned, "samples_spent": samples_spent, "acquisition_seed": acquisition_seed, "draw_serial": draw_serial, "last_draw": last_draw, "catalogue_version": Data.CATALOGUE_VERSION}
+	return {"retired_research_ids": retired_research_ids.duplicate(), "research_ids": research_ids.duplicate(), "samples": samples, "samples_earned": samples_earned, "samples_spent": samples_spent, "acquisition_seed": acquisition_seed, "draw_serial": draw_serial, "last_draw": last_draw, "catalogue_version": Data.CATALOGUE_VERSION}
 
 func load_save_data(data: Dictionary, legacy: bool = false) -> void:
 	research_ids.clear()
+	retired_research_ids.clear()
+	var retired = data.get("retired_research_ids", [])
+	if retired is Array:
+		for id in retired:
+			if id is String and id in Data.RETIRED_RESEARCH_IDS and id not in retired_research_ids:
+				retired_research_ids.append(id)
 	var saved_ids = data.get("research_ids", [])
 	if saved_ids is Array:
 		for id in saved_ids:
 			if id is String and Data.RESEARCH.has(id) and id not in research_ids:
 				research_ids.append(id)
+			elif id is String and id in Data.RETIRED_RESEARCH_IDS and id not in retired_research_ids:
+				retired_research_ids.append(id)
 	samples_earned = Data.integer(data.get("samples_earned", 0), 1000000000)
 	samples_spent = Data.integer(data.get("samples_spent", 0), samples_earned)
 	samples = mini(Data.integer(data.get("samples", 0), 1000000000), samples_earned - samples_spent)
@@ -81,7 +90,7 @@ func load_save_data(data: Dictionary, legacy: bool = false) -> void:
 	var offer = data.get("pending_offer", [])
 	if legacy and offer is Array and samples_spent >= 8:
 		for id in offer:
-			if id is String and id in Data.SAMPLE_MODULES:
+			if id is String and (id in Data.SAMPLE_MODULES or id in ["record", "revisit", "reference_bus", "shutter_weave"]):
 				samples_spent -= 8
 				samples += 8
 				break

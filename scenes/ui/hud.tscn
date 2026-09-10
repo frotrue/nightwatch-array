@@ -7,7 +7,6 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/phase_summary.tscn" id="R13"]
 [ext_resource type="PackedScene" path="res://scenes/ui/settings.tscn" id="Scene_settings"]
 [ext_resource type="PackedScene" path="res://scenes/ui/startup.tscn" id="Scene_startup"]
-[ext_resource type="PackedScene" path="res://scenes/ui/catalogue_ending.tscn" id="Scene_catalogue_ending"]
 [ext_resource type="PackedScene" path="res://scenes/ui/debug_hud.tscn" id="Scene_debug_hud"]
 [ext_resource type="PackedScene" path="res://scenes/ui/data_readout.tscn" id="Scene_data_readout"]
 [ext_resource type="PackedScene" path="res://scenes/ui/phase_clock.tscn" id="Scene_phase_clock"]
@@ -73,9 +72,6 @@ vertical_alignment = 1
 unique_name_in_owner = true
 
 [node name="DebugPanel" parent="." instance=ExtResource("Scene_debug_hud") ]
-unique_name_in_owner = true
-
-[node name="EndOverlay" parent="." instance=ExtResource("Scene_catalogue_ending") ]
 unique_name_in_owner = true
 
 [node name="PhaseSummary" type="Control" parent="." instance=ExtResource("R13")]

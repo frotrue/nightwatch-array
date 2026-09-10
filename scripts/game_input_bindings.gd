@@ -31,7 +31,6 @@ const RESERVED_DEBUG_KEYS := [
 	KEY_R,
 	KEY_S,
 	KEY_F,
-	KEY_E,
 	KEY_BACKSPACE,
 ]
 
@@ -111,7 +110,6 @@ const ACTION_METADATA := {
 			&"settings",
 			&"dialog",
 			&"phase_summary",
-			&"catalogue",
 		],
 		"slots": [
 			{

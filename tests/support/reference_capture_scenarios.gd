@@ -25,7 +25,7 @@ const PALETTE_INACTIVE_ROWS := [
 ]
 const PALETTE_BRANCH_LABELS := [
 	"OPTICS", "DETECT", "NETWORK", "URSA\nMINOR", "PERSEUS", "GEMINI", "TAURUS",
-	"LYRA", "ANDRO-\nMEDA", "LEO", "CANIS\nMAJOR", "DRACO", "LOCAL\nGROUP",
+	"LYRA", "ANDRO-\nMEDA", "LEO", "CANIS\nMAJOR", "DRACO",
 ]
 const REFERENCE_COMPLETED_CONSTELLATIONS := [
 	"cassiopeia", "big_dipper", "orion", "andromeda", "perseus", "lyra",
@@ -53,13 +53,10 @@ const SCENARIOS := [
 	{"id": "meteor_family_special", "stage": "constellation_specimens", "density": "five_targets", "overlays": [], "note": "Five authored special specimens at the same fixed pose and diagnostic lifetime.", "expected": {"meteors": 5, "installed": 0, "tracking": false, "span": 1.0}},
 	{"id": "sky_sweep", "stage": "opening", "density": "empty_sky", "overlays": ["sweep"], "note": "Purchased Sky Sweep, 210/460 pixels of blank-sky charge; no summon roll yet.", "expected": {"meteors": 0, "installed": 1, "tracking": false, "span": 1.0}},
 	{"id": "round_summary", "stage": "intermission", "density": "empty_sky", "overlays": ["summary"], "note": "Synthetic fifth-round results through the production summary renderer.", "expected": {"meteors": 0, "installed": 0, "tracking": false, "span": 1.0}},
-	{"id": "research_chart", "stage": "constellation", "density": "81_of_107_research", "overlays": ["chart", "constellation_inspector"], "note": "Existing reference build: ten completed constellations plus three Canis nodes; canis_capacity_ii selected.", "expected": {"meteors": 0, "installed": 81, "tracking": false, "span": 1.0}},
-	{"id": "galactic_sky", "stage": "galactic", "density": "two_hosts_two_phenomena", "overlays": [], "note": "Full research, two idle hosts and two supernovae at six explicit seconds; no atmospheric specimens.", "expected": {"meteors": 0, "installed": 107, "tracking": false, "span": 1.477455443789063}},
-	{"id": "exoplanet_transit", "stage": "galactic", "density": "two_hosts_two_phenomena", "overlays": [], "note": "Full research; first host's first transit window at exactly 48%, without a simulated completion.", "expected": {"meteors": 0, "installed": 107, "tracking": false, "span": 1.477455443789063}},
-	{"id": "deep_sky_chart", "stage": "chart_continuation", "density": "first_branch", "overlays": ["chart", "constellation_inspector"], "note": "A completed save opens ten outer constellations on the original chart. Forty-seven research stars share its canvas and inspector; retired nodes remain invisible.", "expected": {"meteors": 0, "installed": 107, "tracking": false, "span": 1.477455443789063}},
-	{"id": "catalogue_ending", "stage": "ending_preview", "density": "completed_catalogue", "overlays": ["ending"], "note": "Synthetic completed-run statistics through the non-persistent production debug reveal, stepped 8.1 seconds.", "expected": {"meteors": 0, "installed": 107, "tracking": false, "span": 1.477455443789063}},
-	{"id": "palette_active", "stage": "synthetic_palette", "density": "117_visuals_13_branches", "overlays": ["palette_diagnostic"], "note": "Synthetic13-branch input matrix using real StarNodeVisual draws: star/cluster/galaxy in purchased, affordable and unaffordable available states. Not a gameplay chart.", "expected": {"meteors": 0, "installed": 0, "tracking": false, "span": 1.0}},
-	{"id": "palette_inactive", "stage": "synthetic_palette", "density": "117_visuals_13_branches", "overlays": ["palette_diagnostic"], "note": "Synthetic13-branch input matrix using real StarNodeVisual draws: star/cluster/galaxy in locked, hidden and teaser states. Inactive silhouettes are intentionally shown as test specimens.", "expected": {"meteors": 0, "installed": 0, "tracking": false, "span": 1.0}},
+	{"id": "research_chart", "stage": "constellation", "density": "81_of_95_research", "overlays": ["chart", "constellation_inspector"], "note": "Existing reference build: ten completed constellations plus three Canis nodes; canis_capacity_ii selected.", "expected": {"meteors": 0, "installed": 81, "tracking": false, "span": 1.0}},
+	{"id": "deep_sky_chart", "stage": "chart_continuation", "density": "first_branch", "overlays": ["chart", "constellation_inspector"], "note": "A completed save opens nine outer constellations on the original chart. Forty-two research stars share its canvas and inspector; retired nodes remain invisible.", "expected": {"meteors": 0, "installed": 95, "tracking": false, "span": 1.0}},
+	{"id": "palette_active", "stage": "synthetic_palette", "density": "108_visuals_12_branches", "overlays": ["palette_diagnostic"], "note": "Synthetic12-branch input matrix using real StarNodeVisual draws: star/cluster/galaxy in purchased, affordable and unaffordable available states. Not a gameplay chart.", "expected": {"meteors": 0, "installed": 0, "tracking": false, "span": 1.0}},
+	{"id": "palette_inactive", "stage": "synthetic_palette", "density": "108_visuals_12_branches", "overlays": ["palette_diagnostic"], "note": "Synthetic12-branch input matrix using real StarNodeVisual draws: star/cluster/galaxy in locked, hidden and teaser states. Inactive silhouettes are intentionally shown as test specimens.", "expected": {"meteors": 0, "installed": 0, "tracking": false, "span": 1.0}},
 ]
 
 var failures: Array[String] = []
@@ -132,29 +129,12 @@ func prepare(tree: SceneTree, id: String) -> Node:
 			game.upgrade_tree.open_tree()
 		"palette_active", "palette_inactive":
 			_build_palette_plate(game, id)
-		"galactic_sky", "exoplanet_transit", "deep_sky_chart", "catalogue_ending":
+		"deep_sky_chart":
 			var all_nodes: Array[String] = []
 			for definition in Balance.UPGRADE_NODES:
 				all_nodes.append(String(definition.id))
 			_buy_nodes(game, all_nodes)
-			game._sync_galactic_systems()
-			game.galactic_phenomena.advance_time(6.0)
-			if id == "exoplanet_transit":
-				game.host_stars.advance_time(game.host_stars.next_transit_remaining)
-				game.host_stars.advance_time(game.host_stars.TRANSIT_WINDOW * 0.48)
-			elif id == "deep_sky_chart":
-				game.upgrade_tree.open_tree()
-			elif id == "catalogue_ending":
-				for target_id in game.galactic_phenomena.TARGET_SPECS:
-					game.galactic_phenomena.completed_targets[target_id] = true
-				game.galactic_phenomena.refresh_unlock_state()
-				game.elapsed_time = 3040.0
-				game.observation_round = 61
-				game.progression.success_count = 2100
-				game.progression.manual_successes = 1200
-				game.progression.automatic_successes = 900
-				game.progression.total_data_earned = 42000000000.0
-				game._show_catalogue_ending_debug_preview()
+			game.upgrade_tree.open_tree()
 	game.progression.observation_data = 1284000.0
 	game.hud._refresh_progression()
 	# Layout/deferred refresh is allowed; simulation, input and tweens are not.
@@ -166,12 +146,6 @@ func prepare(tree: SceneTree, id: String) -> Node:
 	elif id == "deep_sky_chart":
 		game.upgrade_tree._finish_galactic_pullback()
 		game.upgrade_tree.select_extension("ext_trace_study")
-	elif id == "catalogue_ending":
-		var reveal: Tween = game.hud.end_reveal_tween
-		if reveal == null or not reveal.is_valid():
-			failures.append(id + ": missing production reveal tween")
-		else:
-			reveal.custom_step(8.1)
 	for tween in tree.get_processed_tweens():
 		if tween.is_valid():
 			tween.custom_step(10.0)
@@ -180,12 +154,6 @@ func prepare(tree: SceneTree, id: String) -> Node:
 	game.hud.banner_timer = 0.0
 	game.hud.banner_rule.scale = Vector2.ONE
 	game.effects.reset()
-	for star in game.host_stars.host_stars:
-		star.visual_age = 0.0
-		star._process(1.0)
-	for target in game.galactic_phenomena.get_children():
-		if target.has_method("get_stage") and "capture_time_override_msec" in target:
-			target.set("capture_time_override_msec", 0.0)
 	await _settle(tree, game)
 	for visual in game.upgrade_tree.node_hold_bars.values():
 		visual.pulse_phase = 0.0
@@ -214,18 +182,10 @@ func inspect(game: Node, id: String) -> Dictionary:
 	if game.upgrade_tree.is_open():
 		overlays.append("chart")
 		if game.upgrade_tree.tooltip_panel.is_visible_in_tree(): overlays.append("constellation_inspector")
-		if game.upgrade_tree.galactic_panel.is_visible_in_tree(): overlays.append("galactic_inspector")
-	if game.hud.end_overlay.is_visible_in_tree(): overlays.append("ending")
 	if game.hud.settings_overlay.is_visible_in_tree(): overlays.append("settings")
 	if game.hud.startup_overlay.is_visible_in_tree(): overlays.append("startup")
 	if game.hud.banner_root.is_visible_in_tree(): overlays.append("banner")
 	if game.has_node("ReferencePalette"): overlays.append("palette_diagnostic")
-	var hosts: Array[Dictionary] = []
-	for star in game.host_stars.host_stars:
-		hosts.append({"id": star.stable_star_id, "profile": star.profile_id, "state": star.state, "position": _point(star.position), "visual_age": star.visual_age, "transit_phase": star.transit_phase_ratio})
-	var phenomena: Array[Dictionary] = []
-	for target in game.galactic_phenomena.get_children():
-		phenomena.append({"id": String(target.target_id), "stage": String(target.get_stage()) if target.has_method("get_stage") else "lens", "position": _point(target.position), "visual_time_msec": target.capture_time_override_msec})
 	var active_processes: Array[String] = []
 	_find_active_processes(game, active_processes)
 	var running_tweens := 0
@@ -240,11 +200,8 @@ func inspect(game: Node, id: String) -> Dictionary:
 		"tracking_target_valid": game.observer._selection_is_valid(),
 		"cursor": _point(game.observer.cursor_position), "survey_charge": game.survey.get_charge_progress(),
 		"chart_mode": game.upgrade_tree.galactic_mode, "chart_rotation": game.upgrade_tree.rotation_offset,
-		"chart_selection": game.upgrade_tree.selected_node_id, "galaxy_selection": game.upgrade_tree.galactic_inspector_node_id,
+		"chart_selection": game.upgrade_tree.selected_node_id,
 		"deep_sky_selection": game.upgrade_tree.selected_node_id,
-		"hosts": hosts, "phenomena": phenomena, "phenomena_recorded": game.galactic_phenomena.get_completed_record_count(),
-		"ending_complete": game.hud.end_reveal_complete, "ending_debug_preview": game.catalogue_ending_debug_preview,
-		"ending_map_progress": [game.hud.end_coda.constellation_progress, game.hud.end_coda.pullback_progress, game.hud.end_coda.route_progress, game.hud.end_coda.illumination_progress, game.hud.end_coda.settle_progress],
 		"active_processes": active_processes, "running_tweens": running_tweens,
 		"paused": game.get_tree().paused, "isolated": game.save_games is Fixtures.NoSaveSlots and game.settings is Fixtures.NoSettings,
 		"twinkle_time": game.get_node("TwinkleStars").time,
@@ -274,22 +231,12 @@ func inspect(game: Node, id: String) -> Dictionary:
 		_check(is_equal_approx(float(state.survey_charge), 210.0 / 460.0) and game.survey.roll_count == 0, id, "sweep charge or roll count differs")
 	if id == "research_chart":
 		_check(state.chart_selection == "canis_capacity_ii" and is_zero_approx(float(state.chart_rotation)), id, "reference inspector/rotation differs")
-	if id in ["galactic_sky", "exoplanet_transit", "deep_sky_chart"]:
-		_check(hosts.size() == 2 and phenomena.size() == 2, id, "full research must expose two hosts and two phenomena")
-		for target in phenomena:
-			_check(is_zero_approx(float(target.visual_time_msec)), id, "supernova visual clock must be deterministic")
-	if id == "exoplanet_transit":
-		_check(not hosts.is_empty() and hosts[0].state == "transiting" and is_equal_approx(float(hosts[0].transit_phase), 0.48), id, "primary transit must be at exactly 48%")
 	if id == "deep_sky_chart":
 		var chart: Node = game.upgrade_tree
 		_check(state.chart_mode == chart.GALACTIC_MODE_FINAL and state.chart_selection == "ext_trace_study" and chart.content_clip.is_visible_in_tree(), id, "extended constellation chart not active")
-		_check(chart.chart_constellations.size() == 22 and chart.extension_definitions.size() == 47, id, "ten outer figures and forty-seven research stars must be present")
+		_check(chart.chart_constellations.size() == 21 and chart.extension_definitions.size() == 42, id, "nine outer figures and forty-two research stars must be present")
 		for research in chart.extension_definitions:
 			_check(chart.node_buttons[research.id].get_parent() == chart.tree_canvas, id, "extension research must share the original star canvas")
-	if id == "catalogue_ending":
-		_check(state.ending_complete and state.ending_debug_preview and state.phenomena_recorded == 5, id, "completed catalogue reveal is missing")
-		for value in state.ending_map_progress:
-			_check(is_equal_approx(float(value), 1.0), id, "ending map has not reached its final pose")
 	return state
 
 
@@ -400,7 +347,7 @@ func _build_palette_plate(game: Node, id: String) -> void:
 	layer.add_child(plate)
 	var heading := "ACTIVE STATES" if id == "palette_active" else "INACTIVE STATES"
 	_palette_label(plate, "SYNTHETIC PALETTE CHECK / " + heading, Vector2(24, 16), Vector2(1100, 28), 20)
-	_palette_label(plate, "13 BRANCH INPUTS  /  REAL StarNodeVisual  /  NOT A GAMEPLAY CHART", Vector2(24, 48), Vector2(1100, 24), 12)
+	_palette_label(plate, "12 BRANCH INPUTS  /  REAL StarNodeVisual  /  NOT A GAMEPLAY CHART", Vector2(24, 48), Vector2(1100, 24), 12)
 	var branches: Array = Balance.BRANCHES.keys()
 	var rows: Array = PALETTE_ACTIVE_ROWS if id == "palette_active" else PALETTE_INACTIVE_ROWS
 	for column in range(branches.size()):
@@ -472,7 +419,7 @@ func _inspect_palette_plate(game: Node, id: String) -> Array[Dictionary]:
 			"cell": [cell.position.x, cell.position.y, cell.size.x, cell.size.y],
 			"center": _point(cell.get_center()), "scale": _point(child.scale),
 		})
-	_check(cells.size() == 117 and branch_counts.size() == 13, id, "palette must contain 13 branches x 9 rows")
+	_check(cells.size() == 108 and branch_counts.size() == 12, id, "palette must contain 12 branches x 9 rows")
 	for branch in branch_counts:
 		_check(branch_counts[branch] == 9, id, "palette branch must contain every state/kind: " + String(branch))
 	return cells

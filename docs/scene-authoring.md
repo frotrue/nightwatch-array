@@ -46,7 +46,7 @@ the required Windows export. A match in screenshots does not prove input behavio
 
 ## Authored surfaces
 
-All fixed UI, including the retained ending and probe HUD, follows this boundary.
+All fixed UI, including the probe HUD, follows this boundary.
 Controllers bind scene-owned named nodes and connect live requests. Do not add
 another code-built fixed surface alongside these scenes.
 
@@ -56,7 +56,7 @@ another code-built fixed surface alongside these scenes.
 | Settings and six pages | `settings.tscn`, `settings_*.tscn` | `hud.gd` |
 | Startup/save rows | `startup.tscn`, `startup_slot.tscn`, `save_slot.tscn` | HUD binds slot summaries/actions |
 | Round summary | `phase_summary.tscn` | HUD binds result, disclosure and reveal lifecycle |
-| Retained ending/debug display | `catalogue_ending.tscn`, `debug_hud.tscn` | HUD and procedural coda |
+| Debug display | `debug_hud.tscn` | HUD |
 | Research chart | `upgrade_tree.tscn`, `chart_header.tscn`, inspector/ledger scenes | `upgrade_tree.gd` |
 | Repeated research star | `research_star.tscn` | Catalogue-driven instantiation and procedural marker |
 | Module loadout | `module_popup.tscn`, `module_tooltip.tscn` | `module_popup.gd` |

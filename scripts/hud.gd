@@ -1,8 +1,5 @@
 extends CanvasLayer
 
-signal catalogue_finish_requested
-signal catalogue_continue_requested
-signal catalogue_debug_preview_close_requested
 signal phase_summary_continue_requested
 signal save_slot_requested(slot: int)
 signal load_slot_requested(slot: int)
@@ -13,10 +10,7 @@ signal tutorial_replay_requested
 
 const Balance = preload("res://scripts/game_balance.gd")
 const UITheme = preload("res://scripts/ui_theme.gd")
-const CatalogueEndingCoda = preload("res://scripts/catalogue_ending_coda.gd")
 const ExtensionData = preload("res://scripts/expansion_data.gd")
-const END_REVEAL_TOTAL_SECONDS := 8.0
-const END_REVEAL_SKIP_DELAY_MSEC := 2000
 const OBSERVATION_CLOCK_WIDTH := 140.0
 const SETTINGS_PAGE_ORDER := ["general", "audio", "display", "accessibility", "controls", "save"]
 const SETTINGS_PAGE_TAB_KEYS := {
@@ -60,22 +54,6 @@ var ready_pip: ColorRect
 var ready_label: Label
 var debug_panel: PanelContainer
 var debug_label: Label
-var end_overlay: ColorRect
-var end_coda
-var end_title: Label
-var end_subtitle: Label
-var end_body: Label
-var end_stats: Label
-var end_save_failure: Label
-var end_reveal_body: VBoxContainer
-var end_actions: VBoxContainer
-var end_finish_button: Button
-var end_continue_button: Button
-var end_reveal_tween: Tween
-var end_reveal_complete: bool = false
-var end_reveal_started_msec: int = 0
-var catalogue_debug_preview_active: bool = false
-var catalogue_save_failure_active: bool = false
 var guided_tutorial_active := false
 var external_readouts_covered := false
 var discovery_banners: Dictionary = {}
@@ -526,108 +504,6 @@ func is_pointer_over_hud(pointer_position: Vector2) -> bool:
 	return false
 
 
-func show_catalogue_ending(stats_text: String, debug_preview: bool = false) -> void:
-	# A save error belongs only to the ending presentation that reported it.
-	# Locale refreshes preserve the message, while a genuinely new ending starts
-	# with a clean record surface.
-	catalogue_save_failure_active = false
-	catalogue_debug_preview_active = debug_preview
-	refresh_catalogue_ending_text(stats_text)
-	if end_reveal_tween != null and end_reveal_tween.is_valid():
-		end_reveal_tween.kill()
-	end_reveal_complete = false
-	end_reveal_started_msec = Time.get_ticks_msec()
-	end_coda.reset_animation()
-	end_overlay.color = Color(0.016, 0.008, 0.006, 0.0)
-	end_reveal_body.modulate = Color(1.0, 0.76, 0.62, 0.0)
-	end_actions.modulate = Color(1.0, 0.82, 0.70, 0.0)
-	end_finish_button.disabled = true
-	end_continue_button.disabled = true
-	end_finish_button.release_focus()
-	end_continue_button.release_focus()
-	end_overlay.visible = true
-	end_overlay.move_to_front()
-	_refresh_in_round_readouts()
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	phase_summary_button.call_deferred("grab_focus")
-	# Replay the actual completed constellations, pull them into the Milky Way,
-	# then illuminate every Local Group marker. Choices wait for the map to settle.
-	end_reveal_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_parallel(true)
-	end_reveal_tween.tween_property(end_overlay, "color:a", 1.0, 0.65).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	end_reveal_tween.tween_property(end_coda, "constellation_progress", 1.0, 2.4).set_delay(0.25)
-	end_reveal_tween.tween_property(end_coda, "pullback_progress", 1.0, 2.2).set_delay(2.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	end_reveal_tween.tween_property(end_coda, "route_progress", 1.0, 2.7).set_delay(3.7)
-	end_reveal_tween.tween_property(end_coda, "illumination_progress", 1.0, 1.3).set_delay(6.0)
-	end_reveal_tween.tween_property(end_coda, "settle_progress", 1.0, 1.1).set_delay(6.1).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	end_reveal_tween.tween_property(end_reveal_body, "modulate", Color.WHITE, 1.0).set_delay(6.7).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	end_reveal_tween.tween_property(end_actions, "modulate", Color.WHITE, 0.8).set_delay(7.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	end_reveal_tween.tween_callback(_complete_catalogue_reveal).set_delay(END_REVEAL_TOTAL_SECONDS)
-
-
-func refresh_catalogue_ending_text(stats_text: String = "") -> void:
-	if end_title == null:
-		return
-	end_title.text = tr("HUD_END_TITLE")
-	end_subtitle.text = tr("HUD_END_SUBTITLE")
-	end_body.text = tr("HUD_END_BODY")
-	end_finish_button.text = tr("HUD_END_FINISH")
-	end_continue_button.text = tr("HUD_END_CONTINUE")
-	end_save_failure.text = tr("HUD_END_SAVE_FAILURE")
-	end_save_failure.visible = catalogue_save_failure_active
-	if not stats_text.is_empty():
-		end_stats.text = stats_text
-
-
-func show_catalogue_save_failure() -> void:
-	catalogue_save_failure_active = true
-	refresh_catalogue_ending_text()
-	if not is_end_open():
-		return
-	# A direct handler call can exercise a save failure before the reveal has
-	# finished. Bring the choices fully online so retry never waits behind the
-	# presentation beat.
-	if end_reveal_tween != null and end_reveal_tween.is_valid():
-		end_reveal_tween.kill()
-	end_reveal_tween = null
-	_complete_catalogue_reveal()
-
-
-func _complete_catalogue_reveal() -> void:
-	if not is_end_open():
-		return
-	if end_reveal_tween != null and end_reveal_tween.is_valid():
-		end_reveal_tween.kill()
-	end_reveal_tween = null
-	end_reveal_complete = true
-	end_overlay.color.a = 1.0
-	end_coda.complete_animation()
-	end_reveal_body.modulate = Color.WHITE
-	end_actions.modulate = Color.WHITE
-	end_finish_button.disabled = false
-	end_continue_button.disabled = false
-	end_finish_button.grab_focus()
-
-
-func hide_end() -> void:
-	if end_reveal_tween != null and end_reveal_tween.is_valid():
-		end_reveal_tween.kill()
-	end_reveal_tween = null
-	end_reveal_complete = false
-	catalogue_debug_preview_active = false
-	end_coda.set_process(false)
-	end_finish_button.release_focus()
-	end_continue_button.release_focus()
-	end_overlay.visible = false
-	_refresh_in_round_readouts()
-
-
-func is_end_open() -> bool:
-	return end_overlay != null and end_overlay.visible
-
-
-# Live readouts that belong to the round that just ended. The summary is
-# typeset straight onto the sky now, so there is no panel in front of them and
-# they would sit inside the summary's own column.
 const IN_ROUND_GROUPS := ["DataReadout", "PhaseClock", "ExtensionReadout", "ReadySystems", "TrackingCluster", "EventBanner", "FirstObservationHint"]
 
 
@@ -647,7 +523,6 @@ func _in_round_readouts_covered() -> bool:
 	return (
 		external_readouts_covered
 		or is_phase_summary_open()
-		or (end_overlay != null and end_overlay.visible)
 		or (settings_overlay != null and settings_overlay.visible)
 		or is_controls_open()
 		or (startup_overlay != null and startup_overlay.visible)
@@ -994,52 +869,6 @@ func _refresh_save_mode_label(just_saved: bool) -> void:
 	save_mode_label.add_theme_color_override("font_color", UITheme.GAIN)
 
 
-func _input(event: InputEvent) -> void:
-	if (
-		is_end_open()
-		and catalogue_debug_preview_active
-		and _is_catalogue_debug_preview_chord(event)
-	):
-		# HUD processes while paused, unlike the gameplay root. It therefore owns
-		# the second half of the debug-preview toggle after the ending pauses play.
-		catalogue_debug_preview_close_requested.emit()
-		get_viewport().set_input_as_handled()
-		return
-	if not is_end_open() or end_reveal_complete or not _is_catalogue_reveal_skip_input(event):
-		return
-	if Time.get_ticks_msec() - end_reveal_started_msec >= END_REVEAL_SKIP_DELAY_MSEC:
-		_complete_catalogue_reveal()
-	# Before two seconds this still consumes deliberate input so it cannot leak to
-	# a covered interface. Afterwards the same input completes, but never also
-	# activates a newly enabled ending choice.
-	get_viewport().set_input_as_handled()
-
-
-func _is_catalogue_debug_preview_chord(event: InputEvent) -> bool:
-	return (
-		event is InputEventKey
-		and event.pressed
-		and not event.echo
-		and event.ctrl_pressed
-		and event.shift_pressed
-		and event.keycode == KEY_E
-	)
-
-
-func _is_catalogue_reveal_skip_input(event: InputEvent) -> bool:
-	if event is InputEventKey:
-		return (
-			event.pressed
-			and not event.echo
-			and event.keycode not in [KEY_CTRL, KEY_SHIFT, KEY_ALT, KEY_META]
-		)
-	if event is InputEventMouseButton:
-		return event.pressed and event.button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT, MOUSE_BUTTON_MIDDLE]
-	if event is InputEventJoypadButton:
-		return event.pressed
-	return false
-
-
 func _unhandled_key_input(event: InputEvent) -> void:
 	# The always-processing GameInputRouter owns this path in the live game. This
 	# remains as a safe fallback for isolated HUD fixtures.
@@ -1074,8 +903,6 @@ func _refresh_ready_notice() -> void:
 		return
 	var ready := 0
 	for definition in Balance.UPGRADE_NODES:
-		if deep_sky != null and definition.branch == "local_group":
-			continue
 		if progression.can_purchase(String(definition.id)):
 			ready += 1
 	if deep_sky != null and deep_sky.modules_unlocked():
@@ -1661,7 +1488,6 @@ func _apply_locale() -> void:
 	tutorial_label.text = tr("HUD_TUTORIAL_DONE") % _chart_binding_label() if tutorial_complete else tr("HUD_TUTORIAL_START")
 	_sync_settings_controls()
 	_refresh_controls_rows()
-	refresh_catalogue_ending_text()
 	debug_label.text = "\n\n".join([
 		tr("HUD_DEBUG_TITLE"),
 		"\n".join([
@@ -1747,17 +1573,6 @@ func _build_interface() -> void:
 	data_label = view.get_node("%DataReadout").get_node("%DataLabel")
 	debug_label = view.get_node("%DebugPanel").get_node("%DebugLabel")
 	debug_panel = view.get_node("%DebugPanel")
-	end_actions = view.get_node("%EndOverlay").get_node("%EndActions")
-	end_body = view.get_node("%EndOverlay").get_node("%EndBody")
-	end_coda = view.get_node("%EndOverlay").get_node("%CatalogueEndingCoda")
-	end_continue_button = view.get_node("%EndOverlay").get_node("%EndContinueButton")
-	end_finish_button = view.get_node("%EndOverlay").get_node("%EndFinishButton")
-	end_overlay = view.get_node("%EndOverlay")
-	end_reveal_body = view.get_node("%EndOverlay").get_node("%EndRevealBody")
-	end_save_failure = view.get_node("%EndOverlay").get_node("%EndSaveFailure")
-	end_stats = view.get_node("%EndOverlay").get_node("%EndStats")
-	end_subtitle = view.get_node("%EndOverlay").get_node("%EndSubtitle")
-	end_title = view.get_node("%EndOverlay").get_node("%EndTitle")
 	extension_objective_label = view.get_node("%ExtensionReadout").get_node("%ExtensionObjectiveLabel")
 	extension_readout = view.get_node("%ExtensionReadout")
 	extension_samples_label = view.get_node("%ExtensionReadout").get_node("%ExtensionSamplesLabel")
@@ -2014,8 +1829,6 @@ func _build_interface() -> void:
 	view.get_node("%StartupSaveSlots").get_node("%HBoxContainer7").get_node("%Reset").pressed.connect(_on_reset_slot_pressed.bind(3))
 	view.get_node("%ResetDialog").confirmed.connect(_on_reset_confirmed)
 	view.get_node("%ResetDialog").canceled.connect(_on_reset_canceled)
-	end_finish_button.pressed.connect(func(): catalogue_finish_requested.emit())
-	end_continue_button.pressed.connect(func(): catalogue_continue_requested.emit())
 	tutorial_replay_button.pressed.connect(func(): tutorial_replay_requested.emit())
 	# Option metadata is live binding data; Godot does not serialize it.
 	for index in 2:

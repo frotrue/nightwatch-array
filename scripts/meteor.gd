@@ -81,12 +81,6 @@ var wobble_phase: float = 0.0
 var rng := RandomNumberGenerator.new()
 var observation_view: Camera2D
 var observation_visual_scale: float = 1.0
-var lens_curve_enabled := false
-var lens_control_position := Vector2.ZERO
-var lens_center := Vector2.ZERO
-var lens_radius := 0.0
-var lens_activity_rect := Rect2()
-var lensed_active := false
 
 
 func configure(spec: Dictionary, meteor_type: String, start_position: Vector2, move_velocity: Vector2, lifetime_scale: float, features: Dictionary, planned_burnout := Vector2.INF, view: Camera2D = null) -> void:
@@ -252,7 +246,6 @@ func _update_burn_motion(delta: float) -> void:
 		var wobble := oscillation * burn_wobble * instability * endpoint_taper
 		path_position += Vector2(-path_direction.y, path_direction.x) * wobble
 	position = path_position
-	lensed_active = lens_curve_enabled and global_position.distance_to(lens_center) <= lens_radius
 	if delta > 0.000001:
 		velocity = (position - previous_position) / delta
 		if not velocity.is_zero_approx():
@@ -327,26 +320,6 @@ func allows_automatic_assist() -> bool:
 	return true
 
 
-func set_lens_curve(control_position: Vector2, zone_center: Vector2, zone_radius: float, activity_rect: Rect2) -> void:
-	lens_curve_enabled = true
-	lens_control_position = control_position
-	lens_center = zone_center
-	lens_radius = maxf(0.0, zone_radius)
-	lens_activity_rect = activity_rect
-
-
-func is_lensed() -> bool:
-	return lensed_active
-
-
-func get_lens_curve_bounds() -> Rect2:
-	var first := get_planned_position(0.0)
-	var bounds := Rect2(first, Vector2.ZERO)
-	for index in range(1, 33):
-		bounds = bounds.expand(get_planned_position(float(index) / 32.0))
-	return bounds
-
-
 func has_dish_assist() -> bool:
 	return dish_assist_rate > 0.0
 
@@ -392,7 +365,7 @@ func get_recent_observation_trail() -> PackedVector2Array:
 func is_natural_observation() -> bool:
 	if type_id in ["fragment", "fragment_piece"]:
 		return false
-	for generated_meta in ["gemini_echo", "leonid_storm", "perseid_outburst", "polar_summoned", "afterglow_archive", "shutter_ineligible"]:
+	for generated_meta in ["gemini_echo", "leonid_storm", "perseid_outburst", "polar_summoned", "afterglow_archive"]:
 		if has_meta(generated_meta):
 			return false
 	return true
@@ -441,15 +414,7 @@ func get_burn_tail_scale() -> float:
 
 
 func get_planned_position(progress: float) -> Vector2:
-	var ratio := burn_curve(progress, burn_terminal_ratio)
-	if not lens_curve_enabled:
-		return entry_position.lerp(burnout_position, ratio)
-	var inverse := 1.0 - ratio
-	return (
-		entry_position * inverse * inverse
-		+ lens_control_position * 2.0 * inverse * ratio
-		+ burnout_position * ratio * ratio
-	)
+	return entry_position.lerp(burnout_position, burn_curve(progress, burn_terminal_ratio))
 
 
 func get_quality() -> float:

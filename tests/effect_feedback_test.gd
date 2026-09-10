@@ -190,17 +190,6 @@ func _test_meteor_routing(game) -> void:
 
 
 func _test_distant_and_event_paths(game) -> void:
-	var target := DistantFixture.new()
-	game.add_child(target)
-	target.position = CENTRE
-	game.effects.reset()
-	game._on_host_harvested(target, 120.0, 1.0, true, "GOOD", 1)
-	_check(game.effects.rings.size() == 1 and game.effects.flash_strength > 0.0, "distant-host harvest is explicitly accented despite ordinary grade")
-	game.effects.reset()
-	game._on_galactic_phenomenon_observed(target, 120.0, 1.0, "GOOD")
-	_check(game.effects.rings.size() == 1 and is_zero_approx(game.effects.flash_strength), "galactic phenomenon keeps its explicit accent and zero-flash contract")
-	target.free()
-
 	# Origin metadata prevents recursive rewards; it is not an accent category.
 	for origin in ["gemini_echo", "leonid_storm", "perseid_outburst", "polar_summoned"]:
 		game.effects.reset()
@@ -309,9 +298,9 @@ func _test_chart_installation_rule(game) -> void:
 	chart._process(1.0)
 	chart.pulse_installation_rule()
 	_check(chart.content_clip.is_visible_in_tree(), "the expanded view keeps the same constellation canvas")
-	_check(chart.installation_rule == chart.constellation_installation_rule and not chart.galactic_panel.is_visible_in_tree(), "explicit feedback uses the visible constellation inspector, never the retired galaxy inspector")
+	_check(chart.installation_rule == chart.constellation_installation_rule, "explicit feedback uses the visible constellation inspector, never the retired galaxy inspector")
 	_check(not game.progression.has_upgrade("lmc_transit_watch") and game.progression.observation_data == old_balance, "retired Local Group holds cannot buy research")
-	chart.select_extension("m31")
+	chart.select_extension("ext_protocol")
 	_check(game.hud.installation_tween == old_hud_tween, "selecting a research node does not dispatch purchase feedback")
 	chart.close_tree()
 
@@ -325,7 +314,7 @@ func _test_chart_installation_rule(game) -> void:
 	chart._on_node_hovered("galactic_reference_frame")
 	_check(game.progression.request_purchase("galactic_reference_frame"), "reference-frame purchase starts its real presentation transition")
 	_check(chart.galactic_mode == chart.GALACTIC_MODE_PULLBACK, "reference-frame installation retains its own visible pull-back")
-	_check(chart.installation_rule == null and not chart.tooltip_panel.visible and not chart.galactic_panel.visible, "pull-back does not start a pulse under either hidden inspector")
+	_check(chart.installation_rule == null and not chart.tooltip_panel.visible, "pull-back does not start a pulse under either hidden inspector")
 	_check(game.hud.installation_tween == old_hud_tween, "pull-back never starts an obscured HUD pulse")
 	chart.close_tree()
 	_check_no_accent(game.effects, "chart installation never adds meteor feedback")

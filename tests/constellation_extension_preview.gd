@@ -21,7 +21,7 @@ func _run() -> void:
 	while progressed:
 		progressed = false
 		for definition in Balance.UPGRADE_NODES:
-			if definition.branch != "local_group" and not game.progression.has_upgrade(definition.id):
+			if not game.progression.has_upgrade(definition.id):
 				progressed = game.progression.debug_purchase_node(definition.id) or progressed
 	game.spawner.reset()
 	game.galactic_pullback_seen = true
@@ -37,9 +37,7 @@ func _run() -> void:
 		tree.selected_node_id = "ext_trace_study"
 		tree._refresh()
 		await _capture(game, locale + "_atlas_revealed")
-	game.deep_sky.target._process(0.0)
-	game.deep_sky.target.apply_manual_observation(10.0, 0.0, 100.0)
-	for id in ["ext_trace_study", "ext_sweep_study", "ext_link_study", "focus", "wide"]:
+	for id in ["ext_trace_study", "ext_sweep_study", "focus", "wide"]:
 		game.deep_sky.purchase(id)
 	for locale in ["en", "ko"]:
 		_set_locale(game, locale)

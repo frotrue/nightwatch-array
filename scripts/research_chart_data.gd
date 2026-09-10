@@ -190,60 +190,6 @@ const CONSTELLATIONS := {
 	}
 }
 
-# The pre-Local-Group chart collapses into the Milky Way at galactic scale. These
-# records live directly in that scale instead of pretending Local Group
-# galaxies are members of a constellation. Their positions are a presentation
-# map: the linear research order travels outward as one continuous spiral. It
-# is not a claim about measured 3D distance.
-const LOCAL_GROUP_LABEL_KEY := "RESEARCH_GROUP_LOCAL_GROUP"
-const LOCAL_GROUP_GALAXIES: Array[Dictionary] = [
-	{
-		"id": "large_magellanic_cloud", "name_key": "GALAXY_LARGE_MAGELLANIC_CLOUD",
-		"bayer": "LMC", "magnitude": 0.90, "local_position": Vector2(48.2, -214.7),
-		"node_id": "lmc_transit_watch", "kind": "galaxy",
-	},
-	{
-		"id": "small_magellanic_cloud", "name_key": "GALAXY_SMALL_MAGELLANIC_CLOUD",
-		"bayer": "SMC", "magnitude": 2.70, "local_position": Vector2(215.9, -243.4),
-		"node_id": "smc_reference_baseline", "kind": "galaxy",
-	},
-	{"id": "andromeda_galaxy_local", "name_key": "GALAXY_ANDROMEDA", "bayer": "M31", "magnitude": 3.44, "local_position": Vector2(370.9, -131.3), "node_id": "m31_hidden_decoy_survey", "kind": "galaxy"},
-	{"id": "messier_32", "name_key": "GALAXY_MESSIER_32", "bayer": "M32", "magnitude": 8.08, "local_position": Vector2(446.2, 74.2), "node_id": "temporary_messier_32", "kind": "galaxy", "decorative": true},
-	{"id": "messier_110", "name_key": "GALAXY_MESSIER_110", "bayer": "M110", "magnitude": 8.92, "local_position": Vector2(396.5, 313.9), "node_id": "temporary_messier_110", "kind": "galaxy", "decorative": true},
-	{"id": "ngc_147", "name_key": "GALAXY_NGC_147", "bayer": "NGC 147", "magnitude": 9.50, "local_position": Vector2(214.4, 512.5), "node_id": "temporary_ngc_147", "kind": "galaxy", "decorative": true},
-	{"id": "ngc_185", "name_key": "GALAXY_NGC_185", "bayer": "NGC 185", "magnitude": 9.20, "local_position": Vector2(-65.3, 599.1), "node_id": "temporary_ngc_185", "kind": "galaxy", "decorative": true},
-	{"id": "triangulum_galaxy", "name_key": "GALAXY_TRIANGULUM", "bayer": "M33", "magnitude": 5.72, "local_position": Vector2(-372.8, 529.5), "node_id": "m33_transit_network", "kind": "galaxy"},
-	{"id": "ngc_6822", "name_key": "GALAXY_NGC_6822", "bayer": "C57", "magnitude": 9.30, "local_position": Vector2(-621.2, 301.9), "node_id": "ngc6822_supernova_watch", "kind": "galaxy"},
-	{"id": "ic_10", "name_key": "GALAXY_IC_10", "bayer": "IC 10", "magnitude": 10.40, "local_position": Vector2(-731.3, -38.4), "node_id": "ic10_supernova_overlap", "kind": "galaxy"},
-	{"id": "ic_1613", "name_key": "GALAXY_IC_1613", "bayer": "IC 1613", "magnitude": 9.90, "local_position": Vector2(-655.8, -408.8), "node_id": "ic1613_supernova_ephemeris", "kind": "galaxy"},
-	{"id": "wolf_lundmark_melotte", "name_key": "GALAXY_WLM", "bayer": "WLM", "magnitude": 11.00, "local_position": Vector2(-395.3, -709.2), "node_id": "wlm_einstein_ring", "kind": "galaxy"},
-	{"id": "pegasus_dwarf_irregular", "name_key": "GALAXY_PEGASUS_DIRR", "bayer": "DDO 216", "magnitude": 12.30, "local_position": Vector2(-3.1, -850.2), "node_id": "pegasus_partial_lens", "kind": "galaxy"},
-	{"id": "phoenix_dwarf", "name_key": "GALAXY_PHOENIX", "bayer": "PHX", "magnitude": 13.10, "local_position": Vector2(426.6, -778.4), "node_id": "phoenix_lensed_meteors", "kind": "galaxy"},
-	{"id": "leo_a", "name_key": "GALAXY_LEO_A", "bayer": "Leo A", "magnitude": 12.70, "local_position": Vector2(780.8, -494.5), "node_id": "leo_a_lensed_supernova", "kind": "galaxy"},
-	{"id": "aquarius_dwarf", "name_key": "GALAXY_AQUARIUS", "bayer": "DDO 210", "magnitude": 14.00, "local_position": Vector2(958.4, -57.3), "node_id": "aquarius_local_group_record", "kind": "galaxy"},
-	{"id": "sagittarius_dwarf_irregular", "name_key": "GALAXY_SAGDIG", "bayer": "SagDIG", "magnitude": 15.50, "local_position": Vector2(898.3, 428.6), "node_id": "temporary_sagittarius_dwarf_irregular", "kind": "galaxy", "decorative": true},
-	{"id": "tucana_dwarf", "name_key": "GALAXY_TUCANA", "bayer": "Tucana", "magnitude": 15.70, "local_position": Vector2(599.0, 837.8), "node_id": "temporary_tucana_dwarf", "kind": "galaxy", "decorative": true},
-	{"id": "cetus_dwarf", "name_key": "GALAXY_CETUS", "bayer": "Cetus", "magnitude": 14.40, "local_position": Vector2(122.9, 1056.8), "node_id": "temporary_cetus_dwarf", "kind": "galaxy", "decorative": true},
-	{"id": "sagittarius_dwarf_spheroidal", "name_key": "GALAXY_SAGITTARIUS_DSPH", "bayer": "Sgr dSph", "magnitude": 4.50, "local_position": Vector2(-416.3, 1015.4), "node_id": "temporary_sagittarius_dwarf_spheroidal", "kind": "galaxy", "decorative": true},
-	{"id": "fornax_dwarf", "name_key": "GALAXY_FORNAX", "bayer": "Fornax", "magnitude": 9.30, "local_position": Vector2(-881.3, 708.0), "node_id": "temporary_fornax_dwarf", "kind": "galaxy", "decorative": true},
-	{"id": "sculptor_dwarf", "name_key": "GALAXY_SCULPTOR", "bayer": "Sculptor", "magnitude": 10.10, "local_position": Vector2(-1145.8, 198.9), "node_id": "temporary_sculptor_dwarf", "kind": "galaxy", "decorative": true},
-	{"id": "carina_dwarf", "name_key": "GALAXY_CARINA", "bayer": "Carina", "magnitude": 11.30, "local_position": Vector2(-1129.4, -390.6), "node_id": "temporary_carina_dwarf", "kind": "galaxy", "decorative": true},
-	{"id": "draco_dwarf", "name_key": "GALAXY_DRACO", "bayer": "Draco", "magnitude": 10.90, "local_position": Vector2(-820.8, -911.8), "node_id": "temporary_draco_dwarf", "kind": "galaxy", "decorative": true},
-	{"id": "ursa_minor_dwarf", "name_key": "GALAXY_URSA_MINOR", "bayer": "Ursa Minor", "magnitude": 11.90, "local_position": Vector2(-284.4, -1225.6), "node_id": "temporary_ursa_minor_dwarf", "kind": "galaxy", "decorative": true},
-	{"id": "sextans_dwarf", "name_key": "GALAXY_SEXTANS", "bayer": "Sextans", "magnitude": 10.40, "local_position": Vector2(352.4, -1240.0), "node_id": "temporary_sextans_dwarf", "kind": "galaxy", "decorative": true},
-	{"id": "leo_i", "name_key": "GALAXY_LEO_I", "bayer": "Leo I", "magnitude": 10.20, "local_position": Vector2(929.8, -936.5), "node_id": "temporary_leo_i", "kind": "galaxy", "decorative": true},
-	{"id": "leo_ii", "name_key": "GALAXY_LEO_II", "bayer": "Leo II", "magnitude": 12.60, "local_position": Vector2(1295.9, -378.4), "node_id": "temporary_leo_ii", "kind": "galaxy", "decorative": true},
-	{"id": "andromeda_ii", "name_key": "GALAXY_ANDROMEDA_II", "bayer": "And II", "magnitude": 13.50, "local_position": Vector2(1346.5, 302.2), "node_id": "temporary_andromeda_ii", "kind": "galaxy", "decorative": true},
-]
-
-
-static func is_local_group_decoration(node_id: String) -> bool:
-	for galaxy_variant in LOCAL_GROUP_GALAXIES:
-		var galaxy: Dictionary = galaxy_variant
-		if String(galaxy.node_id) == node_id:
-			return bool(galaxy.get("decorative", false))
-	return false
-
 # Placement is deliberately separate from factual star data. Anchors are polar
 # coordinates around the chart's bottom-centre horizon origin.
 const PLACEMENTS := {
@@ -301,26 +247,6 @@ static func chart_offsets() -> Array[Dictionary]:
 	return offsets
 
 
-static func galactic_map_offsets(inner_radius: float = 124.0, outer_radius: float = 548.0, disk_tilt: float = 0.52) -> Dictionary:
-	# Presentation geometry shared by the research chart and ending. Include
-	# decorative records, but return new positions without changing their data
-	# or research status. Callers own screen scale, origin, and camera zoom.
-	var offsets := {}
-	var maximum_source_radius := 1.0
-	for galaxy_variant in LOCAL_GROUP_GALAXIES:
-		var galaxy: Dictionary = galaxy_variant
-		maximum_source_radius = maxf(maximum_source_radius, Vector2(galaxy.local_position).length())
-	for galaxy_variant in LOCAL_GROUP_GALAXIES:
-		var galaxy: Dictionary = galaxy_variant
-		var source_position := Vector2(galaxy.local_position)
-		var mapped_radius := inner_radius + (source_position.length() / maximum_source_radius) * (outer_radius - inner_radius)
-		offsets[String(galaxy.node_id)] = Vector2(
-			cos(source_position.angle()) * mapped_radius,
-			sin(source_position.angle()) * mapped_radius * disk_tilt
-		)
-	return offsets
-
-
 static func node_star_map() -> Dictionary:
 	var result := {}
 	for constellation_id in CONSTELLATIONS:
@@ -330,10 +256,6 @@ static func node_star_map() -> Dictionary:
 			var node_id := String(star.get("node_id", ""))
 			if not node_id.is_empty():
 				result[node_id] = {"constellation_id": constellation_id, "star": star}
-	for galaxy_variant in LOCAL_GROUP_GALAXIES:
-		var galaxy: Dictionary = galaxy_variant
-		var node_id := String(galaxy.node_id)
-		result[node_id] = {"constellation_id": "local_group", "star": galaxy}
 	return result
 
 
@@ -366,15 +288,6 @@ static func validation_errors(expected_node_ids: Array[String]) -> Array[String]
 					var endpoint_id := String(endpoint_variant)
 					if String(star_node_ids.get(endpoint_id, "")).is_empty():
 						errors.append("Research segment endpoint %s/%s has no node" % [constellation_id, endpoint_id])
-	for galaxy_variant in LOCAL_GROUP_GALAXIES:
-		var galaxy: Dictionary = galaxy_variant
-		var node_id := String(galaxy.get("node_id", ""))
-		if bool(galaxy.get("decorative", false)):
-			continue
-		if node_id.is_empty():
-			errors.append("Local Group galaxy has no research node: %s" % String(galaxy.get("id", "")))
-			continue
-		mapped_counts[node_id] = int(mapped_counts.get(node_id, 0)) + 1
 	for node_id in expected_node_ids:
 		if int(mapped_counts.get(node_id, 0)) != 1:
 			errors.append("Expected exactly one star for node %s" % node_id)

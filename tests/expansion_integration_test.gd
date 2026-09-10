@@ -26,7 +26,7 @@ func _run() -> void:
 	while progress:
 		progress = false
 		for node in Balance.UPGRADE_NODES:
-			if node.branch != "local_group" and not game.progression.has_upgrade(node.id):
+			if not game.progression.has_upgrade(node.id):
 				progress = game.progression.debug_purchase_node(node.id) or progress
 	game.spawner.reset()
 	game._begin_observation_phase()
@@ -34,14 +34,12 @@ func _run() -> void:
 	game.galactic_pullback_seen = true
 	game.upgrade_tree.configure_galactic_state(true, true)
 	_check(game.progression.upgrade_level == 95, "original 95-node economy remains sufficient")
-	_m31()
-	_check(research.observations == 1 and research.research_owned("ext_protocol"), "first real M31 unlocks special meteors")
+	_check(research.modules_unlocked() and research.research_owned("ext_protocol"), "coordinate research unlocks special meteors")
 	growth_baseline = _growth_snapshot()
 	await _check_transactions()
 	await _check_target_persistence()
 	await _check_research_loop()
 	await _check_archive_and_budget()
-	_check_weighted_exposure()
 	_check_measurement()
 	_check_migration()
 	_check_tracking_names()
@@ -176,12 +174,6 @@ func _sky() -> void:
 	game.observation_phase_remaining = 60.0
 	game.events.canis_major_state = "resolved"
 
-func _m31(amount: float = 1.0) -> void:
-	var target: Node = research.target
-	target.cooldown = 0.0
-	var rate: float = 1.2 * research.state.effect("m31_speed") * game.progression.get_analysis_speed_multiplier("galaxy") / 10.0
-	target.apply_manual_observation(amount / rate + (0.00001 if amount >= 1.0 else 0.0), 0.0, 100.0)
-
 func _manual(target: Node, amount: float = 1.0) -> void:
 	var rate: float = 1.42 * game.progression.get_analysis_speed_multiplier("common") / target.required_track_time
 	target.apply_manual_observation(amount / rate + (0.00001 if amount >= 1.0 else 0.0), 0.0, 100.0)
@@ -196,7 +188,7 @@ func _automatic(target: Node, amount: float = 1.0) -> void:
 
 func _check_transactions() -> void:
 	_chart()
-	for id in ["ext_trace_study", "ext_sweep_study", "ext_link_study"]:
+	for id in ["ext_trace_study", "ext_sweep_study"]:
 		_check(research.purchase(id), "study purchase succeeds: " + id)
 	_check(research.modules.purchased.is_empty() and research.modules.installed_ids().is_empty(), "research growth does not grant or equip modules")
 	research.state.award_samples(80)
@@ -276,7 +268,7 @@ func _check_research_loop() -> void:
 			if research.can_purchase(id):
 				_check(research.purchase(id), "research purchase succeeds: " + id)
 				advanced = true
-	_check(research.state.research_ids.size() == 47, "all forty-seven nodes reached using only Data and predecessor research")
+	_check(research.state.research_ids.size() == 42, "all forty-two nodes reached using only Data and predecessor research")
 	_check(research.modules.unlocked_slots == 5 and research.state.draw_cost() == 6, "all five slots and final efficiency reachable")
 	_check(research.modules.purchased.is_empty(), "all research completed without owning a single module")
 	_check_permanent_growth()
@@ -398,38 +390,6 @@ func _check_permanent_growth() -> void:
 	_check(not research.research_owned("focus") and research.modules.owned_count("focus") == 1, "new-catalogue ownership never backfills an old direct-purchase research ID")
 	research.load_save_data(before)
 
-func _check_weighted_exposure() -> void:
-	for id in ["record", "revisit"]: research.modules.grant(id)
-	research.modules.slots.assign(["", "", "", "", ""])
-	research.target.progress = 0.0
-	research.target.integrated_progress = 0.0
-	research.target.value_integral = 0.0
-	research.target.cooldown_integral = 0.0
-	_m31(0.5)
-	research.modules.slots[0] = "record"
-	research.modules.slots[1] = "revisit"
-	var before: float = game.progression.total_data_earned
-	_m31(0.5)
-	var expected: float = 8000.0 * game.progression.get_observation_value_multiplier("common", 1) * 1.25 * 1.25 * 1.15
-	_check(absf((game.progression.total_data_earned - before) - expected) <= 1.0, "half record exposure yields integrated x1.25")
-	_check(is_equal_approx(research.target.cooldown, 5.6 * 0.85), "half revisit exposure composes with permanent cadence")
-	research.modules.slots[1] = ""
-	_check(is_equal_approx(research.target.cooldown, 5.6 * 0.85), "removing revisit cannot alter a cooldown already started")
-	# Previously fixed-purchase modules can now fill every slot with copies.
-	research.modules.slots.assign(["", "", "", "", ""])
-	for index in range(5):
-		research.modules.grant_copy("record")
-		research.modules.equip("record", index)
-	_m31(0.5)
-	var half_value: float = research.target.value_integral
-	var half_save: Dictionary = JSON.parse_string(JSON.stringify(research.get_save_data()))
-	research.load_save_data(half_save)
-	_check(is_equal_approx(research.target.value_integral, half_value) and research.modules.installed_count("record") == 5, "five record copies retain their high partial value and inventory through JSON")
-	before = game.progression.total_data_earned
-	_m31(0.5)
-	expected = 8000.0 * game.progression.get_observation_value_multiplier("common", 1) * 3.5 * 1.25 * 1.15
-	_check(absf((game.progression.total_data_earned - before) - expected) <= 1.0, "five record copies pay their full integrated reward after save/load")
-
 func _check_measurement() -> void:
 	game._begin_observation_phase()
 	var original: String = research.modules.slots[0]
@@ -466,20 +426,7 @@ func _check_migration() -> void:
 	_check(research.get_save_data() == before, "whole game rejects future version before applying any mutation")
 	research.load_save_data({"version": 1, "observations": 2, "progress": 0.4, "cooldown": 2.0, "modules": {"purchased": ["record", "revisit"], "slots": ["record", "revisit", "", "", ""], "unlocked_slots": 5}})
 	_check(research.modules.unlocked_slots == 5 and research.research_owned("ext_protocol"), "v1 preserves capacity without inventing plans")
-	_check(is_equal_approx(research.target.value_integral, 0.6) and is_equal_approx(research.target.cooldown_integral, 0.24), "v1 partial exposure initializes its existing equipment weights")
-	_check(research.research_owned("record") and research.research_owned("revisit"), "legacy direct purchases retain completed research IDs")
 
-	# Two shutter copies preserve the longer M31 cooldown across disk saves.
-	research.modules.load_save_data({"purchased": ["shutter_weave"], "quantities": {"shutter_weave": 2}, "slots": ["shutter_weave", "shutter_weave"]})
-	research.state.research_ids.erase("revisit") # Isolate the preserved module penalty.
-	research.target.progress = 0.0
-	research.target.integrated_progress = 0.0
-	research.target.value_integral = 0.0
-	research.target.cooldown_integral = 0.0
-	_m31()
-	_check(is_equal_approx(research.target.cooldown, 10.5), "two cooldown penalties add on actual completion")
-	research.load_save_data(JSON.parse_string(JSON.stringify(research.get_save_data())))
-	_check(is_equal_approx(research.target.cooldown, 10.5), "duplicate cooldown is not truncated on load")
 	var old: Dictionary = research.get_save_data()
 	old.version = 2
 	old.anomalies = {"active": [{"ticket": "p/old", "kind": "spectrum", "origin_kind": "plan", "stage": 1, "stage_progress": 0.4, "start": [0.3, 0.4], "end": [0.7, 0.5]}], "tickets": {"p/old": {"components": {}, "sample_units": 0, "completed": false}}}

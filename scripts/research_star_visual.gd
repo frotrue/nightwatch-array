@@ -90,7 +90,7 @@ func _draw_cluster_marker(center: Vector2, radius: float) -> void:
 
 
 func _draw_galaxy_marker(center: Vector2, _radius: float) -> void:
-	# Local Group research uses the mock-up's edge-on galactic discs. Keep the
+	# Galaxy markers use elongated discs. Keep the
 	# transform contained here so labels and later nodes never inherit rotation.
 	var spec_radius := clampf(12.6 - magnitude * 0.52, 4.6, 13.0)
 	var major := UITheme.px(spec_radius) / GALACTIC_NODE_SCREEN_SCALE

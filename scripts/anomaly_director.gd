@@ -137,7 +137,6 @@ func complete_component(target: Node) -> void:
 	if not component.data_paid:
 		component.data_paid = true
 		research.award_anomaly_data(target)
-	research.modules.notify_completed(target)
 	research.game.observer.release_target(target)
 	ticket.completed = true
 	if ticket.origin_kind == "natural":

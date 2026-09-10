@@ -21,118 +21,6 @@ func _check(condition: bool, message: String) -> void:
 		push_error("SMOKE: " + message)
 
 
-func _check_ending_map_geometry(coda, live_chart) -> void:
-	_check(
-		coda.constellation_figures.size() == 12 and coda.chart_star_offsets.size() == 95,
-		"the ending replays twelve actual constellations and all 95 chart stars"
-	)
-	var expected_figure_ids: Array = ChartData.CONSTELLATIONS.keys()
-	var total_stars := 0
-	for figure_index in range(mini(coda.constellation_figures.size(), expected_figure_ids.size())):
-		var constellation_id: String = expected_figure_ids[figure_index]
-		var source: Dictionary = ChartData.CONSTELLATIONS[constellation_id]
-		var placement: Dictionary = ChartData.PLACEMENTS[constellation_id]
-		var figure: Dictionary = coda.constellation_figures[figure_index]
-		var star_indices := {}
-		_check(
-			String(figure.id) == constellation_id
-			and figure.points.size() == source.stars.size()
-			and figure.magnitudes.size() == source.stars.size()
-			and figure.edges.size() == source.segments.size(),
-			"ending figure preserves the source star and edge counts: " + constellation_id
-		)
-		for star_index in range(source.stars.size()):
-			var star: Dictionary = source.stars[star_index]
-			var key := "%s/%s" % [constellation_id, star.id]
-			star_indices[String(star.id)] = star_index
-			# Reconstruct from the factual position and placement instead of
-			# comparing the renderer to another call of its chart_offsets helper.
-			var angle := float(placement.anchor_angle)
-			var expected := Vector2(cos(angle), sin(angle)) * float(placement.anchor_radius)
-			expected += Vector2(star.local_position).rotated(float(placement.tilt)) * float(placement.scale)
-			_check(
-				coda.chart_star_offsets.has(key)
-				and Vector2(coda.chart_star_offsets.get(key, Vector2.INF)).is_equal_approx(expected)
-				and star_index < figure.points.size()
-				and Vector2(figure.points[star_index]).is_equal_approx(expected)
-				and star_index < figure.magnitudes.size()
-				and is_equal_approx(float(figure.magnitudes[star_index]), float(star.magnitude)),
-				"ending star keeps the chart's actual placement and brightness: " + key
-			)
-			total_stars += 1
-		for edge_index in range(mini(figure.edges.size(), source.segments.size())):
-			var segment: Array = source.segments[edge_index]
-			var expected_edge := Vector2i(star_indices[String(segment[0])], star_indices[String(segment[1])])
-			_check(
-				Vector2i(figure.edges[edge_index]) == expected_edge,
-				"ending connects the source constellation segment: %s/%s-%s" % [constellation_id, segment[0], segment[1]]
-			)
-	_check(total_stars == 95, "the ending does not omit a constellation's stars")
-
-	var expected_galaxy_ids: Array[String] = ["galactic_reference_frame"]
-	var functional_ids := {}
-	for definition in Balance.UPGRADE_NODES:
-		functional_ids[String(definition.id)] = true
-	var decorative_count := 0
-	var maximum_source_radius := 1.0
-	for galaxy in ChartData.LOCAL_GROUP_GALAXIES:
-		maximum_source_radius = maxf(maximum_source_radius, Vector2(galaxy.local_position).length())
-	var shared_offsets := ChartData.galactic_map_offsets()
-	_check(shared_offsets.size() == 29, "the shared galaxy projection includes all 29 Local Group records")
-	for galaxy in ChartData.LOCAL_GROUP_GALAXIES:
-		var node_id := String(galaxy.node_id)
-		expected_galaxy_ids.append(node_id)
-		var source_position := Vector2(galaxy.local_position)
-		var expected_radius := 124.0 + source_position.length() / maximum_source_radius * (548.0 - 124.0)
-		var expected := source_position.normalized() * expected_radius
-		expected.y *= 0.52
-		var live_offset: Vector2 = (Vector2(live_chart.local_group_node_positions[node_id]) - live_chart.CHART_ORIGIN) * live_chart.GALACTIC_ZOOM / UITheme.SCALE
-		_check(
-			Vector2(shared_offsets.get(node_id, Vector2.INF)).is_equal_approx(expected)
-			and Vector2(coda.galaxy_positions.get(node_id, Vector2.INF)).is_equal_approx(expected)
-			and live_offset.is_equal_approx(expected),
-			"ending and live chart share the source galaxy's radial placement and disc tilt: " + node_id
-		)
-		if bool(galaxy.get("decorative", false)):
-			decorative_count += 1
-			_check(not functional_ids.has(node_id), "an illuminated ending decoration is still not research: " + node_id)
-	var unique_galaxy_ids := {}
-	for node_id in coda.galaxy_node_ids:
-		unique_galaxy_ids[String(node_id)] = true
-	_check(
-		coda.galaxy_node_ids == expected_galaxy_ids
-		and unique_galaxy_ids.size() == 30
-		and coda.galaxy_positions.size() == 30
-		and Vector2(coda.galaxy_positions.get("galactic_reference_frame", Vector2.INF)).is_zero_approx()
-		and decorative_count == 17
-		and functional_ids.size() == 107,
-		"the ending uses the Milky Way plus all 29 unique galaxies without promoting 17 decorations to research"
-	)
-	_check(
-		coda.galaxy_arrivals.size() == 30
-		and coda.galaxy_route_points.size() == 1 + 29 * coda.ROUTE_SAMPLES,
-		"the ending route has an arrival and exact sampled endpoint for every galaxy marker"
-	)
-	for index in range(expected_galaxy_ids.size()):
-		var route_index: int = index * coda.ROUTE_SAMPLES
-		_check(
-			route_index < coda.galaxy_route_points.size()
-			and Vector2(coda.galaxy_route_points[route_index]).is_equal_approx(Vector2(coda.galaxy_positions.get(expected_galaxy_ids[index], Vector2.INF))),
-			"the ending route passes through its actual galaxy marker: " + expected_galaxy_ids[index]
-		)
-
-
-func _check_ending_map_illuminated(coda, context: String) -> void:
-	for index in range(coda.constellation_figures.size()):
-		_check(is_equal_approx(coda.constellation_light(index), 1.0), "%s fully lights constellation %d" % [context, index])
-	for index in range(coda.galaxy_node_ids.size()):
-		_check(is_equal_approx(coda.galaxy_light(index), 1.0), "%s fully lights galaxy %s" % [context, coda.galaxy_node_ids[index]])
-	_check(
-		coda._lit_route_points() == coda.galaxy_route_points,
-		context + " retains the complete connected route, including the final galaxy"
-	)
-
-
 func _run() -> void:
 	var packed: PackedScene = load("res://scenes/main.tscn")
 	_check(packed != null, "main scene loads")
@@ -171,8 +59,8 @@ func _run() -> void:
 			break
 	_check(outer_background_reserved, "background stars reserve deterministic coverage outside the atmospheric playfield")
 	_check(
-		StarfieldScript.BACKGROUND_COVERAGE_SPAN > Balance.GALACTIC_FINAL_OBSERVATION_SPAN
-		and StarTwinkleScript.BACKGROUND_COVERAGE_SPAN > Balance.GALACTIC_FINAL_OBSERVATION_SPAN,
+		StarfieldScript.BACKGROUND_COVERAGE_SPAN > 1.5
+		and StarTwinkleScript.BACKGROUND_COVERAGE_SPAN > 1.5,
 		"background coverage derives with overscan from the single galactic observation-span ceiling"
 	)
 	var original_research_rotation: float = game.settings.get_research_chart_rotation()
@@ -245,153 +133,6 @@ func _run() -> void:
 	_cleanup_smoke_saves(smoke_save_directory)
 	game.save_games.set_save_directory(smoke_save_directory)
 	game.reset_run()
-	var debug_ending_snapshot := JSON.stringify(game._build_save_data())
-	var debug_ending_mouse_mode: int = Input.mouse_mode
-	var debug_ending_chord := InputEventKey.new()
-	debug_ending_chord.keycode = KEY_E
-	debug_ending_chord.pressed = true
-	debug_ending_chord.ctrl_pressed = true
-	debug_ending_chord.shift_pressed = true
-	var debug_ending_release := debug_ending_chord.duplicate()
-	debug_ending_release.pressed = false
-	game.get_viewport().push_input(debug_ending_chord)
-	await process_frame
-	await process_frame
-	game.get_viewport().push_input(debug_ending_release)
-	_check(
-		game.catalogue_ending_debug_preview
-		and game.completed
-		and game.hud.is_end_open()
-		and paused
-		and game.hud.end_coda.is_processing()
-		and game.hud.end_coda.constellation_progress < 1.0
-		and is_zero_approx(game.hud.end_coda.pullback_progress)
-		and is_zero_approx(game.hud.end_coda.route_progress)
-		and is_zero_approx(game.hud.end_coda.illumination_progress)
-		and is_zero_approx(game.hud.end_coda.settle_progress)
-		and not game.hud.end_reveal_complete
-		and game.hud.end_finish_button.disabled
-		and JSON.stringify(game._build_save_data()) == debug_ending_snapshot,
-		"Ctrl+Shift+E opens the animated catalogue coda without changing save data"
-	)
-	_check_ending_map_geometry(game.hud.end_coda, game.upgrade_tree)
-	var ending_skip_mouse := InputEventMouseButton.new()
-	ending_skip_mouse.button_index = MOUSE_BUTTON_LEFT
-	ending_skip_mouse.pressed = true
-	var ending_skip_mouse_release := ending_skip_mouse.duplicate()
-	ending_skip_mouse_release.pressed = false
-	var ending_skip_pad := InputEventJoypadButton.new()
-	ending_skip_pad.button_index = JOY_BUTTON_A
-	ending_skip_pad.pressed = true
-	var ending_skip_pad_release := ending_skip_pad.duplicate()
-	ending_skip_pad_release.pressed = false
-	var ending_modifier_only := InputEventKey.new()
-	ending_modifier_only.keycode = KEY_CTRL
-	ending_modifier_only.pressed = true
-	_check(
-		game.hud._is_catalogue_reveal_skip_input(ending_skip_mouse)
-		and game.hud._is_catalogue_reveal_skip_input(ending_skip_pad)
-		and not game.hud._is_catalogue_reveal_skip_input(ending_modifier_only),
-		"mouse and controller buttons qualify as skip input while modifier-only presses do not"
-	)
-	_check(
-		game.hud.END_REVEAL_SKIP_DELAY_MSEC == 2000
-		and is_equal_approx(game.hud.END_REVEAL_TOTAL_SECONDS, 8.0),
-		"the approved coda keeps its two-second skip boundary and eight-second natural duration"
-	)
-	game.hud.end_reveal_started_msec = Time.get_ticks_msec()
-	game.get_viewport().push_input(ending_skip_mouse)
-	game.get_viewport().push_input(ending_skip_mouse_release)
-	_check(
-		not game.hud.end_reveal_complete
-		and game.hud.end_finish_button.disabled,
-		"a real paused-HUD mouse press before two seconds is consumed without skipping"
-	)
-	game.hud.end_reveal_started_msec = Time.get_ticks_msec() - game.hud.END_REVEAL_SKIP_DELAY_MSEC
-	game.get_viewport().push_input(ending_skip_pad)
-	game.get_viewport().push_input(ending_skip_pad_release)
-	_check(
-		game.hud.end_reveal_complete
-		and game.catalogue_ending_debug_preview
-		and game.hud.is_end_open()
-		and is_equal_approx(game.hud.end_coda.constellation_progress, 1.0)
-		and is_equal_approx(game.hud.end_coda.pullback_progress, 1.0)
-		and is_equal_approx(game.hud.end_coda.route_progress, 1.0)
-		and is_equal_approx(game.hud.end_coda.illumination_progress, 1.0)
-		and is_equal_approx(game.hud.end_coda.settle_progress, 1.0)
-		and not game.hud.end_coda.is_processing()
-		and not game.hud.end_finish_button.disabled,
-		"a real paused-HUD pad press at two seconds skips exactly once without choosing an action"
-	)
-	_check_ending_map_illuminated(game.hud.end_coda, "skipped debug ending")
-	game._on_catalogue_finish_requested()
-	_check(
-		not game.catalogue_ending_debug_preview
-		and not game.completed
-		and not game.hud.is_end_open()
-		and not paused
-		and game.observation_phase_active
-		and Input.mouse_mode == debug_ending_mouse_mode
-		and JSON.stringify(game._build_save_data()) == debug_ending_snapshot,
-		"an ending choice exits the debug preview and restores the live round without saving"
-	)
-	game.get_viewport().push_input(debug_ending_release)
-	game.get_viewport().push_input(debug_ending_chord)
-	await process_frame
-	var natural_coda_tween: Tween = game.hud.end_reveal_tween
-	natural_coda_tween.pause()
-	natural_coda_tween.custom_step(maxf(0.0, 2.8 - natural_coda_tween.get_total_elapsed_time()))
-	_check(
-		is_equal_approx(game.hud.end_coda.constellation_progress, 1.0)
-		and is_zero_approx(game.hud.end_coda.pullback_progress)
-		and is_zero_approx(game.hud.end_coda.route_progress)
-		and not game.hud.end_reveal_complete,
-		"the coda first finishes the player's constellation chart before the galaxy pullback"
-	)
-	natural_coda_tween.custom_step(maxf(0.0, 5.2 - natural_coda_tween.get_total_elapsed_time()))
-	_check(
-		is_equal_approx(game.hud.end_coda.pullback_progress, 1.0)
-		and game.hud.end_coda.route_progress > 0.0
-		and game.hud.end_coda.route_progress < 1.0
-		and is_equal_approx(game.hud.end_coda.galaxy_light(0), 1.0)
-		and is_zero_approx(game.hud.end_coda.galaxy_light(29))
-		and game.hud.end_finish_button.disabled,
-		"the completed chart becomes the Milky Way while the full galaxy route lights progressively"
-	)
-	var remaining_before_coda_endpoint := maxf(
-		0.0,
-		game.hud.END_REVEAL_TOTAL_SECONDS - 0.1 - natural_coda_tween.get_total_elapsed_time()
-	)
-	natural_coda_tween.custom_step(remaining_before_coda_endpoint)
-	_check(
-		not game.hud.end_reveal_complete
-		and game.hud.end_finish_button.disabled,
-		"the natural coda remains locked immediately before its eight-second endpoint"
-	)
-	natural_coda_tween.custom_step(0.2)
-	_check(
-		game.hud.end_reveal_complete
-		and is_equal_approx(game.hud.end_coda.constellation_progress, 1.0)
-		and is_equal_approx(game.hud.end_coda.pullback_progress, 1.0)
-		and is_equal_approx(game.hud.end_coda.route_progress, 1.0)
-		and is_equal_approx(game.hud.end_coda.illumination_progress, 1.0)
-		and is_equal_approx(game.hud.end_coda.settle_progress, 1.0)
-		and not game.hud.end_finish_button.disabled,
-		"the unskipped eight-second timeline reaches the same completed coda frame"
-	)
-	_check_ending_map_illuminated(game.hud.end_coda, "natural debug ending")
-	var debug_toggle_snapshot := JSON.stringify(game._build_save_data())
-	game.get_viewport().push_input(debug_ending_release)
-	game.get_viewport().push_input(debug_ending_chord)
-	game.get_viewport().push_input(debug_ending_release)
-	_check(
-		not game.catalogue_ending_debug_preview
-		and not game.completed
-		and not game.hud.is_end_open()
-		and not paused
-		and JSON.stringify(game._build_save_data()) == debug_toggle_snapshot,
-		"pressing Ctrl+Shift+E again closes the non-destructive ending preview"
-	)
 	var engine_version: Dictionary = Engine.get_version_info()
 	var has_high_polling_fix := (
 		int(engine_version.major) > 4
@@ -529,7 +270,7 @@ func _run() -> void:
 	for multiplier_id in global_x2_ids:
 		var multiplier_definition: Dictionary = balance.upgrade_definition(multiplier_id)
 		var multiplier_description: String = game.upgrade_tree._upgrade_description(multiplier_definition)
-		_check("데이터 2배" in multiplier_description and "자동 포함" in multiplier_description and "국부은하군 제외" in multiplier_description, "%s exposes its global multiplier in Korean" % multiplier_id)
+		_check("데이터 2배" in multiplier_description and "자동 포함" in multiplier_description, "%s exposes its global multiplier in Korean" % multiplier_id)
 	_check(TranslationServer.translate("UPGRADE_ERROR_NEED_DATA") % 12 == "데이터가 12개 더 필요합니다", "Korean shortfall text is a complete sentence")
 	_check(TranslationServer.translate("TREE_NEED_MORE") % [8, 12] == "◇  데이터 8 / 12", "Korean tree affordability text shows current and required Data")
 	_check(TranslationServer.translate("SAVE_RESET_PROMPT") % 2 == "슬롯 2의 모든 진행 상황을 삭제합니다. 이 작업은 되돌릴 수 없습니다.", "Korean reset warning clearly explains permanent deletion")
@@ -598,7 +339,7 @@ func _run() -> void:
 	for multiplier_id in global_x2_ids:
 		var multiplier_definition: Dictionary = balance.upgrade_definition(multiplier_id)
 		var multiplier_description: String = game.upgrade_tree._upgrade_description(multiplier_definition)
-		_check("Observation Data ×2" in multiplier_description and "automatic included" in multiplier_description and "Local Group excluded" in multiplier_description, "%s exposes its global multiplier in English" % multiplier_id)
+		_check("Observation Data ×2" in multiplier_description and "automatic included" in multiplier_description, "%s exposes its global multiplier in English" % multiplier_id)
 	_check(
 		String(secondary_camera_definition.description)
 		== game.upgrade_tree._upgrade_description(secondary_camera_definition),
@@ -658,7 +399,7 @@ func _run() -> void:
 	var draco_probe = load("res://scripts/progression_controller.gd").new()
 	for draco_gate_definition_variant in balance.UPGRADE_NODES:
 		var draco_gate_definition: Dictionary = draco_gate_definition_variant
-		if String(draco_gate_definition.branch) not in ["draco", "local_group"]:
+		if String(draco_gate_definition.branch) not in ["draco"]:
 			draco_probe.purchased_nodes[String(draco_gate_definition.id)] = true
 	_check(draco_probe.upgrade_level == 86 and draco_probe.get_node_state("draco_synthesis") == "available", "completing the other eleven constellations reveals Draco's first star")
 	_check(draco_probe.get_node_state("draco_cadence") == "hidden", "Draco still reveals only one internal step at a time")
@@ -672,14 +413,7 @@ func _run() -> void:
 	_check(draco_probe.debug_purchase_node("draco_array") and draco_probe.get_dish_count() == 4 and draco_probe.get_secondary_slots() == 4, "Total Array expands both steerable dishes and automatic lanes to four")
 	_check(draco_probe.debug_purchase_node("draco_apotheosis") and is_equal_approx(draco_probe.get_observation_value_multiplier("common", 1), 8192.0), "Dragon's Eye raises the completed constellation economy to x8192")
 	_check(not draco_probe.galaxy_unlocked() and draco_probe.debug_purchase_node("galactic_reference_frame") and draco_probe.galaxy_unlocked(), "the final Draco node unlocks the galactic reference frame")
-	_check(not draco_probe.is_research_complete(), "the Draco culmination leaves the 12-node Local Group route uninstalled")
-	var purchased_local_group_nodes := 0
-	for local_definition_variant in balance.UPGRADE_NODES:
-		var local_definition: Dictionary = local_definition_variant
-		if String(local_definition.branch) == "local_group" and draco_probe.debug_purchase_node(String(local_definition.id)):
-			purchased_local_group_nodes += 1
-	_check(purchased_local_group_nodes == 12, "the prerequisite-safe Local Group route installs all 12 functional research nodes")
-	_check(draco_probe.is_research_complete(), "Draco plus the full Local Group route complete the 107-node research graph")
+	_check(draco_probe.is_research_complete(), "Draco completes the 95 active base studies")
 	var draco_save_probe = load("res://scripts/progression_controller.gd").new()
 	draco_save_probe.load_save_data(draco_probe.get_save_data())
 	_check(draco_save_probe.galaxy_unlocked() and is_equal_approx(draco_save_probe.get_observation_value_multiplier("common", 1), 8192.0), "Draco culmination and galaxy state survive ID-based saves")
@@ -1040,10 +774,7 @@ func _run() -> void:
 			var prerequisite_node_id := String(prerequisite_variant)
 			var prerequisite_location: Dictionary = chart_node_stars[prerequisite_node_id]
 			if String(prerequisite_location.constellation_id) != String(target_location.constellation_id):
-				if not (prerequisite_node_id == "galactic_reference_frame" and target_node_id == "lmc_transit_watch"):
-					all_prerequisites_internal = false
-				continue
-			if String(target_location.constellation_id) == "local_group":
+				all_prerequisites_internal = false
 				continue
 			var constellation: Dictionary = chart_data.CONSTELLATIONS[target_location.constellation_id]
 			var prerequisite_star_id := String(prerequisite_location.star.id)
@@ -1070,7 +801,7 @@ func _run() -> void:
 	_check(game.upgrade_tree.node_buttons["long_exposure"].visible and game.upgrade_tree.node_buttons["long_exposure"].get_meta("visual_state") == "teaser", "one upcoming system is previewed as an unresolved signal")
 	_check(opening_optics.size == game.upgrade_tree.STAR_HIT_SIZE, "research stars use compact transparent point hit targets")
 	_check(game.upgrade_tree.tooltip_panel.visible and not game.upgrade_tree.selected_node_id.is_empty(), "research chart opens with the reference-style fixed inspector selection")
-	_check(game.upgrade_tree.constellation_ledger.visible and game.upgrade_tree.constellation_ledger_counts.size() == 22, "research chart includes the original twelve and ten outer constellation rows")
+	_check(game.upgrade_tree.constellation_ledger.visible and game.upgrade_tree.constellation_ledger_counts.size() == 21, "research chart includes the original twelve and nine outer constellation rows")
 	_check(game.upgrade_tree.tree_canvas.find_children("*", "Label", true, false).is_empty(), "constellation chart keeps node-name text out of the central playfield")
 	game.upgrade_tree._on_node_hovered("edge_detection")
 	_check(game.upgrade_tree.tooltip_panel.visible and game.upgrade_tree.hovered_node_id == "edge_detection" and game.upgrade_tree.selected_node_id == "edge_detection", "hovering a node updates the fixed constellation inspector")
@@ -2143,41 +1874,9 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	_check(open_night_game.upgrade_tree.galactic_mode == open_night_game.upgrade_tree.GALACTIC_MODE_NORMAL and open_night_game.upgrade_tree.zoom >= open_night_game.upgrade_tree.MIN_ZOOM, "the pre-unlock research chart opens in its normal player zoom range")
-	# The catalogue ending requires both semantic records. Neither side alone may
-	# close the sky, and a final purchase in a live mixed-build round must wait
-	# for one observation that began with the complete array.
-	for target_id_variant in open_night_game.galactic_phenomena.TARGET_SPECS:
-		open_night_game.galactic_phenomena.completed_targets[String(target_id_variant)] = true
-	open_night_game.galactic_phenomena.refresh_unlock_state()
-	open_night_game._refresh_catalogue_ending_requirement()
-	_check(
-		open_night_game.galactic_phenomena.is_record_complete()
-		and not open_night_game.progression.is_research_complete()
-		and not open_night_game._catalogue_record_complete()
-		and not open_night_game.ending_final_watch_pending,
-		"five galactic phenomena without the research tree cannot arm the catalogue ending"
-	)
-	open_night_game.galactic_phenomena.completed_targets.clear()
-	open_night_game.galactic_phenomena.refresh_unlock_state()
 	open_night_game.progression.debug_purchase_all()
-	_check(
-		open_night_game.progression.is_research_complete()
-		and not open_night_game.galactic_phenomena.is_record_complete()
-		and not open_night_game._catalogue_record_complete()
-		and not open_night_game.ending_final_watch_pending,
-		"the complete research tree without all phenomena cannot arm the catalogue ending"
-	)
-	for target_id_variant in open_night_game.galactic_phenomena.TARGET_SPECS:
-		open_night_game.galactic_phenomena.completed_targets[String(target_id_variant)] = true
-	open_night_game.galactic_phenomena.refresh_unlock_state()
-	open_night_game._refresh_catalogue_ending_requirement()
-	_check(
-		open_night_game._catalogue_record_complete()
-		and open_night_game.ending_final_watch_pending
-		and not open_night_game.phase_started_with_complete_research,
-		"completing the catalogue inside a mixed-build round arms one full-array final watch"
-	)
 	_check(open_night_game.upgrade_tree.galactic_mode == open_night_game.upgrade_tree.GALACTIC_MODE_PULLBACK and not open_night_game.galactic_pullback_seen, "buying Galactic Reference Frame in the open chart starts the one-time pull-back")
+	open_night_game.progression.debug_purchase_all()
 	var purchase_release := InputEventMouseButton.new()
 	purchase_release.button_index = MOUSE_BUTTON_LEFT
 	purchase_release.pressed = false
@@ -2185,16 +1884,6 @@ func _run() -> void:
 	open_night_game.upgrade_tree._input(InputEventMouseMotion.new())
 	_check(open_night_game.upgrade_tree.galactic_mode == open_night_game.upgrade_tree.GALACTIC_MODE_PULLBACK, "the purchase release and passive pointer jitter do not skip the pull-back")
 	open_night_game.upgrade_tree._advance_galactic_pullback(1.35)
-	var overlap_legacy_alpha: float = open_night_game.upgrade_tree._node_presentation_alpha("better_lens")
-	_check(
-		is_equal_approx(overlap_legacy_alpha, 1.0) and is_zero_approx(open_night_game.upgrade_tree._local_group_alpha()),
-		"the original stars remain visible as the outer constellations are revealed"
-	)
-	_check(open_night_game.upgrade_tree._galactic_background_alpha() < 0.01, "the sparse galactic background waits until the legacy chart has nearly cleared")
-	_check(
-		is_zero_approx(open_night_game.upgrade_tree._node_presentation_alpha("lmc_transit_watch")),
-		"retired galaxy research remains invisible during the transition"
-	)
 	var pullback_skip := InputEventKey.new()
 	pullback_skip.keycode = KEY_SPACE
 	pullback_skip.pressed = true
@@ -2206,24 +1895,6 @@ func _run() -> void:
 		if galactic_button_variant.visible:
 			visible_galactic_buttons += 1
 	_check(visible_galactic_buttons > 18, "the expanded chart keeps original and outer star hit targets together")
-	_check(
-		open_night_game.upgrade_tree.galactic_background_stars.size() == open_night_game.upgrade_tree.GALACTIC_BACKGROUND_STAR_COUNT,
-		"the final galaxy frame retains exactly 74 sparse non-interactive background stars"
-	)
-	var galactic_background_clear := true
-	for background_star_variant in open_night_game.upgrade_tree.galactic_background_stars:
-		var background_star := Vector2(background_star_variant)
-		var background_offset: Vector2 = background_star - open_night_game.upgrade_tree.GALACTIC_MAP_CENTER_SPEC * open_night_game.upgrade_tree.UITheme.SCALE
-		var exclusion_distance := Vector2(
-			background_offset.x / (open_night_game.upgrade_tree.GALACTIC_BACKGROUND_EXCLUSION_SPEC.x * open_night_game.upgrade_tree.UITheme.SCALE),
-			background_offset.y / (open_night_game.upgrade_tree.GALACTIC_BACKGROUND_EXCLUSION_SPEC.y * open_night_game.upgrade_tree.UITheme.SCALE)
-		).length()
-		if exclusion_distance < 1.0:
-			galactic_background_clear = false
-			break
-	_check(galactic_background_clear, "galactic background stars stay outside the route and node exclusion ellipse")
-	_check(not open_night_game.upgrade_tree.galactic_panel.visible and not open_night_game.upgrade_tree.galactic_ledger.visible and open_night_game.upgrade_tree.constellation_ledger.visible, "the expanded constellation chart keeps its original inspector and ledger")
-	_check(not open_night_game.upgrade_tree.galactic_core_hit.visible and open_night_game.upgrade_tree.galactic_core_hit.mouse_filter == Control.MOUSE_FILTER_IGNORE, "the old galactic core cannot intercept destination input")
 	_check(
 		not Vector2(open_night_game.upgrade_tree.node_positions["galactic_reference_frame"]).is_equal_approx(open_night_game.upgrade_tree.CHART_ORIGIN),
 		"the original research coordinates are preserved instead of collapsing to one point"
@@ -2252,257 +1923,16 @@ func _run() -> void:
 	_check(open_night_game.upgrade_tree.galactic_mode == open_night_game.upgrade_tree.GALACTIC_MODE_FINAL and is_equal_approx(open_night_game.upgrade_tree.zoom, 0.43), "a seen reveal reopens the expanded chart without replaying")
 	open_night_game.upgrade_tree.close_tree()
 	await process_frame
-	_check(
-		open_night_game.observation_phase_active
-		and open_night_game.observation_round == 2
-		and open_night_game.phase_started_with_complete_research
-		and open_night_game.ending_final_watch_pending
-		and not open_night_game.hud.is_end_open(),
-		"closing the chart after a mixed-build completion starts exactly one full-array final watch"
-	)
 	_check(open_night_game.events.canis_major_state == "scheduled", "the next viable round randomizes one warned Sirius event")
 	open_night_game.upgrade_tree.open_tree()
 	await process_frame
 	await process_frame
 	var open_night_chart_binding: String = open_night_game.settings.binding_label(&"nw_chart")
-	_check(
-		open_night_game.upgrade_tree.completion_detail_label.text != TranslationServer.translate("TREE_CATALOGUE_FINAL_WATCH_DETAIL")
-		and open_night_game.upgrade_tree.close_button.text == TranslationServer.translate("TREE_CLOSE") % open_night_chart_binding
-		and open_night_game.upgrade_tree.constellation_bottom_action.text == TranslationServer.translate("TREE_BOTTOM_CLOSE") % open_night_chart_binding
-		and open_night_game.upgrade_tree.galactic_return_hint.text == TranslationServer.translate("TREE_GALACTIC_RETURN") % open_night_chart_binding
-		and not open_night_game.upgrade_tree.data_context_label.visible,
-		"an active final watch hides pending-watch copy and keeps ordinary chart-close actions"
-	)
 	open_night_game.upgrade_tree.close_tree()
 	await process_frame
 	_check(open_night_game.observation_phase_active and open_night_game.observation_round == 2, "reviewing the chart during the final watch resumes that same round")
-	var active_final_watch_save: Dictionary = open_night_game._build_save_data()
-	_check(
-		bool(active_final_watch_save.get("observation_phase_active", false))
-		and bool(active_final_watch_save.get("phase_started_with_complete_research", false))
-		and bool(active_final_watch_save.get("ending_final_watch_pending", false)),
-		"an active final-watch save retains the complete-array qualification evidence"
-	)
-	var tampered_final_watch_save: Dictionary = active_final_watch_save.duplicate(true)
-	var tampered_phase_signature: Array = tampered_final_watch_save["phase_start_upgrade_signature"].duplicate()
-	tampered_phase_signature.pop_back()
-	tampered_final_watch_save["phase_start_upgrade_signature"] = tampered_phase_signature
-	tampered_final_watch_save["phase_started_with_complete_research"] = true
-	open_night_game._apply_save_data(tampered_final_watch_save)
-	_check(
-		open_night_game.observation_phase_active
-		and not open_night_game.phase_started_with_complete_research
-		and open_night_game.ending_final_watch_pending,
-		"a true final-watch flag cannot override an incomplete validated phase-start signature"
-	)
-	open_night_game._apply_save_data(active_final_watch_save)
-	_check(
-		open_night_game.observation_phase_active
-		and open_night_game.phase_started_with_complete_research
-		and open_night_game.ending_final_watch_pending
-		and open_night_game._catalogue_record_complete(),
-		"loading an active final watch preserves its qualification through the rest of that round"
-	)
-	var final_phenomenon_id := String(open_night_game.galactic_phenomena.TARGET_SPECS.keys().back())
-	open_night_game.galactic_phenomena.completed_targets.erase(final_phenomenon_id)
-	open_night_game._refresh_catalogue_ending_requirement()
-	_check(not open_night_game._catalogue_record_complete(), "the final-watch round remains non-terminal until its last phenomenon is recorded")
-	open_night_game.galactic_phenomena.completed_targets[final_phenomenon_id] = true
-	open_night_game._refresh_catalogue_ending_requirement()
-	_check(
-		open_night_game._catalogue_record_complete() and not open_night_game.ending_final_watch_pending,
-		"a last phenomenon recorded during a full-research round lets that same round qualify"
-	)
-	open_night_game._end_observation_phase()
-	_check(
-		not open_night_game.observation_phase_active
-		and open_night_game.hud.is_phase_summary_open()
-		and not open_night_game.ending_final_watch_pending
-		and open_night_game._catalogue_ending_ready(),
-		"the full-array final watch reaches its ordinary summary before arming the ending"
-	)
-	var unseen_ending_save: Dictionary = open_night_game._build_save_data()
-	_check(
-		not bool(unseen_ending_save.get("catalogue_ending_seen", true))
-		and not bool(unseen_ending_save.get("ending_final_watch_pending", true))
-		and not bool(unseen_ending_save.get("observation_phase_active", true)),
-		"an unseen ending save preserves the ready intermission without pretending it was acknowledged"
-	)
-	open_night_game._on_phase_summary_continue_requested()
-	await process_frame
-	await process_frame
-	_check(
-		open_night_game.upgrade_tree.is_open()
-		and open_night_game.upgrade_tree.completion_detail_label.text == TranslationServer.translate("TREE_CATALOGUE_ENDING_READY_DETAIL")
-		and open_night_game.upgrade_tree.close_button.text == TranslationServer.translate("TREE_CATALOGUE_SEAL_RECORD") % open_night_chart_binding
-		and open_night_game.upgrade_tree.constellation_bottom_action.text == TranslationServer.translate("TREE_BOTTOM_CATALOGUE_SEAL_RECORD") % open_night_chart_binding
-		and open_night_game.upgrade_tree.galactic_return_hint.text == TranslationServer.translate("TREE_BOTTOM_CATALOGUE_SEAL_RECORD") % open_night_chart_binding
-		and not open_night_game.upgrade_tree.data_context_label.visible,
-		"the completed chart labels both exits as sealing the record instead of advertising another observation"
-	)
-	var ending_round: int = int(open_night_game.observation_round)
-	open_night_game.upgrade_tree.close_tree()
-	await process_frame
-	_check(
-		open_night_game.completed
-		and open_night_game.hud.is_end_open()
-		and paused
-		and not open_night_game.observation_phase_active
-		and open_night_game.observation_round == ending_round,
-		"closing the completed chart shows the paused catalogue ending without starting another round"
-	)
-	_check(
-		open_night_game.hud.end_title.text == TranslationServer.translate("HUD_END_TITLE")
-		and open_night_game.hud.end_body.text == TranslationServer.translate("HUD_END_BODY")
-		and open_night_game.hud.end_finish_button.text == TranslationServer.translate("HUD_END_FINISH")
-		and open_night_game.hud.end_continue_button.text == TranslationServer.translate("HUD_END_CONTINUE")
-		and open_night_game.hud.end_stats.text.split("\n").size() == 7
-		and open_night_game.hud.end_finish_button.disabled
-		and open_night_game.hud.end_continue_button.disabled
-		and open_night_game.hud.end_coda.visible
-		and open_night_game.hud.end_coda.is_processing()
-		and open_night_game.hud.end_coda.route_progress < 1.0
-		and is_equal_approx(open_night_game.hud.end_actions.modulate.a, 0.0),
-		"the ending begins an animated neutral record with active-time statistics and two non-destructive choices"
-	)
-	var reveal_tween_before_locale_refresh: Tween = open_night_game.hud.end_reveal_tween
-	var refreshed_stats_probe := "REFRESHED CATALOGUE STATS"
-	open_night_game.hud.refresh_catalogue_ending_text(refreshed_stats_probe)
-	_check(
-		open_night_game.hud.end_reveal_tween == reveal_tween_before_locale_refresh
-		and open_night_game.hud.end_finish_button.disabled
-		and open_night_game.hud.end_stats.text == refreshed_stats_probe,
-		"refreshing translated ending copy and statistics does not restart or bypass the reveal beat"
-	)
-	open_night_game.hud.end_reveal_started_msec = Time.get_ticks_msec() - open_night_game.hud.END_REVEAL_SKIP_DELAY_MSEC
-	open_night_game.get_viewport().push_input(debug_ending_chord)
-	open_night_game.get_viewport().push_input(debug_ending_release)
-	_check(
-		open_night_game.completed
-		and not open_night_game.catalogue_ending_debug_preview
-		and not open_night_game.hud.catalogue_debug_preview_active
-		and not open_night_game.hud.end_finish_button.disabled
-		and not open_night_game.hud.end_continue_button.disabled
-		and open_night_game.hud.end_finish_button.focus_mode == Control.FOCUS_ALL
-		and open_night_game.hud.end_continue_button.focus_mode == Control.FOCUS_ALL
-		and open_night_game.get_viewport().gui_get_focus_owner() == open_night_game.hud.end_finish_button
-		and open_night_game.hud.end_reveal_complete
-		and is_equal_approx(open_night_game.hud.end_coda.constellation_progress, 1.0)
-		and is_equal_approx(open_night_game.hud.end_coda.pullback_progress, 1.0)
-		and is_equal_approx(open_night_game.hud.end_coda.route_progress, 1.0)
-		and is_equal_approx(open_night_game.hud.end_coda.illumination_progress, 1.0)
-		and is_equal_approx(open_night_game.hud.end_coda.settle_progress, 1.0)
-		and not open_night_game.hud.end_coda.is_processing()
-		and open_night_game.hud.end_finish_button.get_theme_font_size("font_size") > open_night_game.hud.end_continue_button.get_theme_font_size("font_size"),
-		"the actual ending treats Ctrl+Shift+E as skip input and completes with archival focus"
-	)
-	_check_ending_map_illuminated(open_night_game.hud.end_coda, "actual completed ending")
-	open_night_game.active_save_slot = 0
-	open_night_game.hud.set_active_save_slot(0)
-	open_night_game._on_catalogue_finish_requested()
-	open_night_game.hud.refresh_catalogue_ending_text()
-	_check(
-		open_night_game.completed
-		and open_night_game.hud.is_end_open()
-		and not open_night_game.catalogue_ending_seen
-		and open_night_game.hud.end_save_failure.visible
-		and open_night_game.hud.end_save_failure.text == TranslationServer.translate("HUD_END_SAVE_FAILURE")
-		and not open_night_game.hud.end_finish_button.disabled
-		and not open_night_game.hud.end_continue_button.disabled
-		and open_night_game.get_viewport().gui_get_focus_owner() == open_night_game.hud.end_finish_button,
-		"a real finish save failure keeps the ending visible, translated, and retryable"
-	)
-	open_night_game.active_save_slot = 1
-	open_night_game.hud.set_active_save_slot(1)
-	var blocked_end_u := InputEventKey.new()
-	blocked_end_u.keycode = KEY_U
-	blocked_end_u.pressed = true
-	open_night_game.get_viewport().push_input(blocked_end_u)
-	_check(not open_night_game.upgrade_tree.is_open(), "ending ownership blocks research-chart input behind the overlay")
-	open_night_game._on_catalogue_continue_requested()
-	_check(
-		open_night_game.catalogue_ending_seen
-		and not open_night_game.completed
-		and not open_night_game.hud.is_end_open()
-		and open_night_game.observation_phase_active
-		and open_night_game.observation_round == ending_round + 1
-		and not paused,
-		"continue observing acknowledges the ending and resumes the same completed save in the open night"
-	)
-	var continued_save: Dictionary = open_night_game.save_games.load_slot(1)
-	_check(bool(continued_save.get("catalogue_ending_seen", false)), "continuing autosaves the one-time ending acknowledgement")
-	open_night_game._end_observation_phase()
-	open_night_game._on_phase_summary_continue_requested()
-	await process_frame
-	await process_frame
-	open_night_game.upgrade_tree.close_tree()
-	await process_frame
-	_check(
-		open_night_game.observation_phase_active
-		and open_night_game.observation_round == ending_round + 2
-		and not open_night_game.hud.is_end_open(),
-		"later open-night rounds do not replay an acknowledged ending"
-	)
-	var legacy_galactic_save: Dictionary = seen_galactic_save.duplicate(true)
-	legacy_galactic_save.erase("galactic_pullback_seen")
-	legacy_galactic_save.erase("catalogue_ending_seen")
-	legacy_galactic_save.erase("ending_final_watch_pending")
-	legacy_galactic_save.erase("phase_started_with_complete_research")
-	open_night_game._apply_save_data(legacy_galactic_save)
-	_check(
-		open_night_game.ending_final_watch_pending
-		and not open_night_game.catalogue_ending_seen
-		and not open_night_game.completed,
-		"a completed legacy open-night save migrates to one safe final watch instead of ending during load"
-	)
-	open_night_game.upgrade_tree.open_tree()
-	await process_frame
-	await process_frame
-	_check(open_night_game.upgrade_tree.galactic_mode == open_night_game.upgrade_tree.GALACTIC_MODE_PULLBACK and not open_night_game.galactic_pullback_seen, "a completed legacy save without the presentation flag plays the pull-back once on its next chart open")
-	var pullback_close := InputEventKey.new()
-	pullback_close.keycode = KEY_U
-	pullback_close.pressed = true
-	open_night_game.upgrade_tree._input(pullback_close)
-	_check(open_night_game.galactic_pullback_seen and not open_night_game.upgrade_tree.is_open(), "U completes the pull-back final state and still closes the research chart")
-	open_night_game._apply_save_data(seen_galactic_save)
-	open_night_game.upgrade_tree.open_tree()
-	await process_frame
-	await process_frame
-	_check(open_night_game.upgrade_tree.galactic_mode == open_night_game.upgrade_tree.GALACTIC_MODE_FINAL and open_night_game.galactic_pullback_seen, "a save with the presentation flag restores the final frame without replay")
-	open_night_game._apply_save_data(unseen_ending_save)
-	await process_frame
-	await process_frame
-	_check(open_night_game.upgrade_tree.is_open() and not open_night_game.hud.is_end_open(), "loading an unseen ready save returns to the completed chart before replaying the ending")
-	open_night_game.upgrade_tree.close_tree()
-	await process_frame
-	_check(
-		open_night_game.hud.is_end_open()
-		and open_night_game.completed
-		and not open_night_game.hud.end_save_failure.visible,
-		"closing that restored chart safely replays a clean unseen ending without a stale save error"
-	)
-	open_night_game._on_catalogue_finish_requested()
-	var finished_record_save: Dictionary = open_night_game.save_games.load_slot(1)
-	_check(
-		open_night_game.hud.is_startup_slots_open()
-		and paused
-		and open_night_game.save_games.has_slot(1)
-		and bool(finished_record_save.get("catalogue_ending_seen", false)),
-		"finishing archives the acknowledgement and returns to slots without deleting the active record"
-	)
-	open_night_game.hud.close_startup_slots()
-	open_night_game.reset_run()
-	_check(
-		not open_night_game.galactic_pullback_seen
-		and not open_night_game.progression.galaxy_unlocked()
-		and open_night_game.upgrade_tree.galactic_mode == open_night_game.upgrade_tree.GALACTIC_MODE_NORMAL
-		and not open_night_game.catalogue_ending_seen
-		and not open_night_game.ending_final_watch_pending,
-		"reset clears the galactic presentation and every catalogue-ending state"
-	)
-	open_night_game.queue_free()
-	await process_frame
 
+	open_night_game.free()
 	# Let short procedural audio voices and delayed chord tones release cleanly.
 	await create_timer(0.85).timeout
 	_cleanup_smoke_saves(smoke_save_directory)
@@ -2840,21 +2270,7 @@ func _run_input_routing_regressions(packed: PackedScene) -> void:
 	await _push_key_event(routing_game.get_viewport(), KEY_F11, true)
 	settings.reset_nightwatch_bindings(false)
 
-	# Ending, startup recovery, and both tutorial modal steps block chart/back.
-	routing_game.hud.show_catalogue_ending("", false)
-	paused = true
-	for blocked_key in [KEY_ESCAPE, KEY_U]:
-		routing_game.hud.end_reveal_started_msec = Time.get_ticks_msec()
-		await _push_key_event(routing_game.get_viewport(), blocked_key)
-	_check(
-		routing_game.hud.is_end_open()
-		and not routing_game.upgrade_tree.is_open()
-		and not routing_game.hud.is_settings_open()
-		and paused,
-		"the ending consumes back and chart actions without exposing a covered surface"
-	)
-	routing_game.hud.hide_end()
-	paused = false
+	# Startup recovery and tutorial modals block chart/back.
 	routing_game.hud.open_startup_slots()
 	await process_frame
 	for blocked_key in [KEY_ESCAPE, KEY_U]:
@@ -2930,8 +2346,6 @@ func _run_input_routing_regressions(packed: PackedScene) -> void:
 	hud.close_settings()
 
 	# Defensive cleanup and restoration even when an assertion above failed.
-	if routing_game.hud.is_end_open():
-		routing_game.hud.hide_end()
 	if routing_game.hud.is_startup_slots_open():
 		routing_game.hud.close_startup_slots()
 	if routing_game.hud.is_controls_open():
@@ -3281,14 +2695,14 @@ func _run_survey_regressions(packed: PackedScene, balance) -> void:
 	observer.reset()
 	_check(is_zero_approx(survey.charge_distance), "reset clears base charge while scanning is already suspended")
 	survey_game.spawner.reset()
-	# Supernovae finish synchronously inside apply_manual_observation, unlike
+	# Some additional targets finish synchronously inside apply_manual_observation, unlike
 	# meteors that finish in _process. Both lifecycles must reserve the frame.
 	var instant_layer := Node2D.new()
 	survey_game.add_child(instant_layer)
 	observer.additional_target_layers.append(instant_layer)
-	var instant_target = load("res://scripts/supernova_target.gd").new()
+	var instant_target = ImmediateObservationTarget.new()
 	instant_layer.add_child(instant_target)
-	instant_target.configure("survey_transition_probe", Vector2(440.0, 260.0), 0.0, false, survey_game.observation_view)
+	instant_target.position = Vector2(440.0, 260.0)
 	instant_target.observed.connect(func(target, _reward, _multiplier, _was_manual, _quality): observer.release_target(target))
 	instant_target.observation_progress = 0.999
 	survey.charge_distance = 70.0
@@ -3374,7 +2788,7 @@ func _run_survey_regressions(packed: PackedScene, balance) -> void:
 
 	var legacy_ids: Array[String] = []
 	for definition in balance.UPGRADE_NODES:
-		if String(definition.branch) not in ["ursa_minor", "canis_major", "draco", "local_group"]:
+		if String(definition.branch) not in ["ursa_minor", "canis_major", "draco"]:
 			legacy_ids.append(String(definition.id))
 	_check(legacy_ids.size() == 71, "the pre-survey research graph remains an exact 71-ID compatibility fixture")
 	survey_game.progression.load_save_data({
@@ -3406,3 +2820,20 @@ func _cleanup_smoke_saves(directory: String) -> void:
 			DirAccess.remove_absolute(slot_path)
 	if DirAccess.dir_exists_absolute(absolute_directory):
 		DirAccess.remove_absolute(absolute_directory)
+
+
+class ImmediateObservationTarget:
+	extends Node2D
+	signal observed(target, reward, multiplier, was_manual, quality)
+	var type_id := "rare"
+	var observation_progress := 0.0
+	var alive := true
+	func can_be_tracked() -> bool: return alive
+	func get_tracking_radius(radius: float) -> float: return radius
+	func get_progress() -> float: return observation_progress
+	func get_visual_color() -> Color: return Color.WHITE
+	func get_display_name() -> String: return "Immediate observation fixture"
+	func apply_manual_observation(_delta: float, _distance: float, _radius: float, _speed: float = 1.0) -> void:
+		alive = false
+		observation_progress = 1.0
+		observed.emit(self, 1.0, 1.0, true, "GOOD")

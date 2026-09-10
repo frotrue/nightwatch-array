@@ -92,11 +92,7 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 
-	var galactic_research_nodes := 0
-	for definition in Balance.UPGRADE_NODES:
-		if String(definition.branch) == "local_group":
-			galactic_research_nodes += 1
-	print("RESEARCH_UI_PROBE_ENV engine=%s renderer=%s display=%s viewport=%s window=%s refresh_hz=%.2f vsync=%d wheel_events_per_frame=%d phase_seconds=%.1f retired_research_records=%d retired_decorative_records=%d retired_background_points=%d pullback_seconds=%.1f target_p95_ms=16.7 isolated=true input=scripted cpu_timing=inclusive_subclass final_surface=constellation_chart extension_nodes=%d chart_layer=%d hud_layer=%d" % [
+	print("RESEARCH_UI_PROBE_ENV engine=%s renderer=%s display=%s viewport=%s window=%s refresh_hz=%.2f vsync=%d wheel_events_per_frame=%d phase_seconds=%.1f pullback_seconds=%.1f target_p95_ms=16.7 isolated=true input=scripted cpu_timing=inclusive_subclass final_surface=constellation_chart extension_nodes=%d chart_layer=%d hud_layer=%d" % [
 		Engine.get_version_info(),
 		RenderingServer.get_current_rendering_method(),
 		DisplayServer.get_name(),
@@ -106,9 +102,6 @@ func _run() -> void:
 		DisplayServer.window_get_vsync_mode(),
 		WHEEL_EVENTS_PER_FRAME,
 		PHASE_SECONDS,
-		galactic_research_nodes,
-		int(tree.ChartData.LOCAL_GROUP_GALAXIES.size()) - galactic_research_nodes,
-		int(tree.galactic_background_stars.size()),
 		float(tree.PULLBACK_DURATION),
 		tree.extension_definitions.size(),
 		tree.layer,

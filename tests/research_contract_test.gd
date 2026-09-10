@@ -3,7 +3,7 @@ extends SceneTree
 const Balance = preload("res://scripts/game_balance.gd")
 const ProgressionController = preload("res://scripts/progression_controller.gd")
 
-const EXPECTED_NODE_COUNT := 107
+const EXPECTED_NODE_COUNT := 95
 const EXPECTED_RUNTIME_PARAMETER_KEYS := [
 	"observation_duration_bonus",
 	"observation_value_multiplier",
@@ -13,12 +13,6 @@ const EXPECTED_CONTRACT_COUNTS := {
 	"observation_duration_bonus": 4,
 	"max_active_delta": 8,
 	"regular_spawn_interval_floor": 4,
-	"galactic_observation_profile": 3,
-	"galactic_chapter_milestone": 4,
-	"supernova_watch": 1,
-	"supernova_overlap": 1,
-	"lens_observation": 2,
-	"lensed_supernova": 1,
 }
 const EXPECTED_DYNAMIC_CONNECTION_IDS := [
 	"amber_band",
@@ -152,8 +146,8 @@ func _run() -> void:
 	var prerequisite_only_ids: Array[String] = []
 	var actual_unverified_ids: Array[String] = []
 
-	_check(Balance.UPGRADE_NODES.size() == EXPECTED_NODE_COUNT, "research definition count is exactly 107")
-	_check(Balance.research_node_count() == 107, "every research definition is installable")
+	_check(Balance.UPGRADE_NODES.size() == EXPECTED_NODE_COUNT, "research definition count is exactly 95")
+	_check(Balance.research_node_count() == 95, "every research definition is installable")
 	for definition_variant in Balance.UPGRADE_NODES:
 		var definition: Dictionary = definition_variant
 		var node_id := String(definition.get("id", ""))
@@ -233,8 +227,6 @@ func _run() -> void:
 			literal_upgrade_ids.has(node_id)
 			or not Dictionary(definition.get("runtime_parameters", {})).is_empty()
 			or not String(definition.get("implementation_connection", "")).is_empty()
-			or node_id in Balance.GALACTIC_SPAN_NODE_IDS
-			or Balance.GALACTIC_OBSERVATION_PROFILES.has(node_id)
 		)
 		_check(connected, node_id + " has a literal, runtime-parameter, dynamic-id, or prerequisite-only implementation connection")
 
@@ -255,7 +247,7 @@ func _run() -> void:
 	_verify_opening_purchase_budget()
 	print("RESEARCH_CONTRACT_UNVERIFIED: %d exact ids" % actual_unverified_ids.size())
 	if failures.is_empty():
-		print("RESEARCH_CONTRACT_PASS: 107 installable research nodes, 38 executable contracts, 69 exact unverified ids, and bidirectional en/ko claims")
+		print("RESEARCH_CONTRACT_PASS: 95 installable research nodes, 26 executable contracts, 69 exact unverified ids, and bidirectional en/ko claims")
 		quit(0)
 	else:
 		push_error("RESEARCH_CONTRACT_FAIL: %d failure(s)" % failures.size())
@@ -340,28 +332,6 @@ func _verify_contract_behavior(progression, definition: Dictionary) -> void:
 			_check(String(contract.scope) == "regular_meteor_arrivals", node_id + " interval-floor contract has regular-arrival scope")
 			progression.purchased_nodes[node_id] = true
 			_check(is_equal_approx(progression.get_regular_spawn_interval_floor(), expected_value), node_id + " runtime interval floor matches its independent contract")
-		"galactic_observation_profile":
-			_check("aim_and_hold" in String(contract.scope), node_id + " profile keeps the shared observation gesture")
-			progression.purchased_nodes[node_id] = true
-			_check(node_id in progression.get_galactic_observation_profile_ids(), node_id + " becomes an ordinary Local Group target profile")
-			if node_id == "lmc_transit_watch":
-				_check(progression.host_stars_unlocked(), node_id + " opens the distant-target layer")
-				_check(int(contract.max_host_stars) == 1 and int(contract.max_active_transits) == 1, node_id + " begins with one target and one active observation")
-		"galactic_chapter_milestone":
-			_check("visible_world" in String(contract.scope), node_id + " chapter milestone has visible-world scope")
-			var before_span: float = progression.get_observation_span()
-			progression.purchased_nodes[node_id] = true
-			_check(is_equal_approx(progression.get_observation_span() / before_span, expected_value), node_id + " applies one exact 10.25% span step")
-			if node_id == "m33_transit_network":
-				_check(progression.get_host_star_capacity() == 2 and progression.get_active_transit_capacity() == 2, node_id + " also raises both host capacities to two")
-		"supernova_watch", "supernova_overlap", "lensed_supernova":
-			_check(String(contract.scope) == "galactic_phenomena_layer", node_id + " phenomenon contract is owned by the dedicated layer")
-			progression.purchased_nodes[node_id] = true
-			_check(progression.has_upgrade(node_id), node_id + " has a live progression gate consumed by the phenomena layer")
-		"lens_observation":
-			_check(String(contract.scope) == "aim_and_hold", node_id + " lens contract keeps the ordinary observation gesture")
-			progression.purchased_nodes[node_id] = true
-			_check(progression.has_upgrade(node_id), node_id + " has a live progression gate consumed by the phenomena layer")
 		_:
 			_check(false, node_id + " has no executable adapter for contract kind: " + kind)
 
@@ -385,12 +355,6 @@ func _verify_claims_bidirectionally(contract_ids_by_kind: Dictionary) -> void:
 		"observation_duration_bonus": [],
 		"max_active_delta": [],
 		"regular_spawn_interval_floor": [],
-		"galactic_observation_profile": [],
-		"galactic_chapter_milestone": [],
-		"supernova_watch": [],
-		"supernova_overlap": [],
-		"lens_observation": [],
-		"lensed_supernova": [],
 	}
 	var original_locale := TranslationServer.get_locale()
 	var sky_activity_claim_ids: Array[String] = []
@@ -420,8 +384,8 @@ func _verify_claims_bidirectionally(contract_ids_by_kind: Dictionary) -> void:
 			match String(contract.kind):
 				"observation_value_multiplier":
 					var value := int(round(float(contract.value)))
-					_check("Observation Data ×%d" % value in english and "automatic included" in english and "Local Group excluded" in english, node_id + " English copy exposes the exact multiplier and its automation/Local Group scope")
-					_check("관측 데이터 %d배" % value in korean and "자동 포함" in korean and "국부은하군 제외" in korean, node_id + " Korean copy exposes the exact multiplier and its automation/Local Group scope")
+					_check("Observation Data ×%d" % value in english and "automatic included" in english, node_id + " English copy exposes the exact multiplier and its automation scope")
+					_check("관측 데이터 %d배" % value in korean and "자동 포함" in korean, node_id + " Korean copy exposes the exact multiplier and its automation scope")
 				"observation_duration_bonus":
 					_check("10 seconds" in english and "future observation window" in english, node_id + " English copy exposes the 10-second future-window delta")
 					_check("10초" in korean and "다음 관측부터 관측 시간을" in korean, node_id + " Korean copy exposes the 10-second future-window delta")
@@ -433,25 +397,6 @@ func _verify_claims_bidirectionally(contract_ids_by_kind: Dictionary) -> void:
 					var seconds := "%.2f" % float(contract.value)
 					_check("minimum regular meteor interval " + seconds + " seconds" in english, node_id + " English copy exposes the exact regular-arrival floor")
 					_check("일반 유성 최소 출현 간격 " + seconds + "초" in korean, node_id + " Korean copy exposes the exact regular-arrival floor")
-				"galactic_observation_profile":
-					_check(("aim-and-hold" in english or "tracking" in english or "35% longer" in english), node_id + " English copy exposes an ordinary observation variation")
-					_check("관측" in korean, node_id + " Korean copy keeps observation as the player verb")
-					claimed_ids_by_kind["galactic_observation_profile"].append(node_id)
-				"galactic_chapter_milestone":
-					_check("10.25%" in english and "10.25%" in korean, node_id + " exposes the exact chapter span in both locales")
-					claimed_ids_by_kind["galactic_chapter_milestone"].append(node_id)
-				"supernova_watch":
-					_check("supernova" in english.to_lower() and "초신성" in korean, node_id + " exposes the persistent supernova verb in both locales")
-					claimed_ids_by_kind["supernova_watch"].append(node_id)
-				"supernova_overlap":
-					_check("two supernova" in english.to_lower() and "두 초신성" in korean, node_id + " exposes the overlapping timing choice in both locales")
-					claimed_ids_by_kind["supernova_overlap"].append(node_id)
-				"lens_observation":
-					_check(("ring" in english.to_lower() or "lens" in english.to_lower()) and "aim-and-hold" in english.to_lower() and "관측" in korean, node_id + " exposes lens shape without a new verb")
-					claimed_ids_by_kind["lens_observation"].append(node_id)
-				"lensed_supernova":
-					_check("supernova" in english.to_lower() and "lens" in english.to_lower() and "초신성" in korean and "렌즈" in korean, node_id + " exposes the combined coda verb in both locales")
-					claimed_ids_by_kind["lensed_supernova"].append(node_id)
 	TranslationServer.set_locale(original_locale)
 	_verify_exact_string_set(
 		sky_activity_claim_ids,

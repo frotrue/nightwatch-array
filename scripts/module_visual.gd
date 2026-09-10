@@ -24,13 +24,12 @@ static func draw_module(canvas: CanvasItem, rect: Rect2, id: String, active: boo
 	var c := rect.get_center()
 	var r := minf(rect.size.x, rect.size.y) * 0.28
 	var definition: Dictionary = Modules.DEFINITIONS.get(id, {})
-	# The nine expansion modules each get a stable, named glyph. Keeping their
+	# The seven expansion modules each get a stable, named glyph. Keeping their
 	# IDs here means a future metadata refactor cannot accidentally turn every
 	# new module into the legacy focus glyph through a missing `glyph` field.
 	var expansion_ids := [
 		"trail_integrator", "sweep_optics", "relay_bus", "long_baseline",
 		"dual_processor", "afterglow_archive", "wide_correlation",
-		"reference_bus", "shutter_weave",
 	]
 	if id not in expansion_ids:
 		id = String(definition.get("glyph", id))
@@ -99,17 +98,3 @@ static func draw_module(canvas: CanvasItem, rect: Rect2, id: String, active: boo
 		canvas.draw_arc(c, r * 0.56, PI * 0.15, PI * 0.85, 24, ink, 1.0, true)
 		canvas.draw_line(c + Vector2(-1.12, 0) * r, c + Vector2(1.12, 0) * r, ink, 1.0, true)
 		canvas.draw_circle(c, r * 0.14, ink)
-	elif id == "reference_bus":
-		# A reference cross feeds a target node from the left.
-		canvas.draw_line(c + Vector2(-1.14, 0) * r, c + Vector2(0.32, 0) * r, ink, 1.0, true)
-		canvas.draw_line(c + Vector2(-0.42, -0.44) * r, c + Vector2(-0.42, 0.44) * r, ink, 1.0, true)
-		canvas.draw_circle(c + Vector2(0.52, 0) * r, r * 0.3, ink, false, 1.0, true)
-		canvas.draw_circle(c + Vector2(0.52, 0) * r, r * 0.08, ink)
-	elif id == "shutter_weave":
-		# Alternating shutter leaves make a compact weave around a beam.
-		for index in range(4):
-			var x := -0.78 + index * 0.52
-			var top := c + Vector2(x, -0.58 if index % 2 == 0 else -0.34) * r
-			var bottom := c + Vector2(x + 0.24, 0.34 if index % 2 == 0 else 0.58) * r
-			canvas.draw_line(top, bottom, ink, 1.1, true)
-		canvas.draw_line(c + Vector2(-1.15, 0) * r, c + Vector2(1.15, 0) * r, ink, 0.8, true)

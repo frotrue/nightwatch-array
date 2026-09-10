@@ -173,7 +173,7 @@ func show_loadout() -> void:
 	close_button.grab_focus()
 
 func open() -> void:
-	if is_open() or not game.upgrade_tree.is_open() or not game.deep_sky.modules_unlocked() or game.hud.is_settings_open() or game.hud.is_startup_slots_open() or game.hud.is_end_open() or game.tutorial.is_modal_step():
+	if is_open() or not game.upgrade_tree.is_open() or not game.deep_sky.modules_unlocked() or game.hud.is_settings_open() or game.hud.is_startup_slots_open() or game.tutorial.is_modal_step():
 		return
 	previous_pause = get_tree().paused
 	previous_mouse = Input.mouse_mode
@@ -261,7 +261,7 @@ func refresh(animate: bool = true) -> void:
 	heading.text = tr("DEEP_MODULES")
 	close_button.text = tr("RING_CLOSE")
 	inventory_heading.text = tr("MODX_INVENTORY")
-	inventory_count.text = tr("MODX_COUNT") % model().purchased.size()
+	inventory_count.text = tr("MODX_COUNT") % model().purchased.filter(func(id): return Modules.DEFINITIONS.has(id)).size()
 	for filter_id in filter_buttons:
 		var filter: Button = filter_buttons[filter_id]
 		filter.text = _filter_label(filter_id)
@@ -289,7 +289,7 @@ func refresh(animate: bool = true) -> void:
 		# stable as modules are added to the catalog later.
 		tile.focus_mode = Control.FOCUS_ALL if tile.visible else Control.FOCUS_NONE
 	inventory_empty.visible = visible_count == 0
-	inventory_empty.text = tr("MODX_EMPTY" if model().purchased.is_empty() else "MODX_EMPTY_CATEGORY")
+	inventory_empty.text = tr("MODX_EMPTY" if model().purchased.filter(func(id): return Modules.DEFINITIONS.has(id)).is_empty() else "MODX_EMPTY_CATEGORY")
 	summary_heading.text = tr("MODX_CURRENT")
 	var old_speed := _effect_number("speed", 1.0)
 	var new_speed := _effect_number("new_speed", 1.0)
@@ -425,7 +425,7 @@ func _category_for(id: String, definition: Dictionary = {}) -> String:
 		return "trace"
 	if id in ["wide", "afterglow_archive", "sweep_optics", "wide_correlation"]:
 		return "sweep"
-	if id in ["record", "revisit", "relay_bus", "reference_bus", "shutter_weave"]:
+	if id in ["relay_bus"]:
 		return "link"
 	return ""
 
@@ -433,7 +433,7 @@ func _source_for(id: String, definition: Dictionary = {}) -> String:
 	var source := String(definition.get("source", "")).to_lower()
 	if source in ["purchase", "research", "sample"]:
 		return source
-	return "purchase" if id in ["focus", "wide", "precision", "record", "revisit"] else "research"
+	return "purchase" if id in ["focus", "wide", "precision"] else "research"
 
 func _matches_filter(id: String, definition: Dictionary) -> bool:
 	if id not in model().purchased:
@@ -479,7 +479,7 @@ func _acquisition_route(id: String, definition: Dictionary) -> String:
 
 func _changed_summary(manual_speed: float) -> String:
 	var parts: Array[String] = []
-	var stats := {"MODX_STAT_MANUAL": manual_speed, "MODX_STAT_RADIUS": _effect_number("radius", 1.0), "MODX_STAT_M31": _effect_number("m31_value", 1.0), "MODX_STAT_WAIT": _effect_number("m31_cooldown", 1.0)}
+	var stats := {"MODX_STAT_MANUAL": manual_speed, "MODX_STAT_RADIUS": _effect_number("radius", 1.0)}
 	for key in stats:
 		var value: float = stats[key]
 		if is_equal_approx(value, 1.0):
@@ -498,7 +498,7 @@ func _conditional_summary(installed_ids: Array[String]) -> String:
 		seen.append(id)
 		var definition := _definition(id)
 		var text := String(definition.get("conditional_desc", definition.get("conditional", "")))
-		var is_conditional := not text.is_empty() or id in ["focus", "trail_integrator", "sweep_optics", "relay_bus", "long_baseline", "dual_processor", "afterglow_archive", "wide_correlation", "reference_bus", "shutter_weave"]
+		var is_conditional := not text.is_empty() or id in ["focus", "trail_integrator", "sweep_optics", "relay_bus", "long_baseline", "dual_processor", "afterglow_archive", "wide_correlation"]
 		if is_conditional:
 			count += 1
 	return "" if count == 0 else tr("MODX_CONDITIONAL_COUNT") % count

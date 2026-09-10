@@ -97,14 +97,14 @@ func _initialize() -> void:
 func _run() -> void:
 	_check_definition_contract()
 	_check_slot_and_inventory_contract()
-	_check_shutter_and_dish_contract()
+	_check_dish_contract()
 	_check_meteor_contribution_contract()
 	_check_trail_observation_contract()
 	_check_sweep_charge_contract()
 	_check_same_frame_completion()
 	_check_duplicate_effects()
 	if failures.is_empty():
-		print("MODULE_EXPANSION_PASS: 14 module metadata, bounded effects, shutter state, trail/manual provenance and sweep charge")
+		print("MODULE_EXPANSION_PASS: 10 module metadata, bounded effects, dish contribution, trail/manual provenance and sweep charge")
 		quit(0)
 	else:
 		push_error(str(failures))
@@ -128,54 +128,30 @@ func _installed(ids: Array[String]) -> RefCounted:
 
 
 func _check_definition_contract() -> void:
-	_check(Modules.DEFINITIONS.size() == 14 and Expansion.SAMPLE_MODULES.size() == 14, "all fourteen modules are in the current draw pool")
-	_check(Modules.RESEARCH_IDS.size() == 8 and "trail_integrator" not in Modules.RESEARCH_IDS, "the retained diagnostic purchase IDs remain compatible")
+	_check(Modules.DEFINITIONS.size() == 10 and Expansion.SAMPLE_MODULES.size() == 10, "all ten modules are in the current draw pool")
+	_check(Modules.RESEARCH_IDS.size() == 6 and "trail_integrator" not in Modules.RESEARCH_IDS, "the retained diagnostic purchase IDs remain compatible")
 	for id in Modules.DEFINITIONS:
 		var definition: Dictionary = Modules.DEFINITIONS[id]
 		_check(Expansion.SAMPLE_MODULES.count(id) == 1 and definition.source == "sample" and String(definition.pool) == String(definition.category), id + " occurs once in the equal-odds draw with matching acquisition metadata")
-	var legacy := Modules.configuration(["focus", "wide", "record"])
-	_check(is_equal_approx(float(legacy.speed), 0.6) and is_equal_approx(float(legacy.radius), 1.65) and is_equal_approx(float(legacy.m31_value), 1.5), "split replaces focus speed while wide and record effects compose")
-	var expanded := Modules.configuration(["sweep_optics", "trail_integrator", "relay_bus", "shutter_weave"])
+	var expanded := Modules.configuration(["sweep_optics", "trail_integrator", "relay_bus"])
 	_check(is_equal_approx(float(expanded.new_speed), 0.729) and is_equal_approx(float(expanded.sweep_charge), 1.35) and is_equal_approx(float(expanded.rare_radius), 1.5), "new generic penalties and sweep effects remain separate from legacy speed")
-	_check(is_equal_approx(float(expanded.m31_value), 1.0) and is_equal_approx(float(expanded.m31_cooldown), 1.25), "shutter changes cooldown but never M31 data value")
 
 
 func _check_slot_and_inventory_contract() -> void:
 	var model = Modules.new()
 	_check(model.research_ready("slot_3") and not model.research_ready("slot_4"), "slot capacity remains sequential without forced module purchases")
 	model.unlocked_slots = 3
-	_check(model.research_ready("revisit"), "revisit still requires the third slot")
 	_check(model.grant("trail_integrator") and model.research_owned("trail_integrator") and not model.has("trail_integrator"), "reward grants ownership without auto-equipping")
 	_check(model.equip("trail_integrator", 0) and model.has("trail_integrator"), "has reports an active installed module")
 
 
-func _check_shutter_and_dish_contract() -> void:
-	var shutter = _installed(["shutter_weave"])
-	var completed := MockTarget.new()
-	completed.manual_contribution = 0.25
-	_check(shutter.notify_completed(completed) and shutter.shutter_active(), "a natural target with 25% manual work refreshes shutter")
-	shutter.advance_time(2.0)
-	var restored = Modules.new()
-	restored.load_save_data(shutter.get_save_data())
-	_check(restored.shutter_active() and is_equal_approx(restored.shutter_remaining, 3.0), "runtime shutter duration survives save/load")
-	completed.type_id = "fragment"
-	_check(not shutter.notify_completed(completed), "fragments cannot refresh shutter")
-	completed.type_id = "common"
-	completed.manual_contribution = 0.249
-	_check(not shutter.notify_completed(completed), "sub-threshold manual work cannot refresh shutter")
-	completed.free()
-
-	var dishes = _installed(["relay_bus", "reference_bus"])
+func _check_dish_contract() -> void:
+	var dishes = _installed(["relay_bus"])
 	var ordinary := MockTarget.new()
+	ordinary.manual_contribution = 0.249
+	_check(is_equal_approx(dishes.dish_multiplier(ordinary), 1.0), "relay requires 25 percent manual contribution")
 	ordinary.manual_contribution = 0.25
-	_check(is_equal_approx(dishes.dish_multiplier(ordinary), 1.75), "relay affects actual dish work after manual contribution")
-	dishes.set_m31_manual_active(true)
-	_check(is_equal_approx(dishes.dish_multiplier(ordinary), 2.5), "manual M31 cross-feeds other dish work while combined new modifiers respect their x2.5 cap")
-	ordinary.type_id = "andromeda"
-	_check(is_equal_approx(dishes.dish_multiplier(ordinary), 1.75), "Reference Bus never makes M31 an automatic dish target")
-	ordinary.type_id = "common"
-	dishes.set_m31_manual_active(false)
-	_check(is_equal_approx(dishes.dish_multiplier(ordinary), 1.75), "reference requires a live M31 manual contact")
+	_check(is_equal_approx(dishes.dish_multiplier(ordinary), 1.75), "relay affects dish work at the contribution threshold")
 	ordinary.free()
 
 
@@ -224,10 +200,6 @@ func _check_trail_observation_contract() -> void:
 	target.applications = 0
 	target.position = Vector2(50.0, 0.0)
 	_check(observer._apply_manual_contact(target, 1.0) and target.applications == 1 and is_equal_approx(target.last_speed, 0.9), "head contact does not double-apply the trail path")
-	target.type_id = "andromeda"
-	_check(observer._apply_manual_contact(target, 0.1) and modules.m31_manual_active(), "a live M31 contact is exposed to dish logic")
-	observer._notification(Node.NOTIFICATION_PAUSED)
-	_check(not modules.m31_manual_active(), "pausing clears the transient M31 manual-contact flag")
 	observer.release_target(target)
 	observer.hud.free()
 	observer.free()
@@ -286,10 +258,6 @@ func _check_duplicate_effects() -> void:
 	_check(restored.installed_count("focus") == 5 and is_equal_approx(restored.effect("split_chance"), 1.0), "old focus identity preserves copies and slots through JSON")
 	var precision := _installed(["precision", "precision"])
 	_check(is_equal_approx(precision.effect("speed"), 2.0) and is_equal_approx(precision.effect("radius"), 0.4), "two precision copies compose speed and radius penalties")
-	var record := _installed(["record", "record"])
-	_check(is_equal_approx(record.effect("m31_value"), 2.0) and is_equal_approx(record.effect("speed"), 0.6), "two record copies compose reward and speed")
-	var revisit := _installed(["revisit", "revisit", "revisit"])
-	_check(is_equal_approx(revisit.effect("m31_cooldown"), 0.1), "revisit copies respect the positive cooldown floor")
 	var sweep := _installed(["sweep_optics", "sweep_optics"])
 	_check(is_equal_approx(sweep.effect("sweep_charge"), 1.7) and is_equal_approx(sweep.effect("rare_radius"), 2.0), "sweep copies add both effects")
 	var relay := _installed(["relay_bus", "relay_bus"])
@@ -310,16 +278,6 @@ func _check_duplicate_effects() -> void:
 	_check(is_equal_approx(observer._module_manual_speed_for_target(target), 0.5), "two correlation primary penalties add")
 	observer.selected_meteor = null
 	_check(is_equal_approx(observer._module_manual_speed_for_target(target), 1.7), "two correlation secondary bonuses add")
-	target.type_id = "andromeda"
-	observer.modules = _installed(["reference_bus", "reference_bus"])
-	_check(is_equal_approx(observer._module_manual_speed_for_target(target), 0.5), "two reference M31 penalties add")
-	target.type_id = "common"
-	observer.modules.set_m31_manual_active(true)
-	_check(is_equal_approx(observer.modules.dish_multiplier(target), 2.2), "two reference dish bonuses add")
-	target.type_id = "andromeda"
-	observer.modules = _installed(["shutter_weave", "shutter_weave"])
-	observer.modules.shutter_remaining = 5.0
-	_check(is_equal_approx(observer._module_manual_speed_for_target(target), 1.7), "two shutter conditional bonuses add")
+	target.free()
 	observer.progression.free()
 	observer.free()
-	target.free()

@@ -30,13 +30,13 @@ Real-time motion, density, sound quality and input comfort still require appropr
 
 ## Reference corpus
 
-`tests/capture_reference.gd` produces thirteen reference images under a unique
+`tests/capture_reference.gd` produces ten reference images under a unique
 `build/reference/<revision>[_dirty]_<timestamp>/`. It rejects `--headless`.
 
 The scenarios cover active observation, synthetic density, both meteor families,
-sky sweep, summary, research chart, expanded sky, legacy transit/map/ending and
-two synthetic research palettes. The palette plates each contain 117 markers:
-thirteen branches × three marker kinds × three states. They are diagnostics, not gameplay screens.
+sky sweep, summary, research chart, outer constellation continuation and
+two synthetic research palettes. The palette plates each contain 108 markers:
+twelve branches × three marker kinds × three states. They are diagnostics, not gameplay screens.
 
 The fixture replaces persistence before `_ready()`, disables hardware input,
 fixes RNG/positions/clocks and checks expected state before and after rendering.
@@ -60,10 +60,10 @@ Run without `--headless`; the same renderer flags above can be used.
 
 | Script under `tests/` | Output and coverage | Marker |
 |---|---|---|
-| `deep_sky_preview.gd` | Sixteen stable frames in `build/deep_sky_review/<timestamp>/`: original sky/M31, chart gates/purchases, module popup, locked/equipped/full states and edge tooltips in en/ko | `DEEP_SKY_PREVIEW_PASS` |
-| `expansion_preview.gd` | Thirty-eight stable frames in `build/outer_growth_review/<timestamp>/`: all ten figures in en/ko, overview, empty loadout, draw scan/alignment/result, duplicate/full equipment, and rare meteor | `EXPANSION_PREVIEW_PASS` |
+| `deep_sky_preview.gd` | Sixteen stable frames in `build/deep_sky_review/<timestamp>/`: original sky, chart gates/purchases, module popup, locked/equipped/full states and edge tooltips in en/ko | `DEEP_SKY_PREVIEW_PASS` |
+| `expansion_preview.gd` | Thirty-six stable frames in `build/outer_growth_review/<timestamp>/`: all nine figures in en/ko, overview, empty loadout, draw scan/alignment/result, duplicate/full equipment, and rare meteor | `EXPANSION_PREVIEW_PASS` |
 | `effect_feedback_preview.gd` | Six PNG/JSON pairs in `build/effect_feedback_review/`: routine/accent poses, visible installation-rule start/mid/end, continuation selection | `EFFECT_PREVIEW_PASS` |
-| `research_chart_preview.gd` | `build/research_chart_preview.png`; synthetic 81/107 research, 1,284,000 Data, fifth-round/80s pose | `PREVIEW_SAVED` |
+| `research_chart_preview.gd` | `build/research_chart_preview.png`; synthetic 81/95 research, 1,284,000 Data, fifth-round/80s pose | `PREVIEW_SAVED` |
 | `hud_preview.gd` | `build/hud_preview.png` or selected diagnostic pose below | `PREVIEW_SAVED` |
 
 Deep-sky capture has a 45s watchdog and validates frozen fixtures, source/image hashes
@@ -80,14 +80,9 @@ Set only the variables needed for a pose and remove/restore them afterwards:
 | Chart | `NIGHTWATCH_GALACTIC_RESEARCH_PREVIEW=1` | `galactic_research_preview.png` |
 | Chart | `NIGHTWATCH_GALACTIC_RESEARCH_PREVIEW_TIME=0.65` with the flag above | Intermediate pull-back; time 0–3.6s |
 | HUD | `NIGHTWATCH_SURVEY_PREVIEW=1` | `survey_preview.png`, partially charged sweep |
-| HUD | `NIGHTWATCH_GALACTIC_PREVIEW=1` | `galactic_preview.png`, completed-research diagnostic sky |
-| HUD | `NIGHTWATCH_TRANSIT_PREVIEW=1` | `transit_preview.png`, legacy first transit at 48% |
-| HUD | `NIGHTWATCH_ENDING_PREVIEW=1` | `ending_preview.png`, non-persistent legacy ending |
-| Ending | `NIGHTWATCH_ENDING_PREVIEW_STEP` | 2.8s constellations / 5.2s transition / 8.1s final (default) |
-| Ending | `NIGHTWATCH_ENDING_PREVIEW_LOCALE=en` or `ko` | Localized ending capture |
 
 Legacy HUD/chart poses may overwrite the same filename. Inspect or copy a frame
-before another run. Legacy previews do not define new M31 content.
+before another run. Previews cover active content only.
 
 ## Settings and display
 
