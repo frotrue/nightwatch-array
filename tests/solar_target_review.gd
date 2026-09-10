@@ -2,6 +2,9 @@ extends "res://tests/module_overhaul_review.gd"
 
 # Save-free desktop art review. Labels belong to the comparison fixture only.
 func _run() -> void:
+	if "--live-sky" in OS.get_cmdline_user_args():
+		await _live_sky()
+		return
 	create_timer(50.0, true, false, true).timeout.connect(func(): push_error("Solar target review timeout"); quit(1))
 	if DisplayServer.get_name() == "headless":
 		quit(1)
@@ -70,3 +73,55 @@ func _run() -> void:
 	game.free()
 	paused = false
 	_finish("SOLAR_TARGET_REVIEW", "%d frames at " % records.size() + ProjectSettings.globalize_path(output))
+
+
+# Run the editor engine against the exported pack with --main-pack and --script.
+# Uses real moving targets but isolates saves/settings and supplies no player input.
+func _live_sky() -> void:
+	if DisplayServer.get_name() == "headless":
+		quit(1)
+		return
+	create_timer(25.0, true, false, true).timeout.connect(func(): push_error("Live sky timeout"); quit(1))
+	root.gui_disable_input = true
+	var game := await _game()
+	game.upgrade_tree.configure_galactic_state(true, true)
+	_clear_sky(game)
+	game.spawner.running = false
+	game.events.set_process(false)
+	game.deep_sky.director.set_process(false)
+	game.observer.set_process(false)
+	game.observer.cursor_position = Vector2(-1000, -1000)
+	game.effects.reset()
+	var random := RandomNumberGenerator.new()
+	random.seed = 20260911
+	# Respect the reserved deep-sky slots instead of overriding the production cap.
+	var extension_objects: int = game.deep_sky.director.object_count()
+	var target_count := mini(24, game.spawner.MAX_TOTAL_METEORS - 1 - maxi(game.spawner.extension_reserved_slots, extension_objects))
+	for index in range(target_count):
+		var type: String = ["variable_star", "binary_star", "galaxy"][index] if index < 3 else ["common", "fast", "fragment", "fireball"][index % 4]
+		var screen := Vector2(random.randf_range(120, 1000), random.randf_range(170, 470))
+		if index < 3: screen = [Vector2(330, 320), Vector2(560, 380), Vector2(790, 290)][index]
+		var target = game.spawner.spawn_meteor(type, game.observation_view.screen_to_world(screen), Vector2.RIGHT.rotated(-0.18) * float(Balance.meteor_spec(type).speed), 18.0)
+		if target == null:
+			failures.append("dense fixture could not spawn target %d/%d" % [index, target_count])
+			continue
+		# Keep the art visible long enough to inspect motion; not an economy probe.
+		target.required_track_time = 1000.0
+		target.base_automatic_rate = 0.0
+		target.dish_assist_rate = 0.0
+		target.lane_assist_rate = 0.0
+	output = "res://build/solar_live_review/%d" % int(Time.get_unix_time_from_system())
+	# Exported resources are read-only; captures always go to the launch workspace.
+	var capture_dir := OS.get_environment("NIGHTWATCH_ART_CAPTURE_DIR")
+	if not capture_dir.is_empty(): output = capture_dir
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(output))
+	for sample in range(2):
+		await create_timer(0.8 if sample == 0 else 3.0).timeout
+		await RenderingServer.frame_post_draw
+		var frame := root.get_texture().get_image()
+		if frame.save_png(output.path_join("dense_%d.png" % sample)) != OK: failures.append("live capture failed")
+	await create_timer(3.0).timeout
+	print("SOLAR_LIVE_REVIEW_%s: real moving sky, initial %d targets; no comfort verdict" % ["PASS" if failures.is_empty() else "FAIL", target_count])
+	for failure in failures: push_error(failure)
+	game.free()
+	quit(0 if failures.is_empty() else 1)

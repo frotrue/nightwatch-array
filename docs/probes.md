@@ -125,3 +125,11 @@ observation field and the three replacement research inspectors in Korean/Englis
 checks solid-body edge contacts with circular/single/double LINE fields at two
 camera spans. `meteor_render_cache_test` retains the full 539-case matrix, with
 147 solid-body cases explicitly requiring no meteor ribbons.
+
+`solar_target_review.gd -- --live-sky` runs a save-free moving sky with up to 24
+initial targets (respecting reserved deep-sky capacity) and captures two density
+frames. Use the editor engine with `--main-pack build/windows/NightwatchArray.exe
+--script res://tests/solar_target_review.gd -- --live-sky` after export, setting
+`NIGHTWATCH_ART_CAPTURE_DIR` to an absolute writable output directory. The release
+EXE itself does not support `--script`. It isolates auto-completion for visibility,
+so this is art review, not a player-input, economy, performance or comfort verdict.

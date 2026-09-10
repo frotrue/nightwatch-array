@@ -9,6 +9,7 @@
 |---|---|
 | [설계 원문 — 9월 3일](design-through-2026-09-03.md) | 이전 3층·경제·국부은하군을 포함한 승인 원문 |
 | [설계 원문 — 9월 7일](design-through-2026-09-07.md) | 모듈 다섯 자리까지의 승인과 소규모 조정 자율 진행 결정 |
+| [태양계 천체 외형 검토](solar-target-art-plan.md) | 광학 외피 계획을 보류하고 사용자 첨부 이미지의 패싯 외형을 유지한 결정 |
 | [모듈 고리 편성](module-loadout-plan.md) | 다섯 자리·초기 두 자리·연구 해금이 승인·구현된 당시 계획 |
 | [설정·접근성 v2.1 계획](settings-accessibility-plan.md) | 완료된 설정 개편과 당시 수정 이유. 현행 계약은 [설정 참조](../settings.md) |
 | [별도 안드로메다 스테이지](andromeda-stage-experiment.md) | 폐기한 독립 무대·작업대의 변경 이력 |
