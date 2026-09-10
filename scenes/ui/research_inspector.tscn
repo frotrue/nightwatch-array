@@ -3,8 +3,18 @@
 [ext_resource type="Resource" path="res://resources/ui/mono_tabular.tres" id="R1"]
 [ext_resource type="FontFile" path="res://fonts/IBMPlexMono-Regular.ttf" id="R2"]
 [ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Regular.ttf" id="R3"]
-[ext_resource type="Resource" path="res://resources/ui/empty.tres" id="R5"]
 [ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Medium.ttf" id="R6"]
+
+[sub_resource type="StyleBoxFlat" id="InspectorBackground"]
+content_margin_left = 0.0
+content_margin_top = 0.0
+content_margin_right = 0.0
+content_margin_bottom = 0.0
+bg_color = Color(0.03529412, 0.023529412, 0.015686275, 1)
+expand_margin_left = 10.0
+expand_margin_top = 10.0
+expand_margin_right = 10.0
+expand_margin_bottom = 0.0
 
 [node name="ConstellationInspector" type="PanelContainer"]
 visible = false
@@ -12,7 +22,7 @@ z_index = 100
 custom_minimum_size = Vector2(175.2, 0)
 layout_mode = 0
 mouse_filter = 2
-theme_override_styles/panel = ExtResource("R5")
+theme_override_styles/panel = SubResource("InspectorBackground")
 
 [node name="InspectorScroll" type="ScrollContainer" parent="."]
 unique_name_in_owner = true

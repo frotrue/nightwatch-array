@@ -140,7 +140,7 @@ func _process(delta: float) -> void:
 		progression != null
 		and progression.has_upgrade("perseid_survey")
 	)
-	var perseid_target_count := _active_atmospheric_target_count() if perseid_indicator_visible else 0
+	var perseid_target_count := get_visible_atmospheric_target_count() if perseid_indicator_visible else 0
 	var perseid_visual_changed := (
 		perseid_indicator_visible != perseid_indicator_visible_last_frame
 		or perseid_target_count != perseid_target_count_last_frame
@@ -582,7 +582,7 @@ func _draw_manual_combo(observation_radius: float) -> void:
 func _draw_perseid_survey_indicator(observation_radius: float) -> void:
 	if progression == null or not progression.has_upgrade("perseid_survey"):
 		return
-	var target_count := _active_atmospheric_target_count()
+	var target_count := get_visible_atmospheric_target_count()
 	var threshold: int = progression.PERSEID_SURVEY_TARGET_THRESHOLD
 	var threshold_reached: bool = progression.is_perseid_survey_active(target_count)
 	var visual_scale := _world_px(1.0)
@@ -609,12 +609,14 @@ func _draw_perseid_survey_indicator(observation_radius: float) -> void:
 			)
 
 
-func _active_atmospheric_target_count() -> int:
+func get_visible_atmospheric_target_count(completed_target = null) -> int:
 	if meteor_layer == null:
 		return 0
 	var count := 0
 	for candidate in meteor_layer.get_children():
-		if _target_is_valid(candidate):
+		# Completion marks the emitting target inactive before paying its reward.
+		# Use the same screen-space rule for the cursor pips and that final count.
+		if (_target_is_valid(candidate) or candidate == completed_target) and candidate is Node2D and get_viewport_rect().has_point(candidate.get_global_transform_with_canvas().origin):
 			count += 1
 	return count
 

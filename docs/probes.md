@@ -62,7 +62,7 @@ Each file below is under `tests/`. Run one while iterating with:
 |---|---|---|
 | `research_contract_test.gd` | `RESEARCH_CONTRACT_PASS` | 95 definitions, 26 executable contracts, exact 69 unverified IDs, bidirectional en/ko claims, opening budgets |
 | `save_integrity_test.gd` | `SAVE_INTEGRITY_PASS` | Atomic replacement, injected write/rename failures, invalid slots/payloads, prior bytes and summary preservation |
-| `smoke_test.gd` | `SMOKE_TEST_PASS` | Main loop, saves, localization, held tracking/sweep, input/modals/settings, round accounting |
+| `smoke_test.gd` | `SMOKE_TEST_PASS` | Main loop, saves, localization, held tracking/sweep, input/modals/settings, round accounting; immediate echo unlock/legacy channels, additive dish forecasts, screen-space survey counts and manual-only spectral rewards |
 | `deep_sky_test.gd` | `DEEP_SKY_PASS` | Original 95-node path, coordinate-based module unlock, chart purchases, five-slot pointer/input flow, pause recovery, effects and migration |
 | `expansion_state_test.gd` | `EXPANSION_STATE_PASS` | Predecessor research, replacement draw determinism, additive copies and malformed saves |
 | `module_expansion_test.gd` | `MODULE_EXPANSION_PASS` | Conditional effects, split chance/copy persistence, composed multipliers, trail contact, sweep and contribution eligibility |

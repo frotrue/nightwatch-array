@@ -397,13 +397,13 @@ EFFECT_AUTOMATION,AUTOMATION,자동화
 UPGRADE_BETTER_LENS_NAME,Better Lens,개량 렌즈
 UPGRADE_BETTER_LENS_DESC,Base observation radius increases by about 44%.,기본 관측 반경이 약 44% 늘어납니다.
 UPGRADE_LONG_EXPOSURE_NAME,Long Exposure,장노출
-UPGRADE_LONG_EXPOSURE_DESC,Meteor visibility duration +35%.,유성이 보이는 시간이 35% 늘어납니다.
+UPGRADE_LONG_EXPOSURE_DESC,Meteor lifetime +35%.,유성의 소멸까지 남은 시간 +35%.
 UPGRADE_OBSERVATION_STREAK_NAME,Observation Streak,관측 연속
 UPGRADE_OBSERVATION_STREAK_DESC,"Observation Streak: manual successes add 8% Data per step after the first, up to +50%. Base time limit: 2.6 seconds.","관측 연속: 두 번째 수동 관측부터 데이터 +8%씩, 최대 +50%. 기본 제한 시간 2.6초."
 UPGRADE_PRECISION_MULTIPLIER_NAME,Precision Spectrometer,정밀 분광기
 UPGRADE_PRECISION_MULTIPLIER_DESC,"Centered manual tracking increases Data, up to 3 times.",유성 중심을 따라 관측하면 데이터가 최대 3배로 늘어납니다.
 UPGRADE_PERFECT_OBSERVATION_NAME,Perfect Observation,완벽한 관측
-UPGRADE_PERFECT_OBSERVATION_DESC,"Manual grade bonus: Excellent +25% Data, Perfect +55%. Observation Data ×2 (automatic included).","수동 관측 등급 보너스: 우수 데이터 +25%, 완벽 +55%. 관측 데이터 2배(자동 포함)."
+UPGRADE_PERFECT_OBSERVATION_DESC,"Manual grade bonus: Excellent +25% Data, Perfect +55%. All Observation Data ×2 (automatic included).","수동 관측 등급 보너스: 우수 데이터 +25%, 완벽 +55%. 모든 관측 데이터 2배(자동 포함)."
 UPGRADE_EDGE_DETECTION_NAME,Edge Detection,경계 탐지
 UPGRADE_EDGE_DETECTION_DESC,Unlocks fast meteors.,고속 유성이 나타납니다.
 UPGRADE_WIDE_FIELD_NAME,Wide Field Sensor,광시야 센서
@@ -415,7 +415,7 @@ UPGRADE_RARE_DETECTION_DESC,Unlocks fireballs and identifies incoming target typ
 UPGRADE_FRAGMENT_ANALYSIS_NAME,Fragment Tracking,파편 추적
 UPGRADE_FRAGMENT_ANALYSIS_DESC,Unlocks splitting meteors and observable fragments.,분열 유성과 관측 가능한 파편 조각이 나타납니다.
 UPGRADE_SHOWER_DETECTOR_NAME,Meteor Shower Forecast,유성우 예보
-UPGRADE_SHOWER_DETECTOR_DESC,"Unlocks meteor showers: 2.6-second warning, 9-second duration. Observation Data ×2 (automatic included).","유성우가 발생합니다. 예고 2.6초, 지속 9초. 관측 데이터 2배(자동 포함)."
+UPGRADE_SHOWER_DETECTOR_DESC,"Unlocks meteor showers: 2.6-second warning, 9-second duration. All Observation Data ×2 (automatic included).","유성우가 발생합니다. 예고 2.6초, 지속 9초. 모든 관측 데이터 2배(자동 포함)."
 UPGRADE_ARRAY_PLANNING_NAME,Array Planning,관측망 설계
 UPGRADE_ARRAY_PLANNING_DESC,Sky Activity: simultaneous regular targets +1.,하늘 활동: 일반 표적 동시 출현 상한 +1개.
 UPGRADE_OBSERVATION_SCHEDULING_NAME,Observation Scheduling,관측 일정 최적화
@@ -431,7 +431,7 @@ UPGRADE_SECONDARY_CAMERA_DESC,Adds 1 movable observation dish and arrival warnin
 UPGRADE_PREDICTIVE_DISH_CONTROL_NAME,Predictive Dish Control,예측 접시 제어
 UPGRADE_PREDICTIVE_DISH_CONTROL_DESC,Automatically moves idle dishes to predicted arrival positions. Right-click placement takes priority.,쉬고 있는 접시를 예상 출현 위치로 자동 이동합니다. 우클릭 배치가 우선합니다.
 UPGRADE_MULTI_TARGET_ANALYSIS_NAME,Multi-Target Tracking,다중 표적 관측
-UPGRADE_MULTI_TARGET_ANALYSIS_DESC,"Observes all meteors inside the cursor ring together. Automatic support: 1 target, including fragments after Fragment Tracking. Sky Activity: simultaneous regular targets +1.",커서 원 안의 유성을 동시 관측합니다. 자동 지원 1개(파편 추적 설치 시 조각 포함). 하늘 활동: 일반 표적 동시 출현 상한 +1개.
+UPGRADE_MULTI_TARGET_ANALYSIS_DESC,Observe every meteor in the cursor circle together. Auto-assist: 1 target. Sky Activity: simultaneous regular targets +1.,커서 원 안 유성을 함께 관측합니다. 자동 지원 1개. 하늘 활동: 일반 표적 동시 출현 상한 +1개.
 UPGRADE_AUTOMATED_TRACKING_NAME,Automated Common Tracking,일반 표적 자동 추적
 UPGRADE_AUTOMATED_TRACKING_DESC,Automatically fills ordinary meteor observation gauges. Rare targets still need manual observation.,일반 유성의 관측 게이지가 자동으로 채워집니다. 희귀 표적은 직접 관측해야 합니다.
 UPGRADE_OBSERVATORY_NETWORK_NAME,Observatory Network,천문대 네트워크
@@ -440,7 +440,7 @@ UPGRADE_CONTACT_LEDGER_NAME,Forecast Log,예보 기록
 UPGRADE_CONTACT_LEDGER_DESC,Base maximum arrival-position error decreases by about 17%.,기본 최대 예고 오차가 약 17% 줄어듭니다.
 UPGRADE_COMPANION_RESOLUTION_NAME,Companion Resolution,동반체 분해
 UPGRADE_COMPANION_RESOLUTION_DESC,Data from fragment pieces +35%.,파편 조각의 관측 데이터가 35% 늘어납니다.
-UPGRADE_RADIANT_PLOTTING_NAME,Radiant Cadence,복사점 주기
+UPGRADE_RADIANT_PLOTTING_NAME,Arrival Cadence,유성 출현 주기
 UPGRADE_RADIANT_PLOTTING_DESC,Regular meteor arrival interval −6%.,일반 유성 출현 간격이 6% 짧아집니다.
 UPGRADE_CROWD_FORECAST_NAME,Crowd Forecast,밀집 예보
 UPGRADE_CROWD_FORECAST_DESC,Arrival warnings appear 0.8 seconds earlier.,천체 출현 예고를 0.8초 더 일찍 표시합니다.
@@ -451,21 +451,21 @@ UPGRADE_DEBRIS_CORRELATION_DESC,Data from splitting meteors and fragment pieces 
 UPGRADE_CASCADE_SAMPLING_NAME,Cascade Sampling,연쇄 표본 수집
 UPGRADE_CASCADE_SAMPLING_DESC,Sky Activity: simultaneous regular targets +1.,하늘 활동: 일반 표적 동시 출현 상한 +1개.
 UPGRADE_ADAPTIVE_EXPOSURE_GRID_NAME,Adaptive Exposure Grid,적응형 노출 격자
-UPGRADE_ADAPTIVE_EXPOSURE_GRID_DESC,Meteor and long-watch target visibility duration +12%.,유성·장기 관측 대상이 보이는 시간이 12% 늘어납니다.
+UPGRADE_ADAPTIVE_EXPOSURE_GRID_DESC,Meteor and long-target lifetime +12%.,유성·장기 표적의 소멸까지 남은 시간 +12%.
 UPGRADE_PERSEID_SURVEY_NAME,Perseid Watch,페르세우스 유성군 관측
-UPGRADE_PERSEID_SURVEY_DESC,"With 3+ trackable targets present, meteor Data +18%. Sky Activity: simultaneous regular targets +1.",관측 가능 표적이 3개 이상이면 유성 데이터 +18%. 하늘 활동: 일반 표적 동시 출현 상한 +1개.
+UPGRADE_PERSEID_SURVEY_DESC,3 visible targets grant +18% meteor Data. Sky Activity: simultaneous regular targets +1.,화면 안 표적 3개 이상일 때 유성 데이터 +18%. 하늘 활동: 일반 표적 동시 출현 상한 +1개.
 UPGRADE_FILTER_WHEEL_NAME,Calibration Framework,보정 연구 기반
-UPGRADE_FILTER_WHEEL_DESC,Unlocks band upgrades and binary-star research. No direct observation bonus.,대역 보정·쌍성 연구를 엽니다. 직접적인 관측 보너스는 없습니다.
+UPGRADE_FILTER_WHEEL_DESC,Unlocks band calibration and binary-star research.,대역 보정·쌍성 연구를 엽니다.
 UPGRADE_BLUE_BAND_NAME,Blue Band,청색 대역
-UPGRADE_BLUE_BAND_DESC,"Common meteors, major fireballs and satellites: observation speed +25%, Data +15%.","일반 유성·대형 화구·인공위성: 관측 속도 +25%, 데이터 +15%."
+UPGRADE_BLUE_BAND_DESC,"Common meteors, major fireballs and satellites: manual speed +25%, manual Data +15%.","일반 유성·대형 화구·위성: 수동 관측 속도 +25%, 수동 데이터 +15%."
 UPGRADE_AMBER_BAND_NAME,Amber Band,호박색 대역
-UPGRADE_AMBER_BAND_DESC,"Splitting meteors, fireballs, comets and distant galaxies: observation speed +25%, Data +15%.","분열 유성·화구·혜성·먼 은하: 관측 속도 +25%, 데이터 +15%."
+UPGRADE_AMBER_BAND_DESC,"Fragments, fireballs, comets and distant galaxies: manual speed +25%, manual Data +15%.","분열 유성·화구·혜성·먼 은하: 수동 관측 속도 +25%, 수동 데이터 +15%."
 UPGRADE_VIOLET_BAND_NAME,Violet Band,보라색 대역
-UPGRADE_VIOLET_BAND_DESC,"Fast meteors, fragment pieces, variable stars and binary stars: observation speed +25%, Data +15%.","고속 유성·파편 조각·변광성·쌍성: 관측 속도 +25%, 데이터 +15%."
+UPGRADE_VIOLET_BAND_DESC,"Fast meteors, fragment pieces, variable and binary stars: manual speed +25%, manual Data +15%.","고속 유성·조각·변광성·쌍성: 수동 관측 속도 +25%, 수동 데이터 +15%."
 UPGRADE_LYRID_SPECTROGRAPH_NAME,Lyrid Spectrograph,거문고자리 분광기
-UPGRADE_LYRID_SPECTROGRAPH_DESC,"All band bonuses: observation speed +25% → +45%, Data +15% → +35%.","모든 대역 보너스 강화: 관측 속도 +25% → +45%, 데이터 +15% → +35%."
+UPGRADE_LYRID_SPECTROGRAPH_DESC,"All bands: manual speed bonus +25% → +45%, manual Data bonus +15% → +35%.","모든 대역: 수동 속도 보너스 +25% → +45%, 수동 데이터 보너스 +15% → +35%."
 UPGRADE_EPHEMERIS_MARKS_NAME,Ephemeris Marks,천체력 표식
-UPGRADE_EPHEMERIS_MARKS_DESC,Shows arrival warnings at least 3 seconds before appearance.,천체 출현 위치를 최소 3초 전에 예고합니다.
+UPGRADE_EPHEMERIS_MARKS_DESC,"Arrival warnings appear 1 second earlier, including dish forecasts.",출현 예고를 1초 더 일찍 표시합니다. 접시 예고에도 적용됩니다.
 UPGRADE_SATELLITE_CATALOG_NAME,Satellite Catalog,인공위성 목록
 UPGRADE_SATELLITE_CATALOG_DESC,Unlocks slow-moving satellites for observation.,천천히 이동하는 인공위성을 관측할 수 있습니다.
 UPGRADE_CHANGE_DETECTION_NAME,Change Detection,변화 탐지
@@ -474,20 +474,20 @@ UPGRADE_VARIABLE_WATCHLIST_NAME,Variable Watchlist,변광성 관측 목록
 UPGRADE_VARIABLE_WATCHLIST_DESC,Unlocks variable stars that brighten and dim. Observation must finish within the round.,밝기가 변하는 변광성을 관측할 수 있습니다. 회차 안에 관측을 완료해야 합니다.
 UPGRADE_COMET_SOLUTIONS_NAME,Comet Tracking,혜성 추적
 UPGRADE_COMET_SOLUTIONS_DESC,Unlocks slow comets that remain until the round ends.,회차가 끝날 때까지 머무는 느린 혜성을 관측할 수 있습니다.
-UPGRADE_ANDROMEDA_DEEP_SURVEY_NAME,Andromeda Long Watch,안드로메다 장기 관측
-UPGRADE_ANDROMEDA_DEEP_SURVEY_DESC,"Satellites, variable stars, comets and distant galaxies: observation speed +25%, Data +30%.","위성·변광성·혜성·먼 은하: 관측 속도 +25%, 데이터 +30%."
-UPGRADE_ECHO_CORRELATION_10_NAME,Echo Correlation I,공명 상관 분석 I
-UPGRADE_ECHO_CORRELATION_10_DESC,Manual success has a 10% chance to call extra meteors (echo). Requires Single Echo Channel.,직접 관측 성공 시 추가 유성(공명) 발생 확률 10%. 단일 공명 채널도 필요합니다.
-UPGRADE_ECHO_CORRELATION_20_NAME,Echo Correlation II,공명 상관 분석 II
-UPGRADE_ECHO_CORRELATION_20_DESC,Echo chance after manual success: 10% → 20%. Requires an echo channel.,수동 관측 성공 시 공명 확률 10% → 20%. 공명 채널도 필요합니다.
-UPGRADE_SINGLE_ECHO_CHANNEL_NAME,Single Echo Channel,단일 공명 채널
-UPGRADE_SINGLE_ECHO_CHANNEL_DESC,Adds 1 meteor per echo. Requires Echo Correlation I.,공명 발생 시 추가 유성 1개. 공명 상관 분석 I도 필요합니다.
-UPGRADE_DUAL_ECHO_CHANNEL_NAME,Dual Echo Channels,이중 공명 채널
-UPGRADE_DUAL_ECHO_CHANNEL_DESC,Meteors per echo: 1 → 2. Requires Echo Correlation research.,공명 발생 시 추가 유성 1 → 2개. 공명 상관 분석 연구도 필요합니다.
-UPGRADE_TRIPLE_ECHO_ARRAY_NAME,Triple Echo Array,삼중 공명 배열
-UPGRADE_TRIPLE_ECHO_ARRAY_DESC,Meteors per echo: 2 → 3. Requires Echo Correlation research.,공명 발생 시 추가 유성 2 → 3개. 공명 상관 분석 연구도 필요합니다.
+UPGRADE_ANDROMEDA_DEEP_SURVEY_NAME,Long-Target Survey,장기 표적 관측
+UPGRADE_ANDROMEDA_DEEP_SURVEY_DESC,"Satellites, variable stars, comets and distant galaxies: manual speed +25%, Data +30% (automatic included).","위성·변광성·혜성·먼 은하: 수동 속도 +25%, 데이터 +30%(자동 포함)."
+UPGRADE_ECHO_CORRELATION_10_NAME,Echo Discovery,공명 포착
+UPGRADE_ECHO_CORRELATION_10_DESC,Manual observation has a 10% chance to summon 1 extra meteor (Echo).,직접 관측에 성공하면 10% 확률로 추가 유성 1개가 나타납니다(공명).
+UPGRADE_ECHO_CORRELATION_20_NAME,Echo Amplification,공명 증폭
+UPGRADE_ECHO_CORRELATION_20_DESC,Echo chance after manual observation: 10% → 20%.,직접 관측 성공 시 공명 확률 10% → 20%.
+UPGRADE_SINGLE_ECHO_CHANNEL_NAME,Echo Channel I,공명 채널 I
+UPGRADE_SINGLE_ECHO_CHANNEL_DESC,Meteors per Echo: 1 → 2.,공명으로 나타나는 유성 1 → 2개.
+UPGRADE_DUAL_ECHO_CHANNEL_NAME,Echo Channel II,공명 채널 II
+UPGRADE_DUAL_ECHO_CHANNEL_DESC,Meteors per Echo: 2 → 3.,공명으로 나타나는 유성 2 → 3개.
+UPGRADE_TRIPLE_ECHO_ARRAY_NAME,Echo Channel III,공명 채널 III
+UPGRADE_TRIPLE_ECHO_ARRAY_DESC,Meteors per Echo: 3 → 4.,공명으로 나타나는 유성 3 → 4개.
 UPGRADE_LEONID_RADIANT_NAME,Leonid Radiant,사자자리 유성군 복사점
-UPGRADE_LEONID_RADIANT_DESC,10 eligible manual observations trigger 8 meteors over 7 seconds. Major fireballs and echo/storm/Perseid/Sweep targets do not count.,수동 관측 10회마다 7초간 유성 8개 발생. 대형 화구·공명·폭풍·페르세우스 돌발·훑기 표적은 횟수에서 제외.
+UPGRADE_LEONID_RADIANT_DESC,Every 10 manual observations of natural targets trigger 8 meteors over 7 seconds. Major fireballs do not count.,자연 발생 표적을 직접 10회 관측하면 7초간 유성 8개 발생. 대형 화구 제외.
 UPGRADE_COMPRESSED_CADENCE_NAME,Compressed Cadence,압축 관측 주기
 UPGRADE_COMPRESSED_CADENCE_DESC,Storm trigger: 10 → 9 manual observations. Meteors per storm: 8.,폭풍 발동에 필요한 수동 관측 10 → 9회. 발생 유성 8개.
 UPGRADE_DENSE_STREAM_NAME,Dense Stream,고밀도 유성류
@@ -499,35 +499,35 @@ UPGRADE_STORM_FRONT_DESC,Storm trigger: 7 → 6 manual observations. Meteors per
 UPGRADE_LEONID_STORM_NAME,Storm Zenith,폭풍 정점
 UPGRADE_LEONID_STORM_DESC,Storm trigger: 6 → 5 manual observations. Meteors per storm: 16 → 20 over 7 seconds.,폭풍 발동에 필요한 수동 관측 6 → 5회. 7초간 발생 유성 16 → 20개.
 UPGRADE_PERSEID_OUTBURST_NAME,Perseid Outburst,페르세우스 유성군 돌발
-UPGRADE_PERSEID_OUTBURST_DESC,"Unlocks Perseid bursts: 8 meteors over 3.4 seconds, after a warning. Observation Data ×2 (automatic included).",예고 뒤 3.4초간 유성 8개가 나타나는 페르세우스 돌발 유성우를 엽니다. 관측 데이터 2배(자동 포함).
+UPGRADE_PERSEID_OUTBURST_DESC,"Unlocks Perseid bursts: 8 meteors over 3.4 seconds, after a warning. All Observation Data ×2 (automatic included).",예고 뒤 3.4초간 유성 8개가 나타나는 페르세우스 돌발 유성우를 엽니다. 모든 관측 데이터 2배(자동 포함).
 UPGRADE_DOUBLE_STAR_RESOLUTION_NAME,Double-Star Resolution,쌍성 분해
-UPGRADE_DOUBLE_STAR_RESOLUTION_DESC,Unlocks binary stars and their arrival forecasts. Maximum error: about 2% of screen width. Observation Data ×2 (automatic included).,쌍성을 관측하고 출현을 예고합니다. 최대 위치 오차: 화면 너비의 약 2%. 관측 데이터 2배(자동 포함).
+UPGRADE_DOUBLE_STAR_RESOLUTION_DESC,Unlocks binary stars and their arrival forecasts. Maximum error: about 2% of screen width. All Observation Data ×2 (automatic included).,쌍성을 관측하고 출현을 예고합니다. 최대 위치 오차: 화면 너비의 약 2%. 모든 관측 데이터 2배(자동 포함).
 UPGRADE_GALAXY_IMAGING_NAME,Distant Galaxy Imaging,먼 은하 촬영
-UPGRADE_GALAXY_IMAGING_DESC,Unlocks distant galaxies as long-watch targets. Observation Data ×2 (automatic included).,오래 조준해 관측하는 먼 은하가 나타납니다. 관측 데이터 2배(자동 포함).
+UPGRADE_GALAXY_IMAGING_DESC,Unlocks distant galaxies as long-watch targets. All Observation Data ×2 (automatic included).,오래 조준해 관측하는 먼 은하가 나타납니다. 모든 관측 데이터 2배(자동 포함).
 UPGRADE_SPLIT_RADIANT_MODEL_NAME,Split Radiant Model,분할 복사점 모형
 UPGRADE_SPLIT_RADIANT_MODEL_DESC,Storm meteors alternate between 2 mirrored entry areas.,폭풍 유성이 대칭인 두 구역에서 번갈아 나타납니다.
 UPGRADE_FRAGMENT_FRONT_NAME,Fragment Front,파편 전선
 UPGRADE_FRAGMENT_FRONT_DESC,Each meteor storm starts with a splitting meteor.,각 유성 폭풍이 분열 유성으로 시작합니다.
 UPGRADE_FIREBALL_TAIL_NAME,Fireball Tail,화구 꼬리
-UPGRADE_FIREBALL_TAIL_DESC,Each meteor storm ends with a manual-only fireball. Observation Data ×2 (automatic included).,각 유성 폭풍의 마지막에 수동 관측 전용 화구가 나타납니다. 관측 데이터 2배(자동 포함).
+UPGRADE_FIREBALL_TAIL_DESC,Each meteor storm ends with a manual-only fireball. All Observation Data ×2 (automatic included).,각 유성 폭풍의 마지막에 수동 관측 전용 화구가 나타납니다. 모든 관측 데이터 2배(자동 포함).
 UPGRADE_ECHO_SIGNATURE_LOCK_NAME,Echo Signature Lock,공명 신호 고정
-UPGRADE_ECHO_SIGNATURE_LOCK_DESC,Echoes copy observed common/fast/splitting meteors or fireballs. Other types produce a random unlocked meteor.,공명이 방금 관측한 일반·고속·분열 유성·화구의 종류를 복제합니다. 다른 종류는 무작위 유성을 만듭니다.
-UPGRADE_MIRROR_ECHO_SOLUTION_NAME,Mirror Echo Solution,대칭 공명 해
+UPGRADE_ECHO_SIGNATURE_LOCK_DESC,"Echoes repeat the observed meteor type: common, fast, fragment or fireball. Other types give a random meteor.",공명이 관측한 유성 종류를 복제합니다(일반·고속·분열·화구). 그 외에는 무작위.
+UPGRADE_MIRROR_ECHO_SOLUTION_NAME,Opposite-Side Echo,맞은편 공명
 UPGRADE_MIRROR_ECHO_SOLUTION_DESC,Echo meteors appear from the opposite side on a mirrored path.,공명 유성이 반대편에서 대칭 경로로 나타납니다.
 UPGRADE_ECHO_DELAY_LINE_NAME,Echo Delay Line,공명 지연선
-UPGRADE_ECHO_DELAY_LINE_DESC,Echo meteors arrive 0.75 seconds apart. Observation Data ×2 (automatic included).,공명 유성이 0.75초 간격으로 차례로 나타납니다. 관측 데이터 2배(자동 포함).
+UPGRADE_ECHO_DELAY_LINE_DESC,Echo meteors arrive 0.75 seconds apart. All Observation Data ×2 (automatic included).,공명 유성이 0.75초 간격으로 차례로 나타납니다. 모든 관측 데이터 2배(자동 포함).
 UPGRADE_ECHO_DECONFLICTION_NAME,Echo Spacing,공명 간격 조정
 UPGRADE_ECHO_DECONFLICTION_DESC,Spreads echo meteors apart to prevent overlap.,공명 유성을 서로 떨어뜨려 겹침을 줄입니다.
 UPGRADE_ECHO_BEACON_NAME,Echo Beacon,공명 비콘
 UPGRADE_ECHO_BEACON_DESC,Warns of echo arrival positions 1.25 seconds in advance.,공명 유성의 출현 위치를 1.25초 전에 예고합니다.
 UPGRADE_MOMENTUM_ACQUISITION_NAME,Streak Acquisition,관측 연속 포착
-UPGRADE_MOMENTUM_ACQUISITION_DESC,"Observation Streak: 3-second limit, up to 4 bonus steps. Each step adds manual speed +2% and about 2.8% of the starting radius.","관측 연속: 3초, 최대 4회 강화. 1회당 수동 속도 +2%, 초기 반경의 약 2.8% 추가."
+UPGRADE_MOMENTUM_ACQUISITION_DESC,"Observation Streak: lasts 3 seconds, up to 4 bonuses. Each adds +2% manual speed and about 2.8% of the starting radius.","관측 연속: 3초간 최대 4회 강화. 1회당 수동 속도 +2%, 초기 반경 약 +2.8%."
 UPGRADE_WIDE_PURSUIT_NAME,Wide Pursuit,광역 추적
 UPGRADE_WIDE_PURSUIT_DESC,Each Observation Streak step adds about 1.4% of the starting observation radius.,관측 연속 1회당 초기 관측 반경의 약 1.4%를 추가합니다.
 UPGRADE_RAPID_FOCUS_NAME,Rapid Focus,신속 초점
 UPGRADE_RAPID_FOCUS_DESC,"Observation Streak: manual-speed bonus +1% per step, added to other speed bonuses.",관측 연속 1회당 수동 관측 속도 +1%. 다른 속도 보너스에 더해집니다.
 UPGRADE_CANIS_OPENING_NAME,Canis Relay,큰개자리 중계
-UPGRADE_CANIS_OPENING_DESC,Unlocks Canis Major research. No immediate change to meteor arrival intervals.,큰개자리 연구를 엽니다. 이 연구만으로 유성 출현 간격이 바뀌지는 않습니다.
+UPGRADE_CANIS_OPENING_DESC,Unlocks Canis Major research.,큰개자리 연구를 엽니다.
 UPGRADE_CANIS_CADENCE_I_NAME,Swift Signal,신속 신호
 UPGRADE_CANIS_CADENCE_I_DESC,Sky Activity: minimum regular meteor interval 1.00 seconds.,하늘 활동: 일반 유성 최소 출현 간격 1.00초.
 UPGRADE_CANIS_CAPACITY_I_NAME,Long Leash,긴 목줄
@@ -543,7 +543,7 @@ UPGRADE_CANIS_CAPACITY_III_DESC,Sky Activity: simultaneous regular targets +2.,�
 UPGRADE_SIRIUS_FIREBALL_NAME,Sirius Bloom,시리우스 발광
 UPGRADE_SIRIUS_FIREBALL_DESC,"Unlocks a major fireball, up to 1 per round with enough time left. Manual observation required.",관측 시간이 충분한 회차에 대형 화구가 최대 1개 나타납니다. 수동 관측 전용.
 UPGRADE_DRACO_SYNTHESIS_NAME,All-Sky Synthesis,전천 합성
-UPGRADE_DRACO_SYNTHESIS_DESC,Observation Data ×4 (automatic included).,관측 데이터 4배(자동 포함).
+UPGRADE_DRACO_SYNTHESIS_DESC,All Observation Data ×4 (automatic included).,모든 관측 데이터 4배(자동 포함).
 UPGRADE_DRACO_CADENCE_NAME,Circumpolar Cadence,주극 리듬
 UPGRADE_DRACO_CADENCE_DESC,Sky Activity: minimum regular meteor interval 0.45 seconds.,하늘 활동: 일반 유성 최소 출현 간격 0.45초.
 UPGRADE_DRACO_CAPACITY_NAME,Dragon-Spine Array,용등 관측망
@@ -551,26 +551,26 @@ UPGRADE_DRACO_CAPACITY_DESC,Sky Activity: simultaneous regular targets +6.,하�
 UPGRADE_DRACO_SWEEP_NAME,Coiled-Sky Sweep,환천 훑기
 UPGRADE_DRACO_SWEEP_DESC,"Sky Sweep: distance −50%, success 100%, 4 meteors, 0.45-second cooldown.","하늘 훑기: 이동 거리 50% 감소, 성공 100%, 유성 4개, 대기시간 0.45초."
 UPGRADE_DRACO_ECHO_NAME,Polar Resonance,극점 공명
-UPGRADE_DRACO_ECHO_DESC,Echo chance: 20% → 65%. Meteors per echo: 3 → 6.,공명 확률 20% → 65%. 공명 발생 유성 3 → 6개.
+UPGRADE_DRACO_ECHO_DESC,Echo chance 20% → 65%. Meteors per Echo 4 → 6.,공명 확률 20% → 65%. 공명 유성 4 → 6개.
 UPGRADE_DRACO_STORM_NAME,Radiant Convergence,복사점 수렴
 UPGRADE_DRACO_STORM_DESC,Storm trigger: 5 → 2 manual observations. Meteors per storm: 20 → 30.,폭풍 발동에 필요한 수동 관측 5 → 2회. 발생 유성 20 → 30개.
 UPGRADE_DRACO_ARRAY_NAME,Total Array,총력 관측망
 UPGRADE_DRACO_ARRAY_DESC,Movable dishes: 2 → 4. Automatic support: 2 → 4 targets.,접시 2 → 4대. 자동 지원 표적 2 → 4개.
 UPGRADE_DRACO_APOTHEOSIS_NAME,Dragon's Eye,용의 눈
-UPGRADE_DRACO_APOTHEOSIS_DESC,Observation Data ×8 (automatic included).,관측 데이터 8배(자동 포함).
+UPGRADE_DRACO_APOTHEOSIS_DESC,All Observation Data ×8 (automatic included).,모든 관측 데이터 8배(자동 포함).
 UPGRADE_GALACTIC_REFERENCE_FRAME_NAME,Galactic Reference Frame,은하 기준 좌표계
 UPGRADE_GALACTIC_REFERENCE_FRAME_DESC,"Unlocks outer research, rare meteors and modules.",바깥 연구·특수 유성·모듈을 엽니다.
 RESEARCH_GROUP_LOCAL_GROUP,LOCAL GROUP / PHENOMENA,국부은하군 / 천체 현상
 UPGRADE_CADENCE_MEMORY_NAME,Cadence Memory,박자 기억
 UPGRADE_CADENCE_MEMORY_DESC,Observation Streak time limit: 3 → 3.5 seconds. Bonus steps: 4 → 5.,관측 연속 제한 시간 3 → 3.5초. 강화 횟수 상한 4 → 5회.
 UPGRADE_EXPANDED_SWEEP_NAME,Expanded Sweep,확장 탐색
-UPGRADE_EXPANDED_SWEEP_DESC,Observation Streak base radius bonus +100% (excluding Wide Pursuit).,관측 연속의 기본 반경 보너스 +100%(광역 추적 제외).
+UPGRADE_EXPANDED_SWEEP_DESC,Observation Streak: doubles its basic radius bonus. Wide Pursuit adds separately.,관측 연속의 기본 반경 증가량 2배. 광역 추적 효과는 별도 적용.
 UPGRADE_ACCELERATED_ANALYSIS_NAME,Faster Observation,관측 가속
-UPGRADE_ACCELERATED_ANALYSIS_DESC,Observation Streak base manual-speed bonus: +2% → +4% per step. Rapid Focus adds +1%.,관측 연속 1회당 기본 수동 속도 보너스 +2% → +4%. 신속 초점 설치 시 +1% 추가.
+UPGRADE_ACCELERATED_ANALYSIS_DESC,Observation Streak: each success adds +4% manual speed instead of +2%. Rapid Focus adds separately.,관측 연속 1회당 기본 수동 속도 +2% → +4%. 신속 초점 효과는 별도 적용.
 UPGRADE_SUSTAINED_CHARGE_NAME,Sustained Charge,지속 가속
 UPGRADE_SUSTAINED_CHARGE_DESC,Observation Streak time limit: 3.5 → 4 seconds. Bonus steps: 5 → 7.,관측 연속 제한 시간 3.5 → 4초. 강화 횟수 상한 5 → 7회.
 UPGRADE_TAURUS_FULL_GALLOP_NAME,Full Gallop,전력 질주
-UPGRADE_TAURUS_FULL_GALLOP_DESC,Observation Streak time limit: 4 → 5 seconds. Bonus steps: 7 → 10. Observation Data ×2 (automatic included).,관측 연속 제한 시간 4 → 5초. 강화 횟수 상한 7 → 10회. 관측 데이터 2배(자동 포함).
+UPGRADE_TAURUS_FULL_GALLOP_DESC,Observation Streak time limit: 4 → 5 seconds. Bonus steps: 7 → 10. All Observation Data ×2 (automatic included).,관측 연속 제한 시간 4 → 5초. 강화 횟수 상한 7 → 10회. 모든 관측 데이터 2배(자동 포함).
 UPGRADE_POLAR_SURVEY_NAME,Sky Sweep,하늘 훑기
 UPGRADE_POLAR_SURVEY_DESC,Each sweep of about 40% screen width has a 30% summon chance. Keep holding to switch between empty-sky sweeping and target observation.,빈 하늘을 화면 너비의 약 40% 훑으면 30% 확률로 유성 발생. 누른 채 표적을 조준하면 관측합니다.
 UPGRADE_SWEEP_GAIN_NAME,Sweep Gain,훑기 증폭

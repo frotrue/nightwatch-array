@@ -401,7 +401,8 @@ func _base_get_observation_echo_probability() -> float:
 		return 0.65
 	if has_upgrade("echo_correlation_20"):
 		return 0.20
-	if has_upgrade("echo_correlation_10"):
+	if has_upgrade("echo_correlation_10") or has_upgrade("single_echo_channel") or has_upgrade("dual_echo_channel") or has_upgrade("triple_echo_array"):
+		# Older saves could buy the channel branch before correlation.
 		return 0.10
 	return 0.0
 
@@ -410,10 +411,12 @@ func _base_get_observation_echo_count() -> int:
 	if has_upgrade("draco_echo"):
 		return 6
 	if has_upgrade("triple_echo_array"):
-		return 3
+		return 4
 	if has_upgrade("dual_echo_channel"):
-		return 2
+		return 3
 	if has_upgrade("single_echo_channel"):
+		return 2
+	if has_upgrade("echo_correlation_10") or has_upgrade("echo_correlation_20"):
 		return 1
 	return 0
 
@@ -517,7 +520,9 @@ func dish_active() -> bool:
 
 
 func _base_get_forecast_lead() -> float:
-	var lead := 4.0 if dish_active() else (3.0 if has_upgrade("ephemeris_marks") else 2.0)
+	var lead := 4.0 if dish_active() else 2.0
+	if has_upgrade("ephemeris_marks"):
+		lead += 1.0
 	if has_upgrade("crowd_forecast"):
 		lead += 0.8
 	return lead

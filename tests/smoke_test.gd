@@ -21,7 +21,74 @@ func _check(condition: bool, message: String) -> void:
 		push_error("SMOKE: " + message)
 
 
+func _verify_research_revision() -> void:
+	var progression = load("res://scripts/progression_controller.gd").new()
+	for dish in [false, true]:
+		progression.reset()
+		if dish:
+			progression.purchased_nodes["secondary_camera"] = true
+		var before: float = progression.get_forecast_lead()
+		progression.observation_data = 16000.0
+		_check(progression.request_purchase("ephemeris_marks"), "earlier forecasts can be bought with or without a dish")
+		_check(is_equal_approx(progression.get_forecast_lead() - before, 1.0), "ephemeris adds a full second even when the dish already supplies forecasts")
+	progression.reset()
+	progression.observation_data = 100000.0
+	_check(not progression.can_purchase("single_echo_channel"), "new channel purchases follow the functioning echo unlock")
+	_check(progression.request_purchase("echo_correlation_10"), "the first echo research can be purchased directly")
+	var layer := Node2D.new()
+	root.add_child(layer)
+	var spawner = load("res://scripts/meteor_spawner.gd").new()
+	root.add_child(spawner)
+	spawner.setup(layer, progression)
+	_check(spawner.should_trigger_observation_echo(0.0) and spawner._spawn_observation_echo_burst() == 1, "the first echo purchase creates a real meteor without buying a channel")
+	for meteor in layer.get_children():
+		meteor.free()
+	progression.load_save_data({"purchased_nodes": ["single_echo_channel"]})
+	_check(progression.has_upgrade("single_echo_channel") and spawner.should_trigger_observation_echo(0.0), "a legacy channel-only save retains ownership and receives a working echo")
+	var observer = load("res://scripts/observation_controller.gd").new()
+	observer.meteor_layer = layer
+	root.add_child(observer)
+	observer.set_process(false)
+	var targets: Array = []
+	for index in range(3):
+		var meteor = load("res://scripts/meteor.gd").new()
+		layer.add_child(meteor)
+		meteor.set_process(false)
+		meteor.position = Vector2(-1000, -1000 - index * 100)
+		targets.append(meteor)
+	_check(observer.get_visible_atmospheric_target_count() == 0, "offscreen live meteors do not fill the survey indicator")
+	for index in range(3):
+		targets[index].position = Vector2(200 + index * 50, 200)
+	_check(observer.get_visible_atmospheric_target_count() == 3, "three on-screen live meteors fill all survey dots")
+	targets[0].alive = false
+	_check(observer.get_visible_atmospheric_target_count() == 2 and observer.get_visible_atmospheric_target_count(targets[0]) == 3, "the successful third target is counted once for its final reward, then leaves the indicator")
+	targets[0].position.x = -1000
+	_check(observer.get_visible_atmospheric_target_count(targets[0]) == 2, "an offscreen automatic completion cannot activate the visible-target bonus")
+	layer.position = Vector2(-2000, 0)
+	_check(observer.get_visible_atmospheric_target_count() == 0, "survey counting respects the transformed screen position rather than local target coordinates")
+	layer.position = Vector2.ZERO
+	for calibrated in [false, true]:
+		for manual in [false, true]:
+			var meteor = load("res://scripts/meteor.gd").new()
+			root.add_child(meteor)
+			meteor.set_process(false)
+			meteor.base_value = 100.0
+			meteor.manual_touched = manual
+			meteor.set_features({"spectral_calibrated": calibrated})
+			var paid: Array = []
+			meteor.observed.connect(func(_m, reward, _multiplier, _manual, _grade): paid.append(reward))
+			meteor._finish_observation(1.0)
+			var expected := (115.0 if calibrated else 100.0) if manual else 68.0
+			_check(paid.size() == 1 and is_equal_approx(float(paid[0]), expected), "spectral research preserves the documented manual-only reward scope")
+			meteor.free()
+	observer.free()
+	spawner.free()
+	layer.free()
+	progression.free()
+
+
 func _run() -> void:
+	_verify_research_revision()
 	var packed: PackedScene = load("res://scenes/main.tscn")
 	_check(packed != null, "main scene loads")
 	if packed == null:
@@ -249,7 +316,7 @@ func _run() -> void:
 	)
 	_check(
 		game.upgrade_tree._upgrade_description(multi_target_definition)
-		== "커서 원 안의 유성을 동시 관측합니다. 자동 지원 1개(파편 추적 설치 시 조각 포함). 하늘 활동: 일반 표적 동시 출현 상한 +1개.",
+		== "커서 원 안 유성을 함께 관측합니다. 자동 지원 1개. 하늘 활동: 일반 표적 동시 출현 상한 +1개.",
 		"Korean Multi-Target Tracking description names capacity and both support effects"
 	)
 	_check(
@@ -259,8 +326,8 @@ func _run() -> void:
 	)
 	_check(
 		game.upgrade_tree._upgrade_description(triple_echo_definition)
-		== "공명 발생 시 추가 유성 2 → 3개. 공명 상관 분석 연구도 필요합니다.",
-		"Korean Triple Echo Array description names the three-meteor burst"
+		== "공명으로 나타나는 유성 3 → 4개.",
+		"Korean Triple Echo Array description names the four-meteor burst"
 	)
 	_check(
 		game.upgrade_tree._upgrade_description(leonid_storm_definition)
@@ -308,7 +375,7 @@ func _run() -> void:
 	)
 	_check(
 		game.upgrade_tree._upgrade_description(multi_target_definition)
-		== "Observes all meteors inside the cursor ring together. Automatic support: 1 target, including fragments after Fragment Tracking. Sky Activity: simultaneous regular targets +1.",
+		== "Observe every meteor in the cursor circle together. Auto-assist: 1 target. Sky Activity: simultaneous regular targets +1.",
 		"English Multi-Target Tracking description names capacity and both support effects"
 	)
 	_check(
@@ -318,8 +385,8 @@ func _run() -> void:
 	)
 	_check(
 		game.upgrade_tree._upgrade_description(triple_echo_definition)
-		== "Meteors per echo: 2 → 3. Requires Echo Correlation research.",
-		"English Triple Echo Array description names the three-meteor burst"
+		== "Meteors per Echo: 3 → 4.",
+		"English Triple Echo Array description names the four-meteor burst"
 	)
 	_check(
 		game.upgrade_tree._upgrade_description(leonid_storm_definition)
@@ -372,7 +439,7 @@ func _run() -> void:
 	_check(game.progression.get_max_active() == 4, "the opening sky supports four concurrent targets so attention starts scarce")
 	_check(balance.FIRST_METEOR_DELAY <= 2.0, "the opening meteor arrives before the sky feels empty")
 	_check(balance.REGULAR_SPAWN_INTERVAL_MIN == 1.6 and balance.REGULAR_SPAWN_INTERVAL_MAX == 2.4, "regular spawn cadence keeps multiple choices in flight")
-	_check(game.progression.get_available_nodes().size() == 15, "the eleven legacy and four price-gated Canis roots are available from the opening sky")
+	_check(game.progression.get_available_nodes().size() == 14, "ten base and four price-gated Canis roots are available; echo channels follow discovery")
 	_check(game.upgrade_tree.systems_readout != null, "the research chart owns the complete system-count readout")
 	_check(not game.hud.root_control.has_node("ArrayCompletionBar"), "the HUD no longer duplicates completion as a bar")
 	_check(not game.hud.tracking_cluster.is_processing(), "the hidden tracking instrument does no frame work before first use")
@@ -480,8 +547,8 @@ func _run() -> void:
 	_check(research_probe.forecast_classifies("binary_star") and research_probe.get_forecast_max_error("binary_star") == 22.0, "Double-Star Resolution classifies and tightens binary-star forecasts")
 	_check(research_probe.get_analysis_speed_multiplier("galaxy") == 1.25 and is_equal_approx(research_probe.get_observation_value_multiplier("galaxy", 1), 20.8), "Galaxy fields combine the four purchased global x2 leaves with Andromeda's conditional value bonus")
 	_check(research_probe.debug_purchase_node("echo_correlation_10") and is_equal_approx(research_probe.get_observation_echo_probability(), 0.10), "Gemini correlation opens at a ten-percent manual trigger chance")
-	_check(research_probe.get_observation_echo_count() == 0, "Gemini probability research cannot launch meteors before an echo channel is online")
-	_check(research_probe.debug_purchase_node("single_echo_channel") and research_probe.get_observation_echo_count() == 1, "Gemini's second root opens one echo channel")
+	_check(research_probe.get_observation_echo_count() == 1, "the first Gemini purchase immediately opens one extra meteor")
+	_check(research_probe.debug_purchase_node("single_echo_channel") and research_probe.get_observation_echo_count() == 2, "the first channel upgrade raises each echo to two meteors")
 	var echo_layer := Node2D.new()
 	var echo_spawner = load("res://scripts/meteor_spawner.gd").new()
 	root.add_child(echo_layer)
@@ -491,16 +558,16 @@ func _run() -> void:
 	echo_spawner.set_phase_time_remaining(10.0)
 	_check(echo_spawner.should_trigger_observation_echo(0.099) and not echo_spawner.should_trigger_observation_echo(0.10), "Gemini's first probability tier uses an exact ten-percent boundary")
 	_check(research_probe.debug_purchase_node("echo_correlation_20") and is_equal_approx(research_probe.get_observation_echo_probability(), 0.20), "Gemini correlation rises from ten to twenty percent")
-	_check(research_probe.debug_purchase_node("dual_echo_channel") and research_probe.get_observation_echo_count() == 2, "Gemini's second channel raises each burst to two meteors")
-	_check(research_probe.debug_purchase_node("triple_echo_array") and research_probe.get_observation_echo_count() == 3, "Gemini's final channel raises each burst to three meteors")
+	_check(research_probe.debug_purchase_node("dual_echo_channel") and research_probe.get_observation_echo_count() == 3, "Gemini's second channel raises each burst to three meteors")
+	_check(research_probe.debug_purchase_node("triple_echo_array") and research_probe.get_observation_echo_count() == 4, "Gemini's final channel raises each burst to four meteors")
 	_check(echo_spawner.should_trigger_observation_echo(0.199) and not echo_spawner.should_trigger_observation_echo(0.20), "Gemini's final probability tier uses an exact twenty-percent boundary")
 	_check(echo_spawner.try_spawn_observation_echo(false, false) == 0, "automatic observations never trigger Gemini echoes")
 	_check(echo_spawner.try_spawn_observation_echo(true, true) == 0, "echo meteors cannot recursively trigger another Gemini burst")
 	var echo_spawned: int = echo_spawner._spawn_observation_echo_burst()
-	var every_echo_tagged := echo_spawned == 3
+	var every_echo_tagged := echo_spawned == 4
 	for echo_target in echo_layer.get_children():
 		every_echo_tagged = every_echo_tagged and bool(echo_target.get_meta("gemini_echo", false))
-	_check(every_echo_tagged, "the completed Gemini array launches and tags exactly three additional meteors")
+	_check(every_echo_tagged, "the completed Gemini array launches and tags exactly four additional meteors")
 	var echo_children_before_split := echo_layer.get_child_count()
 	echo_spawner._on_fragment_requested(Vector2(480, 220), Vector2(80, 0), "fragment", true)
 	var echo_descendants_tagged := echo_layer.get_child_count() == echo_children_before_split + 3
@@ -528,14 +595,16 @@ func _run() -> void:
 	_check(not echo_spawner.can_schedule_observation_echo("fast"), "the full delayed echo sequence is rejected when it would cross the round boundary")
 	echo_spawner.set_phase_time_remaining(delayed_required)
 	_check(echo_spawner.can_schedule_observation_echo("fast"), "the delayed echo sequence is accepted exactly when its last target remains payable")
-	_check(echo_spawner._spawn_observation_echo_burst(echo_trigger) == 3 and echo_spawner.pending_echoes.size() == 3 and echo_layer.get_child_count() == 0, "Echo Delay Line queues all three channels instead of stacking them immediately")
+	_check(echo_spawner._spawn_observation_echo_burst(echo_trigger) == 4 and echo_spawner.pending_echoes.size() == 4 and echo_layer.get_child_count() == 0, "Echo Delay Line queues all four channels instead of stacking them immediately")
 	echo_spawner._update_pending_echoes(0.0)
-	_check(echo_layer.get_child_count() == 1 and echo_spawner.pending_echoes.size() == 2, "Echo Delay Line releases its first target immediately")
+	_check(echo_layer.get_child_count() == 1 and echo_spawner.pending_echoes.size() == 3, "Echo Delay Line releases its first target immediately")
 	echo_spawner._update_pending_echoes(0.74)
 	_check(echo_layer.get_child_count() == 1, "Echo Delay Line holds the second target until its declared interval")
 	echo_spawner._update_pending_echoes(0.02)
 	echo_spawner._update_pending_echoes(0.75)
-	_check(echo_layer.get_child_count() == 3 and echo_spawner.pending_echoes.is_empty(), "Echo Delay Line releases the remaining targets in sequence inside the round")
+	_check(echo_layer.get_child_count() == 3 and echo_spawner.pending_echoes.size() == 1, "Echo Delay Line keeps the fourth target pending until its own interval")
+	echo_spawner._update_pending_echoes(0.75)
+	_check(echo_layer.get_child_count() == 4 and echo_spawner.pending_echoes.is_empty(), "Echo Delay Line releases the remaining targets in sequence inside the round")
 	for delayed_echo_target in echo_layer.get_children():
 		delayed_echo_target.free()
 	_check(research_probe.debug_purchase_node("echo_deconfliction"), "Echo Deconfliction follows Wasat on one lower Pollux branch")
@@ -553,18 +622,18 @@ func _run() -> void:
 	_check(research_probe.debug_purchase_node("echo_beacon"), "Echo Beacon follows Wasat on the second lower Pollux branch")
 	var beacon_required: float = echo_spawner._echo_required_phase_time("fast")
 	echo_spawner.set_phase_time_remaining(beacon_required)
-	_check(echo_spawner._spawn_observation_echo_burst(echo_trigger) == 3 and echo_spawner.pending_contacts.size() == 3 and echo_spawner.pending_echoes.is_empty(), "Echo Beacon routes all delayed targets through the standard forecast-contact pipeline")
+	_check(echo_spawner._spawn_observation_echo_burst(echo_trigger) == 4 and echo_spawner.pending_contacts.size() == 4 and echo_spawner.pending_echoes.is_empty(), "Echo Beacon routes all delayed targets through the standard forecast-contact pipeline")
 	var standard_echo_contacts := true
 	for echo_contact_variant in echo_spawner.pending_contacts:
 		var echo_contact: Dictionary = echo_contact_variant
 		standard_echo_contacts = standard_echo_contacts and bool(echo_contact.gemini_echo) and bool(echo_contact.classified) and echo_contact.has("error_offset") and echo_contact.has("intercept")
 	_check(standard_echo_contacts, "Echo Beacon reuses the existing red-light contact vocabulary without a second overlay language")
 	echo_spawner._update_pending_contacts(echo_spawner.ECHO_BEACON_LEAD - 0.01)
-	_check(echo_layer.get_child_count() == 0 and echo_spawner.pending_contacts.size() == 3, "Echo Beacon keeps every target pending through its visible warning")
+	_check(echo_layer.get_child_count() == 0 and echo_spawner.pending_contacts.size() == 4, "Echo Beacon keeps every target pending through its visible warning")
 	echo_spawner._update_pending_contacts(0.02)
 	_check(echo_layer.get_child_count() == 1 and bool(echo_layer.get_child(0).get_meta("gemini_echo", false)), "the first beacon resolves into a tagged non-recursive echo")
-	echo_spawner._update_pending_contacts(2.0)
-	var every_beacon_echo_tagged := echo_layer.get_child_count() == 3
+	echo_spawner._update_pending_contacts(2.25)
+	var every_beacon_echo_tagged := echo_layer.get_child_count() == 4
 	for beacon_echo_target in echo_layer.get_children():
 		every_beacon_echo_tagged = every_beacon_echo_tagged and bool(beacon_echo_target.get_meta("gemini_echo", false))
 	_check(every_beacon_echo_tagged and echo_spawner.pending_contacts.is_empty(), "all beacon contacts resolve as tagged echoes before the accepted boundary")

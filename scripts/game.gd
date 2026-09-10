@@ -521,12 +521,7 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 	# research value growth belongs only to the economy. Keeping the two values
 	# separate prevents an x2 research leaf from changing how the same hit feels.
 	var intrinsic_multiplier := multiplier
-	# The emitting target marks itself inactive immediately before this signal;
-	# count it explicitly so a three-contact finish means the player saw three.
-	var active_target_count := 1
-	for candidate in meteor_layer.get_children():
-		if candidate.has_method("can_be_tracked") and candidate.can_be_tracked():
-			active_target_count += 1
+	var active_target_count: int = observer.get_visible_atmospheric_target_count(meteor)
 	var research_multiplier: float = progression.get_observation_value_multiplier(
 		String(meteor.type_id), active_target_count
 	)

@@ -425,9 +425,10 @@ func _on_target_spawned(target) -> void:
 
 
 func _on_target_observed(target, reward: float, multiplier: float, was_manual: bool, _quality_grade: String) -> void:
-	var active_target_count := 1
+	var screen_rect: Rect2 = game.get_viewport().get_visible_rect()
+	var active_target_count := int(screen_rect.has_point(target.get_global_transform_with_canvas().origin))
 	for candidate in game.meteor_layer.get_children():
-		if candidate.has_method("can_be_tracked") and candidate.can_be_tracked():
+		if candidate.has_method("can_be_tracked") and candidate.can_be_tracked() and screen_rect.has_point(candidate.get_global_transform_with_canvas().origin):
 			active_target_count += 1
 	var research_multiplier: float = game.progression.get_observation_value_multiplier(
 		String(target.type_id), active_target_count
