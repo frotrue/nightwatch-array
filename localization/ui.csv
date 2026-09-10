@@ -56,9 +56,9 @@ MODULE_TITLE,Observation modules,관측 모듈
 MODULE_INTRO,Two slots. Combine modules and change them for free.,슬롯 2개. 모듈을 조합하고 무료로 편성을 바꿀 수 있습니다.
 MODULE_BALANCE,Data %s   ·   Equipped: %s,보유 데이터 %s   ·   장착: %s
 MODULE_FOCUS_NAME,Splitting observation,분열 관측
-MODULE_FOCUS_DESC,"Common/fast success: 30% chance to split into 2 small meteors. Manual or automatic. Each has 25% base Data; no further splits.","일반·고속 유성 관측 성공 시 30% 확률로 작은 유성 2개 생성. 수동·자동 모두 적용. 각각 원본 기본 데이터의 25%이며 재분열하지 않습니다."
+MODULE_FOCUS_DESC,"Complete a common/fast meteor: 30% chance to spawn 2 fragments, each worth 25% base Data.",일반·고속 유성 관측 완료 시 30% 확률로 조각 2개 생성. 조각당 기본 데이터 25%.
 MODULE_WIDE_NAME,Wide-field observation,광역 관측
-MODULE_WIDE_DESC,Radius +65%. Manual speed -25%. Two extra targets per copy; existing multi-target research remains.,관측 반경 +65%. 수동 속도 -25%. 장착 1개당 추가 표적 +2. 기존 다중 관측 연구 유지.
+MODULE_WIDE_DESC,"Observation radius +65%, extra targets +2. Manual speed -25%.","관측 반경 +65%, 동시 관측 +2개. 수동 관측 속도 -25%."
 MODULE_BUY,Buy · %s Data,구매 · %s 데이터
 MODULE_EQUIP,Equip,장착
 MODULE_EQUIPPED,Equipped,장착 중
@@ -882,15 +882,15 @@ RING_RESEARCH_BUY,Research slot,자리 연구
 RING_REQUIRES,Requires: %s,선행 조건: %s
 MODULE_PRECISION_NAME,Precision tracking,정밀 추적
 MODULE_PRECISION_SHORT,Precision,정밀 추적
-MODULE_PRECISION_DESC,Manual speed ×1.50. Observation radius ×0.70.,수동 속도 ×1.50. 관측 반경 ×0.70.
+MODULE_PRECISION_DESC,Manual speed +50%. Observation radius -30%.,수동 관측 속도 +50%. 관측 반경 -30%.
 MODULE_PRECISION_COMBO,Combine with wide to offset the smaller radius.,광역과 조합하면 줄어든 반경을 보완합니다.
 MODULE_RECORD_NAME,Deep record,심층 기록
 MODULE_RECORD_SHORT,Record,심층 기록
-MODULE_RECORD_DESC,M31 Data ×1.50. Manual speed ×0.80.,M31 데이터 ×1.50. 수동 속도 ×0.80.
+MODULE_RECORD_DESC,M31 Data +50%. Manual speed -20%.,M31 데이터 +50%. 수동 관측 속도 -20%.
 MODULE_RECORD_COMBO,Precision offsets the speed penalty.,정밀 관측과 조합하면 속도 감소를 보완합니다.
 MODULE_REVISIT_NAME,Repeat observation,재관측
 MODULE_REVISIT_SHORT,Revisit,재관측
-MODULE_REVISIT_DESC,M31 cooldown after completion ×0.60.,M31 관측 완료 후 대기 ×0.60.
+MODULE_REVISIT_DESC,Wait after observing M31 -40%.,M31 관측 후 대기 시간 -40%.
 MODULE_REVISIT_COMBO,Deep record increases the reward per repeat.,심층 기록과 조합하면 재관측 수입이 증가합니다.
 MODULE_FOCUS_COMBO,Each equipped copy adds 30 percentage points (max 100%).,중복 장착마다 확률 +30%p (최대 100%).
 MODULE_WIDE_COMBO,Pair with splitting observation to collect both fragments.,분열 관측과 조합해 작은 유성 둘을 함께 관측하세요.
