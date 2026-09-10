@@ -30,8 +30,6 @@ var end_uv := Vector2(0.68, 0.53)
 var body_position := Vector2.ZERO
 var velocity := Vector2.ZERO
 var base_value := 56.0
-var captured_once := false
-var capture_remaining := 0.0
 var _linger := 0.0
 
 func configure(controller: Node, description: Dictionary) -> void:
@@ -55,11 +53,6 @@ func configure(controller: Node, description: Dictionary) -> void:
 			visible_lifetime += 4.0
 	_update_position(0.0)
 	queue_redraw()
-
-func capture_for(seconds: float) -> void:
-	if can_be_tracked() and not captured_once:
-		captured_once = true
-		capture_remaining = clampf(seconds, 0.0, 6.0)
 
 func can_be_tracked() -> bool:
 	return research != null and research.game.observation_phase_active and alive and age >= warning_time
@@ -133,8 +126,7 @@ func _process(delta: float) -> void:
 		if _linger <= 0.0:
 			queue_free()
 		return
-	var motion_delta := maxf(0.0, real_delta - capture_remaining)
-	capture_remaining = maxf(0.0, capture_remaining - real_delta)
+	var motion_delta: float = real_delta * research.game.observer.motion_multiplier_for(self)
 	age += motion_delta
 	_update_position(motion_delta)
 	if can_be_tracked() and allows_automatic_assist() and dish_assist_rate > 0.0:
@@ -195,11 +187,9 @@ func _draw() -> void:
 	draw_set_transform(Vector2.ZERO)
 
 func get_save_data() -> Dictionary:
-	return {"kind": kind, "origin_kind": origin_kind, "event_id": event_id, "ticket": reward_ticket_id, "component": component_index, "variant": variant, "start": [start_uv.x, start_uv.y], "end": [end_uv.x, end_uv.y], "age": age, "stage_progress": stage_progress, "manual_work": manual_work, "automatic_work": automatic_work, "manual_tracking_time": manual_tracking_time, "quality_integral": quality_integral, "quality": quality, "discovered": discovered, "complete": not alive and get_progress() >= 0.9999, "captured_once": captured_once, "capture_remaining": capture_remaining}
+	return {"kind": kind, "origin_kind": origin_kind, "event_id": event_id, "ticket": reward_ticket_id, "component": component_index, "variant": variant, "start": [start_uv.x, start_uv.y], "end": [end_uv.x, end_uv.y], "age": age, "stage_progress": stage_progress, "manual_work": manual_work, "automatic_work": automatic_work, "manual_tracking_time": manual_tracking_time, "quality_integral": quality_integral, "quality": quality, "discovered": discovered, "complete": not alive and get_progress() >= 0.9999}
 
 func restore_progress(data: Dictionary, restart_lifetime: bool = false) -> void:
-	captured_once = Data.flag(data.get("captured_once", false))
-	capture_remaining = Data.number(data.get("capture_remaining", 0), 6.0) if captured_once else 0.0
 	age = 0.0 if restart_lifetime else Data.number(data.get("age", 0), visible_lifetime)
 	stage_progress = Data.number(data.get("stage_progress", 0), 1.0)
 	manual_work = Data.number(data.get("manual_work", 0), 1.0)

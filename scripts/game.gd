@@ -507,6 +507,7 @@ func handle_debug_key_input(event: InputEvent) -> void:
 
 
 func _on_meteor_spawned(meteor) -> void:
+	meteor.observation_controller = observer
 	meteor.observed.connect(_on_meteor_observed)
 	meteor.expired.connect(_on_meteor_expired)
 	if progression.has_upgrade("wide_field"):

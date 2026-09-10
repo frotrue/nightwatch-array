@@ -117,7 +117,7 @@ func _run() -> void:
 	_check_sweep_charge_contract()
 	_check_completion_roles()
 	if failures.is_empty():
-		print("MODULE_EXPANSION_PASS: eight modules, swept line geometry, one-shot capture, burst lifecycle and retired inventory")
+		print("MODULE_EXPANSION_PASS: eight modules, swept line geometry, live field slowdown, burst lifecycle and retired inventory")
 		quit(0)
 	else:
 		push_error(str(failures))
@@ -134,7 +134,7 @@ func _check_catalogue() -> void:
 	for id in removed:
 		_check(not Modules.DEFINITIONS.has(id) and not model.grant(id), "deleted effect cannot be granted: " + id)
 	var copies := _installed(["linear_observation", "linear_observation", "capture_hold", "capture_hold"])
-	_check(is_equal_approx(copies.stacked_effect("linear_observation", "line_width"), 7.0) and is_equal_approx(copies.stacked_effect("capture_hold", "hold_seconds"), 4.0), "same-ID copies add rather than multiply")
+	_check(is_equal_approx(copies.stacked_effect("linear_observation", "line_width"), 7.0) and is_equal_approx(copies.stacked_effect("capture_hold", "motion_speed"), 0.4), "same-ID copies add rather than multiply")
 	var restored = Modules.new()
 	restored.load_save_data(JSON.parse_string(JSON.stringify(copies.get_save_data())))
 	_check(restored.slots == copies.slots and restored.quantities == copies.quantities, "new module identities preserve copies and slots on disk")
@@ -165,28 +165,46 @@ func _check_linear_geometry() -> void:
 	observer.free()
 
 func _check_capture() -> void:
+	var added_action := not InputMap.has_action(&"nw_observe")
+	if added_action: InputMap.add_action(&"nw_observe")
+	Input.action_press(&"nw_observe")
 	var meteor := Meteor.new()
-	meteor.configure(Balance.meteor_spec("common"), "common", Vector2(200, 200), Vector2(100, 0), 10.0, {})
-	root.add_child(meteor)
-	meteor.set_process(false)
-	meteor.required_track_time = 100.0
+	var control := Meteor.new()
+	for target in [meteor, control]:
+		target.configure(Balance.meteor_spec("common"), "common", Vector2(200, 200), Vector2(100, 0), 10.0, {})
+		root.add_child(target)
+		target.set_process(false)
+		target.required_track_time = 100.0
 	var observer := Observer.new()
 	observer.progression = MockProgression.new()
 	observer.modules = _installed(["capture_hold"])
 	observer.cursor_position = meteor.position
-	observer.previous_cursor_position = meteor.position
-	observer._apply_manual_contact(meteor, 0.001)
-	var point := meteor.position
+	meteor.observation_controller = observer
 	meteor.set_dish_assist_rate(0.1)
 	meteor._process(1.0)
-	_check(meteor.position == point and meteor.age == 0.0 and meteor.observation_progress > 0.09, "capture pauses motion and burnout while actual dish work continues")
-	meteor.capture_for(6.0)
-	_check(is_equal_approx(meteor.capture_remaining, 1.0), "repeated contact cannot extend the one-shot hold")
-	meteor._process(1.5)
-	_check(meteor.position != point and is_equal_approx(meteor.age, 0.5), "motion resumes using only the unfrozen part of a frame")
-	meteor.capture_for(2.0)
-	_check(meteor.capture_remaining == 0.0, "expired capture cannot retrigger")
+	control._process(0.7)
+	_check(meteor.position.is_equal_approx(control.position) and is_equal_approx(meteor.age, 0.7), "inside field advances motion and burnout at 70%")
+	_check(meteor.observation_progress >= 0.1, "slowdown leaves actual dish observation work unchanged")
+	_check(observer.motion_multiplier_for(meteor) == 1.0, "meteor leaving the field immediately loses slowdown")
+	observer.cursor_position = meteor.position
+	_check(is_equal_approx(observer.motion_multiplier_for(meteor), 0.7), "reentering reapplies slowdown without a one-shot flag")
+	Input.action_release(&"nw_observe")
+	_check(observer.motion_multiplier_for(meteor) == 1.0, "button release removes slowdown without waiting for contact refresh")
+	Input.action_press(&"nw_observe")
+	observer.modules.equip("", 0)
+	_check(observer.motion_multiplier_for(meteor) == 1.0, "unequip removes slowdown immediately")
+	observer.modules = _installed(["capture_hold", "linear_observation"])
+	observer.cursor_position = meteor.position + Vector2(35, 0)
+	_check(is_equal_approx(observer.motion_multiplier_for(meteor), 0.7), "line slows targets beyond the circular field")
+	observer.cursor_position = meteor.position + Vector2(0, 6)
+	_check(observer.motion_multiplier_for(meteor) == 1.0, "line does not slow targets beyond its thin vertical bounds")
+	observer.cursor_position = meteor.position
+	observer.modules = _installed(["capture_hold", "capture_hold", "capture_hold", "capture_hold", "capture_hold"])
+	_check(is_equal_approx(observer.motion_multiplier_for(meteor), 0.1), "stacked slowdown never stops time completely")
+	Input.action_release(&"nw_observe")
+	if added_action: InputMap.erase_action(&"nw_observe")
 	meteor.free()
+	control.free()
 	observer.progression.free()
 	observer.free()
 

@@ -61,8 +61,8 @@ static func draw_module(canvas: CanvasItem, rect: Rect2, id: String, active: boo
 		canvas.draw_rect(Rect2(c - Vector2(1.25, 0.32) * r, Vector2(2.5, 0.64) * r), ink, false, 1.2, true)
 		canvas.draw_line(c - Vector2(0, 0.62) * r, c + Vector2(0, 0.62) * r, ink, 1.0, true)
 	elif id == "capture_hold":
-		for side in [-1.0, 1.0]:
-			canvas.draw_line(c + Vector2(side * 0.75, -0.6) * r, c + Vector2(side * 0.75, 0.6) * r, ink, 1.4, true)
-		canvas.draw_circle(c, r * 0.24, ink)
+		for row in [-1.0, 0.0, 1.0]:
+			canvas.draw_line(c + Vector2(-1.0, row * 0.45) * r, c + Vector2(0.25, row * 0.3) * r, ink, 1.0, true)
+		canvas.draw_circle(c + Vector2(0.7, 0) * r, r * 0.2, ink)
 	elif id == "overcharge":
 		canvas.draw_polyline(PackedVector2Array([c + Vector2(0.3, -1.1) * r, c + Vector2(-0.5, 0.1) * r, c + Vector2(0.4, -0.05) * r, c + Vector2(-0.25, 1.1) * r]), ink, 1.7, true)

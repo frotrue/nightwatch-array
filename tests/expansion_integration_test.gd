@@ -421,6 +421,7 @@ func _check_migration() -> void:
 	research.director.end_round()
 
 func _check_new_modules() -> void:
+	Input.action_press(&"nw_observe")
 	_sky()
 	research.director.end_round()
 	_clear_split_sky()
@@ -438,7 +439,6 @@ func _check_new_modules() -> void:
 			game.observer.previous_cursor_position = meteor.global_position
 			game.observer._apply_manual_contact(meteor, 20.0)
 			meteor._process(0.0)
-			_check(meteor.captured_once, "real manual contact applies capture before completion")
 		else:
 			meteor.set_dish_assist_rate(10.0)
 			meteor._process(0.11)
@@ -454,17 +454,21 @@ func _check_new_modules() -> void:
 	game.observer.cursor_position = rare.position
 	game.observer.previous_cursor_position = rare.position
 	game.observer._apply_manual_contact(rare, 0.00001)
-	var rare_position: Vector2 = rare.position
+	var rare_age: float = rare.age
 	rare._process(0.5)
-	_check(rare.position == rare_position and rare.capture_remaining == 1.5, "rare meteor shares the bounded hold behavior")
+	_check(is_equal_approx(rare.age - rare_age, 0.35), "rare meteor movement and lifetime run at 70% inside the field")
 	var saved: Dictionary = JSON.parse_string(JSON.stringify(game._build_save_data()))
 	game._apply_save_data(saved)
 	_freeze(game)
 	_check(research.modules.burst_remaining == 4.5, "whole-game save restore preserves remaining burst time")
 	var restored = research.director.targets()[0]
-	_check(restored.captured_once and restored.capture_remaining == 1.5, "whole-game save restore preserves a partially spent hold")
-	restored.capture_for(6.0)
-	_check(restored.capture_remaining == 1.5, "restore cannot grant a second capture")
+	restored.restore_progress({"age": 2.0, "captured_once": true, "capture_remaining": 6.0})
+	game.observer.cursor_position = restored.position + Vector2(10000, 0)
+	var restored_age: float = restored.age
+	restored._process(0.5)
+	_check(is_equal_approx(restored.age - restored_age, 0.5), "old saved capture timers cannot freeze restored targets outside the field")
+	_check(not restored.get_save_data().has("capture_remaining"), "new saves contain no lingering capture timer")
+	Input.action_release(&"nw_observe")
 	game.upgrade_tree.open_tree()
 	var remaining: float = research.modules.burst_remaining
 	game.set_process(true)

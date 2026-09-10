@@ -46,10 +46,10 @@ MODULE_LINEAR_OBSERVATION_NAME,Linear observation,선형 관측
 MODULE_LINEAR_OBSERVATION_SHORT,Linear observation,선형 관측
 MODULE_LINEAR_OBSERVATION_DESC,Observe every target in a horizontal band. Width ×4 and height ×0.45 of the circular field.,가로로 긴 띠 안의 유성을 함께 관측. 기존 관측 영역 대비 너비 4배·높이 0.45배.
 MODULE_LINEAR_OBSERVATION_COMBO,Wide-field observation and overcharge expand the band.,광역 관측·과충전을 함께 쓰면 띠도 넓어집니다.
-MODULE_CAPTURE_HOLD_NAME,Capture hold,포착 고정
-MODULE_CAPTURE_HOLD_SHORT,Capture hold,포착 고정
-MODULE_CAPTURE_HOLD_DESC,Cursor contact stops a meteor for 2s. Once per meteor.,커서에 닿은 유성을 2초간 정지. 유성마다 한 번만 발동.
-MODULE_CAPTURE_HOLD_COMBO,Hold moving meteors and split fragments inside your observation field.,유성과 분열 조각을 관측 영역에 붙잡아 둡니다.
+MODULE_CAPTURE_HOLD_NAME,Observation slowdown,감속 관측
+MODULE_CAPTURE_HOLD_SHORT,Slowdown,감속 관측
+MODULE_CAPTURE_HOLD_DESC,While observing: meteors inside the field move and burn out 30% slower.,관측 중 범위 안 유성의 이동·소멸 속도 30% 감소.
+MODULE_CAPTURE_HOLD_COMBO,Wide and linear fields slow more meteors. Leaving the field restores normal speed.,광역·선형 관측으로 감속 범위 확대. 범위 밖에서는 원래 속도로 복귀.
 MODULE_OVERCHARGE_NAME,Overcharge,과충전
 MODULE_OVERCHARGE_SHORT,Overcharge,과충전
 MODULE_OVERCHARGE_DESC,Every 12 observations: manual speed ×2 and radius ×1.5 for 6s. No charging during the burst.,관측 12회마다 6초간 수동 속도 2배·반경 1.5배. 발동 중에는 충전 중지.

@@ -36,3 +36,21 @@ for the rare targets that the game already restores.
 
 These checks establish mechanics, migration and presentation. They do not establish
 long-term module balance or enjoyment. The human feedback request remains pending.
+
+## Follow-up: continuous slowdown
+
+The user subsequently approved replacing Capture Hold with Observation Slowdown:
+30% slower movement and burnout while observing inside the current circle/band,
+normal observation work, and immediate release outside the field or on input/equipment
+release. Reentry can slow the target again. Copies add −30 percentage points with a
+10% minimum remaining speed, matching the existing additive module contract.
+The capture_hold inventory ID is retained; per-target stop timers and saved flags
+are removed. Old saved timers are ignored. No additional playfield indicators were added.
+
+Boundary, reentry, release, unequip, line geometry, stacking, real rare-target motion
+and old saved-timer rejection tests passed. All 20 quick gates, the three-seed economy
+and Windows export passed in `build/validation/20260910T093835141Z_b4a09376/summary.json`.
+Eight paired seeds with the existing synthetic 30-second driver averaged 19.38
+observations without a module and 25.88 with slowdown alone. The probe log is
+`build/module_review/slow-probe.log`. This establishes a mechanical effect under the
+specified workload, not a human comfort verdict. New human feedback is still absent.

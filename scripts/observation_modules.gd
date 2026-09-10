@@ -16,7 +16,7 @@ const DEFINITIONS := {
 	"sweep_optics": {"cost": 0.0, "new_speed": 0.9, "sweep_charge": 1.35, "rare_radius": 1.5, "glyph": "wide", "code": "SWEEP", "badge": "CHARGE ×1.35", "requires": [], "source": "sample", "category": "sweep", "pool": "sweep"},
 	"wide_correlation": {"cost": 0.0, "primary_speed": 0.75, "secondary_speed": 1.35, "glyph": "wide", "code": "CORRELATE", "badge": "LINK ×1.35", "requires": [], "source": "sample", "category": "sweep", "pool": "sweep"},
 	"linear_observation": {"cost": 0.0, "line_width": 4.0, "glyph": "linear_observation", "code": "LINE", "badge": "LINE ×4", "requires": [], "source": "sample", "category": "sweep", "pool": "sweep"},
-	"capture_hold": {"cost": 0.0, "hold_seconds": 2.0, "glyph": "capture_hold", "code": "HOLD", "badge": "HOLD 2s", "requires": [], "source": "sample", "category": "trace", "pool": "trace"},
+	"capture_hold": {"cost": 0.0, "motion_speed": 0.7, "glyph": "capture_hold", "code": "SLOW", "badge": "−30%", "requires": [], "source": "sample", "category": "trace", "pool": "trace"},
 	"overcharge": {"cost": 0.0, "burst_speed": 2.0, "burst_radius": 1.5, "glyph": "overcharge", "code": "BURST", "badge": "12 → 6s", "requires": [], "source": "sample", "category": "link", "pool": "link"},
 }
 const SLOT_RESEARCH := {
@@ -100,8 +100,6 @@ func grant_copy(id: String) -> bool:
 	return true
 
 func stacked_effect(id: String, key: String) -> float:
-	if key == "hold_seconds":
-		return float(DEFINITIONS.get(id, {}).get(key, 0.0)) * installed_count(id)
 	return maxf(0.1, 1.0 + (float(DEFINITIONS.get(id, {}).get(key, 1.0)) - 1.0) * installed_count(id))
 
 func first_empty_slot() -> int:

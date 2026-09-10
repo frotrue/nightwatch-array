@@ -169,8 +169,10 @@ The chart yields first-refusal input while the popup is active.
 Reads detect direct fixture mutation, duplicate/unowned slots and capacity changes.
 Manual speed/radius can have positive penalties below one; dishes keep their own rules.
 Linear observation uses a swept rectangle, with a matching procedural cursor; every
-contacted target is observed. Capture Hold pauses a target's motion/burnout clock once,
-while real observation work continues. Overcharge counts completion signals once,
+contacted target is observed. Observation Slowdown retains the capture_hold inventory ID.
+Targets query the observer's current field/input/equipment for a motion multiplier;
+motion and burnout slow together while observation work continues at its normal rate.
+No per-target timer or saved capture flag survives the replacement. Overcharge counts completion signals once,
 uses Game's active real-time clock, and saves remaining time separately from equipment.
 A new round or a changed overcharge installation clears it. Removed module effects,
 interaction-trail buffers, dish relay modifiers and archive targets no longer execute.

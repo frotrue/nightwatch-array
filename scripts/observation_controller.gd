@@ -255,25 +255,32 @@ func _apply_manual_contact(target, delta: float) -> bool:
 		if interval.x < 0.0 or interval.y <= interval.x:
 			return false
 		var midpoint := previous_cursor_position.lerp(cursor_position, (interval.x + interval.y) * 0.5)
-		_capture_target(target)
 		target.apply_manual_observation(delta * (interval.y - interval.x), _target_contact_distance(target, midpoint), tracking_radius, manual_speed)
 		return true
 	var current_distance: float = _target_contact_distance(target, cursor_position)
 	if current_distance <= tracking_radius:
-		_capture_target(target)
 		target.apply_manual_observation(delta, current_distance, tracking_radius, manual_speed)
 		return true
 	var swept_distance := _target_cursor_path_distance(target)
 	if swept_distance <= tracking_radius:
 		var contact_scale := _estimate_sweep_contact_scale(tracking_radius, swept_distance)
-		_capture_target(target)
 		target.apply_manual_observation(delta * contact_scale, swept_distance, tracking_radius, manual_speed)
 		return true
 	return false
 
-func _capture_target(target) -> void:
-	if modules != null and progression.galaxy_unlocked() and modules.has("capture_hold") and target.has_method("capture_for"):
-		target.capture_for(minf(6.0, modules.stacked_effect("capture_hold", "hold_seconds")))
+func motion_multiplier_for(target) -> float:
+	# This is a live field query, not an effect attached to a meteor. Leaving the
+	# field, releasing observation, changing equipment or pausing removes it.
+	if modules == null or progression == null or not progression.galaxy_unlocked() or not modules.has("capture_hold"):
+		return 1.0
+	if not Input.is_action_pressed(&"nw_observe") or not _target_is_valid(target):
+		return 1.0
+	if is_inside_tree() and (get_tree().paused or _cursor_is_on_ui()):
+		return 1.0
+	var radius: float = target.get_tracking_radius(_world_px(_module_tracking_radius()))
+	if _target_contact_distance(target, cursor_position) > radius:
+		return 1.0
+	return modules.stacked_effect("capture_hold", "motion_speed")
 
 func _linear_enabled() -> bool:
 	return modules != null and progression != null and progression.galaxy_unlocked() and modules.has("linear_observation")

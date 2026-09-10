@@ -45,12 +45,14 @@ func _run() -> void:
 	_install(game, NEW_MODULES)
 	game.deep_sky.modules.restore_round_state({"burst_remaining": 4.5})
 	game.observer._apply_manual_contact(meteor, 0.00001)
-	var held_position: Vector2 = meteor.position
+	Input.action_press(&"nw_observe")
+	var starting_age: float = meteor.age
 	meteor._process(0.5)
-	if meteor.position != held_position: failures.append("captured meteor moved")
+	if not is_equal_approx(meteor.age - starting_age, 0.35): failures.append("meteor did not slow by 30%")
+	Input.action_release(&"nw_observe")
 	game.effects.reset()
 	_freeze(game)
-	await _capture(game, "04_overcharge_hold")
+	await _capture(game, "04_overcharge_slow")
 	game.observer.reset()
 	game.upgrade_tree.open_tree()
 	game.module_popup.open()
@@ -101,7 +103,7 @@ func _slice(game: Node) -> void:
 	game.observation_phase_remaining = 60.0
 	game.spawner.set_phase_time_remaining(60.0)
 	DisplayServer.window_set_title("Nightwatch — 새 모듈 60초 체험 (저장 없음)")
-	print("MODULE_SLICE_READY: line, capture, overcharge, split and wide; hold LMB and move normally")
+	print("MODULE_SLICE_READY: line, slowdown, overcharge, split and wide; hold LMB and move normally")
 	var deadline := Time.get_ticks_msec() + 120000
 	var elapsed := 0.0
 	var held_seconds := 0.0
@@ -128,6 +130,7 @@ func _probe() -> void:
 			_install(game, ids)
 			var rng := RandomNumberGenerator.new()
 			rng.seed = seed_value
+			Input.action_press(&"nw_observe")
 			var held := 0.0
 			var burst := 0.0
 			var completed := 0
@@ -148,14 +151,15 @@ func _probe() -> void:
 				game.deep_sky.modules.advance_time(0.05)
 				if game.deep_sky.modules.burst_remaining > 0: burst += 0.05
 				for meteor in game.meteor_layer.get_children():
-					if meteor.capture_remaining > 0: held += 0.05
+					if game.observer.motion_multiplier_for(meteor) < 1.0: held += 0.05
 					meteor._process(0.05)
 					if not meteor.alive:
 						if meteor.observed_successfully: completed += 1
 						meteor.free()
 				peak = maxi(peak, game.meteor_layer.get_child_count())
 			if peak > 32: failures.append("unbounded target population")
-			rows.append({"seed": seed_value, "modules": ids, "completions": completed, "held_target_seconds": held, "burst_seconds": burst, "peak_live": peak})
+			rows.append({"seed": seed_value, "modules": ids, "completions": completed, "slowed_target_seconds": held, "burst_seconds": burst, "peak_live": peak})
+			Input.action_release(&"nw_observe")
 			game.free()
 			await process_frame
 	if source != Capture.source_snapshot(failures): failures.append("source changed during probe")

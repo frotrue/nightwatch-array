@@ -58,8 +58,7 @@ var quality_integral: float = 0.0
 var interruption_count: int = 0
 var manual_contribution: float = 0.0
 var automatic_contribution: float = 0.0
-var captured_once := false
-var capture_remaining := 0.0
+var observation_controller: Node
 var alive: bool = true
 var observed_successfully: bool = false
 var split_done: bool = false
@@ -124,8 +123,6 @@ func configure(spec: Dictionary, meteor_type: String, start_position: Vector2, m
 	observation_visual_scale = _current_visual_scale()
 	rng.seed = int(start_position.x * 193.0 + start_position.y * 877.0 + velocity.length() * 31.0) & 0x7fffffff
 	wobble_phase = rng.randf_range(0.0, TAU)
-	captured_once = false
-	capture_remaining = 0.0
 	manual_contribution = 0.0
 	automatic_contribution = 0.0
 	trail_points.clear()
@@ -148,12 +145,6 @@ static func burn_speed_ratio(progress: float, terminal_ratio: float) -> float:
 	return 1.0 - (1.0 - ratio) * clampf(progress, 0.0, 1.0)
 
 
-func capture_for(seconds: float) -> void:
-	if alive and not captured_once:
-		captured_once = true
-		capture_remaining = clampf(seconds, 0.0, 6.0)
-
-
 func _ready() -> void:
 	# Every meteor uses the same additive state. A material per spawn forced extra
 	# renderer state changes and made shower/fragment bursts compile and bind many
@@ -174,8 +165,7 @@ func _process(delta: float) -> void:
 			queue_free()
 		return
 
-	var motion_delta := maxf(0.0, delta - capture_remaining)
-	capture_remaining = maxf(0.0, capture_remaining - delta)
+	var motion_delta: float = delta * observation_controller.motion_multiplier_for(self) if is_instance_valid(observation_controller) else delta
 	age += motion_delta
 	if motion_delta > 0.0:
 		_update_burn_motion(motion_delta)
