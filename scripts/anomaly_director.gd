@@ -105,6 +105,8 @@ func _event_descriptors(ticket_id: String, kind: String, _variant: String, delay
 	return result
 
 func _spawn_component(descriptor: Dictionary) -> void:
+	if descriptor.get("kind", "") != "rare" or descriptor.get("origin_kind", "natural") != "natural":
+		return
 	var target := Target.new()
 	target.configure(research, descriptor)
 	target.z_index = 10
@@ -152,21 +154,6 @@ func expire_component(target: Node) -> void:
 	research.game.observer.release_target(target)
 	research.changed.emit()
 
-func archive_meteor(meteor: Node) -> void:
-	if not research.modules.has("afterglow_archive") or not research.game.observation_phase_active or meteor.type_id not in ["common", "fast"] or not meteor.is_natural_observation():
-		return
-	for target in targets():
-		if target.origin_kind == "archive":
-			return
-	if not _space_for(1):
-		return
-	var rect: Rect2 = research.game.observation_view.atmospheric_rect()
-	var uv: Vector2 = (meteor.global_position - rect.position) / rect.size
-	uv = uv.clamp(Vector2(0.12, 0.17), Vector2(0.88, 0.77))
-	event_serial += 1
-	var id := "a/%d" % event_serial
-	_ensure_ticket(id, "afterglow", "archive")
-	_spawn_component({"ticket": id, "event_id": id, "kind": "afterglow", "origin_kind": "archive", "component": 0, "start": uv, "end": uv, "archive_value": meteor.base_value * 0.5 * research.modules.installed_count("afterglow_archive")})
 
 func end_round() -> void:
 	for target in targets():
@@ -218,10 +205,10 @@ func load_save_data(data: Dictionary) -> void:
 			if not id is String or id.length() > 120 or tickets.size() >= 10000:
 				continue
 			var ticket = raw_tickets[id]
-			if not ticket is Dictionary or ticket.get("kind", "") not in ["rare", "afterglow"] or not ticket.get("components", {}) is Dictionary:
+			if not ticket is Dictionary or ticket.get("kind", "") != "rare" or not ticket.get("components", {}) is Dictionary:
 				continue
 			var origin: String = ticket.get("origin_kind", "natural") if ticket.get("origin_kind", "") is String else "natural"
-			if origin not in ["natural", "archive"]:
+			if origin != "natural":
 				continue
 			_ensure_ticket(id, ticket.kind, origin)
 			tickets[id].sample_units = Data.integer(ticket.get("sample_units", 0), 3)
@@ -252,7 +239,7 @@ func load_save_data(data: Dictionary) -> void:
 					pending.append(descriptor)
 
 func _decode_descriptor(entry: Dictionary) -> Dictionary:
-	if entry.get("kind", "") not in ["rare", "afterglow"] or not tickets.has(entry.get("ticket", "")):
+	if entry.get("kind", "") != "rare" or not tickets.has(entry.get("ticket", "")):
 		return {}
 	var descriptor: Dictionary = entry.duplicate(true)
 	for key in ["start", "end"]:
@@ -265,7 +252,6 @@ func _decode_descriptor(entry: Dictionary) -> Dictionary:
 	descriptor.origin_kind = tickets[entry.ticket].origin_kind
 	descriptor.event_id = str(entry.get("event_id", entry.ticket))
 	descriptor.variant = str(entry.get("variant", "single"))
-	descriptor.archive_value = Data.number(entry.get("archive_value", 0), 1000000)
 	descriptor.progress = entry.get("progress", {}) if entry.get("progress", {}) is Dictionary else {}
 	descriptor.restart = Data.flag(entry.get("restart", false))
 	return descriptor
@@ -287,7 +273,7 @@ static func migrate_v2(data: Dictionary) -> Dictionary:
 		for entry in entries:
 			if not entry is Dictionary or not entry.get("ticket", "") is String: continue
 			var id: String = entry.get("ticket", "")
-			if id.is_empty() or entry.get("kind", "") not in ["spectrum", "pair", "afterglow"]: continue
+			if id.is_empty() or entry.get("origin_kind", "") == "archive" or entry.get("kind", "") not in ["spectrum", "pair", "afterglow"]: continue
 			if not grouped.has(id): grouped[id] = {"entry": entry.duplicate(true), "key": list_key, "components": {}}
 			var progress = entry if list_key == "active" else entry.get("progress", {})
 			if progress is Dictionary:
@@ -315,14 +301,13 @@ static func migrate_v2(data: Dictionary) -> Dictionary:
 		if saved_components is Dictionary:
 			for component in saved_components.values():
 				if component is Dictionary: data_paid = data_paid or Data.flag(component.get("data_paid", false))
-		var archive: bool = entry.get("origin_kind", "") == "archive"
-		entry.kind = "afterglow" if archive else "rare"
-		entry.origin_kind = "archive" if archive else "natural"
+		entry.kind = "rare"
+		entry.origin_kind = "natural"
 		entry.component = 0
 		entry.stage_progress = minf(progress, 0.999999)
 		entry.age = 0.0 # Give migrated partial work a full new observation window.
-		entry.discovered = archive
-		entry.progress = {"stage_progress": entry.stage_progress, "discovered": archive}
+		entry.discovered = false
+		entry.progress = {"stage_progress": entry.stage_progress, "discovered": false}
 		result[group.key].append(entry)
 		result.tickets[id] = {"kind": entry.kind, "origin_kind": entry.origin_kind, "components": {"0": {"data_paid": data_paid}}, "sample_units": Data.integer(old.get("sample_units", 0), 2), "completed": Data.flag(old.get("completed", false))}
 	return result

@@ -10,6 +10,8 @@
 - M31 진행은 `deep_sky.retired_m31`에 실행되지 않는 기록으로만 보존한다.
 - record/revisit/reference_bus/shutter_weave 소유 수량은 보존하고 장착은 해제한다.
   활성 모듈 정의와 뽑기 풀에는 이 ID들이 없다.
+- 삭제한 궤적 적분기·연계 버스·장기선·이중 처리기·잔광 기록고는 소유·장착에서도 제거한다.
+  옛 잔광 표적·대기 예약·보상 티켓을 폐기하며 새 모듈이나 환불로 바꾸지 않는다.
 - M31 전용 다섯 연구는 `extension.retired_research_ids`에 보존한다.
   가격·효과·선행 조건을 가진 활성 정의는 제거했다.
 - 새 저장은 deep_sky version 4 / catalogue version 4다. 1~3 버전을 읽되 미래 버전은 거절한다.

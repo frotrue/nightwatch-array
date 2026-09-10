@@ -30,7 +30,7 @@ func _run() -> void:
 	await process_frame
 
 	var popup = game.module_popup
-	_check(Modules.DEFINITIONS.size() == 10, "expanded definitions expose all ten modules")
+	_check(Modules.DEFINITIONS.size() == 8, "expanded definitions expose all eight modules")
 	popup.launcher.grab_focus()
 	popup.open()
 	await process_frame
@@ -39,7 +39,7 @@ func _run() -> void:
 		_check(popup.owned_buttons.has(id), "catalog retains stable tile id: " + id)
 
 	var before: Array[String] = game.deep_sky.modules.installed_ids()
-	var locked_id := "trail_integrator"
+	var locked_id := "linear_observation"
 	popup.owned_buttons[locked_id].pressed.emit()
 	_check(game.deep_sky.modules.installed_ids() == before, "unowned catalog tiles never equip")
 	popup.show_module_tooltip(locked_id)
@@ -87,10 +87,10 @@ func _run() -> void:
 	for tile in popup.owned_buttons.values():
 		_check(tile.visible, "acquired module appears in storage")
 	var scrollbar: Range = popup.inventory_scroll.get_v_scroll_bar()
-	_check(scrollbar.max_value <= scrollbar.page, "all ten owned modules fit in the default storage view")
+	_check(scrollbar.max_value <= scrollbar.page, "all eight owned modules fit in the default storage view")
 	# Retain the overflow/focus contract for constrained views or a larger catalog.
 	var authored_scroll_height: float = popup.inventory_scroll.size.y
-	popup.inventory_scroll.size.y = 200.0
+	popup.inventory_scroll.size.y = 120.0
 	await process_frame
 	await process_frame
 	_check(scrollbar.max_value > scrollbar.page, "constrained storage remains scrollable")

@@ -58,14 +58,14 @@ var quality_integral: float = 0.0
 var interruption_count: int = 0
 var manual_contribution: float = 0.0
 var automatic_contribution: float = 0.0
+var captured_once := false
+var capture_remaining := 0.0
 var alive: bool = true
 var observed_successfully: bool = false
 var split_done: bool = false
 var linger_time: float = 0.0
 var linger_duration: float = 0.20
 var trail_points: Array[Vector2] = []
-var observation_trail_points: Array[Vector2] = []
-var trail_sample_times: Array[float] = []
 var trail_glow_ribbon := PackedVector2Array()
 var trail_glow_ribbon_colors := PackedColorArray()
 var trail_core_ribbon := PackedVector2Array()
@@ -124,14 +124,12 @@ func configure(spec: Dictionary, meteor_type: String, start_position: Vector2, m
 	observation_visual_scale = _current_visual_scale()
 	rng.seed = int(start_position.x * 193.0 + start_position.y * 877.0 + velocity.length() * 31.0) & 0x7fffffff
 	wobble_phase = rng.randf_range(0.0, TAU)
+	captured_once = false
+	capture_remaining = 0.0
 	manual_contribution = 0.0
 	automatic_contribution = 0.0
 	trail_points.clear()
-	observation_trail_points.clear()
-	trail_sample_times.clear()
 	trail_points.append(start_position)
-	observation_trail_points.append(start_position)
-	trail_sample_times.append(0.0)
 
 
 static func burn_distance_for(initial_speed: float, lifetime: float, terminal_ratio: float) -> float:
@@ -148,6 +146,12 @@ static func burn_curve(progress: float, terminal_ratio: float) -> float:
 static func burn_speed_ratio(progress: float, terminal_ratio: float) -> float:
 	var ratio := clampf(terminal_ratio, 0.0, 1.0)
 	return 1.0 - (1.0 - ratio) * clampf(progress, 0.0, 1.0)
+
+
+func capture_for(seconds: float) -> void:
+	if alive and not captured_once:
+		captured_once = true
+		capture_remaining = clampf(seconds, 0.0, 6.0)
 
 
 func _ready() -> void:
@@ -170,22 +174,18 @@ func _process(delta: float) -> void:
 			queue_free()
 		return
 
-	age += delta
-	_update_burn_motion(delta)
+	var motion_delta := maxf(0.0, delta - capture_remaining)
+	capture_remaining = maxf(0.0, capture_remaining - delta)
+	age += motion_delta
+	if motion_delta > 0.0:
+		_update_burn_motion(motion_delta)
 
 	trail_sample_accumulator += delta
 	if trail_sample_accumulator >= 0.024:
 		trail_sample_accumulator = 0.0
 		trail_points.push_front(global_position)
-		observation_trail_points.push_front(global_position)
-		trail_sample_times.push_front(age)
 		if trail_points.size() > max_trail_points:
 			trail_points.pop_back()
-		# The interaction history covers one second regardless of the original
-		# visual ribbon's type-specific point limit.
-		while not trail_sample_times.is_empty() and age - trail_sample_times.back() > 1.0:
-			observation_trail_points.pop_back()
-			trail_sample_times.pop_back()
 
 	var auto_rate := get_automatic_rate()
 	if auto_rate > 0.0:
@@ -353,22 +353,6 @@ func get_manual_contribution() -> float:
 func get_automatic_contribution() -> float:
 	return clampf(automatic_contribution / maxf(1.0, manual_contribution + automatic_contribution), 0.0, 1.0)
 
-
-func get_recent_observation_trail() -> PackedVector2Array:
-	var recent := PackedVector2Array()
-	for index in range(mini(observation_trail_points.size(), trail_sample_times.size())):
-		if age - trail_sample_times[index] <= 1.0:
-			recent.append(observation_trail_points[index])
-	return recent
-
-
-func is_natural_observation() -> bool:
-	if type_id in ["fragment", "fragment_piece"]:
-		return false
-	for generated_meta in ["gemini_echo", "leonid_storm", "perseid_outburst", "polar_summoned", "afterglow_archive"]:
-		if has_meta(generated_meta):
-			return false
-	return true
 
 
 func get_burn_progress() -> float:

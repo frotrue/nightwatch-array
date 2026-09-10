@@ -108,10 +108,10 @@ func _run() -> void:
 		failures.append("expansion purchase failed: slot_4")
 	if not game.deep_sky.purchase("slot_5"):
 		failures.append("expansion purchase failed: slot_5")
-	game.deep_sky.modules.grant("trail_integrator")
+	game.deep_sky.modules.grant("linear_observation")
 	game.deep_sky.modules.grant("sweep_optics")
 	game.module_popup.open()
-	for id in ["precision", "trail_integrator", "sweep_optics"]:
+	for id in ["precision", "linear_observation", "sweep_optics"]:
 		game.module_popup.owned_buttons[id].pressed.emit()
 	game.module_popup.hide_tooltip()
 	await _capture(game, "ko_popup_full_five")
@@ -126,7 +126,7 @@ func _run() -> void:
 	_set_locale(game, "en")
 	await _capture(game, "en_chart_five_unlocked")
 	game.module_popup.open()
-	game.module_popup.show_module_tooltip("trail_integrator")
+	game.module_popup.show_module_tooltip("linear_observation")
 	await _capture(game, "en_popup_full_five")
 	if source != Capture.source_snapshot(failures):
 		failures.append("source changed during capture")

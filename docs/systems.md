@@ -168,17 +168,23 @@ The chart yields first-refusal input while the popup is active.
 `observation_modules.gd` caches effects against all slots, ownership and capacity.
 Reads detect direct fixture mutation, duplicate/unowned slots and capacity changes.
 Manual speed/radius can have positive penalties below one; dishes keep their own rules.
+Linear observation uses a swept rectangle, with a matching procedural cursor; every
+contacted target is observed. Capture Hold pauses a target's motion/burnout clock once,
+while real observation work continues. Overcharge counts completion signals once,
+uses Game's active real-time clock, and saves remaining time separately from equipment.
+A new round or a changed overcharge installation clears it. Removed module effects,
+interaction-trail buffers, dish relay modifiers and archive targets no longer execute.
 
 
 The expansion catalogue separates research, quantities and installed copies. A draw
 spends eight specimens (six after efficiency research) for one uniformly selected
-module from fourteen, with replacement. Transactions persist currency, quantity and RNG
+module from eight, with replacement. Transactions persist currency, quantity and RNG
 together, restoring all three on failure. Same-ID bonuses/penalties add; different
 IDs retain multiplicative composition. The loadout displays owned/installed counts. ModuleDrawWindow only presents an already
 committed draw: its 1.8s scan/align animation can be skipped or closed, and reduced motion
 reveals immediately. It never performs an extra transaction while closing/reopening.
 `AnomalyDirector` schedules one conventional rare meteor kind after coordinate research.
-It reserves three components including module-created archive afterglows, defers
+It reserves three components for rare meteors, defers
 around Major warnings and insufficient round time, and awards 2/3 samples per
 completed natural rare meteor for both manual and automatic work. Persistent tickets
 prevent duplicate Data/samples. Targets are direct DeepSkyResearch children for

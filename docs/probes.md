@@ -65,13 +65,13 @@ Each file below is under `tests/`. Run one while iterating with:
 | `smoke_test.gd` | `SMOKE_TEST_PASS` | Main loop, saves, localization, held tracking/sweep, input/modals/settings, round accounting; immediate echo unlock/legacy channels, additive dish forecasts, screen-space survey counts and manual-only spectral rewards |
 | `deep_sky_test.gd` | `DEEP_SKY_PASS` | Original 95-node path, coordinate-based module unlock, chart purchases, five-slot pointer/input flow, pause recovery, effects and migration |
 | `expansion_state_test.gd` | `EXPANSION_STATE_PASS` | Predecessor research, replacement draw determinism, additive copies and malformed saves |
-| `module_expansion_test.gd` | `MODULE_EXPANSION_PASS` | Conditional effects, split chance/copy persistence, composed multipliers, trail contact, sweep and contribution eligibility |
-| `module_inventory_test.gd` | `MODULE_INVENTORY_PASS` | Ten active entries, categories, ownership, scroll/focus controls, tooltip anchors, keyboard disclosures, condensed result context, tutorial/HUD ownership and routine banner suppression |
+| `module_expansion_test.gd` | `MODULE_EXPANSION_PASS` | Eight-module catalogue, swept line geometry, one-shot capture, burst lifecycle, copy persistence and retired inventory |
+| `module_inventory_test.gd` | `MODULE_INVENTORY_PASS` | Eight active entries, categories, ownership, scroll/focus controls, tooltip anchors, keyboard disclosures, condensed result context, tutorial/HUD ownership and routine banner suppression |
 | `deep_sky_chart_expansion_test.gd` | `DEEP_SKY_CHART_EXPANSION_PASS` | Dedicated draw view, animation/skip/double-click/reduced-motion, save failure and modal return |
 | `constellation_extension_test.gd` | `CONSTELLATION_EXTENSION_PASS` | Original geometry preserved, shared Alpheratz, forty-two mapped stars across nine figures, real hold purchases, permanent growth/target unlocks, save compatibility and bilingual navigation |
-| `expansion_integration_test.gd` | `EXPANSION_INTEGRATION_PASS` | Real rare targets and all research without specimen modules, duplicate rewards, transactional failure, active save/load, all seven active permanent growth roles and round context; manual/automatic split pairs, seeded hit/miss, reward, recursion exclusion, reserved capacity and expiry |
+| `expansion_integration_test.gd` | `EXPANSION_INTEGRATION_PASS` | Real rare targets and all research without specimen modules, duplicate rewards, transactional failure, active save/load, all seven active permanent growth roles and round context; manual/automatic split pairs, seeded hit/miss, reward, recursion exclusion, reserved capacity and expiry; mixed completion overcharge, saved rare-target hold and chart pause |
 | `observation_span_probe.gd` | `OBSERVATION_SPAN_PASS` | Fixed-seed atmospheric equality, screen/world bounds, input/effect scaling, forecast suppression |
-| `content_retirement_test.gd` | `CONTENT_RETIREMENT_PASS` | Retired layers/research/ending absent; old-save and debug isolation; ten-module pool; inactive ownership retained |
+| `content_retirement_test.gd` | `CONTENT_RETIREMENT_PASS` | Retired layers/research/ending absent; old-save and debug isolation; eight-module pool; inactive ownership retained |
 | `probe_layer2_test.gd` | `PROBE_TEST_PASS` | Independent Layer 2 signals, uncertainty, commitment, abandonment and completion |
 | `sound_feedback_test.gd` | `SOUND_FEEDBACK_PASS` | Event dispatch, PCM distinctions, 1,000 automatic events aggregated into 63 pulses, timing and queue clearing |
 | `effect_feedback_test.gd` | `EFFECT_FEEDBACK_PASS` | Routine/accent routing, real visible installation rule, pause/selection cancellation, capacity limits and dawn/summary pause, load, next-round and zero-motion lifecycle |
@@ -99,6 +99,7 @@ driver does not measure the new module progression's full-run pacing.
 | Sky/chart/module states | `deep_sky_preview.gd` / [targeted previews](visual-validation.md#targeted-previews) |
 | Settings pages in both languages | `settings_preview.gd` / [settings capture](visual-validation.md#settings-and-display) |
 | Sound audition | `sound_feedback_preview.gd` / [audio](visual-validation.md#audio-audition) |
+| New module geometry, bilingual UI and paired workloads | `module_overhaul_review.gd`; desktop default, `-- --probe` for 8 seeds × 5 configurations, `-- --slice` for a save-free 60-second human session |
 | Real held tracking/sweep comfort | `survey_slice.gd` without `--headless` |
 | Legacy economy acceptance | `full_tree_economy_test.gd` / [economy guide](performance-probes.md#full-tree-economy) |
 | Spawn density and frame costs | [Performance probes](performance-probes.md) |

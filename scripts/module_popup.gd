@@ -421,11 +421,11 @@ func _category_for(id: String, definition: Dictionary = {}) -> String:
 		return category
 	# Legacy definitions predate category metadata. Their fallback keeps filters
 	# useful while preserving the five original IDs and their visual order.
-	if id in ["focus", "precision", "trail_integrator", "long_baseline", "dual_processor"]:
+	if id in ["focus", "precision", "capture_hold"]:
 		return "trace"
-	if id in ["wide", "afterglow_archive", "sweep_optics", "wide_correlation"]:
+	if id in ["wide", "linear_observation", "sweep_optics", "wide_correlation"]:
 		return "sweep"
-	if id in ["relay_bus"]:
+	if id in ["overcharge"]:
 		return "link"
 	return ""
 
@@ -498,7 +498,7 @@ func _conditional_summary(installed_ids: Array[String]) -> String:
 		seen.append(id)
 		var definition := _definition(id)
 		var text := String(definition.get("conditional_desc", definition.get("conditional", "")))
-		var is_conditional := not text.is_empty() or id in ["focus", "trail_integrator", "sweep_optics", "relay_bus", "long_baseline", "dual_processor", "afterglow_archive", "wide_correlation"]
+		var is_conditional := not text.is_empty() or id in ["focus", "sweep_optics", "wide_correlation", "linear_observation", "capture_hold", "overcharge"]
 		if is_conditional:
 			count += 1
 	return "" if count == 0 else tr("MODX_CONDITIONAL_COUNT") % count

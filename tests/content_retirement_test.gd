@@ -27,7 +27,7 @@ func _run():
 	check(not game.has_method("_show_catalogue_ending") and not game.hud.has_method("show_catalogue_ending"), "retired ending has no runtime entry point")
 	for node in game.deep_sky.get_children():
 		check(node.get_script().resource_path != "res://scripts/andromeda_target.gd", "no M31 target")
-	check(Data.SAMPLE_MODULES.size() == 10 and Modules.DEFINITIONS.size() == 10, "ten supported modules")
+	check(Data.SAMPLE_MODULES.size() == 8 and Modules.DEFINITIONS.size() == 8, "eight supported modules")
 	check(Data.RESEARCH.size() == 42, "M31-only five studies removed")
 	var saved: Dictionary = game._build_save_data()
 	saved.progression.purchased_nodes.append_array(["lmc_transit_watch", "wlm_einstein_ring", "phoenix_lensed_meteors", "aquarius_local_group_record"])

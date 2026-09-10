@@ -156,8 +156,9 @@ func current_objective() -> String:
 	return ""
 
 func award_anomaly_data(anomaly: Node) -> void:
+	modules.record_completion(anomaly)
 	var manual: bool = anomaly.get_manual_contribution() >= 0.25 or anomaly.discovered
-	var base: float = anomaly.archive_value if anomaly.origin_kind == "archive" else anomaly.base_value
+	var base: float = anomaly.base_value
 	var intrinsic := 1.0 if manual else 0.68
 	var amount: float = base * intrinsic * game.progression.get_observation_value_multiplier("common", game.meteor_layer.get_child_count() + director.object_count())
 	var reward: float = game.progression.add_observation(round(amount), manual, intrinsic)
@@ -171,8 +172,6 @@ func sample_feedback(amount: int) -> void:
 	game.hud.show_banner(tr("EXT_SAMPLES_GAINED") % amount, UITheme.ACCENT_TEXT, 2.2)
 	game.sound.play_slot_confirm()
 
-func archive_meteor(meteor: Node) -> void:
-	director.archive_meteor(meteor)
 
 func end_round() -> void:
 	director.end_round()

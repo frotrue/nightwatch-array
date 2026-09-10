@@ -23,7 +23,6 @@ const GALACTIC_MUTED_FORECAST_TYPES := ["common", "fast"]
 var progression: Node
 var meteor_layer: Node2D
 var additional_target_layers: Array[Node2D] = []
-var modules: RefCounted
 var observation_view: Camera2D
 var contacts: Array[Dictionary] = []
 var dishes: Array[Dictionary] = []
@@ -224,10 +223,7 @@ func _clear_dish_assists() -> void:
 func _dish_assist_rate(target) -> float:
 	if target == null or not target.has_method("get_assist_rate"):
 		return 0.0
-	var multiplier := 1.0
-	if modules != null and modules.has_method("dish_multiplier"):
-		multiplier = float(modules.dish_multiplier(target))
-	return target.get_assist_rate(DISH_TIME_MULTIPLIER) * multiplier * progression.extension_effect("dish_speed")
+	return target.get_assist_rate(DISH_TIME_MULTIPLIER) * progression.extension_effect("dish_speed")
 
 
 func _locked_target(dish: Dictionary):
@@ -251,7 +247,7 @@ func _dish_can_track(target) -> bool:
 		return true
 	# Meteor's generic lane-assist API also exists on manual-only major targets.
 	# Only these explicitly introduced anomaly types expand the dish allowlist.
-	return String(target.type_id) in ["anomaly_rare", "anomaly_afterglow"] and target.has_method("allows_automatic_assist") and target.allows_automatic_assist()
+	return String(target.type_id) in ["anomaly_rare"] and target.has_method("allows_automatic_assist") and target.allows_automatic_assist()
 
 
 func _dish_can_track_type(type_id: String) -> bool:

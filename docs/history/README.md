@@ -20,6 +20,7 @@
 | 기록 | 범위 |
 |---|---|
 | [설정 UI 27종 조사](settings-reference-study.md) | 2026-09-04의 출처·채택·보류 기록 |
+| [9월 10일 모듈 교체](module-overhaul-2026-09-10.md) | 5종 삭제·3종 추가, 자동 검증과 실제 조작감 확인 범위 |
 | [모듈 UI 조사](module-workbench-reference-study.md) | 12종 기능 조사와 폐기·수정한 시각 방향 |
 | [AM-V3QP 완료 기록](agent-room-feedback-checkpoint.md) | 사운드·효과·캡처·계열색 네 단계 결과와 후속 검토 |
 | [AM-V3QP 원문](agent-room-feedback-through-2026-09-03.md) | 당시 WIP·리뷰·합의 원문. 회의 재개 지시가 아님 |

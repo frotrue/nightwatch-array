@@ -3,10 +3,10 @@ extends RefCounted
 const CATALOGUE_VERSION := 4
 const RETIRED_RESEARCH_IDS := ["ext_link_study", "record", "revisit", "ext_cep_core", "ext_cep_depth"]
 const DRAW_COST := 8
-const SAMPLE_MODULES := ["long_baseline", "dual_processor", "afterglow_archive", "wide_correlation", "focus", "wide", "precision", "trail_integrator", "sweep_optics", "relay_bus"]
+const SAMPLE_MODULES := ["focus", "wide", "precision", "sweep_optics", "wide_correlation", "linear_observation", "capture_hold", "overcharge"]
 const MODULE_BRANCHES := ["pegasus", "lacerta"]
 const LEGACY_PURCHASE_IDS := ["focus", "wide", "precision", "record", "revisit"]
-const LEGACY_GRANTS := {"ext_trace_study": "trail_integrator", "ext_sweep_study": "sweep_optics", "ext_link_study": "relay_bus"}
+const LEGACY_GRANTS := {"ext_sweep_study": "sweep_optics"}
 const RESEARCH_ORDER := ["ext_protocol", "slot_3", "slot_4", "slot_5", "ext_record_complete", "ext_trace_advanced", "ext_sweep_advanced", "ext_link_advanced", "ext_synthesis", "ext_combined_watch", "ext_trace_study", "focus", "precision", "ext_cyg_lock", "ext_cyg_aperture", "ext_sweep_study", "wide", "ext_aql_pair", "ext_aql_stride", "ext_aql_stream", "ext_vul_memory", "ext_vul_rhythm", "ext_vul_arc", "ext_vul_cadence", "ext_vul_flow", "ext_del_signal", "ext_del_companion", "ext_del_debris", "ext_del_resonance", "ext_del_school", "ext_sge_cadence", "ext_sge_forecast", "ext_sge_solution", "ext_sge_window", "ext_sge_stream", "ext_equ_focus", "ext_equ_mount", "ext_equ_array", "ext_equ_link", "ext_tri_photometry", "ext_tri_analysis", "ext_tri_catalogue"]
 const RESEARCH := {
 	"ext_protocol": {"cost": 0.0, "requires": [], "branch": "pegasus", "effects": {}},

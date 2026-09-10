@@ -39,11 +39,12 @@ func _run() -> void:
 	await _check_transactions()
 	await _check_target_persistence()
 	await _check_research_loop()
-	await _check_archive_and_budget()
+	await _check_retirement_and_budget()
 	_check_measurement()
 	_check_migration()
 	_check_tracking_names()
 	await _check_split_module()
+	await _check_new_modules()
 	game.free()
 	paused = false
 	await process_frame
@@ -155,7 +156,7 @@ func _check_split_module() -> void:
 func _check_tracking_names() -> void:
 	for locale in ["en", "ko"]:
 		game.settings.set_language(locale, false)
-		for kind in ["rare", "afterglow"]:
+		for kind in ["rare"]:
 			game.hud.set_tracking(0.25, "anomaly_" + kind, 1.0)
 			_check(not game.hud.tracking_target.text.begins_with("METEOR_"), "localized tracking name: " + locale + "/" + kind)
 
@@ -290,32 +291,13 @@ func _check_research_loop() -> void:
 		_check(interval >= 25.6 and interval <= 35.2, "research shortens spawn interval")
 	research.director.end_round()
 
-func _check_archive_and_budget() -> void:
+func _check_retirement_and_budget() -> void:
 	game.spawner.reset()
 	await process_frame
-	research.modules.grant("afterglow_archive")
-	research.modules.equip("afterglow_archive", 0)
-	var meteor: Node = load("res://scripts/meteor.gd").new()
-	meteor.configure(Balance.meteor_spec("common"), "common", Vector2(400, 270), Vector2.ZERO, 1.0, {})
-	game.meteor_layer.add_child(meteor)
-	game._on_meteor_spawned(meteor)
-	meteor.set_process(false)
-	meteor._process(100.0)
-	var archived: Array = research.director.targets()
-	_check(archived.size() == 1 and archived[0].origin_kind == "archive", "missed natural common creates one archive afterglow")
-	if not archived.is_empty():
-		var target: Node = archived[0]
-		target.set_process(false)
-		_check(not game.sky_contacts._dish_can_track(target), "archive remains manual-only")
-		var samples: int = research.samples
-		game.progression.reset_manual_combo()
-		var total: float = game.progression.total_data_earned
-		var expected: float = round(meteor.base_value * 0.5 * game.progression.get_observation_value_multiplier("common", game.meteor_layer.get_child_count() + research.director.object_count()))
-		_manual(target)
-		_check(research.samples == samples and is_equal_approx(game.progression.total_data_earned - total, expected), "archive pays half Data once and no specimens")
-	research.director.end_round()
-	game.spawner.reset()
-	await process_frame
+	# Archived module targets must not revive from an old save or consume capacity.
+	research.director.load_save_data({"tickets": {"a/old": {"kind": "afterglow", "origin_kind": "archive", "components": {}}}, "active": [{"kind": "afterglow", "origin_kind": "archive", "ticket": "a/old"}]})
+	research.director.resume_targets()
+	_check(research.director.object_count() == 0 and research.director.tickets.is_empty(), "removed archive target is discarded without reward or reserved space")
 	for index in range(40):
 		game.spawner.spawn_meteor("common", Vector2(200, 200), Vector2.ZERO)
 	_check(game.meteor_layer.get_child_count() == 28, "ordinary spawn cap reserves three expansion components and one important target")
@@ -391,6 +373,8 @@ func _check_permanent_growth() -> void:
 	research.load_save_data(before)
 
 func _check_measurement() -> void:
+	research.modules.grant("focus")
+	research.modules.equip("focus", 0)
 	game._begin_observation_phase()
 	var original: String = research.modules.slots[0]
 	research.modules.slots[0] = ""
@@ -399,21 +383,21 @@ func _check_measurement() -> void:
 	research.changed.emit()
 	_check(game._build_round_result().equipment_changed, "A-to-B-to-A equipment remains a mixed round")
 	game._begin_observation_phase()
-	research.modules.grant("long_baseline")
+	research.modules.grant("overcharge")
 	research.changed.emit()
 	var result: Dictionary = game._build_round_result()
-	_check(not result.equipment_changed and result.modules_acquired == ["long_baseline"], "uninstalled acquisition is growth, not a changed loadout")
+	_check(not result.equipment_changed and result.modules_acquired == ["overcharge"], "uninstalled acquisition is growth, not a changed loadout")
 	var study: String = research.state.research_ids.pop_back()
 	research.changed.emit()
 	_check(game._build_round_result().build_changed, "extension research is part of the build measurement")
 	research.state.research_ids.append(study)
-	research.modules.grant_copy("long_baseline")
-	research.modules.equip("long_baseline", 0)
-	research.modules.equip("long_baseline", 1)
+	research.modules.grant_copy("overcharge")
+	research.modules.equip("overcharge", 0)
+	research.modules.equip("overcharge", 1)
 	game._begin_observation_phase()
 	var disk_result: Dictionary = JSON.parse_string(JSON.stringify(game._build_round_result()))
 	var clean: Dictionary = game._sanitize_round_result(disk_result)
-	_check(clean.equipment_signature.count("long_baseline") == 2, "round comparison keeps duplicate installed copies")
+	_check(clean.equipment_signature.count("overcharge") == 2, "round comparison keeps duplicate installed copies")
 	_check(game._validated_module_ids(research.modules.purchased).size() == research.modules.purchased.size(), "ownership history keeps more than five module types")
 
 func _check_migration() -> void:
@@ -435,3 +419,62 @@ func _check_migration() -> void:
 	var migrated: Array = research.director.targets()
 	_check(migrated.size() == 1 and migrated[0].kind == "rare" and is_equal_approx(migrated[0].get_progress(), 0.7), "v2 active spectrum keeps normalized progress as a rare meteor")
 	research.director.end_round()
+
+func _check_new_modules() -> void:
+	_sky()
+	research.director.end_round()
+	_clear_split_sky()
+	research.modules.load_save_data({"purchased": ["linear_observation", "capture_hold", "overcharge"], "slots": ["linear_observation", "capture_hold", "overcharge"], "unlocked_slots": 5})
+	game._begin_observation_phase()
+	game.spawner.module_rng.seed = 123
+	# Exercise real manual and automatic completion signals, rather than calling
+	# the module counter directly. Generated targets remain a valid charge source.
+	for index in range(12):
+		var meteor = game.spawner.spawn_meteor("common", Vector2(500, 300), Vector2(150, 0), 10.0)
+		meteor.set_meta("gemini_echo", true)
+		meteor.set_process(false)
+		if index % 2 == 0:
+			game.observer.cursor_position = meteor.global_position
+			game.observer.previous_cursor_position = meteor.global_position
+			game.observer._apply_manual_contact(meteor, 20.0)
+			meteor._process(0.0)
+			_check(meteor.captured_once, "real manual contact applies capture before completion")
+		else:
+			meteor.set_dish_assist_rate(10.0)
+			meteor._process(0.11)
+		_check(meteor.observed_successfully, "real completion reaches the accounting route")
+		meteor.free()
+	_check(research.modules.burst_remaining == 6.0, "twelve mixed real completions charge the burst")
+	research.modules.advance_time(1.5)
+	research.director._ensure_ticket("n/captured", "rare", "natural")
+	research.director._spawn_component({"ticket": "n/captured", "kind": "rare", "origin_kind": "natural", "component": 0, "start": Vector2(0.3, 0.4), "end": Vector2(0.7, 0.4)})
+	var rare = research.director.targets()[0]
+	rare.set_process(false)
+	rare._process(1.6)
+	game.observer.cursor_position = rare.position
+	game.observer.previous_cursor_position = rare.position
+	game.observer._apply_manual_contact(rare, 0.00001)
+	var rare_position: Vector2 = rare.position
+	rare._process(0.5)
+	_check(rare.position == rare_position and rare.capture_remaining == 1.5, "rare meteor shares the bounded hold behavior")
+	var saved: Dictionary = JSON.parse_string(JSON.stringify(game._build_save_data()))
+	game._apply_save_data(saved)
+	_freeze(game)
+	_check(research.modules.burst_remaining == 4.5, "whole-game save restore preserves remaining burst time")
+	var restored = research.director.targets()[0]
+	_check(restored.captured_once and restored.capture_remaining == 1.5, "whole-game save restore preserves a partially spent hold")
+	restored.capture_for(6.0)
+	_check(restored.capture_remaining == 1.5, "restore cannot grant a second capture")
+	game.upgrade_tree.open_tree()
+	var remaining: float = research.modules.burst_remaining
+	game.set_process(true)
+	await process_frame
+	await process_frame
+	game.set_process(false)
+	_check(research.modules.burst_remaining == remaining, "chart pause does not drain the burst clock")
+	game.upgrade_tree.close_tree()
+	game._begin_observation_phase(true)
+	_check(research.modules.burst_remaining == 0.0, "next round cannot inherit an active burst")
+	research.director.end_round()
+	_clear_split_sky()
+	await process_frame

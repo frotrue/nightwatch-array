@@ -20,30 +20,10 @@ MODX_LOCKED_ACTION,View the acquisition path; this module cannot be equipped yet
 MODX_CURRENT,CURRENT LOADOUT,현재 편성
 MODX_CONDITIONAL,Conditional effects,조건부 효과
 MODX_CONDITIONAL_NONE,No conditional effects active.,활성 조건부 효과 없음
-MODULE_TRAIL_INTEGRATOR_NAME,Trail integrator,궤적 적분기
-MODULE_TRAIL_INTEGRATOR_SHORT,Trail integrator,궤적 적분
-MODULE_TRAIL_INTEGRATOR_DESC,Observe the last 1s of trail at 60% speed. Manual speed -10%. Excludes fireballs.,최근 1초 꼬리에서도 60% 속도로 관측. 수동 속도 -10%. 화구·거대 유성 제외.
-MODULE_TRAIL_INTEGRATOR_COMBO,Hold over the recent trail when the moving head leaves your cursor.,움직이는 본체를 놓쳤다면 최근 궤적 위에서 관측을 이어갑니다.
 MODULE_SWEEP_OPTICS_NAME,Sweep optics,훑기 광학
 MODULE_SWEEP_OPTICS_SHORT,Sweep optics,훑기 광학
 MODULE_SWEEP_OPTICS_DESC,"Sweep charge +35%, rare meteor aim radius +50%. Manual speed -10%.","훑기 충전 +35%, 특수 유성 조준 반경 +50%. 수동 속도 -10%."
 MODULE_SWEEP_OPTICS_COMBO,Charge sweeps faster and track rare meteors from farther away.,훑기를 빠르게 충전하고 더 넓은 범위에서 특수 유성을 조준합니다.
-MODULE_RELAY_BUS_NAME,Relay bus,연계 버스
-MODULE_RELAY_BUS_SHORT,Relay bus,연계 버스
-MODULE_RELAY_BUS_DESC,At least 25% manual observation: dish speed +75% for that target. Manual speed -10%.,25% 이상 직접 관측한 대상은 접시 속도 +75%. 수동 속도 -10%.
-MODULE_RELAY_BUS_COMBO,Hand off a partly observed target to the array.,부분 관측한 표적을 접시에 인계합니다.
-MODULE_LONG_BASELINE_NAME,Long baseline,장기선
-MODULE_LONG_BASELINE_SHORT,Long baseline,장기선
-MODULE_LONG_BASELINE_DESC,Observe the same primary target for 1s: speed +60%. Manual speed -15%.,같은 조준 대상을 1초간 관측하면 속도 +60%. 수동 속도 -15%.
-MODULE_LONG_BASELINE_COMBO,Stay on one primary target to build the baseline.,주 표적 하나를 계속 관측해 기준선을 만듭니다.
-MODULE_DUAL_PROCESSOR_NAME,Dual processor,이중 처리기
-MODULE_DUAL_PROCESSOR_SHORT,Dual processor,이중 처리
-MODULE_DUAL_PROCESSOR_DESC,Primary and nearest extra target: speed +30%. Other extra targets: -45%.,조준 대상과 가장 가까운 추가 대상 속도 +30%. 나머지 추가 대상 -45%.
-MODULE_DUAL_PROCESSOR_COMBO,The second processor favors a nearby companion without removing range.,두 번째 처리기가 가까운 동반 표적을 우선합니다.
-MODULE_AFTERGLOW_ARCHIVE_NAME,Afterglow archive,잔광 기록고
-MODULE_AFTERGLOW_ARCHIVE_SHORT,Afterglow archive,잔광 기록
-MODULE_AFTERGLOW_ARCHIVE_DESC,Reobserve a missed natural common/fast meteor within 8s to recover 50% Data. One at a time.,놓친 자연 생성 일반·고속 유성을 8초 안에 재관측해 데이터 50% 회수. 한 번에 1개.
-MODULE_AFTERGLOW_ARCHIVE_COMBO,Use the archive to recover one missed ordinary target during a round.,회차 중 놓친 일반 표적 하나를 기록고에서 복원합니다.
 MODULE_WIDE_CORRELATION_NAME,Wide correlation,광역 상관
 MODULE_WIDE_CORRELATION_SHORT,Correlation,광역 상관
 MODULE_WIDE_CORRELATION_DESC,Extra target speed +35%. Primary target speed -25%.,주변 대상 관측 속도 +35%. 조준 대상 속도 -25%.
@@ -62,3 +42,15 @@ DRAW_ACQUIRED,Module secured,모듈 확보 완료
 DRAW_NEW,FIRST DISCOVERY,처음 발견한 모듈
 DRAW_SAVED,LATEST ACQUISITION,최근 획득 모듈
 DRAW_DUPLICATE,Additional copy,중복 보유
+MODULE_LINEAR_OBSERVATION_NAME,Linear observation,선형 관측
+MODULE_LINEAR_OBSERVATION_SHORT,Linear observation,선형 관측
+MODULE_LINEAR_OBSERVATION_DESC,Observe every target in a horizontal band. Width ×4 and height ×0.45 of the circular field.,가로로 긴 띠 안의 유성을 함께 관측. 기존 관측 영역 대비 너비 4배·높이 0.45배.
+MODULE_LINEAR_OBSERVATION_COMBO,Wide-field observation and overcharge expand the band.,광역 관측·과충전을 함께 쓰면 띠도 넓어집니다.
+MODULE_CAPTURE_HOLD_NAME,Capture hold,포착 고정
+MODULE_CAPTURE_HOLD_SHORT,Capture hold,포착 고정
+MODULE_CAPTURE_HOLD_DESC,Cursor contact stops a meteor for 2s. Once per meteor.,커서에 닿은 유성을 2초간 정지. 유성마다 한 번만 발동.
+MODULE_CAPTURE_HOLD_COMBO,Hold moving meteors and split fragments inside your observation field.,유성과 분열 조각을 관측 영역에 붙잡아 둡니다.
+MODULE_OVERCHARGE_NAME,Overcharge,과충전
+MODULE_OVERCHARGE_SHORT,Overcharge,과충전
+MODULE_OVERCHARGE_DESC,Every 12 observations: manual speed ×2 and radius ×1.5 for 6s. No charging during the burst.,관측 12회마다 6초간 수동 속도 2배·반경 1.5배. 발동 중에는 충전 중지.
+MODULE_OVERCHARGE_COMBO,Manual and automatic completions count. Split fragments also charge it.,직접·자동 관측 모두 충전. 분열 조각도 횟수에 포함됩니다.

@@ -314,10 +314,10 @@ func _check_slot_saves() -> void:
 		model.load_save_data(old)
 		_check(model.slots == ["focus", "wide", "", "", ""] and model.unlocked_slots == 2, "both legacy save formats restore the first two of five positions")
 		_check(not model.equip("focus", 2) and not model.equip("", 4), "locked model positions reject equip and clear")
-	model.load_save_data({"purchased": Modules.DEFINITIONS.keys(), "slots": Modules.DEFINITIONS.keys(), "unlocked_slots": 5})
+	model.load_save_data({"purchased": Modules.DEFINITIONS.keys(), "slots": ["focus", "wide", "precision", "linear_observation", "sweep_optics"], "unlocked_slots": 5})
 	var encoded: Dictionary = JSON.parse_string(JSON.stringify(model.get_save_data()))
 	model.load_save_data(encoded)
-	_check(model.unlocked_slots == 5 and model.slots == ["focus", "wide", "precision", "trail_integrator", "sweep_optics"], "five positions and researched capacity survive real JSON serialization")
+	_check(model.unlocked_slots == 5 and model.slots == ["focus", "wide", "precision", "linear_observation", "sweep_optics"], "five positions and researched capacity survive real JSON serialization")
 	_check(is_equal_approx(model.effect("speed"), 1.125) and is_equal_approx(model.effect("radius"), 1.155), "all five effects compose without losing original multipliers")
 	model.unlocked_slots = 2
 	_check(is_equal_approx(model.effect("speed"), 0.75), "capacity changes invalidate cache and exclude locked equipment")
@@ -343,7 +343,7 @@ func _check_ring_research(game: Node) -> void:
 	_check(research.research_ready("slot_3") and not research.purchase("slot_4") and not research.purchase("slot_5"), "module capacity is a sequential permanent research branch")
 	# Acquisition is tested by the draw integration gate. These known five
 	# copies let this gate isolate equip, slot holds, JSON and legacy effects.
-	for id in ["focus", "wide", "precision", "trail_integrator", "sweep_optics"]:
+	for id in ["focus", "wide", "precision", "linear_observation", "sweep_optics"]:
 		research.modules.grant(id)
 	popup.open()
 	popup.owned_buttons.focus.pressed.emit()
@@ -353,7 +353,7 @@ func _check_ring_research(game: Node) -> void:
 	popup.owned_buttons.precision.pressed.emit()
 	popup.owned_buttons.focus.pressed.emit()
 	_check(research.modules.slots == ["focus", "wide", "", "", ""], "full and already-mounted tile clicks never replace equipment")
-	_check(not research.equip("trail_integrator", 2) and not research.purchase("slot_3"), "popup cannot equip a locked position or purchase chart research")
+	_check(not research.equip("linear_observation", 2) and not research.purchase("slot_3"), "popup cannot equip a locked position or purchase chart research")
 	popup.show_module_tooltip("focus")
 	_check(popup.tooltip_action.text == tr("RING_EQUIPPED_ACTION"), "mounted inventory tile explains its no-op")
 	popup.slots[0].pressed.emit()
@@ -362,7 +362,7 @@ func _check_ring_research(game: Node) -> void:
 	popup.set_process(false)
 	for locale in ["ko", "en"]:
 		game.settings.set_language(locale, false)
-		popup.show_module_tooltip("trail_integrator")
+		popup.show_module_tooltip("linear_observation")
 		await _frames(3)
 		popup.tooltip_pointer = popup.overlay.size - Vector2.ONE
 		popup._place_tooltip()
@@ -380,14 +380,14 @@ func _check_ring_research(game: Node) -> void:
 		popup.remove_module(index)
 	for id in Modules.DEFINITIONS:
 		popup.owned_buttons[id].pressed.emit()
-	_check(research.modules.slots == ["focus", "wide", "precision", "trail_integrator", "sweep_optics"], "five unlocked positions fill clockwise through popup controls")
+	_check(research.modules.slots == ["focus", "wide", "precision", "sweep_optics", "linear_observation"], "five unlocked positions fill clockwise through popup controls")
 	var snapshot: Dictionary = JSON.parse_string(JSON.stringify(game._build_save_data()))
 	popup.close()
 	game.upgrade_tree.close_tree()
 	game._apply_save_data(snapshot)
 	await _frames(2)
 	_check(research.modules.unlocked_slots == 5 and research.modules.installed_ids().size() == 5 and not paused, "full game JSON restores researched capacity and observation")
-	_check(not research.research_owned("trail_integrator") and not research.research_owned("sweep_optics"), "new inventory ownership does not grant permanent research on load")
+	_check(not research.research_owned("linear_observation") and not research.research_owned("sweep_optics"), "new inventory ownership does not grant permanent research on load")
 	game.set_process(false)
 	game.spawner.set_process(false)
 	game.events.set_process(false)

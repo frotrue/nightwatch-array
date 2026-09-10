@@ -78,7 +78,7 @@ func _run() -> void:
 		await _capture(game, locale + "_chart_overview")
 	for module_id in game.deep_sky.Modules.DEFINITIONS: game.deep_sky.modules.grant(module_id)
 	popup.open()
-	for module_id in ["focus", "relay_bus", "precision"]: game.deep_sky.equip(module_id)
+	for module_id in ["focus", "capture_hold", "precision"]: game.deep_sky.equip(module_id)
 	for locale in ["en", "ko"]:
 		_set_locale(game, locale)
 		await _capture(game, locale + "_popup_five_slots")

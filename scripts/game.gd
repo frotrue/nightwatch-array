@@ -131,7 +131,6 @@ func _ready() -> void:
 	observer.additional_target_layers.append(deep_sky)
 	survey.discovery_layers.append(deep_sky)
 	observer.modules = deep_sky.modules
-	sky_contacts.modules = deep_sky.modules
 	sky_contacts.additional_target_layers.append(deep_sky)
 	survey.modules = deep_sky.modules
 	spawner.extension_owner = deep_sky
@@ -245,6 +244,7 @@ func _process(delta: float) -> void:
 	spawner.set_phase_time_remaining(observation_phase_remaining)
 	hud.set_runtime(elapsed_time)
 	hud.set_observation_phase(observation_round, observation_phase_remaining, observation_phase_duration)
+	deep_sky.modules.advance_time(real_delta)
 	progression.update_manual_combo(real_delta)
 	survey.advance_time(real_delta)
 	if active_save_slot > 0:
@@ -270,6 +270,7 @@ func _begin_observation_phase(advance_round: bool = false, remaining_override: f
 	spawner.set_phase_time_remaining(observation_phase_remaining)
 	observation_phase_active = true
 	progression.reset_manual_combo()
+	deep_sky.modules.reset_round()
 	sound.reset_streak_audio()
 	phase_start_successes = progression.success_count
 	phase_start_manual_successes = progression.manual_successes
@@ -304,6 +305,7 @@ func _end_observation_phase() -> void:
 		return
 	deep_sky.end_round()
 	progression.reset_manual_combo()
+	deep_sky.modules.reset_round()
 	sound.reset_streak_audio()
 	var result := _build_round_result()
 	var previous_result := last_clean_round_result.duplicate(true)
@@ -516,6 +518,8 @@ func _on_meteor_spawned(meteor) -> void:
 
 
 func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: bool, quality_grade: String) -> void:
+	if observation_phase_active:
+		deep_sky.modules.record_completion(meteor)
 	observer.release_target(meteor)
 	# Observation technique belongs to feedback and the end-of-run manual stat;
 	# research value growth belongs only to the economy. Keeping the two values
@@ -673,7 +677,6 @@ func _on_packet_landed(amount: float) -> void:
 
 
 func _on_meteor_expired(meteor, _was_major: bool) -> void:
-	deep_sky.archive_meteor(meteor)
 	observer.release_target(meteor)
 
 
@@ -911,6 +914,7 @@ func _build_save_data() -> Dictionary:
 		"galactic_pullback_seen": galactic_pullback_seen,
 		"progression": progression.get_save_data(),
 		"deep_sky": deep_sky.get_save_data(),
+		"module_runtime": deep_sky.modules.get_round_state(),
 	}
 
 
@@ -962,6 +966,8 @@ func _apply_save_data(data: Dictionary) -> void:
 		))
 		_begin_observation_phase(false, saved_remaining)
 		deep_sky.resume_targets()
+		var module_runtime = data.get("module_runtime", {})
+		deep_sky.modules.restore_round_state(module_runtime if module_runtime is Dictionary else {})
 		if bool(data.get("canis_major_spawned_this_round", false)):
 			spawner.canis_major_spawned_this_round = true
 			events.canis_major_state = "resolved"

@@ -3,19 +3,21 @@ extends RefCounted
 const RETIRED_IDS := ["record", "revisit", "reference_bus", "shutter_weave"]
 const MAX_SLOTS := 5
 const INITIAL_SLOTS := 2
+const OVERCHARGE_COUNT := 12
+const OVERCHARGE_SECONDS := 6.0
+var charge_count := 0
+var burst_remaining := 0.0
 const DEFINITIONS := {
 	# Active modules use one draw pool. Legacy costs and prerequisites
 	# remain for the retained module diagnostic API, not the current chart.
 	"focus": {"cost": 120000000.0, "split_chance": 0.3, "glyph": "split", "code": "SPLIT", "badge": "30%", "requires": [], "source": "sample", "category": "trace", "pool": "trace"},
 	"wide": {"cost": 120000000.0, "speed": 0.75, "radius": 1.65, "targets": 3, "glyph": "wide", "code": "WIDE", "badge": "×1.65", "requires": [], "source": "sample", "category": "sweep", "pool": "sweep"},
 	"precision": {"cost": 180000000.0, "speed": 1.5, "radius": 0.7, "glyph": "focus", "code": "PRECISION", "badge": "×1.50", "requires": ["focus"], "source": "sample", "category": "trace", "pool": "trace"},
-	"trail_integrator": {"cost": 0.0, "new_speed": 0.9, "trail_progress": 0.6, "glyph": "focus", "code": "TRAIL", "badge": "TRAIL 60%", "requires": [], "source": "sample", "category": "trace", "pool": "trace"},
 	"sweep_optics": {"cost": 0.0, "new_speed": 0.9, "sweep_charge": 1.35, "rare_radius": 1.5, "glyph": "wide", "code": "SWEEP", "badge": "CHARGE ×1.35", "requires": [], "source": "sample", "category": "sweep", "pool": "sweep"},
-	"relay_bus": {"cost": 0.0, "new_speed": 0.9, "relay_dish": 1.75, "glyph": "wide", "code": "RELAY", "badge": "DISH ×1.75", "requires": [], "source": "sample", "category": "link", "pool": "link"},
-	"long_baseline": {"cost": 0.0, "new_speed": 0.85, "baseline_speed": 1.6, "glyph": "focus", "code": "BASELINE", "badge": "1s ×1.60", "requires": [], "source": "sample", "category": "trace", "pool": "trace"},
-	"dual_processor": {"cost": 0.0, "primary_speed": 1.3, "secondary_speed": 0.55, "glyph": "focus", "code": "DUAL", "badge": "DUAL ×1.30", "requires": [], "source": "sample", "category": "trace", "pool": "trace"},
-	"afterglow_archive": {"cost": 0.0, "archive_value": 0.5, "archive_lifetime": 8.0, "glyph": "wide", "code": "ARCHIVE", "badge": "AFTERGLOW", "requires": [], "source": "sample", "category": "sweep", "pool": "sweep"},
 	"wide_correlation": {"cost": 0.0, "primary_speed": 0.75, "secondary_speed": 1.35, "glyph": "wide", "code": "CORRELATE", "badge": "LINK ×1.35", "requires": [], "source": "sample", "category": "sweep", "pool": "sweep"},
+	"linear_observation": {"cost": 0.0, "line_width": 4.0, "glyph": "linear_observation", "code": "LINE", "badge": "LINE ×4", "requires": [], "source": "sample", "category": "sweep", "pool": "sweep"},
+	"capture_hold": {"cost": 0.0, "hold_seconds": 2.0, "glyph": "capture_hold", "code": "HOLD", "badge": "HOLD 2s", "requires": [], "source": "sample", "category": "trace", "pool": "trace"},
+	"overcharge": {"cost": 0.0, "burst_speed": 2.0, "burst_radius": 1.5, "glyph": "overcharge", "code": "BURST", "badge": "12 → 6s", "requires": [], "source": "sample", "category": "link", "pool": "link"},
 }
 const SLOT_RESEARCH := {
 	"slot_3": {"capacity": 3, "cost": 240000000.0, "requires": []},
@@ -98,7 +100,7 @@ func grant_copy(id: String) -> bool:
 	return true
 
 func stacked_effect(id: String, key: String) -> float:
-	if key == "trail_progress":
+	if key == "hold_seconds":
 		return float(DEFINITIONS.get(id, {}).get(key, 0.0)) * installed_count(id)
 	return maxf(0.1, 1.0 + (float(DEFINITIONS.get(id, {}).get(key, 1.0)) - 1.0) * installed_count(id))
 
@@ -115,6 +117,8 @@ func equip(id: String, slot: int = -1) -> bool:
 		return false
 	if not id.is_empty() and (not DEFINITIONS.has(id) or id not in purchased or slots.slice(0, unlocked_slots).count(id) - int(slots[slot] == id) >= owned_count(id)):
 		return false
+	if slots[slot] != id and (slots[slot] == "overcharge" or id == "overcharge"):
+		reset_round()
 	slots[slot] = id
 	return true
 
@@ -176,6 +180,7 @@ func get_save_data() -> Dictionary:
 	}
 
 func load_save_data(data: Dictionary) -> void:
+	reset_round()
 	purchased.clear()
 	quantities.clear()
 	slots = ["", "", "", "", ""]
@@ -203,25 +208,42 @@ func load_save_data(data: Dictionary) -> void:
 	_cached_capacity = -1
 
 
-func dish_multiplier(target) -> float:
-	if target == null or not is_instance_valid(target):
-		return 1.0
-	var multiplier := 1.0
-	var manual_contribution := _target_manual_contribution(target)
-	if has("relay_bus") and manual_contribution >= 0.25:
-		multiplier *= stacked_effect("relay_bus", "relay_dish")
-	# New dish modifiers have their own cap. Existing dish rates are deliberately
-	# outside it, because this contract must not retroactively weaken old builds.
-	return clampf(multiplier, 0.25, 2.5)
+func reset_round() -> void:
+	charge_count = 0
+	burst_remaining = 0.0
 
+func record_completion(target: Node) -> void:
+	if not has("overcharge") or not is_instance_valid(target) or target.get_meta("overcharge_counted", false):
+		return
+	target.set_meta("overcharge_counted", true)
+	if burst_remaining > 0.0:
+		return
+	charge_count += 1
+	if charge_count >= OVERCHARGE_COUNT:
+		charge_count = 0
+		burst_remaining = OVERCHARGE_SECONDS
 
-func _target_manual_contribution(target) -> float:
-	if target != null and is_instance_valid(target) and target.has_method("get_manual_contribution"):
-		return maxf(0.0, float(target.get_manual_contribution()))
-	return 0.0
+func advance_time(delta: float) -> void:
+	if not has("overcharge"):
+		reset_round()
+	else:
+		burst_remaining = maxf(0.0, burst_remaining - maxf(0.0, delta))
 
+func burst_multiplier(key: String) -> float:
+	return stacked_effect("overcharge", key) if has("overcharge") and burst_remaining > 0.0 else 1.0
 
-func _finite_range(value, minimum: float, maximum: float) -> float:
-	if not (value is int or value is float) or not is_finite(float(value)):
-		return minimum
-	return clampf(float(value), minimum, maximum)
+func get_round_state() -> Dictionary:
+	return {"charge_count": charge_count, "burst_remaining": burst_remaining}
+
+func restore_round_state(data: Dictionary) -> void:
+	reset_round()
+	if not has("overcharge"):
+		return
+	var count = data.get("charge_count", 0)
+	var remaining = data.get("burst_remaining", 0.0)
+	if (count is int or count is float) and is_finite(float(count)):
+		charge_count = int(clampf(float(count), 0, OVERCHARGE_COUNT - 1))
+	if (remaining is int or remaining is float) and is_finite(float(remaining)):
+		burst_remaining = clampf(float(remaining), 0, OVERCHARGE_SECONDS)
+	if burst_remaining > 0.0:
+		charge_count = 0

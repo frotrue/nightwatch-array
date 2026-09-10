@@ -87,10 +87,11 @@ func load_save_data(data: Dictionary, legacy: bool = false) -> void:
 	samples_spent = Data.integer(data.get("samples_spent", 0), samples_earned)
 	samples = mini(Data.integer(data.get("samples", 0), 1000000000), samples_earned - samples_spent)
 	# A paid, unchosen v2 offer becomes currency exactly once on migration.
+	# Refund the payment independently of the current catalogue; never grant its item.
 	var offer = data.get("pending_offer", [])
 	if legacy and offer is Array and samples_spent >= 8:
 		for id in offer:
-			if id is String and (id in Data.SAMPLE_MODULES or id in ["record", "revisit", "reference_bus", "shutter_weave"]):
+			if id is String and not id.is_empty():
 				samples_spent -= 8
 				samples += 8
 				break
