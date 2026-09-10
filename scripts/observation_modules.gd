@@ -3,8 +3,8 @@ extends RefCounted
 const RETIRED_IDS := ["record", "revisit", "reference_bus", "shutter_weave"]
 const MAX_SLOTS := 5
 const INITIAL_SLOTS := 2
-const OVERCHARGE_COUNT := 12
-const OVERCHARGE_SECONDS := 6.0
+const OVERCHARGE_COUNT := 30
+const OVERCHARGE_SECONDS := 9.0
 var charge_count := 0
 var burst_remaining := 0.0
 const DEFINITIONS := {
@@ -17,7 +17,7 @@ const DEFINITIONS := {
 	"wide_correlation": {"cost": 0.0, "primary_speed": 0.75, "secondary_speed": 1.35, "glyph": "wide", "code": "CORRELATE", "badge": "LINK ×1.35", "requires": [], "source": "sample", "category": "sweep", "pool": "sweep"},
 	"linear_observation": {"cost": 0.0, "line_width": 4.0, "glyph": "linear_observation", "code": "LINE", "badge": "LINE ×4", "requires": [], "source": "sample", "category": "sweep", "pool": "sweep"},
 	"capture_hold": {"cost": 0.0, "motion_speed": 0.7, "glyph": "capture_hold", "code": "SLOW", "badge": "−30%", "requires": [], "source": "sample", "category": "trace", "pool": "trace"},
-	"overcharge": {"cost": 0.0, "burst_speed": 2.0, "burst_radius": 1.5, "glyph": "overcharge", "code": "BURST", "badge": "12 → 6s", "requires": [], "source": "sample", "category": "link", "pool": "link"},
+	"overcharge": {"cost": 0.0, "burst_speed": 2.0, "burst_radius": 1.5, "glyph": "overcharge", "code": "BURST", "badge": "30 → 9s", "requires": [], "source": "sample", "category": "link", "pool": "link"},
 }
 const SLOT_RESEARCH := {
 	"slot_3": {"capacity": 3, "cost": 240000000.0, "requires": []},

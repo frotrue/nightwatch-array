@@ -430,7 +430,7 @@ func _check_new_modules() -> void:
 	game.spawner.module_rng.seed = 123
 	# Exercise real manual and automatic completion signals, rather than calling
 	# the module counter directly. Generated targets remain a valid charge source.
-	for index in range(12):
+	for index in range(30):
 		var meteor = game.spawner.spawn_meteor("common", Vector2(500, 300), Vector2(150, 0), 10.0)
 		meteor.set_meta("gemini_echo", true)
 		meteor.set_process(false)
@@ -444,7 +444,7 @@ func _check_new_modules() -> void:
 			meteor._process(0.11)
 		_check(meteor.observed_successfully, "real completion reaches the accounting route")
 		meteor.free()
-	_check(research.modules.burst_remaining == 6.0, "twelve mixed real completions charge the burst")
+	_check(research.modules.burst_remaining == 9.0, "thirty mixed real completions charge the burst")
 	research.modules.advance_time(1.5)
 	research.director._ensure_ticket("n/captured", "rare", "natural")
 	research.director._spawn_component({"ticket": "n/captured", "kind": "rare", "origin_kind": "natural", "component": 0, "start": Vector2(0.3, 0.4), "end": Vector2(0.7, 0.4)})
@@ -460,7 +460,7 @@ func _check_new_modules() -> void:
 	var saved: Dictionary = JSON.parse_string(JSON.stringify(game._build_save_data()))
 	game._apply_save_data(saved)
 	_freeze(game)
-	_check(research.modules.burst_remaining == 4.5, "whole-game save restore preserves remaining burst time")
+	_check(research.modules.burst_remaining == 7.5, "whole-game save restore preserves remaining burst time")
 	var restored = research.director.targets()[0]
 	restored.restore_progress({"age": 2.0, "captured_once": true, "capture_remaining": 6.0})
 	game.observer.cursor_position = restored.position + Vector2(10000, 0)

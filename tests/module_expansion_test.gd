@@ -210,13 +210,13 @@ func _check_capture() -> void:
 
 func _check_overcharge() -> void:
 	var modules := _installed(["overcharge"])
-	for index in range(12):
+	for index in range(30):
 		var source := Node.new()
 		modules.record_completion(source)
 		modules.record_completion(source)
 		source.free()
-		if index < 11: _check(modules.burst_remaining == 0.0, "one completion counts once")
-	_check(modules.burst_remaining == 6.0 and modules.charge_count == 0, "twelve completed targets start one bounded burst")
+		if index < 29: _check(modules.burst_remaining == 0.0, "one completion counts once")
+	_check(modules.burst_remaining == 9.0 and modules.charge_count == 0, "thirty completed targets start one bounded burst")
 	var source := Node.new()
 	modules.record_completion(source)
 	source.free()
@@ -224,8 +224,10 @@ func _check_overcharge() -> void:
 	modules.advance_time(2.0)
 	var restored := _installed(["overcharge"])
 	restored.restore_round_state(JSON.parse_string(JSON.stringify(modules.get_round_state())))
-	_check(restored.burst_remaining == 4.0 and restored.burst_multiplier("burst_speed") == 2.0, "active burst survives real JSON without restarting its duration")
-	restored.advance_time(4.0)
+	_check(restored.burst_remaining == 7.0 and restored.burst_multiplier("burst_speed") == 2.0, "active burst survives real JSON without restarting its duration")
+	restored.advance_time(6.5)
+	_check(restored.burst_multiplier("burst_speed") == 2.0, "burst remains active until all nine seconds are spent")
+	restored.advance_time(0.5)
 	_check(restored.burst_multiplier("burst_speed") == 1.0, "burst ends exactly at the boundary")
 	modules.equip("", 0)
 	modules.equip("overcharge", 0)

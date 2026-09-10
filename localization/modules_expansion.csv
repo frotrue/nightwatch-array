@@ -52,5 +52,5 @@ MODULE_CAPTURE_HOLD_DESC,While observing: meteors inside the field move and burn
 MODULE_CAPTURE_HOLD_COMBO,Wide and linear fields slow more meteors. Leaving the field restores normal speed.,광역·선형 관측으로 감속 범위 확대. 범위 밖에서는 원래 속도로 복귀.
 MODULE_OVERCHARGE_NAME,Overcharge,과충전
 MODULE_OVERCHARGE_SHORT,Overcharge,과충전
-MODULE_OVERCHARGE_DESC,Every 12 observations: manual speed ×2 and radius ×1.5 for 6s. No charging during the burst.,관측 12회마다 6초간 수동 속도 2배·반경 1.5배. 발동 중에는 충전 중지.
+MODULE_OVERCHARGE_DESC,Every 30 observations: manual speed ×2 and radius ×1.5 for 9s. No charging during the burst.,관측 30회마다 9초간 수동 속도 2배·반경 1.5배. 발동 중에는 충전 중지.
 MODULE_OVERCHARGE_COMBO,Manual and automatic completions count. Split fragments also charge it.,직접·자동 관측 모두 충전. 분열 조각도 횟수에 포함됩니다.
