@@ -31,6 +31,8 @@ func _run() -> void:
 		var id: String = game.deep_sky.state.last_draw
 		var serial: int = game.deep_sky.state.draw_serial
 		_check(window.drawing and not window.result_panel.visible and not id.is_empty(), "paid result stays hidden during animation")
+		var paid_state: Dictionary = game.deep_sky.get_save_data()
+		_check(game.deep_sky.debug_draw_module().is_empty() and game.deep_sky.get_save_data() == paid_state, "debug cannot overwrite an unrevealed paid result")
 		window.begin_draw()
 		_check(game.deep_sky.state.draw_serial == serial and game.deep_sky.samples == 0, "double activation cannot pay twice")
 		window._process(window.REVEAL_SECONDS * 0.6)
@@ -50,6 +52,25 @@ func _run() -> void:
 		popup.slots[1].pressed.emit()
 		popup.close()
 		_check(game.upgrade_tree.visible and paused, "close returns to the same chart")
+	popup.open_draw()
+	var debug_currency: Dictionary = game.deep_sky.state.get_save_data()
+	var debug_slots: Array = game.deep_sky.modules.slots.duplicate()
+	for draw_index in range(20):
+		var debug_id: String = game.deep_sky.debug_draw_module()
+		_check(debug_id in game.deep_sky.Data.SAMPLE_MODULES, "debug draw grants only active modules")
+		window.show_debug_result(debug_id)
+		_check(not window.drawing and window.result_panel.visible and window.result_name.text == tr("MODULE_%s_NAME" % debug_id.to_upper()), "debug result is immediately visible without reveal animation")
+	_check(game.deep_sky.state.draw_serial == debug_currency.draw_serial and game.deep_sky.samples == debug_currency.samples and game.deep_sky.state.samples_spent == debug_currency.samples_spent, "debug draws leave paid sequence and specimen accounting unchanged")
+	_check(game.deep_sky.modules.slots == debug_slots, "debug copies do not change equipment")
+	game.deep_sky.modules.grant("overcharge")
+	game.deep_sky.modules.equip("overcharge", 0)
+	game.deep_sky.modules.restore_round_state({"burst_remaining": 3.5})
+	var debug_before: Dictionary = game.deep_sky.get_save_data()
+	game.active_save_slot = 1
+	_check(game.deep_sky.debug_draw_module().is_empty() and game.deep_sky.get_save_data() == debug_before, "failed debug autosave restores ownership and last result")
+	_check(game.deep_sky.modules.burst_remaining == 3.5, "debug rollback preserves an active module burst")
+	game.active_save_slot = 0
+	popup.close()
 	# Closing halfway through is presentation-only. Reopening must not roll.
 	game.deep_sky.state.award_samples(16)
 	popup.open_draw()

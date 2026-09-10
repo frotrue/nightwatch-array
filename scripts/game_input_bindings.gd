@@ -27,6 +27,7 @@ const RESERVED_DEBUG_KEYS := [
 	KEY_D,
 	KEY_N,
 	KEY_A,
+	KEY_G,
 	KEY_M,
 	KEY_R,
 	KEY_S,

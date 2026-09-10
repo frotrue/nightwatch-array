@@ -742,3 +742,5 @@ MODX_SLOTS_USED,Slots %d / %d,장착 %d / %d
 MODX_CONDITIONAL_COUNT,%d conditional effects · inspect equipped modules,조건부 효과 %d종 · 장착 모듈에서 확인
 MODX_STAT_MANUAL,Manual speed,수동 속도
 MODX_STAT_RADIUS,Radius,반경
+HUD_DEBUG_MODULE,Ctrl+Shift+G   Instantly draw a free module,Ctrl+Shift+G   모듈 무료 즉시 뽑기
+BANNER_DEBUG_MODULE,DEBUG MODULE  %s,디버그 모듈 획득  %s

@@ -121,6 +121,24 @@ func draw_module() -> String:
 	changed.emit()
 	return id
 
+func debug_draw_module() -> String:
+	# Debug grants bypass unlock/cost but share persistence and active inventory.
+	# Do not advance the paid draw sequence or replace an unrevealed paid result.
+	if game.module_popup.is_draw_open() and game.module_popup.draw_window.drawing:
+		return ""
+	var before := get_save_data()
+	var runtime := modules.get_round_state()
+	var id: String = Data.SAMPLE_MODULES.pick_random()
+	if not modules.grant_copy(id):
+		return ""
+	state.last_draw = id
+	if not _commit_transaction(before, game.progression.observation_data):
+		modules.restore_round_state(runtime)
+		return ""
+	game.sound.play_slot_confirm()
+	changed.emit()
+	return id
+
 func paid_research_count() -> int:
 	var count := 0
 	for id in state.research_ids:

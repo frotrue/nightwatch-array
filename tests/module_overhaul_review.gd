@@ -61,13 +61,30 @@ func _run() -> void:
 		for id in NEW_MODULES:
 			game.module_popup.show_module_tooltip(id)
 			await _capture(game, locale + "_popup_" + id)
+	if "--debug-draw" in args:
+		game.module_popup.open_draw()
+		for locale in ["ko", "en"]:
+			_set_locale(game, locale)
+			var event := InputEventKey.new()
+			event.keycode = KEY_G
+			event.ctrl_pressed = true
+			event.shift_pressed = true
+			event.pressed = true
+			game.handle_debug_key_input(event)
+			await _capture(game, locale + "_popup_debug_draw")
+		game.module_popup.close()
+		game.upgrade_tree.close_tree()
+		game.hud.toggle_debug()
+		for locale in ["ko", "en"]:
+			_set_locale(game, locale)
+			await _capture(game, locale + "_debug_shortcuts")
 	if source != Capture.source_snapshot(failures): failures.append("source changed during capture")
 	var manifest := FileAccess.open(output.path_join("manifest.json"), FileAccess.WRITE)
 	manifest.store_string(JSON.stringify({"source": source, "frames": records, "failures": failures, "synthetic": true}, "\t"))
 	manifest.close()
 	game.free()
 	paused = false
-	_finish("MODULE_REVIEW", "10 frames at " + ProjectSettings.globalize_path(output))
+	_finish("MODULE_REVIEW", "%d frames at " % records.size() + ProjectSettings.globalize_path(output))
 
 func _game() -> Node:
 	var game: Node = load("res://scenes/main.tscn").instantiate()

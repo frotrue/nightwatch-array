@@ -491,6 +491,12 @@ func handle_debug_key_input(event: InputEvent) -> void:
 				progression.debug_purchase_node(available[0])
 		KEY_A:
 			progression.debug_purchase_all()
+		KEY_G:
+			var id: String = deep_sky.debug_draw_module()
+			if not id.is_empty():
+				if module_popup.is_draw_open():
+					module_popup.draw_window.show_debug_result(id)
+				hud.show_banner(tr("BANNER_DEBUG_MODULE") % tr("MODULE_%s_NAME" % id.to_upper()), UITheme.INK_MID, 2.0)
 		KEY_M:
 			spawner.spawn_meteor("common")
 		KEY_R:

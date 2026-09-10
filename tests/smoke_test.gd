@@ -2382,12 +2382,26 @@ func _run_input_routing_regressions(packed: PackedScene) -> void:
 	routing_game._close_upgrade_tree_without_transition()
 
 	# Dispatch through the viewport: direct method calls miss paused-node input loss.
+	var debug_modules_before := _module_copy_count(routing_game)
+	var debug_level_before: int = routing_game.progression.upgrade_level
+	await _push_key_event(routing_game.get_viewport(), KEY_G, true, true)
+	_check(_module_copy_count(routing_game) == debug_modules_before + 1, "debug module chord grants one copy without requiring unlock")
+	_check(routing_game.progression.upgrade_level == debug_level_before and routing_game.deep_sky.modules.installed_ids().is_empty(), "debug grant neither purchases research nor auto-equips")
 	var debug_data_before: float = routing_game.progression.observation_data
 	await _push_key_event(routing_game.get_viewport(), KEY_D, true, true)
 	_check(is_equal_approx(routing_game.progression.observation_data, debug_data_before + 100.0), "live debug data chord fires exactly once")
 	routing_game.upgrade_tree.open_tree()
 	await process_frame
 	_check(paused and not routing_game.can_process(), "chart pauses the gameplay root during debug input regression")
+	debug_modules_before = _module_copy_count(routing_game)
+	await _push_key_event(routing_game.get_viewport(), KEY_G, true, true)
+	_check(_module_copy_count(routing_game) == debug_modules_before + 1 and paused, "debug module chord works exactly once while chart pauses gameplay")
+	debug_modules_before = _module_copy_count(routing_game)
+	await _push_key_event(routing_game.get_viewport(), KEY_G)
+	var repeated_module := _key_event(KEY_G, true, true, true)
+	repeated_module.echo = true
+	routing_game.get_viewport().push_input(repeated_module)
+	_check(_module_copy_count(routing_game) == debug_modules_before, "plain G and auto-repeat cannot grant modules")
 	debug_data_before = routing_game.progression.observation_data
 	await _push_key_event(routing_game.get_viewport(), KEY_D, true, true)
 	_check(is_equal_approx(routing_game.progression.observation_data, debug_data_before + 100.0), "debug data chord works while the chart pauses gameplay")
@@ -2411,6 +2425,9 @@ func _run_input_routing_regressions(packed: PackedScene) -> void:
 	hud._begin_rebind(&"nw_chart")
 	await _push_key_event(routing_game.get_viewport(), KEY_D, true, true)
 	_check(is_equal_approx(routing_game.progression.observation_data, debug_data_before), "key rebinding consumes reserved debug chords before game commands")
+	debug_modules_before = _module_copy_count(routing_game)
+	await _push_key_event(routing_game.get_viewport(), KEY_G, true, true)
+	_check(_module_copy_count(routing_game) == debug_modules_before, "rebinding blocks the new debug module chord")
 	hud._cancel_rebind(false)
 	hud.close_settings()
 
@@ -2906,3 +2923,9 @@ class ImmediateObservationTarget:
 		alive = false
 		observation_progress = 1.0
 		observed.emit(self, 1.0, 1.0, true, "GOOD")
+
+func _module_copy_count(game: Node) -> int:
+	var count := 0
+	for id in game.deep_sky.modules.purchased:
+		count += game.deep_sky.modules.owned_count(id)
+	return count

@@ -96,6 +96,13 @@ func finish_reveal() -> void:
 	refresh()
 	action.grab_focus()
 
+func show_debug_result(id: String) -> void:
+	result_id = id
+	new_copy = host.model().owned_count(id) == 1
+	elapsed = REVEAL_SECONDS
+	drawing = false
+	refresh()
+
 func refresh() -> void:
 	if host == null or not visible:
 		return

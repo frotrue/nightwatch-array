@@ -73,6 +73,7 @@ Windows 기본 위치는 `%APPDATA%\Godot\app_userdata\Nightwatch Array\`다.
 | 키 | 동작 |
 |---|---|
 | D / N / A | 데이터 +100 / 구매 가능한 첫 연구 / 전 연구 구매 |
+| G | 표본 소모·연출 없이 모듈 1개 즉시 획득 (자동 장착 없음) |
 | M / R / S | 일반 유성 / 화구 / 유성우 생성 |
 | F | Sirius 연구 설치 후 해당 회차의 큰개자리 화구 경고 |
 | Backspace | 런 리셋 |

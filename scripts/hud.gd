@@ -1493,7 +1493,7 @@ func _apply_locale() -> void:
 		"\n".join([
 			tr("HUD_DEBUG_DATA"), tr("HUD_DEBUG_NEXT"), tr("HUD_DEBUG_ALL"),
 			tr("HUD_DEBUG_METEOR"), tr("HUD_DEBUG_RARE"), tr("HUD_DEBUG_SHOWER"),
-			tr("HUD_DEBUG_FINAL"), tr("HUD_DEBUG_ENDING"), tr("HUD_DEBUG_RESET")
+			tr("HUD_DEBUG_FINAL"), tr("HUD_DEBUG_MODULE"), tr("HUD_DEBUG_RESET")
 		])
 	])
 	last_runtime_second = -1

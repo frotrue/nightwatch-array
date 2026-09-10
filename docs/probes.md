@@ -108,3 +108,9 @@ The human-driven survey slice runs a save-free 60-second opening sky with Sky Sw
 `SURVEY_SLICE_READY` and `SURVEY_SLICE_RESULT` identify the session; neither is a pass/fail verdict.
 The [old reference](history/probes-through-2026-09-07.md) preserves detailed historical
 coverage and earlier measurement rationale. Current workflow starts with this page.
+
+`module_overhaul_review.gd -- --debug-draw` also captures the immediate debug draw
+result and F9 shortcut legend in Korean and English. The draw-window gate checks
+free grant accounting, animation exclusion and save-failure rollback; the smoke
+gate dispatches Ctrl+Shift+G through the live and paused viewport, including repeat
+and rebinding exclusion. These debug-only grants do not change normal economy rules.
