@@ -201,34 +201,41 @@ func _spawn_from_cursor(position: Vector2) -> int:
 	return spawned_count
 
 
+func has_visible_feedback() -> bool:
+	return active_round > 0 and progression != null and progression.survey_enabled() and (scanning or charge_distance > 0.0 or cooldown_remaining > 0.0)
+
+
+func get_visual_feedback() -> Dictionary:
+	if not has_visible_feedback():
+		return {}
+	var blocked := scanning and not is_blank_sky(cursor_position)
+	var progress := get_charge_progress()
+	var ink := Color(UITheme.ACCENT_LINE, 0.38 if blocked else 0.92)
+	if cooldown_remaining > 0.0:
+		progress = get_cooldown_progress()
+		ink = Color(UITheme.ACCENT_PIP, 0.82)
+	return {"progress": progress, "ink": ink, "track_alpha": 0.16 if blocked else 0.30}
+
+
+func uses_linear_feedback() -> bool:
+	return modules != null and progression != null and progression.galaxy_unlocked() and modules.has("linear_observation")
+
+
 func _draw() -> void:
-	if active_round <= 0 or progression == null or not progression.survey_enabled():
+	# The observer owns the linear instrument and paints survey progress along
+	# its lower edge. Keeping one owner also keeps all feedback at its cursor.
+	if uses_linear_feedback():
 		return
-	if not scanning and charge_distance <= 0.0 and cooldown_remaining <= 0.0:
+	var feedback := get_visual_feedback()
+	if feedback.is_empty():
 		return
 	var visual_scale := _world_px(1.0)
 	var radius: float = _world_px(progression.get_tracking_radius() + 16.0)
-	var blocked := scanning and not is_blank_sky(cursor_position)
-	var track_alpha := 0.16 if blocked else 0.30
 	draw_arc(cursor_position, radius, 0.0, TAU, 64, Color(UITheme.SHADOW, 0.44), 2.5 * visual_scale, true)
-	draw_arc(cursor_position, radius, 0.0, TAU, 64, Color(UITheme.ACCENT_DEEP, track_alpha), 0.85 * visual_scale, true)
-	var progress := get_charge_progress()
-	var arc_color := Color(UITheme.ACCENT_LINE, 0.38 if blocked else 0.92)
-	if cooldown_remaining > 0.0:
-		progress = get_cooldown_progress()
-		arc_color = Color(UITheme.ACCENT_PIP, 0.82)
-	if progress <= 0.0:
+	draw_arc(cursor_position, radius, 0.0, TAU, 64, Color(UITheme.ACCENT_DEEP, feedback.track_alpha), 0.85 * visual_scale, true)
+	if feedback.progress <= 0.0:
 		return
-	draw_arc(
-		cursor_position,
-		radius,
-		-PI * 0.5,
-		-PI * 0.5 + TAU * progress,
-		64,
-		arc_color,
-		1.3 * visual_scale,
-		true
-	)
+	draw_arc(cursor_position, radius, -PI * 0.5, -PI * 0.5 + TAU * feedback.progress, 64, feedback.ink, 1.3 * visual_scale, true)
 
 
 func _atmospheric_rect() -> Rect2:

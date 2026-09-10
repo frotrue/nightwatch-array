@@ -114,3 +114,7 @@ result and F9 shortcut legend in Korean and English. The draw-window gate checks
 free grant accounting, animation exclusion and save-failure rollback; the smoke
 gate dispatches Ctrl+Shift+G through the live and paused viewport, including repeat
 and rebinding exclusion. These debug-only grants do not change normal economy rules.
+
+`module_overhaul_review.gd -- --survey-feedback` adds matched linear charge,
+cooldown, wide/overcharge and circular-control captures. Survey mechanics and
+progress values stay unchanged; only the linear indicator moves onto the cursor.

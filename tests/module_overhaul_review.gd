@@ -78,6 +78,30 @@ func _run() -> void:
 		for locale in ["ko", "en"]:
 			_set_locale(game, locale)
 			await _capture(game, locale + "_debug_shortcuts")
+	if "--survey-feedback" in args:
+		game.module_popup.close()
+		game.upgrade_tree.close_tree()
+		_clear_sky(game)
+		game.effects.reset()
+		game.observer.native_cursor_visible = false
+		game.observer.cursor_position = center
+		game.observer.previous_cursor_position = center
+		game.survey.begin_round(1)
+		game.survey.set_scanning(true, center)
+		game.survey.charge_distance = game.progression.get_survey_required_distance() * 0.5
+		_install(game, ["linear_observation"])
+		await _capture(game, "line_survey_charge")
+		game.survey.set_scanning(false, center, true)
+		game.survey.cooldown_duration = 2.0
+		game.survey.cooldown_remaining = 1.0
+		await _capture(game, "line_survey_cooldown")
+		_install(game, ["linear_observation", "wide", "overcharge"])
+		game.deep_sky.modules.restore_round_state({"burst_remaining": 4.5})
+		await _capture(game, "line_survey_wide_burst")
+		_install(game, [])
+		game.survey.cooldown_remaining = 0.0
+		game.survey.set_scanning(true, center)
+		await _capture(game, "circle_survey_charge")
 	if source != Capture.source_snapshot(failures): failures.append("source changed during capture")
 	var manifest := FileAccess.open(output.path_join("manifest.json"), FileAccess.WRITE)
 	manifest.store_string(JSON.stringify({"source": source, "frames": records, "failures": failures, "synthetic": true}, "\t"))

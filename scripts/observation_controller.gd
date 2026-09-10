@@ -146,6 +146,7 @@ func _process(delta: float) -> void:
 		or _target_is_valid(hovered_meteor)
 		or not tracked_meteors.is_empty()
 		or combo_visual_active
+		or (_linear_enabled() and survey != null and survey.has_visible_feedback())
 		or (modules != null and modules.has("overcharge"))
 	)
 	if cursor_position != previous_cursor_position or tracking_visual_active or tracking_visual_active_last_frame or perseid_visual_changed:
@@ -519,6 +520,11 @@ func _draw_linear_cursor(radius: float, ink: Color, progress: float, tracking: b
 	draw_rect(bounds, Color(ink, 0.7 if tracking else 0.42), false, scale_factor, true)
 	if tracking:
 		draw_line(bounds.position, bounds.position + Vector2(bounds.size.x * progress, 0), Color(ink, 0.95), 2.0 * scale_factor, true)
+	if survey != null:
+		var feedback: Dictionary = survey.get_visual_feedback()
+		if not feedback.is_empty() and feedback.progress > 0.0:
+			var start := bounds.position + Vector2(0, bounds.size.y)
+			draw_line(start, start + Vector2(bounds.size.x * feedback.progress, 0), feedback.ink, 1.3 * scale_factor, true)
 	for side in [-1.0, 1.0]:
 		draw_line(cursor_position + Vector2(side * 4, 0) * scale_factor, cursor_position + Vector2(side * 10, 0) * scale_factor, ink, scale_factor, true)
 

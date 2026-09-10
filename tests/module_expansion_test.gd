@@ -275,6 +275,19 @@ func _check_sweep_charge_contract() -> void:
 	survey.modules = _installed(["sweep_optics"])
 	survey.apply_scan_segment(Vector2.ZERO, Vector2(100.0, 0.0))
 	_check(is_equal_approx(survey.charge_distance, 135.0), "Sweep Optics increases blank-sky charge without changing the guard radius")
+	var charge: float = survey.charge_distance
+	survey.modules = _installed(["linear_observation"])
+	_check(survey.uses_linear_feedback() and survey.has_visible_feedback(), "linear mode gives survey feedback to the cursor instead of drawing a ring")
+	_check(is_equal_approx(survey.get_visual_feedback().progress, 0.135), "linear feedback reads existing charge without changing it")
+	survey.cooldown_duration = 4.0
+	survey.cooldown_remaining = 3.0
+	_check(is_equal_approx(survey.get_visual_feedback().progress, 0.25) and survey.charge_distance == charge, "cooldown replaces visible progress without spending preserved charge")
+	survey.advance_time(1.0)
+	_check(is_equal_approx(survey.get_visual_feedback().progress, 0.5), "stationary cooldown feedback follows the real timer")
+	survey.modules.equip("", 0)
+	_check(not survey.uses_linear_feedback() and survey.has_visible_feedback(), "unequip restores the ordinary survey feedback")
+	survey.end_round()
+	_check(survey.get_visual_feedback().is_empty(), "ended round leaves no survey indicator")
 	var progression: Node = survey.progression
 	var spawner: Node = survey.spawner
 	var layer: Node2D = survey.meteor_layer
