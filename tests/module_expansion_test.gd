@@ -112,6 +112,7 @@ func _installed(ids: Array[String]) -> RefCounted:
 func _run() -> void:
 	_check_catalogue()
 	_check_linear_geometry()
+	_check_solid_body_contact()
 	_check_capture()
 	_check_overcharge()
 	_check_sweep_charge_contract()
@@ -297,3 +298,38 @@ func _check_sweep_charge_contract() -> void:
 	progression.free()
 	spawner.free()
 	layer.free()
+
+func _check_solid_body_contact() -> void:
+	var observer := Observer.new()
+	observer.progression = MockProgression.new()
+	var view = load("res://scripts/observation_view.gd").new()
+	observer.observation_view = view
+	for type in ["variable_star", "binary_star", "galaxy"]:
+		var target := Meteor.new()
+		target.configure(Balance.meteor_spec(type), type, Vector2.ZERO, Vector2.RIGHT, 1.0, {}, Vector2.INF, view)
+		root.add_child(target)
+		target.set_process(false)
+		_check(target.material == null, "solid surface occludes sky instead of using meteor additive blending")
+		for span in [1.0, 1.5]:
+			view.observation_span = span
+			var body: float = target.get_observation_body_radius()
+			for ids in [[], ["linear_observation"], ["linear_observation", "linear_observation"]]:
+				var installed: Array[String] = []
+				installed.assign(ids)
+				observer.modules = _installed(installed)
+				var half_height: float = 10.0 * span * (0.45 if not ids.is_empty() else 1.0)
+				observer.cursor_position = Vector2(0, body + half_height - 0.5)
+				observer.previous_cursor_position = observer.cursor_position
+				_check(observer._apply_manual_contact(target, 0.01), "visible body edge accepts circle/line contact at both camera scales")
+				observer.cursor_position.y += 1.0
+				observer.previous_cursor_position = observer.cursor_position
+				_check(not observer._apply_manual_contact(target, 0.01), "outside body plus field is not observed")
+				if not ids.is_empty():
+					var half_width: float = 10.0 * span * (4.0 if ids.size() == 1 else 7.0)
+					observer.cursor_position = Vector2(body + half_width + 0.5, 0)
+					observer.previous_cursor_position = observer.cursor_position
+					_check(not observer._apply_manual_contact(target, 0.01), "LINE copies do not multiply the target body radius")
+		target.free()
+	observer.progression.free()
+	observer.free()
+	view.free()

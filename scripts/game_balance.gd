@@ -94,7 +94,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "rare_detection", "name": "Rare Meteor Detection", "icon": "★", "cost": 450,
-		"description": "Unlocks fireballs and identifies incoming target types.",
+		"description": "Unlocks luminous meteors and identifies incoming target types.",
 		"branch": "detection", "prerequisites": ["trajectory"],
 		"hidden_until": ["trajectory"], "effect_type": "discovery", "effect_notes": {"meteor_type": "fireball"},
 		"major": true
@@ -162,7 +162,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "secondary_camera", "name": "Secondary Camera", "icon": "▣", "cost": 600,
-		"description": "Adds 1 movable observation dish and arrival warnings. Right-click to position it; fireballs require manual observation.",
+		"description": "Adds 1 movable observation dish and arrival warnings. Right-click to position it; luminous meteors require manual observation.",
 		"branch": "network", "prerequisites": ["array_planning"],
 		"hidden_until": ["array_planning"], "effect_type": "automation", "effect_notes": {"assist_slots": 1},
 		"major": true
@@ -312,7 +312,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "filter_wheel", "name": "Calibration Framework", "icon": "◒", "cost": 10000,
-		"description": "Unlocks band calibration and binary-star research.",
+		"description": "Unlocks band calibration and ice-asteroid research.",
 		"branch": "lyra", "prerequisites": [],
 		"hidden_until": [], "effect_type": "unlock", "effect_notes": {"opens_band_calibration": true},
 		"implementation_connection": "prerequisite_only",
@@ -320,7 +320,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "blue_band", "name": "Blue Band", "icon": "B", "cost": 18000,
-		"description": "Common meteors, major fireballs and satellites: manual speed +25%, manual Data +15%.",
+		"description": "Common meteors, giant meteors and satellites: manual speed +25%, manual Data +15%.",
 		"branch": "lyra", "prerequisites": ["filter_wheel"],
 		"hidden_until": ["filter_wheel"], "effect_type": "passive", "effect_notes": {"calibration": "blue"},
 		"implementation_connection": "dynamic_upgrade_id",
@@ -328,7 +328,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "amber_band", "name": "Amber Band", "icon": "A", "cost": 22000,
-		"description": "Fragments, fireballs, comets and distant galaxies: manual speed +25%, manual Data +15%.",
+		"description": "Fragments, luminous meteors, comets and planets: manual speed +25%, manual Data +15%.",
 		"branch": "lyra", "prerequisites": ["blue_band"],
 		"hidden_until": ["blue_band"], "effect_type": "passive", "effect_notes": {"calibration": "amber"},
 		"implementation_connection": "dynamic_upgrade_id",
@@ -336,7 +336,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "violet_band", "name": "Violet Band", "icon": "V", "cost": 26000,
-		"description": "Fast meteors, fragment pieces, variable and binary stars: manual speed +25%, manual Data +15%.",
+		"description": "Fast meteors, fragment pieces, asteroids and ice asteroids: manual speed +25%, manual Data +15%.",
 		"branch": "lyra", "prerequisites": ["amber_band"],
 		"hidden_until": ["amber_band"], "effect_type": "passive", "effect_notes": {"calibration": "violet"},
 		"implementation_connection": "dynamic_upgrade_id",
@@ -365,14 +365,14 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "change_detection", "name": "Change Detection", "icon": "Δ", "cost": 24000,
-		"description": "Identifies satellites, variable stars, comets and distant galaxies. Maximum forecast error: about 2% of screen width.",
+		"description": "Identifies satellites, asteroids, comets and planets. Maximum forecast error: about 2% of screen width.",
 		"branch": "andromeda", "prerequisites": ["satellite_catalog"],
 		"hidden_until": ["satellite_catalog"], "effect_type": "transformation", "effect_notes": {"deep_classification": true},
 		"major": false
 	},
 	{
-		"id": "variable_watchlist", "name": "Variable Watchlist", "icon": "≈", "cost": 220000,
-		"description": "Unlocks variable stars that brighten and dim. Observation must finish within the round.",
+		"id": "variable_watchlist", "name": "Asteroid Observation", "icon": "≈", "cost": 220000,
+		"description": "Unlocks large, rocky asteroids. Finish observing them within the round.",
 		"branch": "andromeda", "prerequisites": ["change_detection"],
 		"hidden_until": ["change_detection"], "effect_type": "discovery", "effect_notes": {"target_type": "variable_star"},
 		"major": true
@@ -386,7 +386,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "andromeda_deep_survey", "name": "Long-Target Survey", "icon": "◎", "cost": 32000,
-		"description": "Satellites, variable stars, comets and distant galaxies: manual speed +25%, Data +30% (automatic included).",
+		"description": "Satellites, asteroids, comets and planets: manual speed +25%, Data +30% (automatic included).",
 		"branch": "andromeda", "prerequisites": ["comet_solutions"],
 		"hidden_until": ["comet_solutions"], "effect_type": "transformation", "effect_notes": {"deep_speed": 1.25, "deep_value": 1.3},
 		"major": true
@@ -428,7 +428,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "leonid_radiant", "name": "Leonid Radiant", "icon": "10", "cost": 16000,
-		"description": "Every 10 manual observations of natural targets trigger 8 meteors over 7 seconds. Major fireballs do not count.",
+		"description": "Every 10 manual observations of natural targets trigger 8 meteors over 7 seconds. Giant meteors do not count.",
 		"branch": "leo", "prerequisites": [],
 		"hidden_until": [], "effect_type": "unlock", "effect_notes": {"manual_trigger": 10, "storm_count": 8},
 		"major": true
@@ -479,8 +479,8 @@ const UPGRADE_NODES: Array[Dictionary] = [
 		"major": true, "affects_pacing": false
 	},
 	{
-		"id": "double_star_resolution", "name": "Double-Star Resolution", "icon": "⁚", "cost": 12000,
-		"description": "Unlocks binary stars and their arrival forecasts. Maximum error: about 2% of screen width. All Observation Data ×2 (automatic included).",
+		"id": "double_star_resolution", "name": "Ice Asteroid Observation", "icon": "⁚", "cost": 12000,
+		"description": "Unlocks ice asteroids and accurate arrival forecasts. All Observation Data ×2 (automatic included).",
 		"branch": "lyra", "prerequisites": ["filter_wheel"],
 		"hidden_until": ["filter_wheel"], "effect_type": "discovery",
 		"effect_notes": {"target_type": "binary_star"},
@@ -489,8 +489,8 @@ const UPGRADE_NODES: Array[Dictionary] = [
 		"major": true, "affects_pacing": false
 	},
 	{
-		"id": "galaxy_imaging", "name": "Distant Galaxy Imaging", "icon": "M31", "cost": 90000,
-		"description": "Unlocks distant galaxies as long-watch targets. All Observation Data ×2 (automatic included).",
+		"id": "galaxy_imaging", "name": "Planet Observation", "icon": "M31", "cost": 90000,
+		"description": "Unlocks large planets for observation. All Observation Data ×2 (automatic included).",
 		"branch": "andromeda", "prerequisites": ["andromeda_deep_survey"],
 		"hidden_until": ["andromeda_deep_survey"], "effect_type": "discovery",
 		"effect_notes": {"target_type": "galaxy"},
@@ -513,8 +513,8 @@ const UPGRADE_NODES: Array[Dictionary] = [
 		"major": true, "affects_pacing": false
 	},
 	{
-		"id": "fireball_tail", "name": "Fireball Tail", "icon": "★", "cost": 32000,
-		"description": "Each meteor storm ends with a manual-only fireball. All Observation Data ×2 (automatic included).",
+		"id": "fireball_tail", "name": "Luminous Meteor Tail", "icon": "★", "cost": 32000,
+		"description": "Each meteor storm ends with a manual-only luminous meteor. All Observation Data ×2 (automatic included).",
 		"branch": "leo", "prerequisites": ["fragment_front"],
 		"hidden_until": ["fragment_front"], "effect_type": "discovery",
 		"effect_notes": {"storm_tail_type": "fireball"},
@@ -524,7 +524,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "echo_signature_lock", "name": "Echo Signature Lock", "icon": "≡", "cost": 14000,
-		"description": "Echoes repeat the observed meteor type: common, fast, fragment or fireball. Other types give a random meteor.",
+		"description": "Echoes repeat the observed meteor type: common, fast, fragment or luminous meteor. Other types give a random meteor.",
 		"branch": "gemini", "prerequisites": ["echo_correlation_20"],
 		"hidden_until": ["echo_correlation_20"], "effect_type": "transformation", "effect_notes": {"echo_signature_lock": true},
 		"major": false, "affects_pacing": false
@@ -677,7 +677,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "sirius_fireball", "name": "Sirius Bloom", "icon": "★", "cost": 10000000,
-		"description": "Unlocks a major fireball, up to 1 per round with enough time left. Manual observation required.",
+		"description": "Unlocks a giant meteor, up to 1 per round with enough time left. Manual observation required.",
 		"branch": "canis_major", "prerequisites": ["canis_capacity_ii", "canis_cadence_i", "canis_capacity_iii"],
 		"hidden_until": ["canis_capacity_ii", "canis_cadence_i", "canis_capacity_iii"], "effect_type": "unlock", "effect_notes": {"major_fireball_per_round": 1},
 		"major": true, "affects_pacing": false
@@ -782,6 +782,8 @@ static func research_node_count() -> int:
 	return UPGRADE_NODES.size()
 
 
+# Legacy target IDs preserve purchased research and existing saves.
+# variable_star / binary_star / galaxy now mean asteroid / ice asteroid / planet.
 static func meteor_spec(type_id: String) -> Dictionary:
 	match type_id:
 		"fast":
@@ -813,7 +815,7 @@ static func meteor_spec(type_id: String) -> Dictionary:
 			}
 		"fireball":
 			return {
-				"name": "RARE FIREBALL", "speed": 190.0, "lifetime": 7.4,
+				"name": "LUMINOUS METEOR", "speed": 190.0, "lifetime": 7.4,
 				"radius": 19.0, "trail": 52, "value": 82.0, "track_time": 1.75,
 				"color": Color("fff2b0"), "glow": Color("ff7438"),
 				"spectral_band": "amber",
@@ -822,7 +824,7 @@ static func meteor_spec(type_id: String) -> Dictionary:
 			}
 		"major":
 			return {
-				"name": "MAJOR FIREBALL", "speed": 128.0, "lifetime": 14.0,
+				"name": "GIANT METEOR", "speed": 128.0, "lifetime": 14.0,
 				"radius": 35.0, "trail": 82, "value": 650.0, "track_time": 3.0,
 				"color": Color("fff8d6"), "glow": Color("ff4d32"),
 				"spectral_band": "blue",
@@ -840,11 +842,11 @@ static func meteor_spec(type_id: String) -> Dictionary:
 			}
 		"variable_star":
 			return {
-				"name": "VARIABLE STAR", "speed": 24.0, "lifetime": 34.0,
-				"radius": 13.0, "trail": 10, "value": 96.0, "track_time": 3.4,
-				"color": Color("f0dcff"), "glow": Color("c46cff"),
+				"name": "ASTEROID", "speed": 24.0, "lifetime": 34.0,
+				"radius": 43.0, "trail": 10, "value": 96.0, "track_time": 3.4,
+				"color": Color("a89b8b"), "glow": Color("d4bda2"),
 				"spectral_band": "violet",
-				"burn_terminal_ratio": 0.82, "burn_fade_start": 0.95, "burn_style": "variable",
+				"burn_terminal_ratio": 0.82, "burn_fade_start": 0.95, "burn_style": "rock",
 				"burnout_linger": 0.32,
 			}
 		"comet":
@@ -858,20 +860,20 @@ static func meteor_spec(type_id: String) -> Dictionary:
 			}
 		"binary_star":
 			return {
-				"name": "BINARY STAR", "speed": 32.0, "lifetime": 34.0,
-				"radius": 12.0, "trail": 12, "value": 118.0, "track_time": 3.8,
-				"color": Color("e8e0ff"), "glow": Color("8ea9ff"),
+				"name": "ICE ASTEROID", "speed": 32.0, "lifetime": 34.0,
+				"radius": 48.0, "trail": 12, "value": 118.0, "track_time": 3.8,
+				"color": Color("b0e5ef"), "glow": Color("80cbdc"),
 				"spectral_band": "violet",
-				"burn_terminal_ratio": 0.88, "burn_fade_start": 0.95, "burn_style": "binary",
+				"burn_terminal_ratio": 0.88, "burn_fade_start": 0.95, "burn_style": "ice",
 				"burnout_linger": 0.34,
 			}
 		"galaxy":
 			return {
-				"name": "DISTANT GALAXY", "speed": 20.0, "lifetime": 40.0,
-				"radius": 18.0, "trail": 8, "value": 220.0, "track_time": 5.2,
-				"color": Color("ffe8d2"), "glow": Color("dc84ff"),
+				"name": "PLANET", "speed": 20.0, "lifetime": 40.0,
+				"radius": 64.0, "trail": 8, "value": 220.0, "track_time": 5.2,
+				"color": Color("b7a181"), "glow": Color("e3c8a0"),
 				"spectral_band": "amber",
-				"burn_terminal_ratio": 0.94, "burn_fade_start": 0.97, "burn_style": "galaxy",
+				"burn_terminal_ratio": 0.94, "burn_fade_start": 0.97, "burn_style": "planet",
 				"burnout_linger": 0.48,
 			}
 		_:

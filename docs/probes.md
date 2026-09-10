@@ -118,3 +118,10 @@ and rebinding exclusion. These debug-only grants do not change normal economy ru
 `module_overhaul_review.gd -- --survey-feedback` adds matched linear charge,
 cooldown, wide/overcharge and circular-control captures. Survey mechanics and
 progress values stay unchanged; only the linear indicator moves onto the cursor.
+
+`solar_target_review.gd` captures a save-free six-target size comparison, linear
+observation field and the three replacement research inspectors in Korean/English
+(9 desktop frames). The comparison labels are fixture-only. `module_expansion_test`
+checks solid-body edge contacts with circular/single/double LINE fields at two
+camera spans. `meteor_render_cache_test` retains the full 539-case matrix, with
+147 solid-body cases explicitly requiring no meteor ribbons.

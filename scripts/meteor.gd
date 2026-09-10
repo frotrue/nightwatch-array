@@ -152,7 +152,8 @@ func _ready() -> void:
 	if SHARED_ADDITIVE_MATERIAL == null:
 		SHARED_ADDITIVE_MATERIAL = CanvasItemMaterial.new()
 		SHARED_ADDITIVE_MATERIAL.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
-	material = SHARED_ADDITIVE_MATERIAL
+	# Solid surfaces must occlude background stars instead of adding their light.
+	material = null if is_solid_body() else SHARED_ADDITIVE_MATERIAL
 	queue_redraw()
 
 
@@ -328,8 +329,19 @@ func can_be_tracked() -> bool:
 
 
 func get_tracking_radius(base_radius: float) -> float:
+	if is_solid_body():
+		return base_radius + get_observation_body_radius()
 	var size_bonus := clampf((body_radius - 7.0) * 0.52, 0.0, 18.0)
 	return base_radius + size_bonus * _interaction_scale()
+
+
+func is_solid_body() -> bool:
+	# Stable save IDs; the former star/galaxy artwork is no longer rendered.
+	return type_id in ["variable_star", "binary_star", "galaxy"]
+
+
+func get_observation_body_radius() -> float:
+	return body_radius * _head_scale() * _current_visual_scale() if is_solid_body() else 0.0
 
 
 func get_progress() -> float:
@@ -369,14 +381,8 @@ func get_burn_visibility() -> float:
 			brightness *= 1.0 + sin(age * 6.0 + wobble_phase) * 0.04
 		"satellite":
 			brightness *= 0.78 + 0.22 * smoothstep(-0.2, 0.8, sin(age * 4.5 + wobble_phase))
-		"variable":
-			brightness *= 0.72 + 0.38 * (0.5 + 0.5 * sin(age * 2.7 + wobble_phase))
 		"comet":
 			brightness *= 1.0 + 0.08 * sin(age * 5.0 + wobble_phase)
-		"binary":
-			brightness *= 0.86 + 0.14 * (0.5 + 0.5 * sin(age * 3.4 + wobble_phase))
-		"galaxy":
-			brightness *= 0.90 + 0.10 * sin(age * 1.7 + wobble_phase)
 	if progress <= burn_fade_start:
 		brightness = maxf(0.78, brightness)
 	return maxf(0.10, brightness)
@@ -446,6 +452,10 @@ func _finish_observation(auto_rate: float) -> void:
 
 func _draw() -> void:
 	var visual_scale := observation_visual_scale
+	if is_solid_body():
+		var body_visibility := get_burn_visibility() if alive else clampf(linger_time / maxf(linger_duration, 0.001), 0.0, 1.0)
+		_draw_type_silhouette(body_radius * visual_scale * _head_scale(), body_visibility, visual_scale)
+		return
 	var burn_visibility := get_burn_visibility()
 	var burn_tail_scale := get_burn_tail_scale()
 	if trail_points.size() > 1:
@@ -740,13 +750,13 @@ func _draw_type_silhouette(radius: float, visibility: float, visual_scale: float
 			_draw_satellite_head(radius, visibility, visual_scale)
 			return
 		"variable_star":
-			_draw_variable_head(radius, visibility)
+			_draw_asteroid_head(radius, visibility, false)
 			return
 		"binary_star":
-			_draw_binary_head(radius, visibility, visual_scale)
+			_draw_asteroid_head(radius, visibility, true)
 			return
 		"galaxy":
-			_draw_galaxy_head(radius, visibility)
+			_draw_planet_head(radius, visibility)
 			return
 
 	# Shape numbers live in `_head_profile` so the trail's shoulder reads the
@@ -1026,32 +1036,65 @@ func _draw_irregular_debris(radius: float, visibility: float, count: int) -> voi
 	)
 
 
-func _draw_binary_head(radius: float, visibility: float, visual_scale: float) -> void:
-	var direction := _safe_travel_direction()
-	var normal := Vector2(-direction.y, direction.x)
-	var separation := radius * (0.66 + 0.11 * sin(age * 2.6 + wobble_phase))
-	var first := normal * separation + direction * radius * 0.10
-	var second := -normal * separation - direction * radius * 0.12
-	var component_lines := PackedVector2Array([
-		first - direction * radius * 0.42,
-		first + direction * radius * 0.55,
-		second - direction * radius * 0.34,
-		second + direction * radius * 0.46,
-	])
-	draw_line(first, second, Color(glow_color, clampf(0.10 * visibility, 0.0, 1.0)), maxf(0.50, radius * 0.08), true)
-	draw_multiline(component_lines, Color(glow_color, clampf(0.16 * visibility, 0.0, 1.0)), maxf(1.0 * visual_scale, radius * 0.48), true)
-	draw_multiline(component_lines, Color(primary_color.lerp(Color.WHITE, 0.48), clampf(0.92 * visibility, 0.0, 1.0)), maxf(0.55 * visual_scale, radius * 0.18), true)
+# Code-drawn sky art is an intentional authoring exception. A shared faceted
+# body makes the two asteroid materials readable without new overlay markers.
+func _draw_asteroid_head(radius: float, visibility: float, icy: bool) -> void:
+	var rotation_phase := age * (0.065 if icy else 0.045) + wobble_phase
+	var points := PackedVector2Array()
+	var count := 9 if icy else 13
+	for index in range(count):
+		var angle := TAU * float(index) / float(count)
+		var roughness := 0.84 + 0.11 * sin(angle * 3.0 + wobble_phase) + 0.05 * cos(angle * 5.0)
+		points.append((Vector2(cos(angle), sin(angle) * 0.85) * radius * roughness).rotated(rotation_phase))
+	draw_colored_polygon(points, Color(primary_color.darkened(0.58), visibility))
+	var core := Vector2(-0.14, -0.12).rotated(rotation_phase) * radius
+	for index in range(count):
+		var next := (index + 1) % count
+		var midpoint := (points[index] + points[next]) * 0.5
+		var light := clampf(0.42 - midpoint.normalized().dot(Vector2(0.6, 0.8)) * 0.25, 0.13, 0.75)
+		var face_color := primary_color.darkened(1.0 - light)
+		if icy and index % 3 == 0:
+			face_color = primary_color.lerp(Color.WHITE, 0.23)
+		draw_colored_polygon(PackedVector2Array([core, points[index], points[next]]), Color(face_color, visibility))
+	var outline := points.duplicate()
+	outline.append(points[0])
+	draw_polyline(outline, Color(primary_color, visibility * 0.6), 0.9, true)
+	if icy:
+		var crack := PackedVector2Array([
+			Vector2(-0.62, -0.32), Vector2(-0.23, -0.12), Vector2(-0.09, 0.16),
+			Vector2(0.20, 0.32), Vector2(0.38, 0.63)])
+		for index in range(crack.size()): crack[index] = (crack[index] * radius).rotated(rotation_phase)
+		draw_polyline(crack, Color("d9f6ff", visibility * 0.85), maxf(0.8, radius * 0.025), true)
+		draw_line(crack[2], Vector2(0.50, -0.16).rotated(rotation_phase) * radius, Color(glow_color, visibility * 0.7), maxf(0.7, radius * 0.02), true)
+	else:
+		for crater in [Vector3(-0.32, -0.19, 0.16), Vector3(0.30, 0.10, 0.21), Vector3(-0.13, 0.40, 0.10)]:
+			var centre := Vector2(crater.x, crater.y).rotated(rotation_phase) * radius
+			draw_circle(centre, radius * crater.z, Color("292724", visibility), true, -1.0, true)
+			draw_arc(centre, radius * crater.z, 0.3, 2.8, 14, Color(primary_color, visibility * 0.48), 0.8, true)
 
 
-func _draw_galaxy_head(radius: float, visibility: float) -> void:
-	var axis := _safe_travel_direction().rotated(0.28)
-	var center := axis * radius * 0.10 + Vector2(-axis.y, axis.x) * radius * 0.04
-	var outer := _ellipse_points(axis, radius * 3.05, radius * 0.86, center, 0.10)
-	var body := _ellipse_points(axis, radius * 2.34, radius * 0.48, center, 0.06)
-	var core := _ellipse_points(axis, radius * 0.72, radius * 0.23, center + axis * radius * 0.08, 0.02)
-	draw_colored_polygon(outer, Color(glow_color, clampf(0.075 * visibility, 0.0, 1.0)))
-	draw_colored_polygon(body, Color(primary_color, clampf(0.36 * visibility, 0.0, 1.0)))
-	draw_colored_polygon(core, Color(primary_color.lerp(Color.WHITE, 0.65), clampf(0.76 * visibility, 0.0, 1.0)))
+func _draw_planet_head(radius: float, visibility: float) -> void:
+	# Latitude strips follow a lit sphere. No rings, orbit lines or star-shaped core.
+	draw_circle(Vector2.ZERO, radius * 1.04, Color(glow_color, visibility * 0.09), true, -1.0, true)
+	var bands := 36
+	for index in range(bands):
+		var y0 := -1.0 + 2.0 * float(index) / float(bands)
+		var y1 := -1.0 + 2.0 * float(index + 1) / float(bands)
+		var y := (y0 + y1) * 0.5
+		var width0 := sqrt(maxf(0.0, 1.0 - y0 * y0))
+		var width1 := sqrt(maxf(0.0, 1.0 - y1 * y1))
+		var band := 0.48 + 0.12 * sin(y * 22.0 + 0.7 * sin(y * 9.0))
+		for column in range(16):
+			var x0 := -1.0 + float(column) / 8.0
+			var x1 := -1.0 + float(column + 1) / 8.0
+			var x := (x0 + x1) * 0.5
+			var lighting := clampf(0.38 + 0.58 * sqrt(maxf(0.0, 1.0 - x * x - y * y * 0.35)) - x * 0.35 - y * 0.17, 0.13, 1.0)
+			var color := primary_color.darkened(1.0 - band * lighting)
+			if index % 9 in [3, 4]: color = glow_color.darkened(1.0 - lighting * 0.78)
+			draw_colored_polygon(PackedVector2Array([
+				Vector2(x0 * width0, y0) * radius, Vector2(x1 * width0, y0) * radius,
+				Vector2(x1 * width1, y1) * radius, Vector2(x0 * width1, y1) * radius]), Color(color, visibility))
+	draw_arc(Vector2.ZERO, radius, PI * 0.8, PI * 1.7, 48, Color(glow_color, visibility * 0.45), 0.9, true)
 
 
 func _ellipse_points(
@@ -1085,20 +1128,6 @@ func _draw_satellite_head(radius: float, visibility: float, visual_scale: float)
 	])
 	draw_multiline(wing_points, Color(glow_color, clampf(0.22 * visibility, 0.0, 1.0)), maxf(1.3 * visual_scale, radius * 0.24), true)
 	draw_line(-direction * radius * 0.32, direction * radius * 0.46, Color(primary_color, clampf(0.92 * visibility, 0.0, 1.0)), maxf(0.65 * visual_scale, radius * 0.15), true)
-
-
-func _draw_variable_head(radius: float, visibility: float) -> void:
-	var pulse := 0.86 + 0.14 * (0.5 + 0.5 * sin(age * 2.7 + wobble_phase))
-	var points := PackedVector2Array()
-	for index in range(8):
-		var angle := TAU * float(index) / 8.0 + PI * 0.125
-		var point_radius := radius * pulse * (1.22 if index % 2 == 0 else 0.31)
-		points.append(Vector2.from_angle(angle) * point_radius)
-	var outer_points := PackedVector2Array()
-	for point in points:
-		outer_points.append(point * 1.48)
-	draw_colored_polygon(outer_points, Color(glow_color, clampf(0.075 * visibility, 0.0, 1.0)))
-	draw_colored_polygon(points, Color(primary_color.lerp(Color.WHITE, 0.28), clampf(0.82 * visibility, 0.0, 1.0)))
 
 
 func _safe_travel_direction() -> Vector2:

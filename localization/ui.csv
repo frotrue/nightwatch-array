@@ -245,9 +245,9 @@ HUD_DEBUG_DATA,Ctrl+Shift+D   +100 data,Ctrl+Shift+D   데이터 +100
 HUD_DEBUG_NEXT,Ctrl+Shift+N   Purchase next available node,Ctrl+Shift+N   다음 노드 구매
 HUD_DEBUG_ALL,Ctrl+Shift+A   Purchase all nodes,Ctrl+Shift+A   모든 노드 구매
 HUD_DEBUG_METEOR,Ctrl+Shift+M   Spawn meteor,Ctrl+Shift+M   유성 생성
-HUD_DEBUG_RARE,Ctrl+Shift+R   Spawn rare fireball,Ctrl+Shift+R   희귀 화구 생성
+HUD_DEBUG_RARE,Ctrl+Shift+R   Spawn luminous meteor,Ctrl+Shift+R   발광 유성 생성
 HUD_DEBUG_SHOWER,Ctrl+Shift+S   Trigger shower,Ctrl+Shift+S   유성우 시작
-HUD_DEBUG_FINAL,Ctrl+Shift+F   Trigger Canis Major event,Ctrl+Shift+F   큰개자리 화구 이벤트 시작
+HUD_DEBUG_FINAL,Ctrl+Shift+F   Trigger Canis Major event,Ctrl+Shift+F   큰개자리 거대 유성 이벤트 시작
 HUD_DEBUG_ENDING,Ctrl+Shift+E   Preview catalogue ending,Ctrl+Shift+E   카탈로그 엔딩 미리 보기
 HUD_DEBUG_RESET,Ctrl+Shift+Backspace   Reset game,Ctrl+Shift+Backspace   게임 초기화
 TREE_TITLE,RESEARCH CHART,연구 성도
@@ -411,7 +411,7 @@ UPGRADE_WIDE_FIELD_DESC,Shows predicted arrival positions at least 2 seconds bef
 UPGRADE_TRAJECTORY_NAME,Arrival Position Calibration,진입 위치 보정
 UPGRADE_TRAJECTORY_DESC,Base maximum arrival-position error decreases by about 31%. Shows approach direction before arrival.,기본 최대 예고 위치 오차가 약 31% 줄어듭니다. 출현 전 진입 방향을 표시합니다.
 UPGRADE_RARE_DETECTION_NAME,Rare Meteor Detection,희귀 유성 탐지
-UPGRADE_RARE_DETECTION_DESC,Unlocks fireballs and identifies incoming target types.,화구가 나타납니다. 출현 예고에 천체 종류를 표시합니다.
+UPGRADE_RARE_DETECTION_DESC,Unlocks luminous meteors and identifies incoming target types.,발광 유성이 나타납니다. 출현 예고에 천체 종류를 표시합니다.
 UPGRADE_FRAGMENT_ANALYSIS_NAME,Fragment Tracking,파편 추적
 UPGRADE_FRAGMENT_ANALYSIS_DESC,Unlocks splitting meteors and observable fragments.,분열 유성과 관측 가능한 파편 조각이 나타납니다.
 UPGRADE_SHOWER_DETECTOR_NAME,Meteor Shower Forecast,유성우 예보
@@ -427,7 +427,7 @@ UPGRADE_EXTENDED_WATCH_PROTOCOL_DESC,Adds 10 seconds to each future observation 
 UPGRADE_CONTINUOUS_WATCH_ROTATION_NAME,Continuous Watch Rotation,연속 관측 교대
 UPGRADE_CONTINUOUS_WATCH_ROTATION_DESC,"Adds 10 seconds to each future observation window, up to 60 seconds.",다음 관측부터 관측 시간을 10초 늘립니다. 최대 60초.
 UPGRADE_SECONDARY_CAMERA_NAME,Secondary Camera,보조 카메라
-UPGRADE_SECONDARY_CAMERA_DESC,Adds 1 movable observation dish and arrival warnings. Right-click to position it; fireballs require manual observation.,이동식 관측 접시 1대와 진입 예고를 추가합니다. 우클릭으로 배치하며 화구는 직접 관측해야 합니다.
+UPGRADE_SECONDARY_CAMERA_DESC,Adds 1 movable observation dish and arrival warnings. Right-click to position it; luminous meteors require manual observation.,이동식 관측 접시 1대와 진입 예고를 추가합니다. 우클릭으로 배치하며 발광 유성은 직접 관측해야 합니다.
 UPGRADE_PREDICTIVE_DISH_CONTROL_NAME,Predictive Dish Control,예측 접시 제어
 UPGRADE_PREDICTIVE_DISH_CONTROL_DESC,Automatically moves idle dishes to predicted arrival positions. Right-click placement takes priority.,쉬고 있는 접시를 예상 출현 위치로 자동 이동합니다. 우클릭 배치가 우선합니다.
 UPGRADE_MULTI_TARGET_ANALYSIS_NAME,Multi-Target Tracking,다중 표적 관측
@@ -455,13 +455,13 @@ UPGRADE_ADAPTIVE_EXPOSURE_GRID_DESC,Meteor and long-target lifetime +12%.,유성
 UPGRADE_PERSEID_SURVEY_NAME,Perseid Watch,페르세우스 유성군 관측
 UPGRADE_PERSEID_SURVEY_DESC,3 visible targets grant +18% meteor Data. Sky Activity: simultaneous regular targets +1.,화면 안 표적 3개 이상일 때 유성 데이터 +18%. 하늘 활동: 일반 표적 동시 출현 상한 +1개.
 UPGRADE_FILTER_WHEEL_NAME,Calibration Framework,보정 연구 기반
-UPGRADE_FILTER_WHEEL_DESC,Unlocks band calibration and binary-star research.,대역 보정·쌍성 연구를 엽니다.
+UPGRADE_FILTER_WHEEL_DESC,Unlocks band calibration and ice-asteroid research.,대역 보정·얼음 소행성 연구를 엽니다.
 UPGRADE_BLUE_BAND_NAME,Blue Band,청색 대역
-UPGRADE_BLUE_BAND_DESC,"Common meteors, major fireballs and satellites: manual speed +25%, manual Data +15%.","일반 유성·대형 화구·위성: 수동 관측 속도 +25%, 수동 데이터 +15%."
+UPGRADE_BLUE_BAND_DESC,"Common meteors, giant meteors and satellites: manual speed +25%, manual Data +15%.","일반 유성·거대 유성·위성: 수동 관측 속도 +25%, 수동 데이터 +15%."
 UPGRADE_AMBER_BAND_NAME,Amber Band,호박색 대역
-UPGRADE_AMBER_BAND_DESC,"Fragments, fireballs, comets and distant galaxies: manual speed +25%, manual Data +15%.","분열 유성·화구·혜성·먼 은하: 수동 관측 속도 +25%, 수동 데이터 +15%."
+UPGRADE_AMBER_BAND_DESC,"Fragments, luminous meteors, comets and planets: manual speed +25%, manual Data +15%.","분열 유성·발광 유성·혜성·행성: 수동 관측 속도 +25%, 수동 데이터 +15%."
 UPGRADE_VIOLET_BAND_NAME,Violet Band,보라색 대역
-UPGRADE_VIOLET_BAND_DESC,"Fast meteors, fragment pieces, variable and binary stars: manual speed +25%, manual Data +15%.","고속 유성·조각·변광성·쌍성: 수동 관측 속도 +25%, 수동 데이터 +15%."
+UPGRADE_VIOLET_BAND_DESC,"Fast meteors, fragment pieces, asteroids and ice asteroids: manual speed +25%, manual Data +15%.","고속 유성·조각·소행성·얼음 소행성: 수동 관측 속도 +25%, 수동 데이터 +15%."
 UPGRADE_LYRID_SPECTROGRAPH_NAME,Lyrid Spectrograph,거문고자리 분광기
 UPGRADE_LYRID_SPECTROGRAPH_DESC,"All bands: manual speed bonus +25% → +45%, manual Data bonus +15% → +35%.","모든 대역: 수동 속도 보너스 +25% → +45%, 수동 데이터 보너스 +15% → +35%."
 UPGRADE_EPHEMERIS_MARKS_NAME,Ephemeris Marks,천체력 표식
@@ -469,13 +469,13 @@ UPGRADE_EPHEMERIS_MARKS_DESC,"Arrival warnings appear 1 second earlier, includin
 UPGRADE_SATELLITE_CATALOG_NAME,Satellite Catalog,인공위성 목록
 UPGRADE_SATELLITE_CATALOG_DESC,Unlocks slow-moving satellites for observation.,천천히 이동하는 인공위성을 관측할 수 있습니다.
 UPGRADE_CHANGE_DETECTION_NAME,Change Detection,변화 탐지
-UPGRADE_CHANGE_DETECTION_DESC,"Identifies satellites, variable stars, comets and distant galaxies. Maximum forecast error: about 2% of screen width.",위성·변광성·혜성·먼 은하의 종류를 예고합니다. 최대 위치 오차: 화면 너비의 약 2%.
-UPGRADE_VARIABLE_WATCHLIST_NAME,Variable Watchlist,변광성 관측 목록
-UPGRADE_VARIABLE_WATCHLIST_DESC,Unlocks variable stars that brighten and dim. Observation must finish within the round.,밝기가 변하는 변광성을 관측할 수 있습니다. 회차 안에 관측을 완료해야 합니다.
+UPGRADE_CHANGE_DETECTION_DESC,"Identifies satellites, asteroids, comets and planets. Maximum forecast error: about 2% of screen width.",위성·소행성·혜성·행성의 종류를 예고합니다. 최대 위치 오차: 화면 너비의 약 2%.
+UPGRADE_VARIABLE_WATCHLIST_NAME,Asteroid Observation,소행성 관측
+UPGRADE_VARIABLE_WATCHLIST_DESC,"Unlocks large, rocky asteroids. Finish observing them within the round.",커다란 바위 소행성이 나타납니다. 회차 안에 관측을 완료해야 합니다.
 UPGRADE_COMET_SOLUTIONS_NAME,Comet Tracking,혜성 추적
 UPGRADE_COMET_SOLUTIONS_DESC,Unlocks slow comets that remain until the round ends.,회차가 끝날 때까지 머무는 느린 혜성을 관측할 수 있습니다.
 UPGRADE_ANDROMEDA_DEEP_SURVEY_NAME,Long-Target Survey,장기 표적 관측
-UPGRADE_ANDROMEDA_DEEP_SURVEY_DESC,"Satellites, variable stars, comets and distant galaxies: manual speed +25%, Data +30% (automatic included).","위성·변광성·혜성·먼 은하: 수동 속도 +25%, 데이터 +30%(자동 포함)."
+UPGRADE_ANDROMEDA_DEEP_SURVEY_DESC,"Satellites, asteroids, comets and planets: manual speed +25%, Data +30% (automatic included).","위성·소행성·혜성·행성: 수동 속도 +25%, 데이터 +30%(자동 포함)."
 UPGRADE_ECHO_CORRELATION_10_NAME,Echo Discovery,공명 포착
 UPGRADE_ECHO_CORRELATION_10_DESC,Manual observation has a 10% chance to summon 1 extra meteor (Echo).,직접 관측에 성공하면 10% 확률로 추가 유성 1개가 나타납니다(공명).
 UPGRADE_ECHO_CORRELATION_20_NAME,Echo Amplification,공명 증폭
@@ -487,7 +487,7 @@ UPGRADE_DUAL_ECHO_CHANNEL_DESC,Meteors per Echo: 2 → 3.,공명으로 나타나
 UPGRADE_TRIPLE_ECHO_ARRAY_NAME,Echo Channel III,공명 채널 III
 UPGRADE_TRIPLE_ECHO_ARRAY_DESC,Meteors per Echo: 3 → 4.,공명으로 나타나는 유성 3 → 4개.
 UPGRADE_LEONID_RADIANT_NAME,Leonid Radiant,사자자리 유성군 복사점
-UPGRADE_LEONID_RADIANT_DESC,Every 10 manual observations of natural targets trigger 8 meteors over 7 seconds. Major fireballs do not count.,자연 발생 표적을 직접 10회 관측하면 7초간 유성 8개 발생. 대형 화구 제외.
+UPGRADE_LEONID_RADIANT_DESC,Every 10 manual observations of natural targets trigger 8 meteors over 7 seconds. Giant meteors do not count.,자연 발생 표적을 직접 10회 관측하면 7초간 유성 8개 발생. 거대 유성 제외.
 UPGRADE_COMPRESSED_CADENCE_NAME,Compressed Cadence,압축 관측 주기
 UPGRADE_COMPRESSED_CADENCE_DESC,Storm trigger: 10 → 9 manual observations. Meteors per storm: 8.,폭풍 발동에 필요한 수동 관측 10 → 9회. 발생 유성 8개.
 UPGRADE_DENSE_STREAM_NAME,Dense Stream,고밀도 유성류
@@ -500,18 +500,18 @@ UPGRADE_LEONID_STORM_NAME,Storm Zenith,폭풍 정점
 UPGRADE_LEONID_STORM_DESC,Storm trigger: 6 → 5 manual observations. Meteors per storm: 16 → 20 over 7 seconds.,폭풍 발동에 필요한 수동 관측 6 → 5회. 7초간 발생 유성 16 → 20개.
 UPGRADE_PERSEID_OUTBURST_NAME,Perseid Outburst,페르세우스 유성군 돌발
 UPGRADE_PERSEID_OUTBURST_DESC,"Unlocks Perseid bursts: 8 meteors over 3.4 seconds, after a warning. All Observation Data ×2 (automatic included).",예고 뒤 3.4초간 유성 8개가 나타나는 페르세우스 돌발 유성우를 엽니다. 모든 관측 데이터 2배(자동 포함).
-UPGRADE_DOUBLE_STAR_RESOLUTION_NAME,Double-Star Resolution,쌍성 분해
-UPGRADE_DOUBLE_STAR_RESOLUTION_DESC,Unlocks binary stars and their arrival forecasts. Maximum error: about 2% of screen width. All Observation Data ×2 (automatic included).,쌍성을 관측하고 출현을 예고합니다. 최대 위치 오차: 화면 너비의 약 2%. 모든 관측 데이터 2배(자동 포함).
-UPGRADE_GALAXY_IMAGING_NAME,Distant Galaxy Imaging,먼 은하 촬영
-UPGRADE_GALAXY_IMAGING_DESC,Unlocks distant galaxies as long-watch targets. All Observation Data ×2 (automatic included).,오래 조준해 관측하는 먼 은하가 나타납니다. 모든 관측 데이터 2배(자동 포함).
+UPGRADE_DOUBLE_STAR_RESOLUTION_NAME,Ice Asteroid Observation,얼음 소행성 관측
+UPGRADE_DOUBLE_STAR_RESOLUTION_DESC,Unlocks ice asteroids and accurate arrival forecasts. All Observation Data ×2 (automatic included).,얼음 소행성과 정확한 출현 예고를 엽니다. 모든 관측 데이터 2배(자동 포함).
+UPGRADE_GALAXY_IMAGING_NAME,Planet Observation,행성 관측
+UPGRADE_GALAXY_IMAGING_DESC,Unlocks large planets for observation. All Observation Data ×2 (automatic included).,커다란 행성이 나타납니다. 모든 관측 데이터 2배(자동 포함).
 UPGRADE_SPLIT_RADIANT_MODEL_NAME,Split Radiant Model,분할 복사점 모형
 UPGRADE_SPLIT_RADIANT_MODEL_DESC,Storm meteors alternate between 2 mirrored entry areas.,폭풍 유성이 대칭인 두 구역에서 번갈아 나타납니다.
 UPGRADE_FRAGMENT_FRONT_NAME,Fragment Front,파편 전선
 UPGRADE_FRAGMENT_FRONT_DESC,Each meteor storm starts with a splitting meteor.,각 유성 폭풍이 분열 유성으로 시작합니다.
-UPGRADE_FIREBALL_TAIL_NAME,Fireball Tail,화구 꼬리
-UPGRADE_FIREBALL_TAIL_DESC,Each meteor storm ends with a manual-only fireball. All Observation Data ×2 (automatic included).,각 유성 폭풍의 마지막에 수동 관측 전용 화구가 나타납니다. 모든 관측 데이터 2배(자동 포함).
+UPGRADE_FIREBALL_TAIL_NAME,Luminous Meteor Tail,발광 유성 꼬리
+UPGRADE_FIREBALL_TAIL_DESC,Each meteor storm ends with a manual-only luminous meteor. All Observation Data ×2 (automatic included).,각 유성 폭풍의 마지막에 수동 관측 전용 발광 유성이 나타납니다. 모든 관측 데이터 2배(자동 포함).
 UPGRADE_ECHO_SIGNATURE_LOCK_NAME,Echo Signature Lock,공명 신호 고정
-UPGRADE_ECHO_SIGNATURE_LOCK_DESC,"Echoes repeat the observed meteor type: common, fast, fragment or fireball. Other types give a random meteor.",공명이 관측한 유성 종류를 복제합니다(일반·고속·분열·화구). 그 외에는 무작위.
+UPGRADE_ECHO_SIGNATURE_LOCK_DESC,"Echoes repeat the observed meteor type: common, fast, fragment or luminous meteor. Other types give a random meteor.",공명이 관측한 유성 종류를 복제합니다(일반·고속·분열·발광 유성). 그 외에는 무작위.
 UPGRADE_MIRROR_ECHO_SOLUTION_NAME,Opposite-Side Echo,맞은편 공명
 UPGRADE_MIRROR_ECHO_SOLUTION_DESC,Echo meteors appear from the opposite side on a mirrored path.,공명 유성이 반대편에서 대칭 경로로 나타납니다.
 UPGRADE_ECHO_DELAY_LINE_NAME,Echo Delay Line,공명 지연선
@@ -541,7 +541,7 @@ UPGRADE_CANIS_CADENCE_III_DESC,Sky Activity: minimum regular meteor interval 0.7
 UPGRADE_CANIS_CAPACITY_III_NAME,Pack Array,무리 관측망
 UPGRADE_CANIS_CAPACITY_III_DESC,Sky Activity: simultaneous regular targets +2.,하늘 활동: 일반 표적 동시 출현 상한 +2개.
 UPGRADE_SIRIUS_FIREBALL_NAME,Sirius Bloom,시리우스 발광
-UPGRADE_SIRIUS_FIREBALL_DESC,"Unlocks a major fireball, up to 1 per round with enough time left. Manual observation required.",관측 시간이 충분한 회차에 대형 화구가 최대 1개 나타납니다. 수동 관측 전용.
+UPGRADE_SIRIUS_FIREBALL_DESC,"Unlocks a giant meteor, up to 1 per round with enough time left. Manual observation required.",관측 시간이 충분한 회차에 거대 유성이 최대 1개 나타납니다. 수동 관측 전용.
 UPGRADE_DRACO_SYNTHESIS_NAME,All-Sky Synthesis,전천 합성
 UPGRADE_DRACO_SYNTHESIS_DESC,All Observation Data ×4 (automatic included).,모든 관측 데이터 4배(자동 포함).
 UPGRADE_DRACO_CADENCE_NAME,Circumpolar Cadence,주극 리듬
@@ -590,13 +590,13 @@ METEOR_COMMON,COMMON METEOR,일반 유성
 METEOR_FAST,FAST METEOR,고속 유성
 METEOR_FRAGMENT,FRAGMENTING METEOR,분열 유성
 METEOR_FRAGMENT_PIECE,FRAGMENT,유성 파편
-METEOR_FIREBALL,RARE FIREBALL,희귀 화구
-METEOR_MAJOR,MAJOR FIREBALL,대형 화구
+METEOR_FIREBALL,LUMINOUS METEOR,발광 유성
+METEOR_MAJOR,GIANT METEOR,거대 유성
 METEOR_SATELLITE,ARTIFICIAL SATELLITE,인공위성
-METEOR_VARIABLE_STAR,VARIABLE STAR,변광성
+METEOR_VARIABLE_STAR,ASTEROID,소행성
 METEOR_COMET,LONG-ARC COMET,장주기 혜성
-METEOR_BINARY_STAR,BINARY STAR,쌍성
-METEOR_GALAXY,DISTANT GALAXY,먼 은하
+METEOR_BINARY_STAR,ICE ASTEROID,얼음 소행성
+METEOR_GALAXY,PLANET,행성
 METEOR_EXOPLANET_TRANSIT,EXOPLANET TRANSIT,외계행성 통과
 METEOR_EXOPLANET_CANDIDATE,HOST CANDIDATE,호스트 후보
 METEOR_COMPARISON_STAR,COMPARISON STAR,비교별
@@ -621,7 +621,7 @@ EVENT_SHOWER_PASSED,SHOWER PASSED  •  ARRAY STABLE,유성우 통과  •  관�
 EVENT_PERSEID_OUTBURST_INCOMING,PERSEID OUTBURST INCOMING,페르세우스 유성군 돌발 접근 중
 EVENT_PERSEID_OUTBURST,PERSEID OUTBURST,페르세우스 유성군 돌발
 EVENT_PERSEID_OUTBURST_PASSED,OUTBURST PASSED  •  ARRAY STABLE,돌발 통과  •  관측망 안정
-EVENT_MAJOR_FIREBALL,MAJOR FIREBALL,대형 화구
+EVENT_MAJOR_FIREBALL,GIANT METEOR,거대 유성
 HUD_READY_SYSTEMS,%d SYSTEMS READY  [%s],설치 가능한 시스템 %d  [%s]
 HUD_TRACK_MULTIPLIER,×%.2f,×%.2f
 HUD_PHASE_ROUND,OBSERVATION %d,%d차 관측

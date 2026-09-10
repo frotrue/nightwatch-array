@@ -289,10 +289,16 @@ func _linear_enabled() -> bool:
 func _linear_extents(radius: float) -> Vector2:
 	return Vector2(radius * modules.stacked_effect("linear_observation", "line_width"), radius * 0.45)
 
+func _linear_target_extents(target, radius: float) -> Vector2:
+	# Solid bodies extend both sides of the field by their visible radius. Do not
+	# multiply their size by LINE's width or squeeze it into the thin band height.
+	var body := float(target.get_observation_body_radius()) if target.has_method("get_observation_body_radius") else 0.0
+	return _linear_extents(maxf(0.0, radius - body)) + Vector2.ONE * body
+
 func _linear_contact_interval(target, radius: float) -> Vector2:
 	# Clip the cursor segment against the target-centered rectangle. This credits
 	# actual time inside the band, including diagonal sweeps and corner misses.
-	var extent := _linear_extents(radius)
+	var extent := _linear_target_extents(target, radius)
 	var start: Vector2 = previous_cursor_position - target.global_position
 	var motion := cursor_position - previous_cursor_position
 	var enter := 0.0
@@ -385,7 +391,7 @@ func _target_children() -> Array:
 func _target_contact_distance(target, point: Vector2) -> float:
 	if _linear_enabled():
 		var radius: float = target.get_tracking_radius(_world_px(_module_tracking_radius()))
-		var relative: Vector2 = (point - target.global_position).abs() / _linear_extents(radius)
+		var relative: Vector2 = (point - target.global_position).abs() / _linear_target_extents(target, radius)
 		return maxf(relative.x, relative.y) * radius
 	if target.has_method("get_manual_contact_distance"):
 		return float(target.get_manual_contact_distance(point))

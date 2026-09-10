@@ -1,13 +1,14 @@
 extends SceneTree
 
-# Arithmetic regression oracle frozen from scripts/meteor.gd at 347dcf0.
+# Solid-body cases expect no tails after the 2026-09-11 presentation replacement.
+# Remaining arithmetic regression oracle frozen from scripts/meteor.gd at 347dcf0.
 # No main scene, settings, saves, output files, or performance claims. Native
 # drawing is invoked only inside Recorder._draw; this also works headlessly.
 # The reference math deliberately does not call production geometry helpers or
 # inspect any optimized weights/cache. Packed outputs must match bit for bit.
 const Meteor = preload("res://scripts/meteor.gd")
 const TYPES := ["common", "fast", "fragment", "fragment_piece", "fireball", "major", "satellite", "variable_star", "comet", "binary_star", "galaxy"]
-const STYLES := ["ember", "snap", "split", "spark", "flare", "major", "satellite", "variable", "comet", "binary", "galaxy"]
+const STYLES := ["ember", "snap", "split", "spark", "flare", "major", "satellite", "rock", "comet", "ice", "planet"]
 const WIDTHS := [Vector2(1.82, 0.54), Vector2(1.25, 0.38), Vector2(2.45, 0.72), Vector2(1.10, 0.32), Vector2(3.20, 1.02), Vector2(5.10, 1.65), Vector2(0.72, 0.24), Vector2(0.90, 0.28), Vector2(4.10, 0.72), Vector2(1.45, 0.38), Vector2(2.50, 0.34)]
 const HEAD_SCALES := [0.72, 0.62, 0.80, 0.68, 0.50, 0.43, 0.84, 0.84, 0.84, 0.84, 0.84]
 const TURBULENCE := [Vector2(0.035, 7.6), Vector2(0.018, 13.0), Vector2(0.16, 9.5), Vector2(0.11, 14.0), Vector2(0.12, 6.6), Vector2(0.10, 4.2), Vector2(0.035, 7.6), Vector2(0.035, 7.6), Vector2(0.055, 3.4), Vector2(0.035, 7.6), Vector2(0.035, 7.6)]
@@ -57,6 +58,7 @@ var failures: Array[String] = []
 var checked_cases := 0
 var getter_cases := 0
 var nonempty_trails := 0
+var solid_cases := 0
 var nonempty_sparks := 0
 var skipped_heads := 0
 var retained_heads := 0
@@ -82,7 +84,8 @@ func _run() -> void:
 	_check(meteor.completed and meteor.callback_count == 1, "all cases completed in a real draw callback")
 	_check(checked_cases == 539, "all 539 declared render cases ran")
 	_check(getter_cases == 264, "all 264 direct-mutation getter cases ran")
-	_check(nonempty_trails > 400 and nonempty_sparks > 20, "ribbon and fragment geometry were actually exercised")
+	_check(nonempty_trails > 280 and nonempty_sparks > 20, "ribbon and fragment geometry were actually exercised")
+	_check(solid_cases == 147, "all three solid bodies render without meteor tails")
 	_check(skipped_heads > 0 and retained_heads > 0, "both sides of the first-sample threshold ran")
 	meteor.free()
 	if failures.is_empty():
@@ -116,7 +119,9 @@ func _run_cases_in_draw(meteor: Recorder) -> void:
 			else:
 				retained_heads += 1
 		var expected_calls: Array = []
-		if meteor.trail_points.size() > 1:
+		if meteor.type_id in ["variable_star", "binary_star", "galaxy"]:
+			solid_cases += 1
+		elif meteor.trail_points.size() > 1:
 			expected_calls.append([_trail_visibility(meteor), _reference_tail_scale(meteor), meteor.observation_visual_scale])
 		_check(meteor.trail_calls == expected_calls, label + ": production draw routes current burn/linger values")
 		if meteor.type_id == "fragment":
@@ -241,14 +246,8 @@ func _reference_visibility(meteor: Recorder) -> float:
 			brightness *= 1.0 + sin(meteor.age * 6.0 + meteor.wobble_phase) * 0.04
 		"satellite":
 			brightness *= 0.78 + 0.22 * smoothstep(-0.2, 0.8, sin(meteor.age * 4.5 + meteor.wobble_phase))
-		"variable":
-			brightness *= 0.72 + 0.38 * (0.5 + 0.5 * sin(meteor.age * 2.7 + meteor.wobble_phase))
 		"comet":
 			brightness *= 1.0 + 0.08 * sin(meteor.age * 5.0 + meteor.wobble_phase)
-		"binary":
-			brightness *= 0.86 + 0.14 * (0.5 + 0.5 * sin(meteor.age * 3.4 + meteor.wobble_phase))
-		"galaxy":
-			brightness *= 0.90 + 0.10 * sin(meteor.age * 1.7 + meteor.wobble_phase)
 	if progress <= meteor.burn_fade_start:
 		brightness = maxf(0.78, brightness)
 	return maxf(0.10, brightness)
@@ -324,7 +323,7 @@ func _reference_normal(meteor: Recorder, stations: PackedVector2Array, index: in
 
 func _reference_trail(meteor: Recorder) -> Dictionary:
 	var result := {"glow": PackedVector2Array(), "core": PackedVector2Array(), "glow_colors": PackedColorArray(), "core_colors": PackedColorArray(), "indices": PackedInt32Array(), "station_count": 0, "skipped_head": false}
-	if meteor.trail_points.size() <= 1:
+	if meteor.type_id in ["variable_star", "binary_star", "galaxy"] or meteor.trail_points.size() <= 1:
 		return result
 	var tail_scale := _reference_tail_scale(meteor)
 	var visibility := _trail_visibility(meteor)
