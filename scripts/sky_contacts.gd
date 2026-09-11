@@ -18,7 +18,6 @@ const COVERAGE_RADIUS := 105.0
 const DISH_TIME_MULTIPLIER := 2.3
 const CONTACT_HIT_RADIUS := 30.0
 const DISH_TRACKABLE_TYPES := ["common", "fast", "fragment", "fragment_piece"]
-const GALACTIC_MUTED_FORECAST_TYPES := ["common", "fast"]
 
 var progression: Node
 var pending_dish_commands: Array[Vector2] = []
@@ -46,11 +45,7 @@ func forecast_visible() -> bool:
 
 
 func forecast_contact_visible(contact: Dictionary) -> bool:
-	return not (
-		progression != null
-		and progression.galaxy_unlocked()
-		and String(contact.get("type_id", "")) in GALACTIC_MUTED_FORECAST_TYPES
-	)
+	return progression == null or progression.forecast_type_visible(String(contact.get("type_id", "")))
 
 
 func dish_active() -> bool:

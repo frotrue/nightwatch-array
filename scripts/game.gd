@@ -579,7 +579,7 @@ func _on_meteor_spawned(meteor) -> void:
 	meteor.observation_controller = observer
 	meteor.observed.connect(_on_meteor_observed)
 	meteor.expired.connect(_on_meteor_expired)
-	if progression.has_upgrade("wide_field"):
+	if progression.has_upgrade("wide_field") and progression.forecast_type_visible(String(meteor.type_id)):
 		# The edge marker is an instrument annotation, not the object, so it takes
 		# red light. The meteor keeps its own colour: the sky is what is being
 		# observed and the instrument is what does the observing.
