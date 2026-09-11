@@ -97,6 +97,8 @@ driver does not measure the new module progression's full-run pacing.
 |---|---|
 | Real display settings (focus, FPS cap, VSync) | `settings_windowed_test.gd` without `--headless` |
 | Main game and palette reference corpus | `capture_reference.gd` / [visual guide](visual-validation.md#reference-corpus) |
+| Batched meteor rendering and lifecycle | `meteor_batch_render_test.gd` with the real Windows/OpenGL renderer; `METEOR_BATCH_RENDER_PASS` |
+| Instanced completion particles | `effect_instances_render_test.gd` with the real Windows/OpenGL renderer; `EFFECT_INSTANCES_RENDER_PASS` |
 | Sky/chart/module states | `deep_sky_preview.gd` / [targeted previews](visual-validation.md#targeted-previews) |
 | Settings pages in both languages | `settings_preview.gd` / [settings capture](visual-validation.md#settings-and-display) |
 | Sound audition | `sound_feedback_preview.gd` / [audio](visual-validation.md#audio-audition) |
@@ -109,6 +111,32 @@ The human-driven survey slice runs a save-free 60-second opening sky with Sky Sw
 `SURVEY_SLICE_READY` and `SURVEY_SLICE_RESULT` identify the session; neither is a pass/fail verdict.
 The [old reference](history/probes-through-2026-09-07.md) preserves detailed historical
 coverage and earlier measurement rationale. Current workflow starts with this page.
+
+Run `meteor_batch_render_test.gd` when changing meteor geometry/submission or
+interpolation. Use the reference-capture Windows/OpenGL flags and replace the
+script path. It pairs immediate and shared rendering in two equal viewports:
+11 types, alternating opaque/light overlaps, moving topology, unchanged-frame
+reuse, interpolation reset, fading, visibility and removal. A separate 1,000-object
+case exceeds 65,536 vertices in one batch and compares actual pixels, covering
+32-bit index submission. It also checks run/target counts and releases target/RID
+caches. The headless `meteor_render_cache_test` remains the independent arithmetic
+oracle; neither test substitutes for the other. No performance threshold belongs
+in this correctness check.
+
+Its native reference also retains the pre-cache planet surface and pre-instancing
+scan arcs. Additional cases cover age-only reuse, radius/palette invalidation,
+planet translucency, fractional radii at both camera spans and stopping/restarting
+automatic scans. Keep the existing pixel bounds: they caught Compatibility's
+float16 custom-data radius rounding, fixed with high/residual encoding.
+
+Run `effect_instances_render_test.gd` with those real-renderer flags when changing
+completion-particle submission. Its nine paired poses compare native filled
+circles against instancing: full capacity, colored alpha overlap, three movement/
+fade steps, canvas scaling, expiry, refill, late-game camera span and reset.
+It checks visible counts and idle processing; native rings/text remain in both
+views to catch ordering changes. The bounded pixel tolerance covers subpixel/color
+rounding, not omitted particles. PNGs for the first moving pose are written to
+`build/effects-{reference,instanced}-fade_0.17.png`.
 
 `module_overhaul_review.gd -- --debug-draw` also captures the immediate debug draw
 result and F9 shortcut legend in Korean and English. The draw-window gate checks

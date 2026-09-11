@@ -2,6 +2,7 @@ extends Node2D
 
 const UITheme = preload("res://scripts/ui_theme.gd")
 const ArrivalVisual = preload("res://scripts/arrival_visual.gd")
+const CircleInstances = preload("res://scripts/circle_instances.gd")
 
 signal packet_landed(amount: float)
 
@@ -43,6 +44,7 @@ var kick_offset := Vector2.ZERO
 var view_offset := Vector2.ZERO
 var rng := RandomNumberGenerator.new()
 var observation_view: Camera2D
+var particle_instances: RefCounted
 
 
 func _ready() -> void:
@@ -377,9 +379,7 @@ func _update_packets(delta: float) -> void:
 
 func _draw() -> void:
 	var visual_scale := _world_px(1.0)
-	for particle in particles:
-		var alpha := clampf(float(particle.life) / maxf(float(particle.max_life), 0.001), 0.0, 1.0)
-		draw_circle(particle.p, float(particle.size) * alpha * visual_scale, Color(particle.color, alpha * 0.9))
+	_draw_particles(visual_scale)
 	for ring in rings:
 		var progress := 1.0 - clampf(float(ring.life) / maxf(float(ring.max_life), 0.001), 0.0, 1.0)
 		var radius := lerpf(float(ring.radius_start), float(ring.radius_end), progress)
@@ -410,6 +410,16 @@ func _draw() -> void:
 		# unpainted strip along the edge the screen shook away from.
 		var margin := Vector2.ONE * _world_px(MAX_SHAKE_OFFSET + MAX_KICK_OFFSET + 2.0)
 		draw_rect(_visible_world_rect().grow(margin.x), Color(flash_color, flash_strength), true)
+
+
+func _draw_particles(visual_scale: float) -> void:
+	if particle_instances == null:
+		particle_instances = CircleInstances.new(MAX_PARTICLES)
+	particle_instances.begin()
+	for particle in particles:
+		var alpha := clampf(float(particle.life) / maxf(float(particle.max_life), 0.001), 0.0, 1.0)
+		particle_instances.append(particle.p, float(particle.size) * alpha * visual_scale, Color(particle.color, alpha * 0.9))
+	particle_instances.draw(self)
 
 
 func _atmospheric_rect() -> Rect2:

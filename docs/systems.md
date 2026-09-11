@@ -24,11 +24,12 @@ All script names below are under `scripts/`.
 | Fixed 60 Hz clock, buffered pointer segments, tick ordering | `simulation_clock.gd`, `simulation_input.gd`, `game.gd` |
 | Bounded numerical jobs (main + at most three workers); motion/contact snapshots | `simulation_workers.gd`, `meteor_motion_batch.gd`, `observation_contact_batch.gd`; pool owned by `observation_controller.gd` |
 | One meteor's lifetime, motion, progress and grading | `meteor.gd` |
+| Shared additive light submission, immutable index caches and render interpolation | `meteor_render_layer.gd`, `meteor_triangle_batch.gd` |
 | Cursor, tracking, additional targets, observation/sweep transitions | `observation_controller.gd` |
 | Forecast contacts, dish movement and automatic tracking | `sky_contacts.gd` |
 | Blank-sky travel charge, summon RNG and cooldown | `survey_controller.gd` |
 | Showers, Perseid events and scheduled Canis events | `event_controller.gd` |
-| Particles, packets, kick and shake | `effects_layer.gd` |
+| Particles, packets, kick and shake; shared instanced particle circles | `effects_layer.gd`, `circle_instances.gd` |
 | Synthesized cues and automatic-success aggregation | `sound_synth.gd` |
 | Global dispatch and binding metadata | `game_input_router.gd`, `game_input_bindings.gd` |
 | HUD, settings, dialogs and summary UI | `hud.gd` |
@@ -54,6 +55,42 @@ retains the original ring, glyph and tracking behavior. See the complete
 
 The independent Layer 2 scene uses `scripts/probe/probe_controller.gd` and
 `probe_hud.gd`; it is a testbed, not another stage of the main game.
+
+### Meteor rendering
+
+The authored `MeteorLayer` owns shared canvas RIDs, not extra scene children.
+Meteors still own gameplay and generate the same local procedural triangles.
+`meteor_triangle_batch.gd` collects ribbon, graded-head and hotspot triangles;
+the layer submits one triangle array per contiguous additive run before drawing
+the frame. An opaque asteroid/planet is a strict run boundary, so light cannot
+move across a solid body's draw order. Native antialiased filaments, debris,
+asteroid faces and planet halo/rim retain their CanvasItem commands. Additive triangles
+may move past other additive commands inside a run; their light is commutative.
+
+`planet_surface.gd` caches the original 576 surface cells in one triangle array,
+retaining float32 colors and triangulation. Radius/palette changes rebuild it;
+fading only updates alpha. `scan_arc_instances.gd` owns one child canvas RID per
+scanning meteor and two instanced arc templates. The shader expands radius and
+width separately using the native five-point AA feather topology. Compatibility
+compresses custom instance attributes to float16, so high/residual pairs preserve
+subpixel motion. Real expanded bounds drive culling. Clearing an inactive scan
+removes its commands; destroying its owner releases the RID. Wider/nonstandard
+arcs use the native fallback. These resources introduce no scene children.
+
+Tick resolution, changed age/linger, feature changes and camera scale invalidate
+meteor geometry. Intervening render frames reuse it. The layer snapshots local
+poses before Game's physics tick and interpolates at the same engine fraction as
+the native lines; reset notifications also reset that snapshot. Paused ticks
+converge to the current pose. Topology caches duplicate source indices because
+GDScript packed arrays share mutable storage; changed trail lengths must rebuild
+both local offsets and offsets into the layer's buffer.
+
+Removal drops target caches immediately, frees unused run RIDs before rendering,
+and disconnects/frees remaining renderer resources on scene exit. A standalone
+meteor without this layer uses immediate submission for previews and the exact
+geometry oracle. The renderer does not change target capacity, motion/reward
+resolution, save data or the main-plus-three-worker ceiling. Geometry generation
+and GPU submission remain on main; this is not a GPU simulation implementation.
 
 ## Setup calls
 

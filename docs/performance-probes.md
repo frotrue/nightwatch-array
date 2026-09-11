@@ -205,6 +205,163 @@ use the fixed-tick CPU probe above for equal-work comparisons. Drawing-only at
 1,000 remained about 4.62 FPS, consistent with the unaddressed render cost.
 Log: `build/threaded-thousand-render.log`.
 
+## Shared meteor light rendering (2026-09-11)
+
+`meteor_render_performance_probe.gd` preserves the thousand-meteor diagnostic
+used for the worker work, now checked in for repeatability. Run with the standard
+Windows/OpenGL renderer at 1152×648; the script disables VSync and the FPS cap.
+It isolates saves, enables research and five observation modules, bypasses normal
+capacity, disables natural spawns and keeps initial targets from completing.
+Each scenario warms up for two wall seconds and samples for five. Held observation
+feeds 17 raw samples per 60 Hz tick, with at most eight catch-up steps per frame.
+Retain `THOUSAND_RESULT` (including achieved tick rate) and `THOUSAND_PASS`.
+
+Sequential editor-binary A/B on Ryzen 9 5950X / RTX 3060, NVIDIA 591.74:
+baseline `3d349a2` was exported into an isolated source directory and imported
+before measurement; the same fixture then ran on the renderer branch. Logs are
+`build/render-final-baseline.log` and `build/render-final-current.log`.
+
+| Workload | Previous FPS | Shared FPS | Previous → shared draw calls |
+|---|---:|---:|---:|
+| 100 common meteors + held observation | 13.34 | 28.67 | 1,312 → 713 |
+| 1,000 common meteors, drawing only | 4.80 | 6.21 | 9,227 → 3,228 |
+| 1,000 common meteors + held observation | 0.98 | 1.23 | 9,412 → 3,413 |
+
+The drawing-only mean frame fell from 208.22 to 160.92 ms (about 23% lower).
+The 100-target case sustained approximately 60 ticks/sec in both implementations.
+The overloaded 1,000-target observation case achieved only 7.83 → 9.88 ticks/sec,
+and measured just six/seven frames. Different amounts of scripted input advance
+in those wall-time samples; use the fixed-work CPU probe for simulation comparisons.
+These results do not establish release-build performance or 300 FPS feasibility.
+Procedural geometry and observation calculations remain substantial CPU costs.
+
+The new renderer batches contiguous additive triangle geometry across meteors,
+caches index offsets and reuses geometry between simulation changes. Thin native
+antialiased lines and opaque body drawing remain intact. Its paired real-GPU
+correctness test matched immediate rendering for all 11 types, moving trail
+topology, opaque overlaps, interpolation reset, fades/removal and a single
+1,000-object batch exceeding the 16-bit index boundary. The independent 539-case
+geometry oracle remains unchanged. No target counts or visual details were removed
+to obtain these measurements, and the main-plus-three-worker cap is unchanged.
+
+Final correctness/export run:
+`build/validation/20260911T092255694Z_35355321/summary.json` passed 24 checks
+(23 fast gates and Windows export). The GPU pair also passed frozen-scene and
+reset-interpolation cases, and the reference corpus captured all ten scenarios.
+The expiry smoke assertion now advances one explicit simulation tick: two
+uncapped render frames can contain zero ticks. It still asserts the target is
+expired and its tracking reference is cleared; production expiry logic is unchanged.
+
+## Completion-particle instancing (2026-09-11)
+
+Remaining real-play drops were profiled with all 95 base and 42 outer research
+nodes, five modules (focus, linear observation, slowdown, overcharge and wide),
+natural spawning, automatic observation and completion feedback. A second pose
+also triggered a shower. A scripted cursor feeds 17 samples per fixed tick;
+three wall seconds warm up and eight are measured, uncapped, at 1152×648 on
+the same Ryzen 9 5950X / RTX 3060 Windows/OpenGL editor binary. Saves/settings
+are isolated; Dummy audio still runs sound synthesis code.
+
+Even with only about 22 live targets, feedback reached the unchanged 220-particle
+cap. Native particle circles repeatedly rebuilt/submitted their 64-segment mesh.
+`circle_instances.gd` now keeps that same mesh resident and submits position,
+radius and color in one MultiMesh buffer, preserving order, fade and camera scale.
+Rings, labels, completion behavior, particle limits and the worker cap are unchanged.
+
+Exploratory instrumented runs (`build/live-profile-before.log` and
+`build/live-profile-after.log`) showed late-game FPS 87.99 → 164.30 and shower
+FPS 64.87 → 99.82; p99 frame times were 24.01 → 13.65 ms and 46.53 → 21.39 ms.
+These are directional evidence, not equal-work benchmarks: the wall-time runs
+had different natural target/completion mixes. Baseline shutdown also reported
+two leaked objects after sampling; the follow-up allows pending sound timers to
+finish before freeing the fixture. Do not treat that diagnostic as a clean gate.
+
+The checked-in `observation_performance_probe.gd` provides a fixed-work comparison.
+Sequential before (`680aa1e`) and after runs each completed all six default
+360-frame phases with one 60 Hz step per frame and the same completion counts.
+It excludes automatic observation, natural spawning and audio, so it exercises a
+smaller particle load than the live diagnostic. Logs:
+`build/frame-drop-observation-{before,after}.log`.
+
+| Fixed workload | Mean frame ms before → after | p99 ms before → after |
+|---|---:|---:|
+| 18 targets, held observation | 8.852 → 7.421 | 14.237 → 11.447 |
+| 32 targets, held observation | 12.438 → 10.195 | 17.158 → 12.399 |
+
+Both held phases completed ten manual observations and reached 49 particles in
+both versions. The 32-target mean fell about 18%; frames over 16.7 ms fell from
+6/360 to 0/360 in these samples. This does not establish a release-build FPS floor:
+meteor geometry and simulation still cost time, and the live shower sample still
+had frames above 16.7 ms. The paired real-GPU particle test passed all nine poses,
+with at most one 8-bit color step of difference and identical expiry/reset images.
+Validation/export: `build/validation/20260911T095636363Z_c827789d/summary.json`
+passed all 24 checks (23 fast gates and Windows export).
+
+## Persistent late-game rendering costs (2026-09-11)
+
+The previous synthetic 32-target input probe did not reproduce the user's slow
+late game. A read-only copy of the latest slot showed 95/42 research and modules
+`overcharge, focus, sweep_optics, capture_hold, focus`. An instrumented natural
+30-second run with that build reached 29 targets/220 particles, 46.45 average
+FPS and 159.89 ms p99. After surface caching and scan instancing, a directional
+rerun reached 86.36 FPS and 21.31 ms p99. These wall-time runs had slightly
+different completions/target mixes; they are not equal-work throughput estimates.
+Logs: `build/player-profile-before.log`, `build/player-profile-arcs-after.log`.
+The player's save is not part of the committed fixture and was not modified.
+
+`late_game_render_performance_probe.gd` now keeps this fuller workload reproducible:
+all research, that duplicate-module build, natural spawning, 17 input samples per
+60 Hz tick, automatic scans, completion effects and sound code. One explicitly
+seeded, noncompleting moving planet guarantees sustained surface rendering;
+other objects retain normal completion and spawn rules. Warm-up is five wall
+seconds, followed by 25 measured seconds. It uses isolated settings/saves and a
+90-second watchdog. Optionally point `NIGHTWATCH_PERF_SAVE` at a read-only CFG
+copy to load a build before starting a fresh observation phase. Remove the
+variable afterwards. No performance threshold is a gameplay acceptance gate.
+
+Use the README editor binary with the Windows/OpenGL flags in visual-validation,
+at 1152×648, sequentially. The final A/B used `--verbose` in both runs, baseline
+`ec30cbf` exported into an isolated source folder, and the same probe. Both logs
+have `LATE_RENDER_PASS`, exit 0 and no engine errors or leaked-object warnings:
+
+| Diagnostic | Baseline | Cached surface + instanced scans |
+|---|---:|---:|
+| Mean FPS | 7.41 | 50.13 |
+| p99 frame time | 250.28 ms | 48.04 ms |
+| Achieved simulation ticks/sec | 45.99 | 59.97 |
+| Draw calls at sample end | 1,656 | 507 |
+
+Logs: `build/late-render-before.log`, `build/late-render-after.log`. The overloaded
+baseline advanced fewer ticks (218 vs 260 completions); this table measures
+frame pacing under the same scenario, not identical completed work. Earlier
+runs varied considerably, so neither this table nor the saved-build diagnostic
+establishes a minimum FPS. Ordinary meteor geometry/input work still costs time.
+
+The planet now submits its original 576 cells as one cached triangle array.
+The two native five-point dashed arcs formerly issued 15 arcs/45 AA strips per
+scanning meteor; two MultiMesh submissions reuse those exact feather templates.
+The paired renderer test retains native oracles for both and checks fractional
+radius, camera span, palette/size changes, fades, stop/restart and removal without
+relaxing its pixel limits. The final 26 poses differed by at most one 8-bit color
+step. The main-plus-three-worker cap and all gameplay timing remain unchanged.
+Validation: `build/validation/20260911T120606968Z_356979eb/summary.json`, 24 passes.
+
+### Why the tick migration can expose drops
+
+Comparison of `fe3e69f` with `4de7625` confirms that input changed from one
+accumulated cursor sample per render frame to raw timestamped motion samples.
+Secondary-camera reassignment also changed from a 0.35-second timer to every
+simulation tick. Low rendered FPS can now require multiple fixed steps in one
+frame (up to the configured eight-step catch-up ceiling). Those are additional
+costs, not a claim that fixed 60 Hz inherently performs worse. This renderer
+change leaves those simulation/input contracts intact; investigate their work
+frequency before changing the fixed timestep or dropping input segments.
+
+Stock release templates do not support `--script` unless compiled with path
+overrides enabled. The attempted direct-EXE probe was stopped after failing to
+produce a result; it is not release-performance evidence. Use the editor binary
+for these scripts. See the [official command-line availability legend](https://docs.godotengine.org/en/stable/tutorials/editor/command_line_tutorial.html#command-line-reference).
+
 ## Duration diagnostics
 
 | Script | Fixed workload / environment | Use |
