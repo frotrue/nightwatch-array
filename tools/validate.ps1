@@ -196,7 +196,8 @@ $gates = @(
     @('research_visual_test', 'RESEARCH_VISUAL_PASS'),
     @('ui_presentation_test', 'UI_PRESENTATION_PASS'),
     @('game_fixture_test', 'GAME_FIXTURE_PASS'),
-    @('meteor_render_cache_test', 'METEOR_RENDER_CACHE_PASS')
+    @('meteor_render_cache_test', 'METEOR_RENDER_CACHE_PASS'),
+    @('performance_monitor_test', 'PERFORMANCE_MONITOR_PASS')
 )
 if ($FullEconomy) { $gates += ,@('full_tree_economy_test', 'FULL_TREE_ECONOMY_PASS') }
 
@@ -204,6 +205,9 @@ try {
     $resolvedGodot = (Resolve-Path -LiteralPath $GodotPath).ProviderPath
     if (-not [IO.File]::Exists($resolvedGodot)) { throw 'GodotPath must identify an executable file.' }
     $summary.godot_path = $resolvedGodot
+    # The monitor gate exercises the real Windows telemetry helper. Build from
+    # source first so neither testing nor export can silently reuse a stale binary.
+    & (Join-Path $PSScriptRoot 'build-performance-sampler.ps1')
     foreach ($gate in $gates) {
         $name = $gate[0]
         $limit = if ($name -eq 'full_tree_economy_test') { $EconomyTimeoutSeconds } else { $TimeoutSeconds }
@@ -235,6 +239,7 @@ try {
                 path = $destination
                 sha256 = (Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash.ToLowerInvariant()
                 bytes = (Get-Item -LiteralPath $destination).Length
+                telemetry_helper = (Join-Path $projectRoot 'build\windows\NightwatchMetrics.exe')
             }
         } catch {
             $result.status = 'failed'

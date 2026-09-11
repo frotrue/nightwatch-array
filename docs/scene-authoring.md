@@ -57,6 +57,7 @@ another code-built fixed surface alongside these scenes.
 | Startup/save rows | `startup.tscn`, `startup_slot.tscn`, `save_slot.tscn` | HUD binds slot summaries/actions |
 | Round summary | `phase_summary.tscn` | HUD binds result, disclosure and reveal lifecycle |
 | Debug display | `debug_hud.tscn` | HUD |
+| Optional performance monitor | `performance_monitor.tscn` | `ui/performance_monitor.gd`, optional Windows pipe sampler |
 | Research chart | `upgrade_tree.tscn`, `chart_header.tscn`, inspector/ledger scenes | `upgrade_tree.gd` |
 | Repeated research star | `research_star.tscn` | Catalogue-driven instantiation and procedural marker |
 | Module loadout | `module_popup.tscn`, `module_tooltip.tscn` | `module_popup.gd` |
@@ -77,7 +78,7 @@ Game retains all progression, round transitions, pause ownership and persistence
 The migration tools and before/after captures in `build/` are diagnostic artifacts;
 no generated-tree loader or migration tool is part of the shipped runtime.
 
-The Compatibility renderer uses a 65,536-command canvas item buffer. Showing all
+The Compatibility fallback retains a 65,536-command canvas item buffer. Showing all
 14 inventory glyphs alongside Korean tooltips exceeded the default
 16,384 limit and dropped UI drawing commands in reproducible captures. Keep this
 headroom when changing the loadout layout; the setting is documented in

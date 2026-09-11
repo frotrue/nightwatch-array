@@ -1,6 +1,8 @@
 extends Node2D
 
 const Balance = preload("res://scripts/game_balance.gd")
+const CircleInstances = preload("res://scripts/circle_instances.gd")
+var star_instances: RefCounted
 
 const TWINKLE_FPS := 30.0
 const TWINKLE_COUNT := 16
@@ -64,11 +66,16 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
+	var capacity := maxi(1, stars.size() + outer_stars.size())
+	if star_instances == null or star_instances.capacity != capacity:
+		star_instances = CircleInstances.new(capacity)
+	star_instances.begin()
 	var viewport_size := _atmospheric_rect().size
 	for star in stars:
 		_draw_star(Vector2(star.p) * viewport_size, star)
 	for star in outer_stars:
 		_draw_star(Vector2(star.p), star)
+	star_instances.draw(self)
 
 
 func _draw_star(point: Vector2, star: Dictionary) -> void:
@@ -76,7 +83,7 @@ func _draw_star(point: Vector2, star: Dictionary) -> void:
 	var alpha := clampf(pulse, 0.08, 0.86)
 	# Rays removed with the starfield's, for the same reason: a background
 	# star must never take up more of the frame than a meteor does.
-	draw_circle(point, _world_px(float(star.size)), Color(0.76, 0.89, 1.0, alpha))
+	star_instances.append(point, _world_px(float(star.size)), Color(0.76, 0.89, 1.0, alpha))
 
 
 func _atmospheric_rect() -> Rect2:

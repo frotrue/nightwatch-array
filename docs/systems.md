@@ -6,7 +6,9 @@ Current values live in [design-details.md](design-details.md); retired-content s
 
 ## Scene and ownership
 
-Godot 4.7.2, Compatibility renderer, 1152×648. The root of
+Godot 4.7.2, Mobile/Vulkan on Windows with Compatibility/OpenGL fallback,
+1152×648. The safe render thread model remains in use; experimental separate
+rendering reproduces upstream font-upload and shutdown errors. The root of
 [main.tscn](../scenes/main.tscn) is `Game` / `scripts/game.gd`.
 There are no autoloads. `Game._ready()` binds controllers and connects their signals.
 It also creates SoundSynth, GameInputRouter, DeepSkyResearch and ModulePopup at runtime.
@@ -17,7 +19,7 @@ All script names below are under `scripts/`.
 |---|---|
 | Composition, rounds, accounting, save/load, feedback routing | `game.gd` |
 | World/screen conversion and camera feedback | `observation_view.gd` |
-| Background sky and stars | `starfield.gd`, `star_twinkle.gd` |
+| Background sky and stars; instanced circles and one sunrise triangle batch | `starfield.gd`, `star_twinkle.gd`, `circle_instances.gd` |
 | Data, installed research, derived effects, streak, storm charge | `progression_controller.gd` |
 | Static research/meteor definitions and immutable ID lookup | `game_balance.gd` |
 | Independent spawn rolls, forecasts, fragments, echo/storm queues | `spawn_policy.gd`, `meteor_spawner.gd` |

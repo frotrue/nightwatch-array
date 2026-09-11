@@ -376,11 +376,10 @@ func _update_manual_tracking(delta: float, keep_primary: bool = false) -> bool:
 	_manual_frame_active = true
 	_manual_frame_primary = primary
 	var tracking_radius: float = _tracking_radius_for(primary)
-	var current_distance: float = _target_contact_distance(primary, cursor_position)
-	if _apply_manual_contact(primary, delta):
+	if _apply_manual_contact(primary, delta, true):
 		tracking_grace_remaining = _tracking_grace()
 		_append_tracked_if_valid(primary)
-	elif current_distance <= tracking_radius * TRACKING_BREAK_MULTIPLIER:
+	elif _target_contact_distance(primary, cursor_position) <= tracking_radius * TRACKING_BREAK_MULTIPLIER:
 		# The soft outer ring pauses progress but keeps the target latched.
 		tracking_grace_remaining = _tracking_grace()
 	else:
@@ -390,9 +389,12 @@ func _update_manual_tracking(delta: float, keep_primary: bool = false) -> bool:
 
 	if _manual_target_limit() > 1:
 		_observe_additional_targets(delta, primary)
-		var closest_tracked = _closest_valid_tracked_target()
-		if closest_tracked != null and (not keep_primary or not _selection_is_valid()):
-			selected_meteor = closest_tracked
+		# Survey retains a live primary. Ranking every additional target cannot
+		# affect that choice, and repeats per raw mouse segment at high poll rates.
+		if not keep_primary or not _selection_is_valid():
+			var closest_tracked = _closest_valid_tracked_target()
+			if closest_tracked != null:
+				selected_meteor = closest_tracked
 	_manual_frame_active = false
 	_manual_frame_primary = null
 	return true
@@ -414,7 +416,7 @@ func _observe_additional_targets(delta: float, primary) -> void:
 			break
 		if child == primary or not _target_is_valid(child):
 			continue
-		if _apply_manual_contact(child, delta):
+		if _apply_manual_contact(child, delta, true):
 			_append_tracked_if_valid(child)
 
 
@@ -441,8 +443,10 @@ func _circle_contact_interval(target, radius: float) -> Vector2:
 	var leave := minf(1.0, (-b + sqrt(discriminant)) / (2.0 * a))
 	return Vector2(enter, leave) if leave > enter else Vector2(-1, -1)
 
-func _apply_manual_contact(target, delta: float) -> bool:
-	if not _target_is_valid(target) or delta <= 0.0: return false
+func _apply_manual_contact(target, delta: float, already_valid: bool = false) -> bool:
+	# Both selection and the additional-target loop just checked validity, with
+	# no callback in between. Other callers retain the defensive entry point.
+	if (not already_valid and not _target_is_valid(target)) or delta <= 0.0: return false
 	var radius: float = _tracking_radius_for(target)
 	if _has_batched_contact(target):
 		var row: PackedFloat64Array = _contact_rows[_contact_indices[target]]

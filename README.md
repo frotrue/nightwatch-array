@@ -23,11 +23,16 @@ $godot = "C:\Users\user\AppData\Local\Temp\codex-godot-4.7.2\Godot_v4.7.2-stable
 
 편집기에서 F5로 실행한다. 메인 씬은 `scenes/main.tscn`이다.
 
+Windows 기본 렌더러는 Mobile/Vulkan이다. Vulkan 초기화가 불가능하면
+Compatibility/OpenGL로 전환한다. 특정 드라이버에서 문제가 있으면
+`NightwatchArray.exe --rendering-method gl_compatibility --rendering-driver opengl3`로
+호환 경로를 직접 실행할 수 있다. 실험적인 별도 렌더 스레드는 사용하지 않는다.
+
 ```powershell
 .\tools\validate.ps1 -GodotPath $godot -Build
 ```
 
-빠른 게이트 23개를 통과하면 Windows 실행 파일을 갱신한다.
+빠른 게이트 24개를 통과하면 Windows 실행 파일을 갱신한다.
 생성·보상·진행·표적 로직에 영향이 있으면 `-FullEconomy`도 추가한다.
 `-Build`를 빼면 검사만 한다. 시드·전략 설정과 추가 검증은 [probes.md](docs/probes.md)를 본다.
 
@@ -36,10 +41,13 @@ $godot = "C:\Users\user\AppData\Local\Temp\codex-godot-4.7.2\Godot_v4.7.2-stable
 
 - 실행 파일: `C:\Users\user\Documents\ChatGPT\star\build\windows\NightwatchArray.exe`
 - `build/`는 Git 제외 디렉터리다. 빌드 산출물은 커밋하지 않는다.
+- Windows 배포 시 같은 폴더의 `NightwatchMetrics.exe`도 함께 포함한다.
+  성능 모니터의 CPU·GPU 측정기이며, 검증 명령이 MSVC C++ Build Tools로 자동 빌드한다.
 - 개별 검사: `& $godot --headless --path . --script res://tests/smoke_test.gd`
 - 검사 없이 직접 내보내야 할 때의 명령:
 
 ```powershell
+.\tools\build-performance-sampler.ps1
 & $godot --headless --path . --export-release "Windows Desktop" C:\Users\user\Documents\ChatGPT\star\build\windows\NightwatchArray.exe
 ```
 
@@ -58,6 +66,7 @@ $godot = "C:\Users\user\AppData\Local\Temp\codex-godot-4.7.2\Godot_v4.7.2-stable
 
 U·F11과 메뉴/정산 보조키는 설정에서 바꿀 수 있다. LMB·RMB·Esc·Enter·Space는
 고정 복구 경로다. 설정은 관측을 일시정지하며 일반·소리·화면·접근성·조작·저장 페이지를 제공한다.
+설정 → 화면 → 성능 모니터에서 FPS·프레임 시간·게임 CPU/GPU 사용량을 켜고 끈다(기본 꺼짐).
 정확한 입력 우선순위와 설정 항목은 [설정 참조](docs/settings.md)를 본다.
 100만 이상의 데이터는 기본 M/B/T로 축약한다. 설정 → 일반 → 숫자 표기에서 과학적 표기로
 바꿀 수 있으며, 데이터·가격에 마우스를 올리면 축약하지 않은 값을 확인한다.

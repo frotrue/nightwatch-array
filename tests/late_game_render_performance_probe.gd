@@ -19,9 +19,10 @@ class Observer:
 class Driver:
 	extends Node
 	var observer: Node
+	var samples_per_tick := 17
 	func _physics_process(_delta: float) -> void:
-		for i in 17:
-			var at: float = observer.input_time + (i + 1) / (17.0 * 60.0)
+		for i in samples_per_tick:
+			var at: float = observer.input_time + (i + 1) / (float(samples_per_tick) * 60.0)
 			observer.point = Vector2(576 + sin(at * 2) * 400, 300 + cos(at * 3) * 200)
 			observer.tick_input.push(at, observer.point, true)
 
@@ -84,6 +85,8 @@ func _run() -> void:
 	planet.required_track_time = 1000000.0
 	var driver := Driver.new()
 	driver.observer = observer
+	var input_samples := OS.get_environment("NIGHTWATCH_PERF_INPUT_SAMPLES")
+	if input_samples.is_valid_int(): driver.samples_per_tick = clampi(int(input_samples), 1, 134)
 	driver.process_physics_priority = -100
 	root.add_child(driver)
 	Engine.max_fps = 0
@@ -91,6 +94,7 @@ func _run() -> void:
 	print("LATE_RENDER_ENV ", JSON.stringify({"engine":Engine.get_version_info().string,
 		"renderer":RenderingServer.get_current_rendering_method(), "viewport":str(root.size),
 		"copied_save":not saved_path.is_empty(), "warmup":WARMUP, "sample":SAMPLE, "noncompleting_planets":1,
+		"input_samples_per_tick":driver.samples_per_tick,
 		"base_research":game.progression.purchased_nodes.size(), "outer_research":game.deep_sky.state.research_ids.size()}))
 	var frames: Array[float] = []
 	var started := Time.get_ticks_usec()

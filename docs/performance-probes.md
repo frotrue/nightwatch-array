@@ -80,6 +80,7 @@ a windowed renderer. All three main-game frame fixtures isolate player persisten
 | `frame_pacing_probe.gd` | Human input: still at 1–7s and 19–24s, rapid motion at 8–18s. `NIGHTWATCH_PROBE_SECONDS=24`, `NIGHTWATCH_RENDER_STRESS_OBJECTS=18` (32 includes Major) |
 | `observation_performance_probe.gd` | Scripted still, unpressed hover sweep and held tracking at exactly 18/32 live meteors. `NIGHTWATCH_OBSERVATION_PERF_FRAMES=360` (180–1800), 60 warm-up frames per phase |
 | `dense_input_performance_probe.gd` | 4/22 common meteors, all base/extension research flags and LINE/SLOW/WIDE/BURST/CORRELATE. 1/17/67 raw samples per 60 Hz tick, 120 ticks per case. Optional windowed frame timing; completion and natural spawning excluded |
+| `late_game_render_performance_probe.gd` | Real-time natural spawning, full research or `NIGHTWATCH_PERF_SAVE` read-only copy, one noncompleting planet, effects and sound. `NIGHTWATCH_PERF_INPUT_SAMPLES` selects 1–134 raw samples per tick (default 17); 5s warm-up + 25s measurement |
 | `research_ui_frame_probe.gd` | Idle, eight wheel events per frame, alternating inspector selections, 3.6s pull-back and final continuation chart |
 | `probe_frame_pacing_probe.gd` | Independent Layer 2 fixture. `NIGHTWATCH_PROBE_SECONDS=8`; `NIGHTWATCH_PROBE_FINISHED=1` selects finished state |
 
@@ -387,3 +388,117 @@ The final CPU and windowed dense-input probes both passed their workload checks.
 
 Bounded-worker validation: `build/validation/20260911T084705635Z_86b4ef24/summary.json`
 passed 25 checks (23 fast gates, three-seed economy, Windows export).
+
+
+## Observation selection optimization (2026-09-11)
+
+Retain all timestamped input segments and the fixed 60 Hz simulation. While
+survey keeps a valid primary, do not rank additional targets whose ranking cannot
+change that selection. Compute the soft-break distance only after a contact miss,
+and reuse the caller's immediately preceding validity check. Direct diagnostic
+calls still validate their target. No sampling/coalescing, worker-count or geometry
+change is involved.
+
+`tests/support/reference_observation_selection.gd` retains the old selection pass
+from `f7a84f0`. The threaded gate compares primary identity, tracked order, grace,
+quality and credited work, with 17/67 samples, LINE/circle, survey off/on, burst,
+hitstop and release. This reference is test-only and should stay independent.
+
+Paired CPU-only dense probe on Ryzen 5950X, Godot 4.7.2, 22 fixed targets:
+
+| Raw samples/tick | Before mean ms | After mean ms |
+|---|---:|---:|
+| 1 | 1.295 | 1.150 |
+| 17 | 3.704 | 2.833 |
+| 67 | 13.454 | 8.595 |
+
+Both runs retained 44.0 credited manual seconds and passed their workload checks.
+The 67-sample reduction in this pair is 36%; other baseline runs were closer to
+11ms, so this is not a promised gain for every machine or play session.
+Logs: `build/input-optimization-dense-{before,after}.log`.
+
+Natural-spawn windowed measurements did not establish a consistent FPS gain.
+The copied 95+42 research save at 1152x648/OpenGL, 5s warm-up + 25s measurement,
+measured before/after 94.25/73.02 FPS with 17 samples; reversing execution order
+measured after/before 93.72/84.52 FPS. A 67-sample pair measured 80.31/77.25 FPS
+with 282 completions on each side. Each run maintained approximately 60 ticks/s.
+These variable whole-game results must not be presented as a rendering improvement.
+Logs: `build/input-optimization-render-*.log`, `build/input-optimization-67-*.log`.
+
+An isolated `--render-thread separate` trial failed before completion with a fatal
+`cowdata.h` bounds error and a VSync warning. Do not enable it based on this trial;
+the project keeps its existing render thread model. The trial is not a performance
+sample. Engine rendering/driver work remains a separate optimization target.
+
+## Vulkan backend and background batches (2026-09-11)
+
+Windows now defaults to Mobile/Vulkan, retaining the safe render thread model.
+Vulkan initialization failure can fall back to Compatibility/OpenGL; D3D12
+fallback is disabled to avoid an unvalidated additional deployment path. Explicit
+OpenGL launch arguments remain available in the README. The unsupported-hardware
+automatic transition was not exercised on this Vulkan-capable RTX 3060.
+See the engine's [renderer fallback documentation](https://github.com/godotengine/godot-docs/blob/master/tutorials/rendering/renderers.rst).
+
+Both background star layers now reuse the existing native-circle MultiMesh
+helper. The sunrise halo submits the same 64 colored triangles in one command.
+Circle order, soft rims, 30 Hz twinkling, sky colors, dawn timing and camera
+compensation are preserved. No simulation, research, density, input or quality
+reduction accompanies the renderer change.
+
+Same Ryzen 9 5950X / RTX 3060 / NVIDIA 591.74, Godot 4.7.2 editor engine,
+1152×648 Windows windows positioned offscreen, VSync/FPS cap disabled. The
+late-game fixture reads the isolated `build/player-frame-drop.cfg` copy (95 + 42
+research), seeds the streams, guarantees one moving noncompleting planet, and
+supplies 17 input samples per tick. Each run has 5s warm-up and 25s measurement.
+Runs were sequential. The unchanged baseline is `d2021b5`; the second baseline
+ran from its separately imported archive in `build/backend-baseline`.
+
+| Run | Mean FPS | p95 / p99 ms | Completions | Peak targets / particles | End draw calls |
+|---|---:|---:|---:|---:|---:|
+| Baseline OpenGL 1 | 75.55 | 19.07 / 23.35 | 319 | 27 / 220 | 568 |
+| Final Vulkan + batches 1 | 206.04 | 10.26 / 13.37 | 313 | 28 / 220 | 320 |
+| Final Vulkan + batches 2 | 239.16 | 9.75 / 11.72 | 290 | 28 / 220 | 327 |
+| Baseline OpenGL 2, after final | 87.49 | 18.28 / 20.63 | 308 | 27 / 220 | 550 |
+
+All sustained approximately 60 ticks/s. This is about 2.7× mean FPS in these
+repeated late-game workloads, not a universal FPS guarantee or identical
+frame-by-frame trajectories: natural completion counts still vary across runs.
+Logs: `build/backend-pair-gl-{1,2}.log`,
+`build/backend-final-vulkan-{1,2}.log`. Renderer-only preliminary Vulkan runs
+were 138.62 and 192.80 FPS; D3D12 was 107.86 FPS. The combined improvement must
+not be attributed exclusively to the background batching.
+
+The separate-thread Vulkan experiment reached 407.14 FPS but produced repeated
+empty texture upload errors and wrong-thread finalization errors. It is invalid
+as a passing performance sample and is not shipped. These match open upstream
+[glyph atlas upload](https://github.com/godotengine/godot/issues/122206) and
+[render-device shutdown](https://github.com/godotengine/godot/issues/119000)
+issues. Log: `build/render-structure-vulkan-thread-trial.log`.
+
+The capacity-bypassing thousand-meteor diagnostic remains heavily overloaded:
+final Vulkan was 6.22 FPS without observation and 1.14 FPS with observation
+(9.10 ticks/s). The synthetic 100-target observation case was 28.88 FPS and
+maintained 59.95 ticks/s. These are deliberately larger workloads than the
+27–28-target natural fixture. This patch does **not** establish 300 FPS at
+1,000 targets. Log: `build/backend-final-thousand.log`.
+
+Real-GPU background, meteor and particle pixel comparisons pass on both Vulkan
+and explicit OpenGL. All nine background frames match the native oracle exactly
+on Vulkan; OpenGL differs in at most 30 channels by one 8-bit level. The paired
+meteor test also covers >65,536 vertices, solid/additive ordering, subpixel scan
+arcs, interpolation and object deletion. Logs:
+`build/backend-{mobile,gl_compatibility}-*_render_test.log`.
+
+Cross-backend Korean/English solar and research captures (nine each) also pass:
+`build/solar_target_review/1789138367` (Vulkan) and `1789138380` (OpenGL).
+The size/observation images differ by at most 2/255 per RGB channel; research
+images by at most 9/255. Visual review found matching geometry, palette and
+readable labels. These cross-backend numeric differences are not a pixel-identity
+claim. Screenshots and probes are diagnostics, not a player comfort verdict.
+
+Validation/export: `build/validation/20260911T145314548Z_2ff242b1/summary.json`
+passed all 25 checks (24 fast gates and Windows export). The editor engine also
+loaded the exported EXE's pack and ran the isolated live sky fixture with 24
+moving targets on its default Vulkan backend: `build/backend-packed-live.log`
+and captures in `build/backend-packed-live/`. This checks packed resources and
+settings; it is not a benchmark of the stock release engine binary.
