@@ -2,6 +2,8 @@ extends Node2D
 
 const UITheme = preload("res://scripts/ui_theme.gd")
 const TriangleBatch = preload("res://scripts/meteor_triangle_batch.gd")
+const PlanetSurface = preload("res://scripts/planet_surface.gd")
+const ScanArcs = preload("res://scripts/scan_arc_instances.gd")
 
 # The trail leaves the head at the head's own width and loses that extra width
 # fast, so the long train keeps the narrow size it was tuned to. A low exponent
@@ -87,6 +89,8 @@ var observation_view: Camera2D
 var observation_visual_scale: float = 1.0
 var triangle_batch := TriangleBatch.new()
 var render_layer: Node2D
+var planet_surface: RefCounted
+var scan_arcs: RefCounted
 var drawn_age := -1.0
 var drawn_linger := -1.0
 
@@ -518,6 +522,7 @@ func _finish_observation(auto_rate: float) -> void:
 
 
 func _draw() -> void:
+	if scan_arcs != null: scan_arcs.clear()
 	drawn_age = age
 	drawn_linger = linger_time
 	triangle_batch.begin()
@@ -1152,24 +1157,9 @@ func _draw_asteroid_head(radius: float, visibility: float, icy: bool) -> void:
 func _draw_planet_head(radius: float, visibility: float) -> void:
 	# Latitude strips follow a lit sphere. No rings, orbit lines or star-shaped core.
 	draw_circle(Vector2.ZERO, radius * 1.04, Color(glow_color, visibility * 0.09), true, -1.0, true)
-	var bands := 36
-	for index in range(bands):
-		var y0 := -1.0 + 2.0 * float(index) / float(bands)
-		var y1 := -1.0 + 2.0 * float(index + 1) / float(bands)
-		var y := (y0 + y1) * 0.5
-		var width0 := sqrt(maxf(0.0, 1.0 - y0 * y0))
-		var width1 := sqrt(maxf(0.0, 1.0 - y1 * y1))
-		var band := 0.48 + 0.12 * sin(y * 22.0 + 0.7 * sin(y * 9.0))
-		for column in range(16):
-			var x0 := -1.0 + float(column) / 8.0
-			var x1 := -1.0 + float(column + 1) / 8.0
-			var x := (x0 + x1) * 0.5
-			var lighting := clampf(0.38 + 0.58 * sqrt(maxf(0.0, 1.0 - x * x - y * y * 0.35)) - x * 0.35 - y * 0.17, 0.13, 1.0)
-			var color := primary_color.darkened(1.0 - band * lighting)
-			if index % 9 in [3, 4]: color = glow_color.darkened(1.0 - lighting * 0.78)
-			draw_colored_polygon(PackedVector2Array([
-				Vector2(x0 * width0, y0) * radius, Vector2(x1 * width0, y0) * radius,
-				Vector2(x1 * width1, y1) * radius, Vector2(x0 * width1, y1) * radius]), Color(color, visibility))
+	if planet_surface == null:
+		planet_surface = PlanetSurface.new()
+	planet_surface.draw(self, radius, primary_color, glow_color, visibility)
 	draw_arc(Vector2.ZERO, radius, PI * 0.8, PI * 1.7, 48, Color(glow_color, visibility * 0.45), 0.9, true)
 
 
@@ -1231,6 +1221,11 @@ func _head_scale() -> float:
 
 
 func _draw_dashed_arc(radius: float, start_angle: float, arc_length: float, dash_count: int, color: Color, width: float) -> void:
+	var standard_arc := (dash_count == 10 and arc_length == PI * 1.25) or (dash_count == 5 and arc_length == PI * 0.55)
+	if standard_arc and width > 0.0 and width < 2.0:
+		if scan_arcs == null: scan_arcs = ScanArcs.new(get_canvas_item())
+		scan_arcs.draw(radius, start_angle, arc_length, dash_count, color, width)
+		return
 	var cell := arc_length / float(dash_count)
 	for index in range(dash_count):
 		var dash_start := start_angle + cell * float(index)

@@ -123,6 +123,12 @@ caches. The headless `meteor_render_cache_test` remains the independent arithmet
 oracle; neither test substitutes for the other. No performance threshold belongs
 in this correctness check.
 
+Its native reference also retains the pre-cache planet surface and pre-instancing
+scan arcs. Additional cases cover age-only reuse, radius/palette invalidation,
+planet translucency, fractional radii at both camera spans and stopping/restarting
+automatic scans. Keep the existing pixel bounds: they caught Compatibility's
+float16 custom-data radius rounding, fixed with high/residual encoding.
+
 Run `effect_instances_render_test.gd` with those real-renderer flags when changing
 completion-particle submission. Its nine paired poses compare native filled
 circles against instancing: full capacity, colored alpha overlap, three movement/

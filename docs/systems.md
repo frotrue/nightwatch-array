@@ -63,9 +63,19 @@ Meteors still own gameplay and generate the same local procedural triangles.
 `meteor_triangle_batch.gd` collects ribbon, graded-head and hotspot triangles;
 the layer submits one triangle array per contiguous additive run before drawing
 the frame. An opaque asteroid/planet is a strict run boundary, so light cannot
-move across a solid body's draw order. Native antialiased filaments, scan arcs,
-debris and solid surfaces retain their CanvasItem commands. Additive triangles
+move across a solid body's draw order. Native antialiased filaments, debris,
+asteroid faces and planet halo/rim retain their CanvasItem commands. Additive triangles
 may move past other additive commands inside a run; their light is commutative.
+
+`planet_surface.gd` caches the original 576 surface cells in one triangle array,
+retaining float32 colors and triangulation. Radius/palette changes rebuild it;
+fading only updates alpha. `scan_arc_instances.gd` owns one child canvas RID per
+scanning meteor and two instanced arc templates. The shader expands radius and
+width separately using the native five-point AA feather topology. Compatibility
+compresses custom instance attributes to float16, so high/residual pairs preserve
+subpixel motion. Real expanded bounds drive culling. Clearing an inactive scan
+removes its commands; destroying its owner releases the RID. Wider/nonstandard
+arcs use the native fallback. These resources introduce no scene children.
 
 Tick resolution, changed age/linger, feature changes and camera scale invalidate
 meteor geometry. Intervening render frames reuse it. The layer snapshots local

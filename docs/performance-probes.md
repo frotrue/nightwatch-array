@@ -297,6 +297,71 @@ with at most one 8-bit color step of difference and identical expiry/reset image
 Validation/export: `build/validation/20260911T095636363Z_c827789d/summary.json`
 passed all 24 checks (23 fast gates and Windows export).
 
+## Persistent late-game rendering costs (2026-09-11)
+
+The previous synthetic 32-target input probe did not reproduce the user's slow
+late game. A read-only copy of the latest slot showed 95/42 research and modules
+`overcharge, focus, sweep_optics, capture_hold, focus`. An instrumented natural
+30-second run with that build reached 29 targets/220 particles, 46.45 average
+FPS and 159.89 ms p99. After surface caching and scan instancing, a directional
+rerun reached 86.36 FPS and 21.31 ms p99. These wall-time runs had slightly
+different completions/target mixes; they are not equal-work throughput estimates.
+Logs: `build/player-profile-before.log`, `build/player-profile-arcs-after.log`.
+The player's save is not part of the committed fixture and was not modified.
+
+`late_game_render_performance_probe.gd` now keeps this fuller workload reproducible:
+all research, that duplicate-module build, natural spawning, 17 input samples per
+60 Hz tick, automatic scans, completion effects and sound code. One explicitly
+seeded, noncompleting moving planet guarantees sustained surface rendering;
+other objects retain normal completion and spawn rules. Warm-up is five wall
+seconds, followed by 25 measured seconds. It uses isolated settings/saves and a
+90-second watchdog. Optionally point `NIGHTWATCH_PERF_SAVE` at a read-only CFG
+copy to load a build before starting a fresh observation phase. Remove the
+variable afterwards. No performance threshold is a gameplay acceptance gate.
+
+Use the README editor binary with the Windows/OpenGL flags in visual-validation,
+at 1152×648, sequentially. The final A/B used `--verbose` in both runs, baseline
+`ec30cbf` exported into an isolated source folder, and the same probe. Both logs
+have `LATE_RENDER_PASS`, exit 0 and no engine errors or leaked-object warnings:
+
+| Diagnostic | Baseline | Cached surface + instanced scans |
+|---|---:|---:|
+| Mean FPS | 7.41 | 50.13 |
+| p99 frame time | 250.28 ms | 48.04 ms |
+| Achieved simulation ticks/sec | 45.99 | 59.97 |
+| Draw calls at sample end | 1,656 | 507 |
+
+Logs: `build/late-render-before.log`, `build/late-render-after.log`. The overloaded
+baseline advanced fewer ticks (218 vs 260 completions); this table measures
+frame pacing under the same scenario, not identical completed work. Earlier
+runs varied considerably, so neither this table nor the saved-build diagnostic
+establishes a minimum FPS. Ordinary meteor geometry/input work still costs time.
+
+The planet now submits its original 576 cells as one cached triangle array.
+The two native five-point dashed arcs formerly issued 15 arcs/45 AA strips per
+scanning meteor; two MultiMesh submissions reuse those exact feather templates.
+The paired renderer test retains native oracles for both and checks fractional
+radius, camera span, palette/size changes, fades, stop/restart and removal without
+relaxing its pixel limits. The final 26 poses differed by at most one 8-bit color
+step. The main-plus-three-worker cap and all gameplay timing remain unchanged.
+Validation: `build/validation/20260911T120606968Z_356979eb/summary.json`, 24 passes.
+
+### Why the tick migration can expose drops
+
+Comparison of `fe3e69f` with `4de7625` confirms that input changed from one
+accumulated cursor sample per render frame to raw timestamped motion samples.
+Secondary-camera reassignment also changed from a 0.35-second timer to every
+simulation tick. Low rendered FPS can now require multiple fixed steps in one
+frame (up to the configured eight-step catch-up ceiling). Those are additional
+costs, not a claim that fixed 60 Hz inherently performs worse. This renderer
+change leaves those simulation/input contracts intact; investigate their work
+frequency before changing the fixed timestep or dropping input segments.
+
+Stock release templates do not support `--script` unless compiled with path
+overrides enabled. The attempted direct-EXE probe was stopped after failing to
+produce a result; it is not release-performance evidence. Use the editor binary
+for these scripts. See the [official command-line availability legend](https://docs.godotengine.org/en/stable/tutorials/editor/command_line_tutorial.html#command-line-reference).
+
 ## Duration diagnostics
 
 | Script | Fixed workload / environment | Use |

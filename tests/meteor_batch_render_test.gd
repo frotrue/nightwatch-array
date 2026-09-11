@@ -14,6 +14,40 @@ class CountedMeteor:
 		draws += 1
 		super._draw()
 
+class ImmediatePlanet:
+	extends CountedMeteor
+	# Independent pre-mesh surface renderer retained as the pixel oracle.
+	func _draw_planet_head(radius: float, visibility: float) -> void:
+		# Latitude strips follow a lit sphere. No rings, orbit lines or star-shaped core.
+		draw_circle(Vector2.ZERO, radius * 1.04, Color(glow_color, visibility * 0.09), true, -1.0, true)
+		var bands := 36
+		for index in range(bands):
+			var y0 := -1.0 + 2.0 * float(index) / float(bands)
+			var y1 := -1.0 + 2.0 * float(index + 1) / float(bands)
+			var y := (y0 + y1) * 0.5
+			var width0 := sqrt(maxf(0.0, 1.0 - y0 * y0))
+			var width1 := sqrt(maxf(0.0, 1.0 - y1 * y1))
+			var band := 0.48 + 0.12 * sin(y * 22.0 + 0.7 * sin(y * 9.0))
+			for column in range(16):
+				var x0 := -1.0 + float(column) / 8.0
+				var x1 := -1.0 + float(column + 1) / 8.0
+				var x := (x0 + x1) * 0.5
+				var lighting := clampf(0.38 + 0.58 * sqrt(maxf(0.0, 1.0 - x * x - y * y * 0.35)) - x * 0.35 - y * 0.17, 0.13, 1.0)
+				var color := primary_color.darkened(1.0 - band * lighting)
+				if index % 9 in [3, 4]: color = glow_color.darkened(1.0 - lighting * 0.78)
+				draw_colored_polygon(PackedVector2Array([
+					Vector2(x0 * width0, y0) * radius, Vector2(x1 * width0, y0) * radius,
+					Vector2(x1 * width1, y1) * radius, Vector2(x0 * width1, y1) * radius]), Color(color, visibility))
+		draw_arc(Vector2.ZERO, radius, PI * 0.8, PI * 1.7, 48, Color(glow_color, visibility * 0.45), 0.9, true)
+
+class NativeArcs:
+	extends ImmediatePlanet
+	func _draw_dashed_arc(radius: float, start_angle: float, arc_length: float, dash_count: int, color: Color, width: float) -> void:
+		var cell := arc_length / float(dash_count)
+		for index in range(dash_count):
+			var dash_start := start_angle + cell * float(index)
+			draw_arc(Vector2.ZERO, radius, dash_start, dash_start + cell * 0.46, 5, color, width, true)
+
 class MotionDriver:
 	extends Node
 	var targets: Array = []
@@ -54,7 +88,7 @@ func _run() -> void:
 		# light must be in front of each rock while earlier light is occluded.
 		var types := ["common", "major", "galaxy", "fast", "variable_star", "comet", "satellite", "binary_star", "fragment", "fragment_piece", "fireball"]
 		for i in types.size():
-			var target := CountedMeteor.new()
+			var target := NativeArcs.new() if variant == 0 else CountedMeteor.new()
 			var point := Vector2(190 + (i % 3) * 20, 110 + (i / 3) * 45)
 			var spec: Dictionary = Balance.meteor_spec(types[i])
 			target.configure(spec, types[i], point, Vector2(80, 12), 1000.0 / float(spec.lifetime), {"automation":0.1}, point + Vector2(1000, 150))
@@ -86,6 +120,57 @@ func _run() -> void:
 	driver.moving = false
 	await _settle()
 	await _compare("stopped")
+	var original_surface: int = all_targets[1][2].planet_surface.revision
+	for targets in all_targets:
+		targets[2].age += 0.1
+	await _settle()
+	await _compare("planet_cached_age")
+	_check(all_targets[1][2].planet_surface.revision == original_surface, "Planet rebuilt its static surface for age changes")
+	for targets in all_targets:
+		targets[2].body_radius *= 1.3
+		targets[2].primary_color = Color("7799cc")
+		targets[2].glow_color = Color("88ddee")
+		targets[2].queue_redraw()
+	await _settle()
+	await _compare("planet_radius_palette")
+	_check(all_targets[1][2].planet_surface.revision != original_surface, "Planet retained stale size/palette")
+	var colored_surface: int = all_targets[1][2].planet_surface.revision
+	for targets in all_targets:
+		targets[2].alive = false
+		targets[2].linger_time = 0.073
+		targets[2].queue_redraw()
+	await _settle()
+	await _compare("planet_translucent")
+	_check(all_targets[1][2].planet_surface.revision == colored_surface, "Planet rebuilt its mesh while fading")
+	# Exercise subpixel shader expansion at the late camera's largest scale.
+	# Keep the actual canvas transform and shader bounds involved in culling.
+	var cameras: Array = []
+	for variant in 2:
+		var camera = load("res://scripts/observation_view.gd").new()
+		camera.process_callback = Camera2D.CAMERA2D_PROCESS_PHYSICS
+		pair[variant].add_child(camera)
+		cameras.append(camera)
+		for target in all_targets[variant]: target.observation_view = camera
+	for span in [1.0, 1.5]:
+		for variant in 2:
+			cameras[variant].set_observation_span(span)
+			for target in all_targets[variant]:
+				target.body_radius += 0.007
+				target.queue_redraw()
+		await _settle()
+		await _compare("arc_subpixel_span_%s" % span)
+	for targets in all_targets:
+		for target in targets:
+			target.base_automatic_rate = 0.0
+			target.queue_redraw()
+	await _settle()
+	await _compare("scan_stopped")
+	for targets in all_targets:
+		for target in targets:
+			target.base_automatic_rate = 0.1
+			target.queue_redraw()
+	await _settle()
+	await _compare("scan_restarted")
 	# A teleport resets the engine's previous pose; the shared layer must follow.
 	for targets in all_targets:
 		targets[3].position += Vector2(60, 15)
@@ -120,7 +205,7 @@ func _run() -> void:
 	# headless test cannot catch wrapped indices or missing light at this density.
 	for variant in 2:
 		for i in 1000:
-			var target := CountedMeteor.new()
+			var target := NativeArcs.new() if variant == 0 else CountedMeteor.new()
 			var point := Vector2(15 + (i % 40) * 14, 12 + (i / 40) * 15)
 			var spec: Dictionary = Balance.meteor_spec("common")
 			target.configure(spec, "common", point, Vector2(30, 0), 100.0, {}, point + Vector2(1000, 0))
