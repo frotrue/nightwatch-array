@@ -1,6 +1,9 @@
 extends Node2D
 
 const SimulationClock = preload("res://scripts/simulation_clock.gd")
+const MeteorMotionBatch = preload("res://scripts/meteor_motion_batch.gd")
+const PARALLEL_MOTION_THRESHOLD := 128
+var parallel_motion_enabled := true
 const UITheme = preload("res://scripts/ui_theme.gd")
 const Balance = preload("res://scripts/game_balance.gd")
 const SoundSynth = preload("res://scripts/sound_synth.gd")
@@ -249,6 +252,25 @@ func allocate_simulation_id() -> int:
 	next_simulation_id += 1
 	return id
 
+
+func _tick_target_motion(targets: Array, delta: float) -> void:
+	var snapshots: Array = []
+	var indices: Dictionary = {}
+	if parallel_motion_enabled and targets.size() >= PARALLEL_MOTION_THRESHOLD:
+		for target in targets:
+			if target.is_queued_for_deletion() or not target.alive or not target.has_method("motion_snapshot"): continue
+			indices[target] = snapshots.size()
+			snapshots.append(target.motion_snapshot(delta))
+	var results: Array = []
+	if not snapshots.is_empty():
+		results = observer.simulation_workers.map_chunks(snapshots.size(), MeteorMotionBatch.calculate.bind(snapshots))
+	for target in targets:
+		if target.is_queued_for_deletion(): continue
+		if indices.has(target):
+			target.apply_motion_result(results[indices[target]], delta, simulation_clock.tick)
+		else:
+			target.tick_motion(SimulationClock.STEP if target.type_id == "anomaly_rare" else delta, simulation_clock.tick)
+
 func simulate_tick() -> void:
 	if completed or not observation_phase_active or get_tree().paused: return
 	_in_simulation_tick = true
@@ -266,9 +288,7 @@ func simulate_tick() -> void:
 	deep_sky.director.simulate_tick(SimulationClock.STEP)
 	var targets: Array = meteor_layer.get_children() + deep_sky.director.targets()
 	targets.sort_custom(func(a, b): return a.simulation_id < b.simulation_id)
-	for target in targets:
-		if target.is_queued_for_deletion(): continue
-		target.tick_motion(SimulationClock.STEP if target.type_id == "anomaly_rare" else motion_delta, simulation_clock.tick)
+	_tick_target_motion(targets, motion_delta)
 	sky_contacts.simulate_tick(motion_delta)
 	spawner._refresh_secondary_camera()
 	observer.simulate_tick(motion_delta)

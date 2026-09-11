@@ -4,6 +4,9 @@ const SimulationInput = preload("res://scripts/simulation_input.gd")
 const Clock = preload("res://scripts/simulation_clock.gd")
 const UITheme = preload("res://scripts/ui_theme.gd")
 const Modules = preload("res://scripts/observation_modules.gd")
+const ContactBatch = preload("res://scripts/observation_contact_batch.gd")
+const SimulationWorkers = preload("res://scripts/simulation_workers.gd")
+const PARALLEL_CONTACT_THRESHOLD := 256
 
 const TRACKING_BREAK_MULTIPLIER := 1.72
 const TRACKING_GRACE_SECONDS := 0.14
@@ -62,6 +65,13 @@ var _tick_primary_speed := 1.0
 var _tick_secondary_speed := 1.0
 var _tick_grace := 0.0
 var _tick_target_limit := 1
+var simulation_workers := SimulationWorkers.new()
+var parallel_contacts_enabled := true
+var _contact_rows: Array = []
+var _contact_indices: Dictionary = {}
+var _contact_segment_index := -1
+var _contact_candidates: Array = []
+var _contact_original_targets: Dictionary = {}
 
 
 func setup(target_layer: Node2D, progression_controller: Node, hud_layer: CanvasLayer, survey_controller: Node2D = null, view: Camera2D = null, extra_target_layer = null) -> void:
@@ -90,6 +100,7 @@ func setup(target_layer: Node2D, progression_controller: Node, hud_layer: Canvas
 
 
 func _exit_tree() -> void:
+	simulation_workers.shutdown()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 
@@ -203,9 +214,11 @@ func prepare_tick() -> void:
 
 func simulate_tick(delta: float) -> void:
 	_begin_tick_cache()
+	_prepare_contact_batch()
 	current_time_scale = delta / Clock.STEP
 	var consumed := 0.0
 	for segment in tick_segments:
+		_contact_segment_index += 1
 		previous_cursor_position = segment.start
 		cursor_position = segment.end
 		segment_start_fraction = clampf(consumed / Clock.STEP, 0.0, 1.0)
@@ -224,6 +237,48 @@ func simulate_tick(delta: float) -> void:
 	segment_start_fraction = 0.0
 	segment_end_fraction = 1.0
 	_end_tick_cache()
+	_contact_rows.clear()
+	_contact_indices.clear()
+	_contact_candidates.clear()
+	_contact_original_targets.clear()
+	_contact_segment_index = -1
+
+
+func _prepare_contact_batch() -> void:
+	simulation_workers.last_parallel_jobs = 0
+	if not parallel_contacts_enabled: return
+	var held_segments := 0
+	for segment in tick_segments: held_segments += int(segment.held)
+	if _tick_targets.size() * held_segments < PARALLEL_CONTACT_THRESHOLD:
+		return
+	var snapshots: Array = []
+	var ordered_targets: Array = []
+	for target in _tick_targets:
+		_contact_original_targets[target] = true
+		if not _target_is_valid(target): continue
+		var radius := _tracking_radius_for(target)
+		_contact_indices[target] = snapshots.size()
+		ordered_targets.append(target)
+		snapshots.append({
+			"previous": _target_position_at(target, 0.0), "current": target.global_position,
+			"radius": radius, "extent": _linear_target_extents(target, radius) if _tick_linear else Vector2.ONE,
+		})
+	var segments: Array = []
+	var consumed := 0.0
+	for segment in tick_segments:
+		var first := clampf(consumed / Clock.STEP, 0.0, 1.0)
+		consumed += float(segment.duration)
+		segments.append({"start": segment.start, "end": segment.end, "held": segment.held, "first": first, "last": clampf(consumed / Clock.STEP, 0.0, 1.0)})
+	_contact_rows = simulation_workers.map_chunks(snapshots.size(), ContactBatch.calculate.bind(snapshots, segments, _tick_linear))
+	for segment_index in segments.size():
+		var candidates: Array = []
+		for index in ordered_targets.size():
+			if _contact_rows[index][segment_index * 3] >= 0.0: candidates.append(ordered_targets[index])
+		_contact_candidates.append(candidates)
+
+
+func _has_batched_contact(target) -> bool:
+	return _contact_segment_index >= 0 and _contact_indices.has(target)
 
 
 func _begin_tick_cache() -> void:
@@ -345,7 +400,16 @@ func _update_manual_tracking(delta: float, keep_primary: bool = false) -> bool:
 
 func _observe_additional_targets(delta: float, primary) -> void:
 	var limit := _manual_target_limit()
-	for child in _target_children():
+	var candidates := _target_children()
+	if not _contact_candidates.is_empty():
+		var current_targets := candidates
+		candidates = _contact_candidates[_contact_segment_index]
+		# Summons created during Sky Sweep retain their original array order.
+		if current_targets.size() != _contact_original_targets.size():
+			candidates = []
+			for target in current_targets:
+				if not _contact_original_targets.has(target) or (_contact_indices.has(target) and _contact_rows[_contact_indices[target]][_contact_segment_index * 3] >= 0.0): candidates.append(target)
+	for child in candidates:
 		if tracked_meteors.size() >= limit:
 			break
 		if child == primary or not _target_is_valid(child):
@@ -380,6 +444,12 @@ func _circle_contact_interval(target, radius: float) -> Vector2:
 func _apply_manual_contact(target, delta: float) -> bool:
 	if not _target_is_valid(target) or delta <= 0.0: return false
 	var radius: float = _tracking_radius_for(target)
+	if _has_batched_contact(target):
+		var row: PackedFloat64Array = _contact_rows[_contact_indices[target]]
+		var offset := _contact_segment_index * 3
+		if row[offset] < 0.0: return false
+		target.apply_manual_observation(delta * (row[offset + 1] - row[offset]), row[offset + 2], radius, _module_manual_speed_for_target(target))
+		return true
 	var interval := _linear_contact_interval(target, radius) if _linear_enabled() else _circle_contact_interval(target, radius)
 	if interval.x < 0.0 or interval.y <= interval.x: return false
 	var fraction := (interval.x + interval.y) * 0.5

@@ -10,7 +10,7 @@ no GUT/gdUnit installation is needed.
 .\tools\validate.ps1 -GodotPath $godot -Build
 ```
 
-This runs the 21 fast gates below, then exports Windows. Add `-FullEconomy` for
+This runs the 23 fast gates below, then exports Windows. Add `-FullEconomy` for
 changes to progression, rewards, spawning or target logic. Omit `-Build` to test only.
 The economy run inherits its seed/strategy environment; it does not force three strategies.
 
@@ -60,6 +60,7 @@ Each file below is under `tests/`. Run one while iterating with:
 
 | Script | Expected marker | Main coverage |
 |---|---|---|
+| `threaded_simulation_test.gd` | `THREADED_SIMULATION_PASS` | Live, batched single-thread and parallel motion/contact equivalence; worker cap, real worker execution, equipment/hitstop, pause and thread joins |
 | `research_contract_test.gd` | `RESEARCH_CONTRACT_PASS` | 95 definitions, 26 executable contracts, exact 69 unverified IDs, bidirectional en/ko claims, opening budgets |
 | `save_integrity_test.gd` | `SAVE_INTEGRITY_PASS` | Atomic replacement, injected write/rename failures, invalid slots/payloads, prior bytes and summary preservation |
 | `smoke_test.gd` | `SMOKE_TEST_PASS` | Main loop, saves, localization, held tracking/sweep, input/modals/settings, round accounting; immediate echo unlock/legacy channels, additive dish forecasts, screen-space survey counts and manual-only spectral rewards |

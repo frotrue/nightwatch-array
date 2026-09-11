@@ -177,6 +177,29 @@ func tick_motion(delta: float, tick_id: int) -> void:
 	age += motion_delta
 	if motion_delta > 0.0:
 		_update_burn_motion(motion_delta)
+	_sample_motion_trail(delta)
+
+
+func motion_snapshot(delta: float) -> Dictionary:
+	var motion_delta: float = delta * observation_controller.motion_multiplier_for(self) if is_instance_valid(observation_controller) else delta
+	return {"age": age, "delta": motion_delta, "position": position,
+		"velocity": velocity, "travel": travel_direction, "entry": entry_position,
+		"burnout": burnout_position, "lifetime": visible_lifetime,
+		"terminal": burn_terminal_ratio, "wobble": burn_wobble,
+		"split": split_progress, "frequency": _wobble_frequency(), "phase": wobble_phase}
+
+
+func apply_motion_result(result: Dictionary, delta: float, tick_id: int) -> void:
+	simulation_tick = tick_id
+	previous_simulation_position = global_position
+	age = result.age
+	position = result.position
+	velocity = result.velocity
+	travel_direction = result.travel
+	_sample_motion_trail(delta)
+
+
+func _sample_motion_trail(delta: float) -> void:
 
 	trail_sample_accumulator += delta
 	if trail_sample_accumulator >= 0.024:

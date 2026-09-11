@@ -158,6 +158,53 @@ not totals from differing frame counts. `_draw_tree()` excludes child markers an
 the continuation's separate draw callback; rendered frame time includes them.
 Retain `RESEARCH_UI_PROBE_ENV`, `RESEARCH_UI_PROBE_SOURCES`, and completion output.
 
+## Bounded simulation workers (2026-09-11)
+
+`threaded_simulation_probe.gd` compares the live path, the same numerical batch
+on the main thread, and a batch split over main + at most three persistent workers.
+Run headless with the standard Godot binary. All modes receive identical seeds
+and 17 held pointer samples per 60 Hz tick; 15 ticks warm up and 60 are measured.
+The fixture places eight meteor/body types in a viewport grid, bypasses production
+capacity, and suppresses natural spawning. Initial targets cannot complete; at low
+density Sky Sweep may still summon and complete additional targets. Final positions,
+manual contact time and observation progress must match exactly across modes.
+
+Ryzen 9 5950X CPU-only sample (`build/threaded-cpu-final.log`):
+
+| Initial targets | Live mean ms/tick | Batch on main | Main + 3 workers |
+|---|---:|---:|---:|
+| 22 | 3.464 | 2.698 | 2.338 |
+| 128 | 16.093 | 15.013 | 12.195 |
+| 1,000 | 156.310 | 125.617 | 107.646 |
+
+The 1,000-target reduction is about 31% versus the live path; about 14% versus
+the same batched calculation on main. Batching/candidate filtering and threading
+contribute separately. These are CPU tick costs, not rendered FPS. This change
+does not batch GPU draw submission, and 1,000 targets still exceed the 60 Hz budget.
+
+The pool is observer-owned and shared sequentially by motion and contact work.
+Jobs receive only immutable numeric snapshots; each chunk owns its result arrays.
+Results are joined before the existing ordered scene mutations and reward resolution.
+Low workloads retain the live path. `threaded_simulation_test.gd` covers real worker
+thread IDs, the hard three-worker cap, zero-worker fallback, mixed body motion and
+trail samples, circle/line changes, hitstop, BURST, research changes, pause and exit.
+Keep its live-path comparison when changing either the numerical kernels or the
+small-workload methods so their duplicated hot-path formulas cannot drift silently.
+
+The existing dense common-meteor fixture also passed headless and windowed
+(`build/threaded-dense-cpu.log`, `build/threaded-dense-render.log`). With 22 targets,
+windowed mean frame time was 17.124 ms at 17 samples/tick and 24.772 ms at 67.
+The unchanged, capacity-bypassing `build/thousand_meteor_probe.gd` was rerun at
+1152x648 OpenGL, VSync off, uncapped FPS, on the RTX 3060. Its short wall-time
+samples reported 100 common meteors + observation at 13.27 FPS (previous 6.66),
+and 1,000 + observation at 0.96 FPS (previous 0.64). The 100-target case sustained
+60 ticks/sec; the 1,000-target case achieved only 7.70. These are editor-binary
+diagnostics, and the final heavy sample contains only six frames. Different
+achieved simulation rates advance different amounts of the scripted input;
+use the fixed-tick CPU probe above for equal-work comparisons. Drawing-only at
+1,000 remained about 4.62 FPS, consistent with the unaddressed render cost.
+Log: `build/threaded-thousand-render.log`.
+
 ## Duration diagnostics
 
 | Script | Fixed workload / environment | Use |
@@ -180,3 +227,6 @@ Production save handling and rollback assertions remain unchanged.
 Final validation: `build/validation/20260911T082255455Z_23eaf32e/summary.json`
 passed all 24 checks (22 fast gates, three-seed economy gate, Windows export).
 The final CPU and windowed dense-input probes both passed their workload checks.
+
+Bounded-worker validation: `build/validation/20260911T084705635Z_86b4ef24/summary.json`
+passed 25 checks (23 fast gates, three-seed economy, Windows export).

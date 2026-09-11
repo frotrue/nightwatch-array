@@ -22,6 +22,7 @@ All script names below are under `scripts/`.
 | Static research/meteor definitions and immutable ID lookup | `game_balance.gd` |
 | Independent spawn rolls, forecasts, fragments, echo/storm queues | `spawn_policy.gd`, `meteor_spawner.gd` |
 | Fixed 60 Hz clock, buffered pointer segments, tick ordering | `simulation_clock.gd`, `simulation_input.gd`, `game.gd` |
+| Bounded numerical jobs (main + at most three workers); motion/contact snapshots | `simulation_workers.gd`, `meteor_motion_batch.gd`, `observation_contact_batch.gd`; pool owned by `observation_controller.gd` |
 | One meteor's lifetime, motion, progress and grading | `meteor.gd` |
 | Cursor, tracking, additional targets, observation/sweep transitions | `observation_controller.gd` |
 | Forecast contacts, dish movement and automatic tracking | `sky_contacts.gd` |

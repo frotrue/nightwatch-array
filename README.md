@@ -27,7 +27,7 @@ $godot = "C:\Users\user\AppData\Local\Temp\codex-godot-4.7.2\Godot_v4.7.2-stable
 .\tools\validate.ps1 -GodotPath $godot -Build
 ```
 
-빠른 게이트 22개를 통과하면 Windows 실행 파일을 갱신한다.
+빠른 게이트 23개를 통과하면 Windows 실행 파일을 갱신한다.
 생성·보상·진행·표적 로직에 영향이 있으면 `-FullEconomy`도 추가한다.
 `-Build`를 빼면 검사만 한다. 시드·전략 설정과 추가 검증은 [probes.md](docs/probes.md)를 본다.
 
