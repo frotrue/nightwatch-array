@@ -104,6 +104,8 @@ var mute_unfocused_button: Button
 var fullscreen_button: Button
 var vsync_button: Button
 var fps_limit_selector: OptionButton
+var performance_monitor: PanelContainer
+var performance_monitor_button: Button
 var motion_intensity_label: Label
 var motion_intensity_slider: HSlider
 var motion_intensity_value: Label
@@ -203,6 +205,7 @@ func bind_progression(controller: Node) -> void:
 
 func bind_settings(controller: Node) -> void:
 	settings_controller = controller
+	settings_controller.performance_monitor_changed.connect(func(_enabled: bool): _sync_settings_controls())
 	if not settings_controller.language_changed.is_connected(_on_language_changed):
 		settings_controller.language_changed.connect(_on_language_changed)
 	if not settings_controller.number_notation_changed.is_connected(_on_number_notation_changed):
@@ -1307,6 +1310,8 @@ func _sync_settings_controls() -> void:
 		fullscreen_button.text = tr("SETTINGS_ON") if settings_controller.is_fullscreen() else tr("SETTINGS_OFF")
 	if vsync_button != null:
 		vsync_button.text = tr("SETTINGS_ON") if settings_controller.is_vsync_enabled() else tr("SETTINGS_OFF")
+	if performance_monitor_button != null:
+		performance_monitor_button.text = tr("SETTINGS_ON") if settings_controller.performance_monitor_enabled else tr("SETTINGS_OFF")
 	if fps_limit_selector != null:
 		for index in range(fps_limit_selector.item_count):
 			if int(fps_limit_selector.get_item_metadata(index)) == int(settings_controller.get_fps_limit()):
@@ -1573,6 +1578,9 @@ func _build_interface() -> void:
 	data_label = view.get_node("%DataReadout").get_node("%DataLabel")
 	debug_label = view.get_node("%DebugPanel").get_node("%DebugLabel")
 	debug_panel = view.get_node("%DebugPanel")
+	performance_monitor = view.get_node("%PerformanceMonitor")
+	performance_monitor_button = view.get_node("%SettingsOverlay").get_node("%SettingsPage_Display").get_node("%PerformanceMonitorButton")
+	performance_monitor_button.pressed.connect(func(): settings_controller.set_performance_monitor_enabled(not settings_controller.performance_monitor_enabled))
 	extension_objective_label = view.get_node("%ExtensionReadout").get_node("%ExtensionObjectiveLabel")
 	extension_readout = view.get_node("%ExtensionReadout")
 	extension_samples_label = view.get_node("%ExtensionReadout").get_node("%ExtensionSamplesLabel")
@@ -1703,6 +1711,10 @@ func _build_interface() -> void:
 		"key": "SETTINGS_FPS_TITLE"},
 		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Display").get_node("%SettingsPageLabels24Label"),
 		"key": "SETTINGS_FPS_DESC"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Display").get_node("%MonitorTitle"),
+		"key": "SETTINGS_MONITOR_TITLE"},
+		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Display").get_node("%MonitorDescription"),
+		"key": "SETTINGS_MONITOR_DESC"},
 		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Accessibility").get_node("%PageTitle"),
 		"key": "SETTINGS_PAGE_ACCESSIBILITY_TITLE"},
 		{"label": view.get_node("%SettingsOverlay").get_node("%SettingsPage_Accessibility").get_node("%PageDescription"),

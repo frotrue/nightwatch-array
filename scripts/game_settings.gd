@@ -9,6 +9,7 @@ signal audio_policy_changed
 signal fullscreen_changed(fullscreen: bool)
 signal display_changed(fullscreen: bool)
 signal performance_changed(vsync_enabled: bool, fps_limit: int)
+signal performance_monitor_changed(enabled: bool)
 signal accessibility_changed(motion_intensity: float, screen_flashes_enabled: bool)
 signal binding_changed(action: StringName)
 signal bindings_changed(action: StringName)
@@ -43,6 +44,7 @@ var fullscreen: bool = DEFAULT_FULLSCREEN
 var mute_when_unfocused: bool = DEFAULT_MUTE_WHEN_UNFOCUSED
 var vsync_enabled: bool = DEFAULT_VSYNC_ENABLED
 var fps_limit: int = DEFAULT_FPS_LIMIT
+var performance_monitor_enabled := false
 var motion_intensity: float = DEFAULT_MOTION_INTENSITY
 var screen_flashes_enabled: bool = DEFAULT_SCREEN_FLASHES_ENABLED
 
@@ -91,6 +93,7 @@ func load_settings(path_override: String = "") -> Dictionary:
 	mute_when_unfocused = DEFAULT_MUTE_WHEN_UNFOCUSED
 	vsync_enabled = DEFAULT_VSYNC_ENABLED
 	fps_limit = DEFAULT_FPS_LIMIT
+	performance_monitor_enabled = false
 	motion_intensity = DEFAULT_MOTION_INTENSITY
 	screen_flashes_enabled = DEFAULT_SCREEN_FLASHES_ENABLED
 	_loaded_version = 0
@@ -134,6 +137,7 @@ func load_settings(path_override: String = "") -> Dictionary:
 		fps_limit = _validated_fps_limit(
 			config.get_value("performance", "fps_limit", DEFAULT_FPS_LIMIT)
 		)
+		performance_monitor_enabled = _validated_bool(config.get_value("performance", "monitor_enabled", false), false)
 		motion_intensity = _validated_unit_float(
 			config.get_value("accessibility", "motion_intensity", DEFAULT_MOTION_INTENSITY),
 			DEFAULT_MOTION_INTENSITY
@@ -152,6 +156,7 @@ func load_settings(path_override: String = "") -> Dictionary:
 	_apply_fullscreen()
 	_apply_vsync()
 	_apply_performance()
+	performance_monitor_changed.emit(performance_monitor_enabled)
 	return {
 		"error": load_error,
 		"version": _loaded_version,
@@ -175,6 +180,7 @@ func save_settings() -> Error:
 	config.set_value("display", "fullscreen", fullscreen)
 	config.set_value("display", "vsync_enabled", vsync_enabled)
 	config.set_value("performance", "fps_limit", fps_limit)
+	config.set_value("performance", "monitor_enabled", performance_monitor_enabled)
 	if config.has_section_key("performance", "background_throttle"):
 		config.erase_section_key("performance", "background_throttle")
 	config.set_value("accessibility", "motion_intensity", motion_intensity)
@@ -190,6 +196,13 @@ func save_settings() -> Error:
 	if save_error != OK:
 		push_warning("Could not save settings: %s" % error_string(save_error))
 	return save_error
+
+
+func set_performance_monitor_enabled(enabled: bool, persist: bool = true) -> void:
+	if performance_monitor_enabled == enabled: return
+	performance_monitor_enabled = enabled
+	if persist: save_settings()
+	performance_monitor_changed.emit(enabled)
 
 
 func set_language(requested_locale: String, persist: bool = true) -> void:

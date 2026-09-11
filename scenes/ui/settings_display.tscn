@@ -224,3 +224,51 @@ custom_minimum_size = Vector2(708, 1)
 layout_mode = 2
 mouse_filter = 2
 color = Color(0.33333334, 0.23529412, 0.19215687, 1)
+
+[node name="MonitorRow" type="HBoxContainer" parent="."]
+custom_minimum_size = Vector2(0, 52.8)
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="VBoxContainer0" type="VBoxContainer" parent="MonitorRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 1
+alignment = 1
+
+[node name="MonitorTitle" type="Label" parent="MonitorRow/VBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_fonts/font = ExtResource("R10")
+theme_override_font_sizes/font_size = 14
+text = "PERFORMANCE MONITOR"
+
+[node name="MonitorDescription" type="Label" parent="MonitorRow/VBoxContainer0"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R5")
+theme_override_font_sizes/font_size = 12
+text = "Shows frame rate and game CPU/GPU usage."
+autowrap_mode = 3
+
+[node name="PerformanceMonitorButton" type="Button" parent="MonitorRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_colors/font_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_colors/font_focus_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_colors/font_pressed_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_colors/font_hover_color = Color(0.9529412, 0.8156863, 0.7254902, 1)
+theme_override_colors/font_disabled_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = ExtResource("R11")
+theme_override_styles/pressed = ExtResource("R11")
+theme_override_styles/hover = ExtResource("R12")
+theme_override_styles/disabled = ExtResource("R11")
+theme_override_styles/focus = ExtResource("R12")
+flat = true
+alignment = 2

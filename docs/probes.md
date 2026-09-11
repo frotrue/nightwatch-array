@@ -10,7 +10,7 @@ no GUT/gdUnit installation is needed.
 .\tools\validate.ps1 -GodotPath $godot -Build
 ```
 
-This runs the 23 fast gates below, then exports Windows. Add `-FullEconomy` for
+This runs the 24 fast gates below, then exports Windows. Add `-FullEconomy` for
 changes to progression, rewards, spawning or target logic. Omit `-Build` to test only.
 The economy run inherits its seed/strategy environment; it does not force three strategies.
 
@@ -60,6 +60,7 @@ Each file below is under `tests/`. Run one while iterating with:
 
 | Script | Expected marker | Main coverage |
 |---|---|---|
+| `performance_monitor_test.gd` | `PERFORMANCE_MONITOR_PASS` | Settings persistence/defaults, invalid values, native CPU pipe, paused/live ticks, passive input, enable/disable and scene shutdown |
 | `threaded_simulation_test.gd` | `THREADED_SIMULATION_PASS` | Live, batched single-thread and parallel motion/contact equivalence; worker cap, real worker execution, equipment/hitstop, pause and thread joins |
 | `research_contract_test.gd` | `RESEARCH_CONTRACT_PASS` | 95 definitions, 26 executable contracts, exact 69 unverified IDs, bidirectional en/ko claims, opening budgets |
 | `save_integrity_test.gd` | `SAVE_INTEGRITY_PASS` | Atomic replacement, injected write/rename failures, invalid slots/payloads, prior bytes and summary preservation |
@@ -183,3 +184,17 @@ whole-sky placement, identical stick-figure conventions or photometric fidelity.
 with identical timestamped input, independent occurrence/entry RNG state,
 bounded capacity and forecast deferral, local hitstop and active-save replay.
 Run with `tools/validate.ps1`; it is part of the required fast gates.
+
+### Performance monitor verification
+
+The validator builds `build/windows/NightwatchMetrics.exe` from
+`native/performance_sampler.cpp` using MSVC C++ Build Tools. Ship this helper next
+to `NightwatchArray.exe`. It has a static runtime and requires no separate VC runtime.
+For real GPU verification, run `performance_monitor_test.gd` with Windows/OpenGL
+and `NIGHTWATCH_MONITOR_GPU_TEST=1`. This requires a working process GPU 3D counter;
+the ordinary headless gate only requires CPU telemetry. The windowed run captures
+`build/performance_monitor_ko.png` and `build/performance_settings_{ko,en}.png`.
+
+Counter definitions: [GetProcessTimes](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getprocesstimes),
+[PDH formatted arrays](https://learn.microsoft.com/en-us/windows/win32/api/pdh/nf-pdh-pdhgetformattedcounterarrayw),
+and [Godot non-blocking pipes](https://docs.godotengine.org/en/stable/classes/class_os.html#class-os-method-execute-with-pipe).

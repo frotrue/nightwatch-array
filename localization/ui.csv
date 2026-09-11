@@ -744,3 +744,13 @@ MODX_STAT_MANUAL,Manual speed,수동 속도
 MODX_STAT_RADIUS,Radius,반경
 HUD_DEBUG_MODULE,Ctrl+Shift+G   Instantly draw a free module,Ctrl+Shift+G   모듈 무료 즉시 뽑기
 BANNER_DEBUG_MODULE,DEBUG MODULE  %s,디버그 모듈 획득  %s
+SETTINGS_MONITOR_TITLE,PERFORMANCE MONITOR,성능 모니터
+SETTINGS_MONITOR_DESC,Shows frame rate and game CPU/GPU usage.,프레임과 게임의 CPU·GPU 사용률을 표시합니다.
+PERF_TITLE,PERFORMANCE,성능 모니터
+PERF_SAMPLING,Sampling…,측정 중…
+PERF_PEAK,Peak %.1f ms · frame history,최대 %.1f ms · 프레임 기록
+PERF_PAUSED,Simulation paused,시뮬레이션 일시정지
+PERF_TICK,%.0f / 60 ticks/s · physics %.1f ms,%.0f / 60틱 · 처리 %.1f ms
+PERF_OBJECTS,%d targets · %d draws,천체 %d개 · 그리기 %d회
+PERF_SCOPE,Game process · — unavailable,게임 사용량 기준 · — 측정 불가
+PERF_UNAVAILABLE,—,—

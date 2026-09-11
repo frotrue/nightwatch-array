@@ -96,6 +96,7 @@ func _ready() -> void:
 
 	hud.bind_progression(progression)
 	hud.bind_settings(settings)
+	hud.performance_monitor.bind_game(self)
 	hud.bind_save_games(save_games)
 	upgrade_tree.bind_progression(progression)
 	upgrade_tree.bind_settings(settings)
