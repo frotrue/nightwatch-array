@@ -205,6 +205,53 @@ use the fixed-tick CPU probe above for equal-work comparisons. Drawing-only at
 1,000 remained about 4.62 FPS, consistent with the unaddressed render cost.
 Log: `build/threaded-thousand-render.log`.
 
+## Shared meteor light rendering (2026-09-11)
+
+`meteor_render_performance_probe.gd` preserves the thousand-meteor diagnostic
+used for the worker work, now checked in for repeatability. Run with the standard
+Windows/OpenGL renderer at 1152×648; the script disables VSync and the FPS cap.
+It isolates saves, enables research and five observation modules, bypasses normal
+capacity, disables natural spawns and keeps initial targets from completing.
+Each scenario warms up for two wall seconds and samples for five. Held observation
+feeds 17 raw samples per 60 Hz tick, with at most eight catch-up steps per frame.
+Retain `THOUSAND_RESULT` (including achieved tick rate) and `THOUSAND_PASS`.
+
+Sequential editor-binary A/B on Ryzen 9 5950X / RTX 3060, NVIDIA 591.74:
+baseline `3d349a2` was exported into an isolated source directory and imported
+before measurement; the same fixture then ran on the renderer branch. Logs are
+`build/render-final-baseline.log` and `build/render-final-current.log`.
+
+| Workload | Previous FPS | Shared FPS | Previous → shared draw calls |
+|---|---:|---:|---:|
+| 100 common meteors + held observation | 13.34 | 28.67 | 1,312 → 713 |
+| 1,000 common meteors, drawing only | 4.80 | 6.21 | 9,227 → 3,228 |
+| 1,000 common meteors + held observation | 0.98 | 1.23 | 9,412 → 3,413 |
+
+The drawing-only mean frame fell from 208.22 to 160.92 ms (about 23% lower).
+The 100-target case sustained approximately 60 ticks/sec in both implementations.
+The overloaded 1,000-target observation case achieved only 7.83 → 9.88 ticks/sec,
+and measured just six/seven frames. Different amounts of scripted input advance
+in those wall-time samples; use the fixed-work CPU probe for simulation comparisons.
+These results do not establish release-build performance or 300 FPS feasibility.
+Procedural geometry and observation calculations remain substantial CPU costs.
+
+The new renderer batches contiguous additive triangle geometry across meteors,
+caches index offsets and reuses geometry between simulation changes. Thin native
+antialiased lines and opaque body drawing remain intact. Its paired real-GPU
+correctness test matched immediate rendering for all 11 types, moving trail
+topology, opaque overlaps, interpolation reset, fades/removal and a single
+1,000-object batch exceeding the 16-bit index boundary. The independent 539-case
+geometry oracle remains unchanged. No target counts or visual details were removed
+to obtain these measurements, and the main-plus-three-worker cap is unchanged.
+
+Final correctness/export run:
+`build/validation/20260911T092255694Z_35355321/summary.json` passed 24 checks
+(23 fast gates and Windows export). The GPU pair also passed frozen-scene and
+reset-interpolation cases, and the reference corpus captured all ten scenarios.
+The expiry smoke assertion now advances one explicit simulation tick: two
+uncapped render frames can contain zero ticks. It still asserts the target is
+expired and its tracking reference is cleared; production expiry logic is unchanged.
+
 ## Duration diagnostics
 
 | Script | Fixed workload / environment | Use |

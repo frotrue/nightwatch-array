@@ -1679,8 +1679,9 @@ func _run() -> void:
 	# Expired targets must be released by the observation controller.
 	var short_lived = game.spawner.spawn_meteor("fast", Vector2(300, 180), Vector2(0, 0), 0.001)
 	game.observer.selected_meteor = short_lived
-	await process_frame
-	await process_frame
+	# Two uncapped render frames need not contain a single 60 Hz simulation tick.
+	Fixtures.advance_seconds(game, 1.0 / 60.0)
+	_check(not short_lived.alive, "expiry fixture advances beyond the target lifetime")
 	_check(game.observer.selected_meteor == null, "expired target does not leave a stale tracking reference")
 
 	game.events.trigger_shower()

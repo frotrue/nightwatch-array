@@ -1,6 +1,7 @@
 extends Node2D
 
 const UITheme = preload("res://scripts/ui_theme.gd")
+const TriangleBatch = preload("res://scripts/meteor_triangle_batch.gd")
 
 # The trail leaves the head at the head's own width and loses that extra width
 # fast, so the long train keeps the narrow size it was tuned to. A low exponent
@@ -84,6 +85,10 @@ var wobble_phase: float = 0.0
 var rng := RandomNumberGenerator.new()
 var observation_view: Camera2D
 var observation_visual_scale: float = 1.0
+var triangle_batch := TriangleBatch.new()
+var render_layer: Node2D
+var drawn_age := -1.0
+var drawn_linger := -1.0
 
 
 func configure(spec: Dictionary, meteor_type: String, start_position: Vector2, move_velocity: Vector2, lifetime_scale: float, features: Dictionary, planned_burnout := Vector2.INF, view: Camera2D = null) -> void:
@@ -159,12 +164,25 @@ func _ready() -> void:
 		SHARED_ADDITIVE_MATERIAL.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
 	# Solid surfaces must occlude background stars instead of adding their light.
 	material = null if is_solid_body() else SHARED_ADDITIVE_MATERIAL
+	if get_parent().has_method("submit_target"):
+		render_layer = get_parent()
+		triangle_batch.deferred = true
 	queue_redraw()
 
 
 func _process(_delta: float) -> void:
 	_sync_visual_scale()
-	queue_redraw()
+	# Tick resolution already invalidates live geometry. In between ticks Godot
+	# interpolates the native lines and MeteorLayer interpolates the light mesh;
+	# repeating the same procedural drawing cannot make either move more smoothly.
+	# Age/linger also cover standalone previews and the post-expiry fade.
+	if age != drawn_age or linger_time != drawn_linger:
+		queue_redraw()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_RESET_PHYSICS_INTERPOLATION and is_instance_valid(render_layer):
+		render_layer.reset_target_transform(self)
 
 func tick_motion(delta: float, tick_id: int) -> void:
 	simulation_tick = tick_id
@@ -316,6 +334,7 @@ func apply_manual_observation(
 
 
 func set_features(features: Dictionary) -> void:
+	var previous_automatic_rate := base_automatic_rate
 	wide_field_enabled = bool(features.get("wide_field", wide_field_enabled))
 	precision_enabled = bool(features.get("precision", precision_enabled))
 	perfect_enabled = bool(features.get("perfect", perfect_enabled))
@@ -323,6 +342,8 @@ func set_features(features: Dictionary) -> void:
 	analysis_speed_multiplier = maxf(0.1, float(features.get("analysis_speed", analysis_speed_multiplier)))
 	spectral_calibrated = bool(features.get("spectral_calibrated", spectral_calibrated))
 	spectral_capstone_enabled = bool(features.get("spectral_capstone", spectral_capstone_enabled))
+	if base_automatic_rate != previous_automatic_rate:
+		queue_redraw()
 
 
 func get_spectral_speed_multiplier() -> float:
@@ -338,11 +359,15 @@ func get_spectral_value_multiplier() -> float:
 
 
 func set_dish_assist_rate(value: float) -> void:
+	if dish_assist_rate == value: return
 	dish_assist_rate = value
+	queue_redraw()
 
 
 func set_lane_assist_rate(value: float) -> void:
+	if lane_assist_rate == value: return
 	lane_assist_rate = value
+	queue_redraw()
 
 
 func get_automatic_rate() -> float:
@@ -493,6 +518,11 @@ func _finish_observation(auto_rate: float) -> void:
 
 
 func _draw() -> void:
+	drawn_age = age
+	drawn_linger = linger_time
+	triangle_batch.begin()
+	if render_layer != null:
+		render_layer.begin_target(self)
 	var visual_scale := observation_visual_scale
 	if is_solid_body():
 		var body_visibility := get_burn_visibility() if alive else clampf(linger_time / maxf(linger_duration, 0.001), 0.0, 1.0)
@@ -526,6 +556,7 @@ func _draw() -> void:
 	var pulse := 1.0 + sin(age * 13.0 + wobble_phase) * pulse_amount
 	var r := body_radius * visual_scale * pulse * success_bloom * _head_scale()
 	_draw_type_silhouette(r, visibility, visual_scale)
+	triangle_batch.flush(get_canvas_item())
 
 	var scan_rate := get_automatic_rate()
 	if scan_rate > 0.0 and alive:
@@ -533,6 +564,8 @@ func _draw() -> void:
 		var start_angle := age * 2.5
 		_draw_dashed_arc(scan_radius, start_angle, PI * 1.25, 10, Color(UITheme.INK_LOW, 0.58 * minf(1.0, burn_visibility)), 1.2 * visual_scale)
 		_draw_dashed_arc(scan_radius + 5.0 * visual_scale, -start_angle * 0.7, PI * 0.55, 5, Color(UITheme.ACCENT_DEEP, 0.52 * minf(1.0, burn_visibility)), 0.9 * visual_scale)
+	if render_layer != null:
+		render_layer.submit_target(self, triangle_batch)
 
 
 func _draw_tapered_trail(visibility: float, tail_scale: float, visual_scale: float) -> void:
@@ -606,13 +639,9 @@ func _draw_tapered_trail(visibility: float, tail_scale: float, visual_scale: flo
 		trail_core_ribbon_colors.append(core_edge)
 
 	var indices := _ribbon_strip_indices(station_count)
-	var canvas := get_canvas_item()
-	RenderingServer.canvas_item_add_triangle_array(
-		canvas, indices, trail_glow_ribbon, trail_glow_ribbon_colors
-	)
-	RenderingServer.canvas_item_add_triangle_array(
-		canvas, indices, trail_core_ribbon, trail_core_ribbon_colors
-	)
+	triangle_batch.append(indices, trail_glow_ribbon, trail_glow_ribbon_colors)
+	triangle_batch.append(indices, trail_core_ribbon, trail_core_ribbon_colors)
+	triangle_batch.flush(get_canvas_item())
 
 
 func _draw_exposure_filament(visibility: float, visual_scale: float) -> void:
@@ -898,13 +927,18 @@ func _draw_directional_head(
 		hotspot_center,
 		deformation * 0.22
 	)
-	draw_colored_polygon(
-		hotspot_points,
-		Color(
+	triangle_batch.flush(get_canvas_item())
+	var hotspot_color := Color(
 			primary_color.lerp(Color.WHITE, 0.76),
 			clampf((0.66 + 0.10 * sin(phase * 1.89)) * visibility, 0.0, 1.0)
 		)
-	)
+	if triangle_batch.deferred:
+		var hotspot_colors := PackedColorArray()
+		hotspot_colors.resize(hotspot_points.size())
+		hotspot_colors.fill(hotspot_color)
+		triangle_batch.append(Geometry2D.triangulate_polygon(hotspot_points), hotspot_points, hotspot_colors)
+	else:
+		draw_colored_polygon(hotspot_points, hotspot_color)
 
 
 func _draw_graded_polygon(
@@ -932,7 +966,7 @@ func _draw_graded_polygon(
 		indices.append(0)
 		indices.append(1 + index)
 		indices.append(1 + (index + 1) % count)
-	RenderingServer.canvas_item_add_triangle_array(get_canvas_item(), indices, vertices, colors)
+	triangle_batch.append(indices, vertices, colors)
 
 
 func _organic_head_points(
