@@ -71,7 +71,7 @@ mouse_filter = 2
 theme_override_fonts/font = ExtResource("3")
 theme_override_font_sizes/font_size = 13
 theme_override_colors/font_color = Color(0.95, 0.82, 0.73, 1)
-text = "CPU —   GPU 3D —"
+text = "CPU —   GPU —"
 
 [node name="Tick" type="Label" parent="Rows"]
 unique_name_in_owner = true

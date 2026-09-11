@@ -86,6 +86,11 @@ the native lines; reset notifications also reset that snapshot. Paused ticks
 converge to the current pose. Topology caches duplicate source indices because
 GDScript packed arrays share mutable storage; changed trail lengths must rebuild
 both local offsets and offsets into the layer's buffer.
+The layer also retains merged run colors/indices between geometry publications.
+Geometry changes, child ordering/removal and visibility changes invalidate this
+data; interpolated poses alone do not. Published run arrays are not cleared through
+scratch aliases. World-space vertices and the triangle submission still update
+each render frame, while unchanged draw indices are not resent.
 
 Removal drops target caches immediately, frees unused run RIDs before rendering,
 and disconnects/frees remaining renderer resources on scene exit. A standalone

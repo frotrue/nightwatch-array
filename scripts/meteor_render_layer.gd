@@ -14,6 +14,12 @@ var rendered_vertex_count := 0
 var vertices := PackedVector2Array()
 var colors := PackedColorArray()
 var indices := PackedInt32Array()
+# Retain merged colors/topology between publications. Positions still follow
+# the engine's per-frame interpolation and use the existing submission API.
+var run_data: Array[Dictionary] = []
+var visibility_state: Array[bool] = []
+var batch_data_dirty := true
+var batch_data_rebuilds := 0
 
 
 func _ready() -> void:
@@ -26,6 +32,11 @@ func _ready() -> void:
 	additive_material.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
 	RenderingServer.frame_pre_draw.connect(_render_batches)
 	child_exiting_tree.connect(_forget_target)
+	child_order_changed.connect(_invalidate_batch_data)
+
+
+func _invalidate_batch_data() -> void:
+	batch_data_dirty = true
 
 
 func _capture_previous_poses() -> void:
@@ -34,6 +45,7 @@ func _capture_previous_poses() -> void:
 
 
 func _forget_target(target: Node) -> void:
+	batch_data_dirty = true
 	geometry.erase(target.get_instance_id())
 	previous_transforms.erase(target.get_instance_id())
 	index_cache.erase(target.get_instance_id())
@@ -44,12 +56,14 @@ func reset_target_transform(target: Node2D) -> void:
 
 
 func begin_target(target: Node2D) -> void:
-	geometry.erase(target.get_instance_id())
+	if geometry.erase(target.get_instance_id()):
+		batch_data_dirty = true
 
 
 func submit_target(target: Node2D, batch: RefCounted) -> void:
 	if batch.indices.is_empty():
 		return
+	batch_data_dirty = true
 	geometry[target.get_instance_id()] = {
 		"vertices": batch.vertices, "colors": batch.colors, "indices": batch.indices,
 	}
@@ -64,16 +78,29 @@ func _render_batches() -> void:
 	vertices.clear()
 	colors.clear()
 	indices.clear()
+	var targets := get_children()
+	# Visibility can change without publishing geometry or changing child order.
+	# Check it before flushing any runs, including hidden opaque boundaries.
+	if visibility_state.size() != targets.size():
+		visibility_state.resize(targets.size())
+		batch_data_dirty = true
+	for i in targets.size():
+		var shown: bool = targets[i].visible
+		if visibility_state[i] != shown:
+			visibility_state[i] = shown
+			batch_data_dirty = true
+	if batch_data_dirty:
+		batch_data_rebuilds += 1
 	var run_start := 0
 	var fraction := Engine.get_physics_interpolation_fraction()
-	for target in get_children():
+	for target in targets:
 		var data: Dictionary = geometry.get(target.get_instance_id(), {})
 		# An opaque asteroid/planet is a strict order boundary. Never collect light
 		# from opposite sides of it into one batch, even if the material matches.
 		if data.is_empty() or not target.visible:
 			_flush_run(run_start)
 			continue
-		if indices.is_empty():
+		if vertices.is_empty():
 			run_start = target.get_index()
 		var pose: Transform2D = target.transform
 		if target.is_physics_interpolated_and_enabled():
@@ -81,38 +108,50 @@ func _render_batches() -> void:
 			pose = previous.interpolate_with(pose, fraction)
 		var offset := vertices.size()
 		vertices.append_array(pose * (data.vertices as PackedVector2Array))
-		colors.append_array(data.colors)
-		var cached: Dictionary = index_cache.get(target.get_instance_id(), {})
-		if cached.is_empty() or cached.offset != offset or cached.source != data.indices:
-			var adjusted: PackedInt32Array = data.indices.duplicate()
-			for i in adjusted.size():
-				adjusted[i] += offset
-			cached = {"offset": offset, "source": data.indices.duplicate(), "indices": adjusted}
-			index_cache[target.get_instance_id()] = cached
-		indices.append_array(cached.indices)
+		if batch_data_dirty:
+			colors.append_array(data.colors)
+			var cached: Dictionary = index_cache.get(target.get_instance_id(), {})
+			if cached.is_empty() or cached.offset != offset or cached.source != data.indices:
+				var adjusted: PackedInt32Array = data.indices.duplicate()
+				for i in adjusted.size():
+					adjusted[i] += offset
+				cached = {"offset": offset, "source": data.indices.duplicate(), "indices": adjusted}
+				index_cache[target.get_instance_id()] = cached
+			indices.append_array(cached.indices)
 		rendered_target_count += 1
 	_flush_run(run_start)
 	while canvases.size() > render_batch_count:
 		RenderingServer.free_rid(canvases.pop_back())
+		run_data.pop_back()
+	batch_data_dirty = false
 
 
 func _flush_run(draw_index: int) -> void:
-	if indices.is_empty():
+	if vertices.is_empty():
 		return
 	if render_batch_count == canvases.size():
 		var canvas := RenderingServer.canvas_item_create()
 		RenderingServer.canvas_item_set_parent(canvas, get_canvas_item())
 		RenderingServer.canvas_item_set_material(canvas, additive_material.get_rid())
 		canvases.append(canvas)
+		run_data.append({"draw_index": -1})
 	var canvas := canvases[render_batch_count]
+	var cached := run_data[render_batch_count]
+	if batch_data_dirty:
+		cached.colors = colors
+		cached.indices = indices
 	RenderingServer.canvas_item_clear(canvas)
-	RenderingServer.canvas_item_set_draw_index(canvas, draw_index)
-	RenderingServer.canvas_item_add_triangle_array(canvas, indices, vertices, colors)
+	if cached.draw_index != draw_index:
+		RenderingServer.canvas_item_set_draw_index(canvas, draw_index)
+		cached.draw_index = draw_index
+	RenderingServer.canvas_item_add_triangle_array(canvas, cached.indices, vertices, cached.colors)
 	rendered_vertex_count += vertices.size()
 	render_batch_count += 1
 	vertices.clear()
-	colors.clear()
-	indices.clear()
+	# The run owns the published arrays. PackedArrays retrieved from Dictionary
+	# are shared references, so clearing these would erase the retained batch.
+	colors = PackedColorArray()
+	indices = PackedInt32Array()
 
 
 func _exit_tree() -> void:
@@ -121,3 +160,5 @@ func _exit_tree() -> void:
 	for canvas in canvases:
 		RenderingServer.free_rid(canvas)
 	canvases.clear()
+	run_data.clear()
+	visibility_state.clear()

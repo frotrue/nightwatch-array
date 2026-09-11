@@ -45,6 +45,13 @@ The background test compares original native circles/sunrise triangles against
 batched output through night, dawn, sunrise, camera pullback, resize, empty and
 refilled buffers. These GPU comparisons are separate from the headless gates.
 
+The Windows telemetry build also compiles/runs `native/gpu_usage_test.cpp`:
+engine selection (3D, Graphics, Compute, Copy, multiple adapters), PID isolation,
+invalid counters and idle/missing data. For the real-GPU monitor check, set
+`NIGHTWATCH_MONITOR_GPU_TEST=1` and run `performance_monitor_test.gd` with a
+Windows display on each supported backend. This opt-in requires a nonzero GPU
+sample under rendering load; accepting merely `>= 0` hid the Vulkan counter bug.
+
 ## Diagnostic isolation
 
 `tests/support/game_fixture.gd::configure_before_ready(game)` replaces save/settings
@@ -131,6 +138,16 @@ case exceeds 65,536 vertices in one batch and compares actual pixels, covering
 caches. The headless `meteor_render_cache_test` remains the independent arithmetic
 oracle; neither test substitutes for the other. No performance threshold belongs
 in this correctness check.
+
+The retained batch-data cases also check pose-only reuse, a shortened leading
+trail (rebasing later indices), hide/show, opaque reordering and insertion/removal.
+`meteor_submission_performance_probe.gd` isolates submission: 1,000 frozen-shape
+meteors, 205,000 vertices, one additive run, 60 Hz pose-only motion, two-second
+warmup and five-second sample. Run with a real renderer at 1152x648 and no other
+GPU probes. `SUBMISSION_RESULT` reports submission CPU time, render FPS and data
+rebuilds; `METEOR_SUBMISSION_PASS` checks only that the workload ran. It bypasses
+gameplay capacity and does not measure observation, procedural redraw or natural
+late-game FPS. Use `late_game_render_performance_probe.gd` for that workload.
 
 Its native reference also retains the pre-cache planet surface and pre-instancing
 scan arcs. Additional cases cover age-only reuse, radius/palette invalidation,

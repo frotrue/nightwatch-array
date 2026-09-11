@@ -502,3 +502,44 @@ loaded the exported EXE's pack and ran the isolated live sky fixture with 24
 moving targets on its default Vulkan backend: `build/backend-packed-live.log`
 and captures in `build/backend-packed-live/`. This checks packed resources and
 settings; it is not a benchmark of the stock release engine binary.
+
+## GPU usage stuck at zero (2026-09-12)
+
+After the Vulkan switch, the helper still filtered counter instance names for
+`engtype_3D`. A reproduced late-game run had 0% in this game's 3D engine while
+Windows reported 17% on its `Graphics_1` engine. Consequently the monitor kept
+displaying a valid-looking 0%. The helper now selects the busiest valid engine
+for the exact game PID, across all engine types/adapters, without summing them.
+This follows Microsoft's [per-process GPU utilization definition](https://devblogs.microsoft.com/directx/gpus-in-the-task-manager/).
+The label is now `GPU`, and missing/invalid data still displays unavailable.
+
+The isolated live Vulkan reproduction changed from constant 0% to varying
+17–40% samples, with Windows independently identifying `Graphics_1` as active.
+Windows/CIM and helper readings have different sampling windows and are not
+claimed to match sample-for-sample. Logs: `build/gpu-usage-{before,after}.log`
+and `build/gpu-usage-after-windows.json`. The same scripted natural workload
+remained about 256 FPS after the fix versus 257 before; these runs establish
+no material observed sampling overhead, not a new performance improvement.
+
+The native counter selection regressions pass. Real-renderer monitor lifecycle,
+settings and sampling tests with `NIGHTWATCH_MONITOR_GPU_TEST=1` also pass on
+both backends: Vulkan 7.15% and OpenGL 14.05% at the printed sampling point.
+Logs: `build/gpu-monitor-{vulkan,opengl}.log`; inspected Vulkan screenshot:
+`build/gpu-monitor-vulkan.png` (9.2% at capture time).
+
+Validation/export: `build/validation/20260911T150510326Z_b7755fe7/summary.json`
+passed all 25 checks (24 fast gates and Windows export), with the native counter
+regression test also passing during helper compilation. Both the game EXE and
+its adjacent `NightwatchMetrics.exe` were refreshed.
+
+## Meteor submission isolation
+
+`meteor_submission_performance_probe.gd` isolates pose-only rendering of 1,000
+frozen-shape targets. Use a real renderer, 1152x648, with sequential A/B runs:
+
+```powershell
+& $godot --path . --resolution 1152x648 --script res://tests/meteor_submission_performance_probe.gd
+```
+
+See [probe scope](probes.md) and the [2026-09-12 Pro review and measured baseline](history/render-pro-review-2026-09-12.md#local-measurements).
+This measures batch submission, not natural late-game or fully observed target FPS.
