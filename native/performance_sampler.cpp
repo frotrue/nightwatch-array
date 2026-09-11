@@ -10,6 +10,7 @@
 #include <cstdlib>
 #include <string>
 #include <vector>
+#include "gpu_usage.h"
 
 static bool cpu_time(HANDLE process, unsigned long long& result) {
     FILETIME created{}, exited{}, kernel{}, user{};
@@ -59,17 +60,7 @@ int main(int argc, char** argv) {
                 std::vector<unsigned char> storage(bytes);
                 auto items = reinterpret_cast<PDH_FMT_COUNTERVALUE_ITEM_W*>(storage.data());
                 if (PdhGetFormattedCounterArrayW(counter, format, &bytes, &count, items) == ERROR_SUCCESS) {
-                    for (DWORD i = 0; i < count; ++i) {
-                        const std::wstring name(items[i].szName);
-                        const auto& value = items[i].FmtValue;
-                        if (name.compare(0, prefix.size(), prefix) == 0 && name.find(L"engtype_3D") != std::wstring::npos
-                            && (value.CStatus == PDH_CSTATUS_VALID_DATA || value.CStatus == PDH_CSTATUS_NEW_DATA)
-                            && std::isfinite(value.doubleValue)) {
-                            // Busiest 3D engine for this PID; never sum unrelated
-                            // engines/adapters into a misleading percentage.
-                            gpu = std::max(gpu, std::clamp(value.doubleValue, 0.0, 100.0));
-                        }
-                    }
+                    gpu = gpu_usage(items, count, prefix);
                 }
             }
         }

@@ -47,11 +47,12 @@ func _run() -> void:
 		_check(helper_pid > 0, "Windows helper is packaged for local execution")
 	for _attempt in 20:
 		await create_timer(0.5).timeout
-		if monitor.sampler.cpu >= 0 and (not require_gpu or monitor.sampler.gpu >= 0): break
+		if monitor.sampler.cpu >= 0 and (not require_gpu or monitor.sampler.gpu > 0): break
 	_check(monitor.fps > 0 and monitor.frame_ms > 0, "frame metrics update while settings pause gameplay")
 	_check(monitor.get_node("%Tick").text == TranslationServer.translate("PERF_PAUSED"), "paused simulation is explicitly labelled")
 	if OS.get_name() == "Windows": _check(monitor.sampler.cpu >= 0, "real process CPU samples arrive")
-	if require_gpu: _check(monitor.sampler.gpu >= 0, "real process GPU 3D samples arrive")
+	if require_gpu: _check(monitor.sampler.gpu > 0, "rendered workload produces nonzero process GPU usage")
+	_check(not monitor.get_node("%Usage").text.contains("GPU 3D"), "GPU label includes all engine types")
 	print("MONITOR_NATIVE_SAMPLE: cpu=", monitor.sampler.cpu, " gpu=", monitor.sampler.gpu)
 	game.hud.close_settings()
 	await create_timer(0.7).timeout

@@ -45,6 +45,13 @@ The background test compares original native circles/sunrise triangles against
 batched output through night, dawn, sunrise, camera pullback, resize, empty and
 refilled buffers. These GPU comparisons are separate from the headless gates.
 
+The Windows telemetry build also compiles/runs `native/gpu_usage_test.cpp`:
+engine selection (3D, Graphics, Compute, Copy, multiple adapters), PID isolation,
+invalid counters and idle/missing data. For the real-GPU monitor check, set
+`NIGHTWATCH_MONITOR_GPU_TEST=1` and run `performance_monitor_test.gd` with a
+Windows display on each supported backend. This opt-in requires a nonzero GPU
+sample under rendering load; accepting merely `>= 0` hid the Vulkan counter bug.
+
 ## Diagnostic isolation
 
 `tests/support/game_fixture.gd::configure_before_ready(game)` replaces save/settings

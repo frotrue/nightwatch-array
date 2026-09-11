@@ -15,4 +15,13 @@ $command = 'call "' + $vcvars + '" >nul && cl /nologo /std:c++17 /O2 /MT /W4 /WX
 & $env:ComSpec /d /c $command
 if ($LASTEXITCODE -ne 0) { throw 'Windows performance sampler compilation failed.' }
 Remove-Item -LiteralPath (Join-Path $output 'performance_sampler.obj') -ErrorAction SilentlyContinue
+$testSource = Join-Path $projectRoot 'native\gpu_usage_test.cpp'
+$testOutput = Join-Path $projectRoot 'build\native'
+[void][IO.Directory]::CreateDirectory($testOutput)
+$testExe = Join-Path $testOutput 'gpu_usage_test.exe'
+$command = 'call "' + $vcvars + '" >nul && cl /nologo /std:c++17 /O2 /MT /W4 /WX /EHsc "' + $testSource + '" /Fo"' + $testOutput + '\gpu_usage_test.obj" /Fe"' + $testExe + '"'
+& $env:ComSpec /d /c $command
+if ($LASTEXITCODE -ne 0) { throw 'GPU counter regression test compilation failed.' }
+& $testExe
+if ($LASTEXITCODE -ne 0) { throw 'GPU counter regression test failed.' }
 Write-Output 'PERFORMANCE_SAMPLER_BUILD_PASS'

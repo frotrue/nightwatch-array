@@ -80,7 +80,7 @@ func _refresh_labels() -> void:
 	%Title.text = tr("PERF_TITLE")
 	%Frame.text = "%.0f FPS   ·   %.1f ms" % [fps, frame_ms] if fps > 0 else tr("PERF_SAMPLING")
 	%Peak.text = tr("PERF_PEAK") % worst_ms
-	%Usage.text = "CPU %s   GPU 3D %s" % [_percent(sampler.cpu), _percent(sampler.gpu)]
+	%Usage.text = "CPU %s   GPU %s" % [_percent(sampler.cpu), _percent(sampler.gpu)]
 	var paused: bool = get_tree().paused or not game.observation_phase_active
 	%Tick.text = tr("PERF_PAUSED") if paused else tr("PERF_TICK") % [ticks_per_second, Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0]
 	%Objects.text = tr("PERF_OBJECTS") % [game.meteor_layer.get_child_count(), int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME))]
