@@ -6,6 +6,11 @@ const BufferedInput = preload("res://scripts/simulation_input.gd")
 const Policy = preload("res://scripts/spawn_policy.gd")
 var failures: Array[String] = []
 
+class UncachedObserver:
+	extends "res://scripts/observation_controller.gd"
+	func _begin_tick_cache() -> void: pass
+	func _end_tick_cache() -> void: pass
+
 func _initialize() -> void:
 	call_deferred("_run")
 
@@ -46,15 +51,17 @@ func _run() -> void:
 		else: check(result == baseline, "identical authority and RNG under %d rendered frames/sec" % fps)
 	_test_policy()
 	_test_lifecycle()
+	_test_observation_cache()
 	await process_frame
 	if failures.is_empty():
 		print("FIXED_TICK_PASS: 30/60/144/240 render schedules, input edges, local hitstop, independent streams, capacity, forecast deferral and save replay")
 		quit(0)
 	else: quit(1)
 
-func _game():
+func _game(cached: bool = true):
 	var game = load("res://scenes/main.tscn").instantiate()
 	Fixtures.configure_before_ready(game)
+	if not cached: Fixtures.replace_child(game, "ObservationController", UncachedObserver.new())
 	root.add_child(game)
 	game.set_physics_process(false)
 	game.spawner.spawn_policy.reseed(271828)
@@ -66,6 +73,52 @@ func _game():
 	game.observation_phase_duration = 120.0
 	game.observation_phase_remaining = 120.0
 	return game
+
+
+func _test_observation_cache() -> void:
+	# Same raw path against the live calculation: quality, swept intersections,
+	# primary/secondary roles and changing loadouts must survive memoization.
+	var games := [_game(), _game(false)]
+	for game in games:
+		game.spawner.running = false
+		game.events.running = false
+		for node in game.Balance.UPGRADE_NODES: game.progression.purchased_nodes[node.id] = true
+		for id in game.deep_sky.Data.RESEARCH: game.deep_sky.state.research_ids.append(id)
+		var modules = game.deep_sky.modules
+		modules.unlocked_slots = 5
+		for id in ["linear_observation", "wide", "wide_correlation", "overcharge", "precision"]: modules.grant_copy(id)
+		modules.slots.assign(["linear_observation", "wide", "wide_correlation", "overcharge", "precision"])
+		for i in 6:
+			var target = game.spawner.spawn_meteor("common", Vector2(380 + i * 50, 260), Vector2(8, 3), 1000.0)
+			target.required_track_time = 1000000.0
+			target.base_automatic_rate = 0.0
+		game.observer.tick_input.reset(Vector2(520, 270))
+		game.observer.input_time = 0.0
+		game.observer.tick_input.push(0.0, Vector2(520, 270), true)
+	for tick in 60:
+		for game in games:
+			var modules = game.deep_sky.modules
+			if tick == 15: modules.slots[0] = "" # switch line to circle
+			if tick == 30: modules.slots[0] = "linear_observation"
+			if tick == 40: modules.burst_remaining = Clock.STEP * 3.0
+			if tick == 45: game.deep_sky.state.research_ids.clear()
+			for sample in 17:
+				var at := (tick + float(sample + 1) / 17.0) * Clock.STEP
+				game.observer.tick_input.push(at, Vector2(520 + sin(at * 30.0) * 300, 270 + cos(at * 21.0) * 90), tick < 55)
+			game.simulate_tick()
+		for i in 6:
+			var left = games[0].meteor_layer.get_child(i)
+			var right = games[1].meteor_layer.get_child(i)
+			for property in ["manual_tracking_time", "quality_integral", "observation_progress", "manual_contribution", "interruption_count"]:
+				check(is_equal_approx(float(left.get(property)), float(right.get(property))), "cached contact differs at tick %d target %d: %s" % [tick, i, property])
+		check(games[0].observer.tracked_meteors.size() == games[1].observer.tracked_meteors.size(), "cached target selection matches live calculation")
+	check(games[0].meteor_layer.get_child(0).manual_tracking_time > 0.0, "cache parity exercised real contact")
+	var observer = games[0].observer
+	observer._begin_tick_cache()
+	var summoned = games[0].spawner.spawn_meteor("common", Vector2(500, 260), Vector2.ZERO, 1000.0)
+	check(summoned != null and summoned in observer._target_children(), "mid-pass Sky Sweep summon refreshes cached membership")
+	observer._end_tick_cache()
+	for game in games: game.free()
 
 func _run_schedule(fps: int) -> Dictionary:
 	var game = _game()
@@ -141,8 +194,11 @@ func _test_policy() -> void:
 	game.progression.purchased_nodes["galaxy_imaging"] = true
 	check(is_equal_approx(left.probability("common", game.progression) / game.progression.get_spawn_probability_multiplier(), 0.5 / 60.0), "late unlock leaves common base probability intact")
 	for i in 1000:
-		left.roll(game.progression)
-		for kind in Policy.ORDER: right.occurrence[kind].randf()
+		var actual: Array[String] = left.roll(game.progression)
+		var expected: Array[String] = []
+		for kind in Policy.ORDER:
+			if right.occurrence[kind].randf() < right.probability(kind, game.progression): expected.append(kind)
+		check(actual == expected, "shared spawn multiplier preserves every per-type outcome")
 	check(left.save_state() == right.save_state(), "locked/unlocked admission cannot perturb occurrence streams")
 	var saved := left.save_state()
 	var expected := left.roll(game.progression)

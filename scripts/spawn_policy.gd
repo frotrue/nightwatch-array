@@ -51,13 +51,18 @@ static func mean_interval(low: float, high: float, floor_value: float) -> float:
 
 func probability(kind: String, progression: Node) -> float:
 	if UNLOCKS.has(kind) and not progression.has_upgrade(UNLOCKS[kind]): return 0.0
-	return clampf(float(BASE_PROBABILITIES[kind]) * progression.get_spawn_probability_multiplier(), 0.0, 1.0)
+	return _scaled_probability(kind, progression.get_spawn_probability_multiplier())
+
+func _scaled_probability(kind: String, multiplier: float) -> float:
+	return clampf(float(BASE_PROBABILITIES[kind]) * multiplier, 0.0, 1.0)
 
 func roll(progression: Node) -> Array[String]:
 	var selected: Array[String] = []
+	var multiplier: float = progression.get_spawn_probability_multiplier()
 	for kind: String in ORDER:
 		var value: float = occurrence[kind].randf()
-		if value < probability(kind, progression):
+		var chance := 0.0 if UNLOCKS.has(kind) and not progression.has_upgrade(UNLOCKS[kind]) else _scaled_probability(kind, multiplier)
+		if value < chance:
 			selected.append(kind)
 			counters[kind].rolled += 1
 	return selected

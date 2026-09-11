@@ -50,6 +50,18 @@ var interaction_mode: InteractionMode = InteractionMode.NONE
 var pending_blank_distance: float = 0.0
 var _manual_frame_active := false
 var _manual_frame_primary = null
+var _tick_cache_active := false
+var _tick_targets: Array = []
+var _tick_radii: Dictionary = {}
+var _tick_extents: Dictionary = {}
+var _tick_positions: Dictionary = {}
+var _tick_linear := false
+var _tick_radius := 0.0
+var _tick_line_width := 1.0
+var _tick_primary_speed := 1.0
+var _tick_secondary_speed := 1.0
+var _tick_grace := 0.0
+var _tick_target_limit := 1
 
 
 func setup(target_layer: Node2D, progression_controller: Node, hud_layer: CanvasLayer, survey_controller: Node2D = null, view: Camera2D = null, extra_target_layer = null) -> void:
@@ -190,6 +202,7 @@ func prepare_tick() -> void:
 	simulation_holding = tick_input.held
 
 func simulate_tick(delta: float) -> void:
+	_begin_tick_cache()
 	current_time_scale = delta / Clock.STEP
 	var consumed := 0.0
 	for segment in tick_segments:
@@ -210,6 +223,47 @@ func simulate_tick(delta: float) -> void:
 	tick_segments.clear()
 	segment_start_fraction = 0.0
 	segment_end_fraction = 1.0
+	_end_tick_cache()
+
+
+func _begin_tick_cache() -> void:
+	# Motion has finished; completion/rewards resolve after this entire input pass.
+	# Keep every raw segment, but derive equipment/research and geometry only once.
+	_tick_targets = _target_children()
+	_tick_linear = _linear_enabled()
+	_tick_radius = _world_px(_module_tracking_radius())
+	_tick_line_width = modules.stacked_effect("linear_observation", "line_width") if _tick_linear else 1.0
+	_tick_primary_speed = _manual_speed_for_role(true)
+	_tick_secondary_speed = _manual_speed_for_role(false)
+	_tick_grace = TRACKING_GRACE_SECONDS + progression.extension_effect("tracking_grace", 0.0)
+	_tick_target_limit = _manual_target_limit()
+	_tick_cache_active = true
+
+
+func _end_tick_cache() -> void:
+	_tick_cache_active = false
+	_tick_targets.clear()
+	_tick_radii.clear()
+	_tick_extents.clear()
+	_tick_positions.clear()
+
+
+func _tracking_radius_for(target) -> float:
+	if not _tick_cache_active:
+		return target.get_tracking_radius(_world_px(_module_tracking_radius()))
+	if not _tick_radii.has(target):
+		_tick_radii[target] = target.get_tracking_radius(_tick_radius)
+	return _tick_radii[target]
+
+
+func _tracking_grace() -> float:
+	return _tick_grace if _tick_cache_active else TRACKING_GRACE_SECONDS + progression.extension_effect("tracking_grace", 0.0)
+
+
+func _manual_target_limit() -> int:
+	if _tick_cache_active: return _tick_target_limit
+	if progression.has_upgrade("multi_target_analysis") or _linear_enabled(): return 100000
+	return int(modules.effect("targets")) if modules != null else 1
 
 
 func _survey_input_enabled() -> bool:
@@ -256,7 +310,7 @@ func _update_manual_tracking(delta: float, keep_primary: bool = false) -> bool:
 	if not _selection_is_valid():
 		selected_meteor = _find_target_under_cursor()
 		if _selection_is_valid():
-			tracking_grace_remaining = TRACKING_GRACE_SECONDS + progression.extension_effect("tracking_grace", 0.0)
+			tracking_grace_remaining = _tracking_grace()
 	if not _selection_is_valid():
 		return false
 
@@ -266,20 +320,20 @@ func _update_manual_tracking(delta: float, keep_primary: bool = false) -> bool:
 	# remaining correlation modifiers between recipients.
 	_manual_frame_active = true
 	_manual_frame_primary = primary
-	var tracking_radius: float = primary.get_tracking_radius(_world_px(_module_tracking_radius()))
+	var tracking_radius: float = _tracking_radius_for(primary)
 	var current_distance: float = _target_contact_distance(primary, cursor_position)
 	if _apply_manual_contact(primary, delta):
-		tracking_grace_remaining = TRACKING_GRACE_SECONDS + progression.extension_effect("tracking_grace", 0.0)
+		tracking_grace_remaining = _tracking_grace()
 		_append_tracked_if_valid(primary)
 	elif current_distance <= tracking_radius * TRACKING_BREAK_MULTIPLIER:
 		# The soft outer ring pauses progress but keeps the target latched.
-		tracking_grace_remaining = TRACKING_GRACE_SECONDS + progression.extension_effect("tracking_grace", 0.0)
+		tracking_grace_remaining = _tracking_grace()
 	else:
 		tracking_grace_remaining -= delta
 		if tracking_grace_remaining <= 0.0:
 			selected_meteor = null
 
-	if progression.has_upgrade("multi_target_analysis") or _linear_enabled() or (modules != null and int(modules.effect("targets")) > 1):
+	if _manual_target_limit() > 1:
 		_observe_additional_targets(delta, primary)
 		var closest_tracked = _closest_valid_tracked_target()
 		if closest_tracked != null and (not keep_primary or not _selection_is_valid()):
@@ -290,7 +344,7 @@ func _update_manual_tracking(delta: float, keep_primary: bool = false) -> bool:
 
 
 func _observe_additional_targets(delta: float, primary) -> void:
-	var limit := 100000 if progression.has_upgrade("multi_target_analysis") or _linear_enabled() else int(modules.effect("targets"))
+	var limit := _manual_target_limit()
 	for child in _target_children():
 		if tracked_meteors.size() >= limit:
 			break
@@ -301,6 +355,13 @@ func _observe_additional_targets(delta: float, primary) -> void:
 
 
 func _target_position_at(target, fraction: float) -> Vector2:
+	if _tick_cache_active:
+		if not _tick_positions.has(target):
+			var end: Vector2 = target.global_position
+			var start: Vector2 = target.previous_simulation_position if "previous_simulation_position" in target else end
+			_tick_positions[target] = Vector4(start.x, start.y, end.x, end.y)
+		var points: Vector4 = _tick_positions[target]
+		return Vector2(lerpf(points.x, points.z, fraction), lerpf(points.y, points.w, fraction))
 	return target.previous_simulation_position.lerp(target.global_position, fraction) if "previous_simulation_position" in target else target.global_position
 
 func _circle_contact_interval(target, radius: float) -> Vector2:
@@ -318,7 +379,7 @@ func _circle_contact_interval(target, radius: float) -> Vector2:
 
 func _apply_manual_contact(target, delta: float) -> bool:
 	if not _target_is_valid(target) or delta <= 0.0: return false
-	var radius: float = target.get_tracking_radius(_world_px(_module_tracking_radius()))
+	var radius: float = _tracking_radius_for(target)
 	var interval := _linear_contact_interval(target, radius) if _linear_enabled() else _circle_contact_interval(target, radius)
 	if interval.x < 0.0 or interval.y <= interval.x: return false
 	var fraction := (interval.x + interval.y) * 0.5
@@ -340,22 +401,27 @@ func motion_multiplier_for(target) -> float:
 		return 1.0
 	if is_inside_tree() and (get_tree().paused or _cursor_is_on_ui()):
 		return 1.0
-	var radius: float = target.get_tracking_radius(_world_px(_module_tracking_radius()))
+	var radius: float = _tracking_radius_for(target)
 	if _target_contact_distance(target, cursor_position) > radius:
 		return 1.0
 	return modules.stacked_effect("capture_hold", "motion_speed")
 
 func _linear_enabled() -> bool:
+	if _tick_cache_active: return _tick_linear
 	return modules != null and progression != null and progression.galaxy_unlocked() and modules.has("linear_observation")
 
 func _linear_extents(radius: float) -> Vector2:
+	if _tick_cache_active: return Vector2(radius * _tick_line_width, radius * 0.45)
 	return Vector2(radius * modules.stacked_effect("linear_observation", "line_width"), radius * 0.45)
 
 func _linear_target_extents(target, radius: float) -> Vector2:
+	if _tick_cache_active and _tick_extents.has(target): return _tick_extents[target]
 	# Solid bodies extend both sides of the field by their visible radius. Do not
 	# multiply their size by LINE's width or squeeze it into the thin band height.
 	var body := float(target.get_observation_body_radius()) if target.has_method("get_observation_body_radius") else 0.0
-	return _linear_extents(maxf(0.0, radius - body)) + Vector2.ONE * body
+	var extent := _linear_extents(maxf(0.0, radius - body)) + Vector2.ONE * body
+	if _tick_cache_active: _tick_extents[target] = extent
+	return extent
 
 func _linear_contact_interval(target, radius: float) -> Vector2:
 	# Clip the cursor segment against the target-centered rectangle. This credits
@@ -430,7 +496,7 @@ func _find_target_under_cursor():
 	for child in _target_children():
 		if not _target_is_valid(child):
 			continue
-		var tracking_radius: float = child.get_tracking_radius(_world_px(_module_tracking_radius()))
+		var tracking_radius: float = _tracking_radius_for(child)
 		# Swept point-to-segment distance prevents fast mouse movement from
 		# tunnelling straight through a target between two rendered frames.
 		var distance: float = _target_cursor_path_distance(child)
@@ -441,18 +507,26 @@ func _find_target_under_cursor():
 
 
 func _target_children() -> Array:
+	if _tick_cache_active:
+		# Sky Sweep can summon a target between two buffered input segments.
+		# Reuse the list while membership is stable, but retain immediate discovery.
+		var count := meteor_layer.get_child_count() if meteor_layer != null else 0
+		for layer in additional_target_layers:
+			if layer != null: count += layer.get_child_count()
+		if count == _tick_targets.size(): return _tick_targets
 	var targets: Array = []
 	if meteor_layer != null:
 		targets.append_array(meteor_layer.get_children())
 	for layer in additional_target_layers:
 		if layer != null:
 			targets.append_array(layer.get_children())
+	if _tick_cache_active: _tick_targets = targets
 	return targets
 
 
 func _target_contact_distance(target, point: Vector2) -> float:
 	if _linear_enabled():
-		var radius: float = target.get_tracking_radius(_world_px(_module_tracking_radius()))
+		var radius: float = _tracking_radius_for(target)
 		var relative: Vector2 = (point - target.global_position).abs() / _linear_target_extents(target, radius)
 		return maxf(relative.x, relative.y) * radius
 	if target.has_method("get_manual_contact_distance"):
@@ -462,7 +536,7 @@ func _target_contact_distance(target, point: Vector2) -> float:
 
 func _target_cursor_path_distance(target) -> float:
 	if _linear_enabled():
-		var radius: float = target.get_tracking_radius(_world_px(_module_tracking_radius()))
+		var radius: float = _tracking_radius_for(target)
 		var interval := _linear_contact_interval(target, radius)
 		return minf(radius, _target_contact_distance(target, cursor_position)) if interval.x >= 0.0 else INF
 	if target.has_method("get_cursor_path_contact_distance"):
@@ -746,11 +820,16 @@ func _module_manual_speed() -> float:
 
 
 func _module_manual_speed_for_target(target) -> float:
+	var is_primary: bool = target == (_manual_frame_primary if _manual_frame_active else selected_meteor)
+	if _tick_cache_active: return _tick_primary_speed if is_primary else _tick_secondary_speed
+	return _manual_speed_for_role(is_primary)
+
+
+func _manual_speed_for_role(is_primary: bool) -> float:
 	var legacy_speed := _module_manual_speed()
 	if modules == null or progression == null or not progression.galaxy_unlocked():
 		return legacy_speed
 	var new_multiplier := float(modules.effect("new_speed"))
-	var is_primary: bool = target == (_manual_frame_primary if _manual_frame_active else selected_meteor)
 	if not is_primary:
 		legacy_speed *= progression.extension_effect("secondary_speed")
 	if modules.has("wide_correlation"):

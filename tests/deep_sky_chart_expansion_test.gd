@@ -62,7 +62,9 @@ func _run() -> void:
 		_check(not window.drawing and window.result_panel.visible and window.result_name.text == tr("MODULE_%s_NAME" % debug_id.to_upper()), "debug result is immediately visible without reveal animation")
 	_check(game.deep_sky.state.draw_serial == debug_currency.draw_serial and game.deep_sky.samples == debug_currency.samples and game.deep_sky.state.samples_spent == debug_currency.samples_spent, "debug draws leave paid sequence and specimen accounting unchanged")
 	_check(game.deep_sky.modules.slots == debug_slots, "debug copies do not change equipment")
-	game.deep_sky.modules.grant("overcharge")
+	# Use the current inventory format even when none of the random debug draws
+	# yielded BURST. Legacy grant() omits quantity until a save is normalized.
+	game.deep_sky.modules.grant_copy("overcharge")
 	game.deep_sky.modules.equip("overcharge", 0)
 	game.deep_sky.modules.restore_round_state({"burst_remaining": 3.5})
 	var debug_before: Dictionary = game.deep_sky.get_save_data()

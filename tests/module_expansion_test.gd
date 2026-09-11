@@ -111,6 +111,7 @@ func _installed(ids: Array[String]) -> RefCounted:
 
 func _run() -> void:
 	_check_catalogue()
+	_check_configuration_cache()
 	_check_linear_geometry()
 	_check_solid_body_contact()
 	_check_capture()
@@ -123,6 +124,19 @@ func _run() -> void:
 	else:
 		push_error(str(failures))
 		quit(1)
+
+func _check_configuration_cache() -> void:
+	var model := _installed(["wide", "wide", "capture_hold"])
+	_check(model.installed_count("wide") == 2, "cache counts duplicate modules")
+	var public_ids: Array[String] = model.installed_ids()
+	public_ids.clear()
+	_check(model.has("wide") and model.installed_count("wide") == 2, "callers cannot mutate cached inventory")
+	model.quantities["wide"] = 1
+	_check(model.installed_count("wide") == 1 and is_equal_approx(model.effect("radius"), 1.65), "quantity mutation refreshes counts and effects together")
+	model.unlocked_slots = 2
+	_check(not model.has("capture_hold"), "capacity changes deactivate cached equipment")
+	model.purchased.erase("wide")
+	_check(not model.has("wide") and is_equal_approx(model.effect("radius"), 1.0), "inventory changes invalidate cached equipment")
 
 func _check_catalogue() -> void:
 	_check(Modules.DEFINITIONS.size() == 8 and Expansion.SAMPLE_MODULES.size() == 8, "exactly eight active modules")
