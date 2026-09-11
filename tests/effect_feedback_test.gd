@@ -72,9 +72,10 @@ func _test_round_dawn() -> void:
 	Fixtures.configure_before_ready(game)
 	root.add_child(game)
 	game.set_process(false)
+	game.set_physics_process(false)
 	game.spawner.running = false
 	game.events.running = false
-	game._process(game.observation_phase_duration * 0.85)
+	preload("res://tests/support/game_fixture.gd").advance_seconds(game, game.observation_phase_duration * 0.85)
 	var dusk: float = game.starfield.dawn_amount()
 	var saved: Dictionary = game._build_save_data()
 	paused = true
@@ -82,7 +83,8 @@ func _test_round_dawn() -> void:
 	_check(is_equal_approx(game.starfield.dawn_amount(), dusk), "paused observation preserves the sky clock")
 	game._apply_save_data(saved)
 	_check(is_equal_approx(game.starfield.dawn_amount(), dusk), "active load restores the sky from remaining round time")
-	game._process(game.observation_phase_remaining)
+	paused = false
+	preload("res://tests/support/game_fixture.gd").advance_seconds(game, game.observation_phase_remaining)
 	var earned: float = game.progression.total_data_earned
 	var elapsed: float = game.elapsed_time
 	_check(paused and not game.observation_phase_active and not game.spawner.running, "sunrise begins only after the round is closed")
@@ -170,7 +172,7 @@ func _test_meteor_routing(game) -> void:
 	for type_id in IMPACT_TYPES:
 		for was_manual in [false, true]:
 			game.effects.reset()
-			game.hitstop_cooldown_until_msec = 0
+			game.simulation_clock.cooldown_ticks = 0
 			_check(game._is_accented_observation(type_id, was_manual, "GOOD"), "rare identity is accented independently of grade")
 			_observe(game, type_id, was_manual, "GOOD")
 			_check(game.effects.rings.size() == 1 and game.effects.flash_strength > 0.0, "rare identity retains its ring and flash")

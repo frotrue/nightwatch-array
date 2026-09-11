@@ -47,7 +47,7 @@ func _run() -> void:
 	game.observer._apply_manual_contact(meteor, 0.00001)
 	Input.action_press(&"nw_observe")
 	var starting_age: float = meteor.age
-	meteor._process(0.5)
+	meteor.simulate_tick(0.5)
 	if not is_equal_approx(meteor.age - starting_age, 0.35): failures.append("meteor did not slow by 30%")
 	Input.action_release(&"nw_observe")
 	game.effects.reset()
@@ -193,7 +193,7 @@ func _probe() -> void:
 				if game.deep_sky.modules.burst_remaining > 0: burst += 0.05
 				for meteor in game.meteor_layer.get_children():
 					if game.observer.motion_multiplier_for(meteor) < 1.0: held += 0.05
-					meteor._process(0.05)
+					meteor.simulate_tick(0.05)
 					if not meteor.alive:
 						if meteor.observed_successfully: completed += 1
 						meteor.free()

@@ -3,7 +3,7 @@ extends SceneTree
 const Fixtures = preload("res://tests/support/game_fixture.gd")
 const Balance = preload("res://scripts/game_balance.gd")
 
-const STEP := 0.05
+const STEP := 1.0 / 60.0
 const SEEDS := [20260821, 20260837, 20260853]
 const SEEDS_ENV := "NIGHTWATCH_ECONOMY_SEEDS"
 const STRATEGIES_ENV := "NIGHTWATCH_ECONOMY_STRATEGIES"
@@ -237,6 +237,7 @@ func _longest_multiplier_gap() -> float:
 
 func _prepare(seed: int) -> void:
 	game.set_process(false)
+	game.set_physics_process(false)
 	game.spawner.set_process(false)
 	game.events.set_process(false)
 	game.sky_contacts.set_process(false)
@@ -250,6 +251,7 @@ func _prepare(seed: int) -> void:
 	game._sync_galactic_systems()
 	game.events.reset()
 	game.spawner.reset()
+	game.spawner.spawn_policy.reseed(seed)
 	game.spawner.rng.seed = seed
 	game.spawner.forecast_rng.seed = seed + 1000
 	game.spawner.warm_contact_rng.seed = seed + 2000
@@ -288,11 +290,9 @@ func _run_round(duration: float) -> void:
 		game.progression.update_manual_combo(delta)
 		var remaining := maxf(0.0, duration - round_elapsed)
 		game.spawner.set_phase_time_remaining(remaining)
-		game.spawner._process(delta)
-		game.events._process(delta)
+		game.spawner.simulate_tick(delta)
+		game.events.simulate_tick(delta)
 		game.survey.advance_time(delta)
-		if game.sky_contacts.dish_active():
-			game.sky_contacts._update_dishes(delta)
 		var manual_target_used := _process_targets(delta)
 		_record_node_states()
 		if not manual_target_used:
@@ -320,6 +320,10 @@ func _run_round(duration: float) -> void:
 
 
 func _process_targets(delta: float) -> bool:
+	var targets: Array = game.meteor_layer.get_children()
+	for target in targets: target.tick_motion(delta, target.simulation_tick + 1)
+	game.sky_contacts.simulate_tick(delta)
+	game.spawner._refresh_secondary_camera()
 	var manual_target = _select_manual_target()
 	if manual_target != null:
 		var cursor_point := _manual_cursor_point(manual_target)
@@ -329,10 +333,11 @@ func _process_targets(delta: float) -> bool:
 				if candidate == manual_target:
 					continue
 				_apply_manual_target(candidate, cursor_point, delta)
-	for target in game.meteor_layer.get_children():
+	for target in targets:
 		if not is_instance_valid(target):
 			continue
-		target._process(delta)
+		target.tick_observation(delta)
+		target.tick_resolve()
 		if not target.alive:
 			target.free()
 	return manual_target != null

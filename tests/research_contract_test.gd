@@ -225,6 +225,7 @@ func _run() -> void:
 		var node_id := String(definition.id)
 		var connected := (
 			literal_upgrade_ids.has(node_id)
+			or node_id in preload("res://scripts/spawn_policy.gd").UNLOCKS.values()
 			or not Dictionary(definition.get("runtime_parameters", {})).is_empty()
 			or not String(definition.get("implementation_connection", "")).is_empty()
 		)
@@ -395,8 +396,8 @@ func _verify_claims_bidirectionally(contract_ids_by_kind: Dictionary) -> void:
 					_check("일반 표적 동시 출현 상한 +%d개" % delta_value in korean, node_id + " Korean copy exposes its regular active-contact delta")
 				"regular_spawn_interval_floor":
 					var seconds := "%.2f" % float(contract.value)
-					_check("minimum regular meteor interval " + seconds + " seconds" in english, node_id + " English copy exposes the exact regular-arrival floor")
-					_check("일반 유성 최소 출현 간격 " + seconds + "초" in korean, node_id + " Korean copy exposes the exact regular-arrival floor")
+					_check("base natural spawn rate ceiling to ×" + ("%.2f" % (2.0 / float(contract.value))) in english, node_id + " English copy exposes the calibrated rate ceiling")
+					_check("천체 기본 출현 증가 한도 ×" + ("%.2f" % (2.0 / float(contract.value))) in korean, node_id + " Korean copy exposes the calibrated rate ceiling")
 	TranslationServer.set_locale(original_locale)
 	_verify_exact_string_set(
 		sky_activity_claim_ids,
@@ -454,8 +455,8 @@ func _claims_max_active_delta(english: String, korean: String) -> bool:
 
 func _claims_regular_spawn_interval_floor(english: String, korean: String) -> bool:
 	return (
-		"minimum regular meteor interval " in english
-		or "일반 유성 최소 출현 간격 " in korean
+		"base natural spawn rate ceiling to ×" in english
+		or "천체 기본 출현 증가 한도 ×" in korean
 		or "shortest time between regular meteors to " in english
 		or "일반 유성의 최소 출현 간격을 " in korean
 	)

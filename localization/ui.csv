@@ -529,15 +529,15 @@ UPGRADE_RAPID_FOCUS_DESC,"Observation Streak: manual-speed bonus +1% per step, a
 UPGRADE_CANIS_OPENING_NAME,Canis Relay,큰개자리 중계
 UPGRADE_CANIS_OPENING_DESC,Unlocks Canis Major research.,큰개자리 연구를 엽니다.
 UPGRADE_CANIS_CADENCE_I_NAME,Swift Signal,신속 신호
-UPGRADE_CANIS_CADENCE_I_DESC,Sky Activity: minimum regular meteor interval 1.00 seconds.,하늘 활동: 일반 유성 최소 출현 간격 1.00초.
+UPGRADE_CANIS_CADENCE_I_DESC,Sky Activity: raise the base natural spawn rate ceiling to ×2.00.,하늘 활동: 천체 기본 출현 증가 한도 ×2.00.
 UPGRADE_CANIS_CAPACITY_I_NAME,Long Leash,긴 목줄
 UPGRADE_CANIS_CAPACITY_I_DESC,Sky Activity: simultaneous regular targets +1.,하늘 활동: 일반 표적 동시 출현 상한 +1개.
 UPGRADE_CANIS_CADENCE_II_NAME,Running Cadence,질주 리듬
-UPGRADE_CANIS_CADENCE_II_DESC,Sky Activity: minimum regular meteor interval 0.85 seconds.,하늘 활동: 일반 유성 최소 출현 간격 0.85초.
+UPGRADE_CANIS_CADENCE_II_DESC,Sky Activity: raise the base natural spawn rate ceiling to ×2.35.,하늘 활동: 천체 기본 출현 증가 한도 ×2.35.
 UPGRADE_CANIS_CAPACITY_II_NAME,Twin Watch,쌍자 경계
 UPGRADE_CANIS_CAPACITY_II_DESC,Sky Activity: simultaneous regular targets +1.,하늘 활동: 일반 표적 동시 출현 상한 +1개.
 UPGRADE_CANIS_CADENCE_III_NAME,White-Star Tempo,백성 템포
-UPGRADE_CANIS_CADENCE_III_DESC,Sky Activity: minimum regular meteor interval 0.70 seconds.,하늘 활동: 일반 유성 최소 출현 간격 0.70초.
+UPGRADE_CANIS_CADENCE_III_DESC,Sky Activity: raise the base natural spawn rate ceiling to ×2.86.,하늘 활동: 천체 기본 출현 증가 한도 ×2.86.
 UPGRADE_CANIS_CAPACITY_III_NAME,Pack Array,무리 관측망
 UPGRADE_CANIS_CAPACITY_III_DESC,Sky Activity: simultaneous regular targets +2.,하늘 활동: 일반 표적 동시 출현 상한 +2개.
 UPGRADE_SIRIUS_FIREBALL_NAME,Sirius Bloom,시리우스 발광
@@ -545,7 +545,7 @@ UPGRADE_SIRIUS_FIREBALL_DESC,"Unlocks a giant meteor, up to 1 per round with eno
 UPGRADE_DRACO_SYNTHESIS_NAME,All-Sky Synthesis,전천 합성
 UPGRADE_DRACO_SYNTHESIS_DESC,All Observation Data ×4 (automatic included).,모든 관측 데이터 4배(자동 포함).
 UPGRADE_DRACO_CADENCE_NAME,Circumpolar Cadence,주극 리듬
-UPGRADE_DRACO_CADENCE_DESC,Sky Activity: minimum regular meteor interval 0.45 seconds.,하늘 활동: 일반 유성 최소 출현 간격 0.45초.
+UPGRADE_DRACO_CADENCE_DESC,Sky Activity: raise the base natural spawn rate ceiling to ×4.44.,하늘 활동: 천체 기본 출현 증가 한도 ×4.44.
 UPGRADE_DRACO_CAPACITY_NAME,Dragon-Spine Array,용등 관측망
 UPGRADE_DRACO_CAPACITY_DESC,Sky Activity: simultaneous regular targets +6.,하늘 활동: 일반 표적 동시 출현 상한 +6개.
 UPGRADE_DRACO_SWEEP_NAME,Coiled-Sky Sweep,환천 훑기

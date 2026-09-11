@@ -157,7 +157,7 @@ func _run() -> void:
 	_check(not game.hud.save_mode_label.visible, "autosave status hides instead of becoming persistent HUD text")
 	game.progression.add_debug_data(23.0)
 	game.autosave_elapsed = game.AUTOSAVE_INTERVAL_SECONDS - 0.1
-	game._process(0.2)
+	preload("res://tests/support/game_fixture.gd").advance_seconds(game, 0.2)
 	var autosaved_data: Dictionary = game.save_games.load_slot(2)
 	var autosaved_progression: Dictionary = autosaved_data.get("progression", {})
 	_check(int(autosaved_progression.get("observation_data", 0.0)) == 23, "active slot autosaves current progress after 60 seconds")
@@ -716,6 +716,9 @@ func _run() -> void:
 	_check(alternating_radiants, "Split Radiant Model alternates the bounded storm between mirrored sky sectors")
 	_check(String(first_storm_target.type_id) == "fragment" and String(last_storm_target.type_id) == "fireball", "Fragment Front and Fireball Tail bookend the storm without changing its count")
 	_check(is_zero_approx(research_probe.get_automation_strength("fireball")), "the Leonid tail fireball remains a manual-only product")
+	# Leave three atmospheric slots for the fragment-tag regression.
+	while echo_layer.get_child_count() > echo_spawner.SpawnPolicy.ATMOSPHERIC_SLOTS - 3:
+		echo_layer.get_child(echo_layer.get_child_count() - 1).free()
 	var leonid_children_before_split := echo_layer.get_child_count()
 	echo_spawner._on_fragment_requested(Vector2(460, 240), Vector2(90, 0), "fragment", false, true, false)
 	var leonid_descendants_tagged := echo_layer.get_child_count() == leonid_children_before_split + 3
@@ -1028,6 +1031,7 @@ func _run() -> void:
 	_check(is_equal_approx(game.observer._software_cursor_radius(), 36.0), "software cursor starts at the real observation radius")
 	var meteor = game.spawner.spawn_meteor("common", Vector2(420, 220), Vector2(20, 5), 3.0)
 	meteor.apply_manual_observation(1.0, 0.0, game.progression.get_tracking_radius())
+	meteor.tick_resolve()
 	await process_frame
 	await process_frame
 	_check(game.progression.success_count == 1, "manual tracking completes an observation")
@@ -1139,7 +1143,7 @@ func _run() -> void:
 	game.spawner.first_spawn_pending = false
 	game.spawner.next_spawn_time = 0.0
 	game.spawner.set_phase_time_remaining(30.0)
-	game.spawner._process(0.05)
+	game.spawner._announce_regular_spawn(null, "common")
 	_check(
 		game.spawner.pending_contacts.size() == pending_before_scope_probe + 1,
 		"pending forecasts and live deep targets do not suppress the next regular announcement"
@@ -1154,8 +1158,11 @@ func _run() -> void:
 	game.spawner.first_spawn_pending = false
 	game.spawner.next_spawn_time = 0.0
 	game.spawner.set_phase_time_remaining(30.0)
-	game.spawner._process(0.05)
-	_check(game.spawner.pending_contacts.is_empty() and is_equal_approx(game.spawner.next_spawn_time, 0.45), "a full live atmospheric sky still delays the regular scheduler")
+	game.spawner._announce_regular_spawn(null, "common")
+	var deferred_contact: Dictionary = game.spawner.pending_contacts.back()
+	deferred_contact.countdown = 0.0
+	game.spawner._update_pending_contacts(1.0 / 60.0)
+	_check(deferred_contact in game.spawner.pending_contacts and deferred_contact.deferred > 0.0, "a full atmospheric sky defers natural admission without discarding its forecast")
 	game.spawner.reset()
 	game.sky_contacts.reset()
 	await process_frame
@@ -1216,12 +1223,14 @@ func _run() -> void:
 	left_click.pressed = true
 	left_click.position = pointer_position
 	game.sky_contacts._unhandled_input(left_click)
+	game.sky_contacts.simulate_tick(0.0)
 	_check(int(game.sky_contacts.dishes[0].assigned_id) == -1, "left-clicking a contact does not assign the dish")
 	var right_click := InputEventMouseButton.new()
 	right_click.button_index = MOUSE_BUTTON_RIGHT
 	right_click.pressed = true
 	right_click.position = pointer_position
 	game.sky_contacts._unhandled_input(right_click)
+	game.sky_contacts.simulate_tick(0.0)
 	_check(int(game.sky_contacts.dishes[0].assigned_id) == -1, "plain right-click over a contact never reserves it")
 	_check(Vector2(game.sky_contacts.dishes[0].target).is_equal_approx(pointer_position), "plain right-click moves the nearest dish to the clicked contact point")
 	_check(not game.progression.dish_auto_assignment_enabled(), "dish auto-assignment remains unavailable before its research")
@@ -1272,6 +1281,7 @@ func _run() -> void:
 	shifted_right_click.shift_pressed = true
 	shifted_right_click.position = cancellation_point
 	game.sky_contacts._unhandled_input(shifted_right_click)
+	game.sky_contacts.simulate_tick(0.0)
 	_check(int(game.sky_contacts.dishes[0].assigned_id) == -1, "right-click manual placement overrides automatic pre-positioning")
 	_check(Vector2(game.sky_contacts.dishes[0].target).is_equal_approx(cancellation_point), "Shift adds no reservation gesture and obeys the same point movement")
 	var settled_dish: Dictionary = game.sky_contacts.dishes[0]
@@ -1289,6 +1299,7 @@ func _run() -> void:
 	_check(int(game.sky_contacts.dishes[0].assigned_id) == -1, "automatic control ignores manual-only fireball forecasts")
 	right_click.position = Vector2(fireball_contact.intercept)
 	game.sky_contacts._unhandled_input(right_click)
+	game.sky_contacts.simulate_tick(0.0)
 	_check(Vector2(game.sky_contacts.dishes[0].target).is_equal_approx(Vector2(fireball_contact.intercept)), "plain right-click over a classified fireball still moves the dish")
 	_check(int(game.sky_contacts.dishes[0].assigned_id) == -1, "moving onto a fireball does not create a hidden reservation")
 	var placed_fireball = game.spawner.spawn_meteor("fireball", Vector2(fireball_contact.intercept), Vector2.ZERO, 1.0)
@@ -1320,7 +1331,7 @@ func _run() -> void:
 	var combined_assist_rate: float = scanned.dish_assist_rate + scanned.lane_assist_rate
 	_check(scanned.dish_assist_rate > 0.0 and scanned.lane_assist_rate > 0.0, "dish and support-lane contributions coexist on one target")
 	_check(is_equal_approx(scanned.get_automatic_rate(), combined_assist_rate), "machine contributions sum instead of overwriting each other")
-	scanned._process(0.2)
+	scanned.simulate_tick(0.2)
 	_check(is_equal_approx(scanned.observation_progress - progress_before, combined_assist_rate * 0.2), "a dish and support lane advance their shared target additively")
 	game.spawner._refresh_secondary_camera()
 	_check(is_zero_approx(scanned.lane_assist_rate) and scanned.dish_assist_rate > 0.0, "a disabled lane source clears only its own contribution")
@@ -1402,7 +1413,7 @@ func _run() -> void:
 	_check(absf(identity_distance - motion_probe.entry_position.distance_to(motion_probe.burnout_position)) < 0.05, "burn curve preserves the configured entry speed by identity")
 	var sampled_speeds: Array[float] = []
 	for _motion_step in range(5):
-		motion_probe._process(motion_probe.visible_lifetime * 0.2)
+		motion_probe.simulate_tick(motion_probe.visible_lifetime * 0.2)
 		sampled_speeds.append(motion_probe.velocity.length())
 	var speed_is_monotonic := true
 	for speed_index in range(1, sampled_speeds.size()):
@@ -1437,7 +1448,7 @@ func _run() -> void:
 	game.sky_contacts.dishes[0] = dish
 	for _step in range(55):
 		game.sky_contacts._update_dishes(0.05)
-		fastest._process(0.05)
+		fastest.simulate_tick(0.05)
 		if not fastest.alive:
 			break
 	_check(fastest.observed_successfully and not fastest.manual_touched, "a dish completes a fast meteor at the real velocity ceiling without manual help")
@@ -1456,7 +1467,7 @@ func _run() -> void:
 	game.sky_contacts.dishes[0] = dish
 	game.sky_contacts.on_contact_resolved({"id": 9001}, fireball)
 	game.sky_contacts._update_dishes(0.2)
-	fireball._process(0.2)
+	fireball.simulate_tick(0.2)
 	_check(int(game.sky_contacts.dishes[0].locked_id) == 0 and is_zero_approx(fireball.dish_assist_rate), "an assigned fireball never receives dish assistance through the resolved-contact path")
 	_check(is_zero_approx(fireball.observation_progress), "dish rejection cannot degrade a rare fireball into an automatic observation")
 
@@ -1469,7 +1480,7 @@ func _run() -> void:
 	dish.arrived = true
 	game.sky_contacts.dishes[0] = dish
 	game.sky_contacts._update_dishes(0.2)
-	major._process(0.2)
+	major.simulate_tick(0.2)
 	_check(int(game.sky_contacts.dishes[0].locked_id) == 0 and is_zero_approx(major.dish_assist_rate), "a dish parked beside a contactless major cannot acquire it opportunistically")
 	_check(is_zero_approx(major.observation_progress), "the dish cannot reduce the contactless major prize to an automatic reward")
 	_check(not game.sky_contacts._dish_can_track(fireball) and not game.sky_contacts._dish_can_track(major), "rare objects are outside the dish role by type")
@@ -1492,7 +1503,7 @@ func _run() -> void:
 		early_fragment.apply_manual_observation(
 			0.05, 0.0, game.progression.get_tracking_radius()
 		)
-		early_fragment._process(0.05)
+		early_fragment.simulate_tick(0.05)
 	_check(early_fragment.observed_successfully, "manual setup completes the fragment observation")
 	_check(early_fragment.age < early_split_threshold, "fragment observation completes strictly before its split timer")
 	var early_piece_count := 0
@@ -1534,7 +1545,7 @@ func _run() -> void:
 				continue
 			if String(split_target.type_id) == "fragment_piece":
 				split_piece_created = true
-			split_target._process(0.05)
+			split_target.simulate_tick(0.05)
 			if String(split_target.type_id) == "fragment_piece" and split_target.observed_successfully and not split_target.manual_touched:
 				split_piece_completed = true
 		if split_piece_completed:
@@ -1640,7 +1651,7 @@ func _run() -> void:
 	for _step in range(281):
 		game.spawner._refresh_secondary_camera()
 		game.sky_contacts._update_dishes(0.05)
-		machine_only_major._process(0.05)
+		machine_only_major.simulate_tick(0.05)
 		if not machine_only_major.alive:
 			break
 	_check(is_zero_approx(machine_only_major.dish_assist_rate) and is_zero_approx(machine_only_major.lane_assist_rate), "every limited machine source excludes the major target")
@@ -1660,6 +1671,7 @@ func _run() -> void:
 	var best_multiplier_before_quality_test: float = game.progression.best_multiplier
 	var quality_target = game.spawner.spawn_meteor("common", Vector2(520, 240), Vector2.ZERO, 3.0)
 	quality_target.apply_manual_observation(1.0, 0.0, game.progression.get_tracking_radius())
+	quality_target.tick_resolve()
 	await process_frame
 	await process_frame
 	_check(game.progression.best_multiplier > maxf(2.0, best_multiplier_before_quality_test), "Perfect Observation rewards accurate manual tracking")
@@ -1675,9 +1687,11 @@ func _run() -> void:
 	_check(game.events.shower_state == "warning", "shower begins with a warning state")
 	_check(game.effects.incoming_markers.size() >= 4, "Observatory Network previews shower entry sectors")
 	game.events.shower_timer = -1.0
+	game.events.simulate_tick(1.0 / 60.0)
 	await process_frame
 	_check(game.events.shower_state == "active", "shower enters the active state")
 	game.events.shower_timer = -1.0
+	game.events.simulate_tick(1.0 / 60.0)
 	await process_frame
 	_check(game.events.shower_state == "idle", "shower terminates cleanly")
 
@@ -1688,6 +1702,7 @@ func _run() -> void:
 	_check(not game.events.trigger_canis_major_warning(), "a warning already in progress cannot be triggered twice")
 	_check(not game.events.trigger_shower(), "a shower cannot overwrite the short Canis warning")
 	game.events.canis_major_timer = -1.0
+	game.events.simulate_tick(1.0 / 60.0)
 	await process_frame
 	var major_count := 0
 	for child in game.meteor_layer.get_children():
@@ -1742,7 +1757,7 @@ func _run() -> void:
 	game.spawner.reset()
 	game.spawner.start_spawning()
 	game.spawner.set_phase_time_remaining(20.0)
-	game.spawner._process(balance.FIRST_METEOR_DELAY + 0.01)
+	game.spawner.simulate_tick(balance.FIRST_METEOR_DELAY + 0.01)
 	_check(game.meteor_layer.get_child_count() == 1 and String(game.meteor_layer.get_child(0).type_id) == "common", "each measured round opens with exactly one forced common anchor")
 	_check(not game.spawner.first_spawn_pending, "the forced common anchor is consumed only once per round")
 	game.spawner.reset()
@@ -1767,7 +1782,7 @@ func _run() -> void:
 	game.progression.automatic_successes = 1
 	game.progression.total_data_earned = 55.0
 	game.observation_phase_remaining = 0.05
-	game._process(0.1)
+	preload("res://tests/support/game_fixture.gd").advance_seconds(game, 0.1)
 	_check(not game.observation_phase_active and game.hud.is_phase_summary_open() and not game.upgrade_tree.is_open() and paused, "round expiry pauses the sky and opens the comparison summary")
 	_check(game.hud.phase_summary_observations.text == TranslationServer.translate("PHASE_SUMMARY_OBSERVATIONS") % 4, "phase summary reports observations from the measured round")
 	_check(game.hud.phase_summary_data.text == TranslationServer.translate("PHASE_SUMMARY_OUTPUT") % 55, "phase summary keeps total round Data as the headline")
@@ -1935,12 +1950,13 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	open_night_game.set_process(false)
+	open_night_game.set_physics_process(false)
 	open_night_game.save_games.set_save_directory(smoke_save_directory)
 	open_night_game.active_save_slot = 1
 	open_night_game.hud.set_active_save_slot(1)
 	open_night_game._autosave_active_slot()
 	open_night_game.events.run_time = 999999.0
-	open_night_game.events._process(0.05)
+	open_night_game.events.simulate_tick(0.05)
 	_check(open_night_game.events.canis_major_state == "idle", "elapsed run time cannot summon Sirius before its research is installed")
 	open_night_game.upgrade_tree.open_tree()
 	await process_frame
@@ -2548,6 +2564,7 @@ func _run_feedback_regressions(packed: PackedScene, global_x2_ids: Array) -> voi
 	await process_frame
 	await process_frame
 	feedback_game.set_process(false)
+	feedback_game.set_physics_process(false)
 	feedback_game.spawner.set_process(false)
 	feedback_game.events.set_process(false)
 	feedback_game.sky_contacts.set_process(false)
@@ -2656,17 +2673,17 @@ func _run_feedback_regressions(packed: PackedScene, global_x2_ids: Array) -> voi
 
 	feedback_game.effects.reset()
 	feedback_game.progression.reset_manual_combo()
-	feedback_game.hitstop_cooldown_until_msec = 0
+	feedback_game.simulation_clock.cooldown_ticks = 0
 	var fireball_target = feedback_game.spawner.spawn_meteor(
 		"fireball", Vector2(420.0, 240.0), Vector2.ZERO, 8.0
 	)
 	fireball_target.set_meta("gemini_echo", true)
 	feedback_game._on_meteor_observed(fireball_target, 82.0, 1.0, true, "PERFECT")
 	_check(feedback_game.effects.shake_trauma > 0.0 and feedback_game.hitstop_active, "a strong manual fireball still owns shake and hitstop")
-	feedback_game._release_hitstop()
-	var cooldown_deadline: int = feedback_game.hitstop_cooldown_until_msec
+	for _tick in feedback_game.simulation_clock.hitstop_ticks: feedback_game.simulation_clock.begin_tick()
+	feedback_game.hitstop_active = false
 	feedback_game._apply_hitstop(0.05)
-	_check(cooldown_deadline > Time.get_ticks_msec() and not feedback_game.hitstop_active, "hitstop cannot restart during its 400 ms real-time cooldown")
+	_check(feedback_game.simulation_clock.cooldown_ticks == 24 and not feedback_game.hitstop_active, "hitstop cannot restart during its 24-tick cooldown")
 	fireball_target.free()
 
 	var legacy_multiplier_save: Dictionary = feedback_game.progression.get_save_data()
@@ -2682,7 +2699,7 @@ func _run_feedback_regressions(packed: PackedScene, global_x2_ids: Array) -> voi
 	)
 	legacy_multiplier_probe.free()
 
-	feedback_game.hitstop_cooldown_until_msec = 0
+	feedback_game.simulation_clock.cooldown_ticks = 0
 	Engine.time_scale = 1.0
 	feedback_game.queue_free()
 	await process_frame
@@ -2696,6 +2713,7 @@ func _run_survey_regressions(packed: PackedScene, balance) -> void:
 	await process_frame
 	await process_frame
 	survey_game.set_process(false)
+	survey_game.set_physics_process(false)
 	survey_game.spawner.set_process(false)
 	survey_game.events.set_process(false)
 	survey_game.sky_contacts.set_process(false)
@@ -2778,7 +2796,7 @@ func _run_survey_regressions(packed: PackedScene, balance) -> void:
 	observer.cursor_position = Vector2(450.0, 260.0)
 	observer._update_survey_interaction(0.016)
 	_check(finishing_target.observation_progress >= 1.0, "queued-for-deletion targets do not block a live target under the cursor")
-	finishing_target._process(0.0)
+	finishing_target.simulate_tick(0.0)
 	_check(not finishing_target.can_be_tracked() and observer.selected_meteor == null, "a completed meteor releases its selection through the real completion signal")
 	_check(observer.interaction_mode == observer.InteractionMode.TRACKING and is_equal_approx(survey.charge_distance, 70.0), "a completion frame cannot also charge survey travel")
 	observer.reset()

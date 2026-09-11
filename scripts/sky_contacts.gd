@@ -21,6 +21,7 @@ const DISH_TRACKABLE_TYPES := ["common", "fast", "fragment", "fragment_piece"]
 const GALACTIC_MUTED_FORECAST_TYPES := ["common", "fast"]
 
 var progression: Node
+var pending_dish_commands: Array[Vector2] = []
 var meteor_layer: Node2D
 var additional_target_layers: Array[Node2D] = []
 var observation_view: Camera2D
@@ -87,6 +88,7 @@ func refresh_dishes() -> void:
 			var home_x := 0.5 + (float(dish_index) - float(wanted - 1) * 0.5) * 0.16
 			var home := Vector2(size.x * home_x, size.y * 0.55)
 			dish.position = home
+			dish["previous_position"] = home
 			dish.target = home
 			dish.assigned_id = -1
 			dish.locked_id = 0
@@ -96,6 +98,7 @@ func refresh_dishes() -> void:
 
 
 func reset() -> void:
+	pending_dish_commands.clear()
 	_clear_dish_assists()
 	contacts.clear()
 	hovered_contact_id = -1
@@ -106,6 +109,7 @@ func reset() -> void:
 		dish.assigned_id = -1
 		dish.locked_id = 0
 		dish.target = dish.position
+		dish["previous_position"] = dish.position
 		dish.arrived = true
 		dishes[index] = dish
 	queue_redraw()
@@ -161,10 +165,17 @@ func _process(delta: float) -> void:
 	if dish_active():
 		cursor_position = _screen_to_world(get_viewport().get_mouse_position())
 		hovered_contact_id = _contact_at(cursor_position)
-		_update_dishes(delta)
+
 	else:
 		hovered_contact_id = -1
 	queue_redraw()
+
+
+func simulate_tick(delta: float) -> void:
+	for point in pending_dish_commands: move_dish_to(point)
+	pending_dish_commands.clear()
+	if dish_active(): _update_dishes(delta)
+	else: _clear_dish_assists()
 
 
 func _update_dishes(delta: float) -> void:
@@ -173,6 +184,7 @@ func _update_dishes(delta: float) -> void:
 	_clear_dish_assists()
 	for index in range(dishes.size()):
 		var dish: Dictionary = dishes[index]
+		dish["previous_position"] = dish.position
 		var locked = _locked_target(dish)
 
 		if locked != null:
@@ -364,7 +376,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		screen_position = event.position
 	var point := _screen_to_world(screen_position)
 	cursor_position = point
-	move_dish_to(point)
+	pending_dish_commands.append(point)
 	get_viewport().set_input_as_handled()
 
 
@@ -415,7 +427,7 @@ func _draw() -> void:
 
 
 func _draw_dish(dish: Dictionary) -> void:
-	var position: Vector2 = dish.position
+	var position: Vector2 = Vector2(dish.get("previous_position", dish.position)).lerp(dish.position, Engine.get_physics_interpolation_fraction())
 	var arrived: bool = bool(dish.arrived)
 	var visual_scale := _world_px(1.0)
 	var coverage_radius := _world_px(COVERAGE_RADIUS * progression.extension_effect("dish_radius"))

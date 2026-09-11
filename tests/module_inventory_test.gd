@@ -18,6 +18,7 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	game.set_process(false)
+	game.set_physics_process(false)
 	game.spawner.set_process(false)
 	game.events.set_process(false)
 	game.progression.debug_purchase_all()

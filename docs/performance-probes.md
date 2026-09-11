@@ -14,7 +14,7 @@ Use matching workloads before/after; run GPU measurements sequentially.
 ```
 
 This checks all 95 base research nodes; outer research and module collection are
-covered by separate integration gates. Simulation uses 0.05s steps and a scripted
+covered by separate integration gates. Simulation uses fixed 1/60s steps and a scripted
 engaged cursor targeting uncovered meteors. Additional-target analysis uses the
 same cursor position and real radius. Production dishes, sweep, research effects
 and meteor clocks execute. Retired celestial objects no longer run.
@@ -128,8 +128,8 @@ Retain `RESEARCH_UI_PROBE_ENV`, `RESEARCH_UI_PROBE_SOURCES`, and completion outp
 
 | Script | Fixed workload / environment | Use |
 |---|---|---|
-| `duration_ladder_probe.gd` | 18 rounds per duration, 0.05s steps, seed 20260821, denominator 40 | Compare the 20→60s ladder with its historical baseline |
-| `duration_pricing_probe.gd` | 600 simulated seconds per cell, 0.05s steps, base seed 20260821; `NIGHTWATCH_PRICING_SEEDS=10` | Marginal Data at minimum prerequisite builds |
+| `duration_ladder_probe.gd` | 18 rounds per duration, 1/60s steps, seed 20260821, denominator 40 | Compare the 20→60s ladder with its historical baseline |
+| `duration_pricing_probe.gd` | 600 simulated seconds per cell, 1/60s steps, base seed 20260821; `NIGHTWATCH_PRICING_SEEDS=10` | Marginal Data at minimum prerequisite builds |
 | `duration_matrix_probe.gd` | Five durations over a synthetic 1080s horizon; `NIGHTWATCH_MATRIX_SEEDS=5` | Historical matrix comparisons, not a live ending simulation |
 
 Run these with `--headless --path . --script res://tests/<script>`.

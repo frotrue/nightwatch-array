@@ -1,7 +1,7 @@
 extends SceneTree
 
 const PROBE_DURATION := 30.0
-const STEP := 0.05
+const STEP := 1.0 / 60.0
 const SPAWN_SEED := 20260821
 const SPAWN_SEED_ENV := "NIGHTWATCH_CONTACT_PROBE_SEED"
 const TYPE_BUCKETS := ["common", "fast", "fragment", "fragment_piece", "fireball", "satellite", "variable_star", "comet", "binary_star", "galaxy", "major"]
@@ -201,7 +201,7 @@ func _run_row(row: Dictionary, mode: String) -> void:
 	var elapsed := 0.0
 	while elapsed < PROBE_DURATION:
 		game.spawner.set_phase_time_remaining(PROBE_DURATION - elapsed)
-		game.spawner._process(STEP)
+		game.spawner.simulate_tick(STEP)
 		_update_assignment_slew(STEP)
 		if game.sky_contacts.dish_active():
 			game.sky_contacts._update_dishes(STEP)
@@ -277,6 +277,8 @@ func _prepare_row(row: Dictionary, mode: String) -> void:
 	manual_placement_acquired_ids.clear()
 
 	game.set_process(false)
+
+	game.set_physics_process(false)
 	game.spawner.set_process(false)
 	game.events.set_process(false)
 	game.sky_contacts.set_process(false)
@@ -321,6 +323,7 @@ func _prepare_row(row: Dictionary, mode: String) -> void:
 	game.spawner.contact_announced.connect(_on_contact_announced)
 	game.spawner.contact_resolved.connect(_on_contact_resolved)
 	game.spawner.meteor_spawned.connect(_on_meteor_spawned)
+	game.spawner.spawn_policy.reseed(spawn_seed)
 	game.spawner.rng.seed = spawn_seed
 	game.spawner.forecast_rng.seed = spawn_seed + 1
 	game.spawner.warm_contact_rng.seed = spawn_seed + 2
@@ -640,7 +643,7 @@ func _process_meteors(delta: float) -> void:
 				game.progression.get_tracking_radius(),
 				game.progression.get_manual_analysis_speed_multiplier()
 			)
-		meteor._process(delta)
+		meteor.simulate_tick(delta)
 		if not meteor.alive:
 			meteor.free()
 

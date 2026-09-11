@@ -23,6 +23,7 @@ func _run() -> void:
 	game.observer.set_process(false)
 	if survey_preview:
 		game.set_process(false)
+		game.set_physics_process(false)
 		game.spawner.set_process(false)
 		game.events.set_process(false)
 		game.sky_contacts.set_process(false)

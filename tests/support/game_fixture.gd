@@ -84,3 +84,8 @@ static func replace_child(parent: Node, child_name: String, replacement: Node) -
 	original.free()
 	replacement.name = child_name
 	parent.add_child(replacement)
+
+static func advance_seconds(game: Node, seconds: float) -> void:
+	for _tick in maxi(0, ceili(seconds * 60.0 - 0.000001)):
+		game.simulate_tick()
+	game._process(0.0)

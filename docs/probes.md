@@ -147,3 +147,10 @@ ordinary navigation views. Focused frames change only chart zoom/pan; markers st
 at their actual positions. Compare them with the IAU maps linked in
 [the geometry reference](constellation-geometry.md). A shape match does not imply
 whole-sky placement, identical stick-figure conventions or photometric fidelity.
+
+## Fixed simulation ticks
+
+`tests/fixed_tick_test.gd` / `FIXED_TICK_PASS`: 30/60/144/240 FPS render schedules
+with identical timestamped input, independent occurrence/entry RNG state,
+bounded capacity and forecast deferral, local hitstop and active-save replay.
+Run with `tools/validate.ps1`; it is part of the required fast gates.

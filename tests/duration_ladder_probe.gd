@@ -3,7 +3,7 @@ extends SceneTree
 const Balance = preload("res://scripts/game_balance.gd")
 
 const ROUND_COUNT := 18
-const STEP := 0.05
+const STEP := 1.0 / 60.0
 const SPAWN_SEED := 20260821
 const ROWS := [
 	{"name": "base", "duration": 20.0, "upgrades": []},
@@ -91,8 +91,8 @@ func _run_row(row: Dictionary) -> void:
 		while elapsed_in_round < round_duration:
 			var remaining := maxf(0.0, round_duration - elapsed_in_round)
 			game.spawner.set_phase_time_remaining(remaining)
-			game.spawner._process(STEP)
-			game.events._process(STEP)
+			game.spawner.simulate_tick(STEP)
+			game.events.simulate_tick(STEP)
 			if game.sky_contacts.dish_active():
 				game.sky_contacts._update_dishes(STEP)
 			_process_meteors(STEP)
@@ -145,6 +145,7 @@ func _run_row(row: Dictionary) -> void:
 func _prepare_row(row: Dictionary) -> void:
 	row_name = String(row.name)
 	game.set_process(false)
+	game.set_physics_process(false)
 	game.spawner.set_process(false)
 	game.events.set_process(false)
 	game.sky_contacts.set_process(false)
@@ -169,6 +170,7 @@ func _prepare_row(row: Dictionary) -> void:
 	game.spawner.contact_resolved.connect(_on_contact_resolved)
 	game.spawner.meteor_spawned.connect(_on_meteor_spawned)
 	game.events.shower_started.connect(_on_shower_started)
+	game.spawner.spawn_policy.reseed(SPAWN_SEED)
 	game.spawner.rng.seed = SPAWN_SEED
 	game.spawner.forecast_rng.seed = SPAWN_SEED + 1
 	game.spawner.warm_contact_rng.seed = SPAWN_SEED + 2
@@ -231,7 +233,7 @@ func _process_meteors(delta: float) -> void:
 				game.progression.get_tracking_radius(),
 				game.progression.get_manual_analysis_speed_multiplier()
 			)
-		meteor._process(delta)
+		meteor.simulate_tick(delta)
 		if not meteor.alive:
 			meteor.free()
 

@@ -699,3 +699,9 @@ func get_forecast_min_error(type_id: String = "") -> float:
 
 func get_analysis_speed_multiplier(type_id: String) -> float:
 	return _base_get_analysis_speed_multiplier(type_id) * extension_effect("analysis_speed")
+
+func get_spawn_probability_multiplier() -> float:
+	# Preserve the old research pacing curve without retaining a shared spawn clock.
+	var scale := get_spawn_interval_scale()
+	var mean := preload("res://scripts/spawn_policy.gd").mean_interval(1.6 * scale, 2.4 * scale, get_regular_spawn_interval_floor())
+	return 2.0 / maxf(mean, 0.000001)

@@ -20,7 +20,8 @@ All script names below are under `scripts/`.
 | Background sky and stars | `starfield.gd`, `star_twinkle.gd` |
 | Data, installed research, derived effects, streak, storm charge | `progression_controller.gd` |
 | Static research/meteor definitions and immutable ID lookup | `game_balance.gd` |
-| Spawn cadence, forecasts, fragments, echo/storm queues | `meteor_spawner.gd` |
+| Independent spawn rolls, forecasts, fragments, echo/storm queues | `spawn_policy.gd`, `meteor_spawner.gd` |
+| Fixed 60 Hz clock, buffered pointer segments, tick ordering | `simulation_clock.gd`, `simulation_input.gd`, `game.gd` |
 | One meteor's lifetime, motion, progress and grading | `meteor.gd` |
 | Cursor, tracking, additional targets, observation/sweep transitions | `observation_controller.gd` |
 | Forecast contacts, dish movement and automatic tracking | `sky_contacts.gd` |
@@ -245,3 +246,10 @@ Use the pre-ready no-persistence fixture for tests, captures and probes.
 See [probes.md](probes.md) for required gates and [performance probes](performance-probes.md)
 for controlled measurements. The [previous reference](history/systems-through-2026-09-07.md)
 preserves old rationale and detailed legacy descriptions; it is not required reading.
+
+## Fixed simulation ownership
+
+`Game._physics_process()` is the sole gameplay update driver. Controllers expose
+explicit tick methods; their `_process` callbacks only present the current state.
+Targets split motion, observation and completion so manual and automatic work
+resolve before expiry and the round boundary. See [the fixed-tick contract](fixed-tick-simulation.md).

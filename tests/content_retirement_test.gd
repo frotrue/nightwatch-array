@@ -17,6 +17,7 @@ func _run():
 	game.add_child(game.sound)
 	await process_frame
 	game.set_process(false)
+	game.set_physics_process(false)
 	game.spawner.set_process(false)
 	game.events.set_process(false)
 	check(not game.deep_sky.modules_unlocked(), "modules require the coordinate research")

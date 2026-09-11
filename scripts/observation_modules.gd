@@ -226,6 +226,7 @@ func advance_time(delta: float) -> void:
 		reset_round()
 	else:
 		burst_remaining = maxf(0.0, burst_remaining - maxf(0.0, delta))
+		if burst_remaining < 0.000001: burst_remaining = 0.0
 
 func burst_multiplier(key: String) -> float:
 	return stacked_effect("overcharge", key) if has("overcharge") and burst_remaining > 0.0 else 1.0

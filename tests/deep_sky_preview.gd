@@ -37,7 +37,7 @@ func _run() -> void:
 	for spec in [["common", Vector2(240, 250)], ["binary_star", Vector2(420, 365)], ["fireball", Vector2(140, 440)]]:
 		var meteor = game.spawner.spawn_meteor(spec[0], spec[1], Vector2(160, -20), 30.0)
 		for index in range(20):
-			meteor._process(0.025)
+			meteor.simulate_tick(0.025)
 	game.progression.observation_data = 240000000.0
 	game.hud._refresh_progression()
 	game.hud.banner_root.hide()

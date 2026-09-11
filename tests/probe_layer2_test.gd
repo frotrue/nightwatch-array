@@ -28,7 +28,7 @@ func _step(probe, seconds: float, step: float = 1.0 / 60.0) -> void:
 		probe._process(step)
 		for meteor in probe.meteor_layer.get_children():
 			if meteor.has_method("can_be_tracked"):
-				meteor._process(step)
+				meteor.simulate_tick(step)
 		remaining -= step
 	await process_frame
 

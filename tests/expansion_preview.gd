@@ -92,7 +92,7 @@ func _run() -> void:
 	director._spawn_component({"ticket": "n/preview", "kind": "rare", "origin_kind": "natural", "component": 0, "start": Vector2(0.3, 0.45), "end": Vector2(0.67, 0.56)})
 	var target: Node = director.targets()[0]
 	target.set_process(false)
-	target._process(3.5)
+	target.simulate_tick(3.5)
 	target.stage_progress = 0.4
 	game.effects.reset()
 	for locale in ["en", "ko"]:

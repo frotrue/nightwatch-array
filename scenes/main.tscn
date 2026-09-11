@@ -21,13 +21,16 @@
 script = ExtResource("1_game")
 
 [node name="ObservationView" type="Camera2D" parent="."]
+physics_interpolation_mode = 2
 script = ExtResource("16_observation_view")
 
 [node name="Starfield" type="Node2D" parent="."]
+physics_interpolation_mode = 2
 z_index = -20
 script = ExtResource("2_starfield")
 
 [node name="TwinkleStars" type="Node2D" parent="."]
+physics_interpolation_mode = 2
 z_index = -19
 script = ExtResource("9_twinkle")
 
@@ -35,10 +38,12 @@ script = ExtResource("9_twinkle")
 z_index = 10
 
 [node name="EffectsLayer" type="Node2D" parent="."]
+physics_interpolation_mode = 2
 z_index = 40
 script = ExtResource("7_effects")
 
 [node name="ObservationController" type="Node2D" parent="."]
+physics_interpolation_mode = 2
 z_index = 50
 script = ExtResource("6_observation")
 
@@ -49,10 +54,12 @@ script = ExtResource("4_progression")
 script = ExtResource("3_spawner")
 
 [node name="SkyContacts" type="Node2D" parent="."]
+physics_interpolation_mode = 2
 z_index = 20
 script = ExtResource("14_sky_contacts")
 
 [node name="SurveyController" type="Node2D" parent="."]
+physics_interpolation_mode = 2
 z_index = 15
 script = ExtResource("15_survey")
 
