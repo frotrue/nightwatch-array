@@ -37,6 +37,14 @@ exemption confined to the reference-capture gate.
 Commands and acceptance boundaries: [visual/audio validation](visual-validation.md),
 [performance/economy probes](performance-probes.md).
 
+For renderer changes, run `background_batch_render_test.gd`,
+`meteor_batch_render_test.gd` and `effect_instances_render_test.gd` with a real
+Windows display, both the default Vulkan backend and explicit
+`--rendering-method gl_compatibility --rendering-driver opengl3` fallback.
+The background test compares original native circles/sunrise triangles against
+batched output through night, dawn, sunrise, camera pullback, resize, empty and
+refilled buffers. These GPU comparisons are separate from the headless gates.
+
 ## Diagnostic isolation
 
 `tests/support/game_fixture.gd::configure_before_ready(game)` replaces save/settings

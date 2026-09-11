@@ -28,8 +28,11 @@ common/physics_interpolation=true
 
 [rendering]
 
-renderer/rendering_method="gl_compatibility"
+renderer/rendering_method="mobile"
 renderer/rendering_method.mobile="gl_compatibility"
+rendering_device/driver.windows="vulkan"
+rendering_device/fallback_to_d3d12=false
+rendering_device/fallback_to_opengl3=true
 gl_compatibility/item_buffer_size=65536
 textures/default_filters/use_nearest_mipmap_filter=false
 environment/defaults/default_clear_color=Color(0.006, 0.012, 0.035, 1)

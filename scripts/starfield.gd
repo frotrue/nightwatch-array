@@ -3,7 +3,9 @@ extends Node2D
 signal background_visibility_changed(alpha: float)
 
 const Balance = preload("res://scripts/game_balance.gd")
+const CircleInstances = preload("res://scripts/circle_instances.gd")
 const SUNRISE_SECONDS := 1.1
+var star_instances: RefCounted
 
 # Keep an overscan reserve for camera motion and diagnostic zoom so the
 # painted background continues beyond the normal observation field.
@@ -154,7 +156,6 @@ func _rebuild_stars() -> void:
 
 func _draw() -> void:
 	var atmospheric := _atmospheric_rect()
-	var size := atmospheric.size
 	var sky_frame := _sky_frame_rect()
 	var sky_size := sky_frame.size
 	# The camera is still identity-scaled in stage 0, so this reserve is outside
@@ -182,10 +183,7 @@ func _draw() -> void:
 
 	_draw_airglow(sky_frame)
 
-	for star in stars:
-		_draw_star(atmospheric.position + Vector2(star.p) * size, star)
-	for star in outer_stars:
-		_draw_star(Vector2(star.p), star)
+	_draw_stars(atmospheric)
 	_draw_sunrise(sky_frame)
 
 	# Quiet ridges establish distance below the playable sky. The near plateau
@@ -193,6 +191,18 @@ func _draw() -> void:
 	_draw_distant_ridges(sky_frame)
 	draw_colored_polygon(_horizon_ridge(sky_frame), Color("03070C"))
 	_draw_observatory_silhouette(sky_frame)
+
+
+func _draw_stars(atmospheric: Rect2) -> void:
+	var capacity := maxi(1, (stars.size() + outer_stars.size()) * 2)
+	if star_instances == null or star_instances.capacity != capacity:
+		star_instances = CircleInstances.new(capacity)
+	star_instances.begin()
+	for star in stars:
+		_draw_star(atmospheric.position + Vector2(star.p) * atmospheric.size, star)
+	for star in outer_stars:
+		_draw_star(Vector2(star.p), star)
+	star_instances.draw(self)
 
 
 func _draw_star(point: Vector2, star: Dictionary) -> void:
@@ -203,11 +213,11 @@ func _draw_star(point: Vector2, star: Dictionary) -> void:
 	# No cross rays. They were the reason a background star could occupy more
 	# pixels than a meteor's head, and the sky has to stay quieter than the
 	# thing the player is trying to see in it.
-	draw_circle(point, _world_px(float(star.size)), star_color)
+	star_instances.append(point, _world_px(float(star.size)), star_color)
 	if level == 2:
 		var soft_edge := star_color
 		soft_edge.a *= 0.07
-		draw_circle(point, _world_px(float(star.size) * 2.15), soft_edge)
+		star_instances.append(point, _world_px(float(star.size) * 2.15), soft_edge)
 
 
 func _draw_sunrise(frame: Rect2) -> void:
@@ -218,13 +228,15 @@ func _draw_sunrise(frame: Rect2) -> void:
 	# A vertex-colored radial mesh avoids hard concentric halo edges.
 	var points := PackedVector2Array()
 	var colors := PackedColorArray()
+	var indices := PackedInt32Array()
 	var glow_radius := radius * 6.0
 	for index in range(64):
 		var angle := TAU * float(index) / 64.0
 		var next_angle := TAU * float(index + 1) / 64.0
-		points = PackedVector2Array([centre, centre + Vector2.from_angle(angle) * glow_radius, centre + Vector2.from_angle(next_angle) * glow_radius])
-		colors = PackedColorArray([Color(1.0, 0.64, 0.33, glow * 0.15), Color(1.0, 0.64, 0.33, 0.0), Color(1.0, 0.64, 0.33, 0.0)])
-		draw_polygon(points, colors)
+		points.append_array(PackedVector2Array([centre, centre + Vector2.from_angle(angle) * glow_radius, centre + Vector2.from_angle(next_angle) * glow_radius]))
+		colors.append_array(PackedColorArray([Color(1.0, 0.64, 0.33, glow * 0.15), Color(1.0, 0.64, 0.33, 0.0), Color(1.0, 0.64, 0.33, 0.0)]))
+		indices.append_array(PackedInt32Array([index * 3, index * 3 + 1, index * 3 + 2]))
+	RenderingServer.canvas_item_add_triangle_array(get_canvas_item(), indices, points, colors)
 	if sunrise > 0.0:
 		draw_circle(centre, radius, Color("FFE1AE"), true, -1.0, true)
 

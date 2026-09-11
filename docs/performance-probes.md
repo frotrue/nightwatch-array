@@ -429,3 +429,76 @@ An isolated `--render-thread separate` trial failed before completion with a fat
 `cowdata.h` bounds error and a VSync warning. Do not enable it based on this trial;
 the project keeps its existing render thread model. The trial is not a performance
 sample. Engine rendering/driver work remains a separate optimization target.
+
+## Vulkan backend and background batches (2026-09-11)
+
+Windows now defaults to Mobile/Vulkan, retaining the safe render thread model.
+Vulkan initialization failure can fall back to Compatibility/OpenGL; D3D12
+fallback is disabled to avoid an unvalidated additional deployment path. Explicit
+OpenGL launch arguments remain available in the README. The unsupported-hardware
+automatic transition was not exercised on this Vulkan-capable RTX 3060.
+See the engine's [renderer fallback documentation](https://github.com/godotengine/godot-docs/blob/master/tutorials/rendering/renderers.rst).
+
+Both background star layers now reuse the existing native-circle MultiMesh
+helper. The sunrise halo submits the same 64 colored triangles in one command.
+Circle order, soft rims, 30 Hz twinkling, sky colors, dawn timing and camera
+compensation are preserved. No simulation, research, density, input or quality
+reduction accompanies the renderer change.
+
+Same Ryzen 9 5950X / RTX 3060 / NVIDIA 591.74, Godot 4.7.2 editor engine,
+1152×648 Windows windows positioned offscreen, VSync/FPS cap disabled. The
+late-game fixture reads the isolated `build/player-frame-drop.cfg` copy (95 + 42
+research), seeds the streams, guarantees one moving noncompleting planet, and
+supplies 17 input samples per tick. Each run has 5s warm-up and 25s measurement.
+Runs were sequential. The unchanged baseline is `d2021b5`; the second baseline
+ran from its separately imported archive in `build/backend-baseline`.
+
+| Run | Mean FPS | p95 / p99 ms | Completions | Peak targets / particles | End draw calls |
+|---|---:|---:|---:|---:|---:|
+| Baseline OpenGL 1 | 75.55 | 19.07 / 23.35 | 319 | 27 / 220 | 568 |
+| Final Vulkan + batches 1 | 206.04 | 10.26 / 13.37 | 313 | 28 / 220 | 320 |
+| Final Vulkan + batches 2 | 239.16 | 9.75 / 11.72 | 290 | 28 / 220 | 327 |
+| Baseline OpenGL 2, after final | 87.49 | 18.28 / 20.63 | 308 | 27 / 220 | 550 |
+
+All sustained approximately 60 ticks/s. This is about 2.7× mean FPS in these
+repeated late-game workloads, not a universal FPS guarantee or identical
+frame-by-frame trajectories: natural completion counts still vary across runs.
+Logs: `build/backend-pair-gl-{1,2}.log`,
+`build/backend-final-vulkan-{1,2}.log`. Renderer-only preliminary Vulkan runs
+were 138.62 and 192.80 FPS; D3D12 was 107.86 FPS. The combined improvement must
+not be attributed exclusively to the background batching.
+
+The separate-thread Vulkan experiment reached 407.14 FPS but produced repeated
+empty texture upload errors and wrong-thread finalization errors. It is invalid
+as a passing performance sample and is not shipped. These match open upstream
+[glyph atlas upload](https://github.com/godotengine/godot/issues/122206) and
+[render-device shutdown](https://github.com/godotengine/godot/issues/119000)
+issues. Log: `build/render-structure-vulkan-thread-trial.log`.
+
+The capacity-bypassing thousand-meteor diagnostic remains heavily overloaded:
+final Vulkan was 6.22 FPS without observation and 1.14 FPS with observation
+(9.10 ticks/s). The synthetic 100-target observation case was 28.88 FPS and
+maintained 59.95 ticks/s. These are deliberately larger workloads than the
+27–28-target natural fixture. This patch does **not** establish 300 FPS at
+1,000 targets. Log: `build/backend-final-thousand.log`.
+
+Real-GPU background, meteor and particle pixel comparisons pass on both Vulkan
+and explicit OpenGL. All nine background frames match the native oracle exactly
+on Vulkan; OpenGL differs in at most 30 channels by one 8-bit level. The paired
+meteor test also covers >65,536 vertices, solid/additive ordering, subpixel scan
+arcs, interpolation and object deletion. Logs:
+`build/backend-{mobile,gl_compatibility}-*_render_test.log`.
+
+Cross-backend Korean/English solar and research captures (nine each) also pass:
+`build/solar_target_review/1789138367` (Vulkan) and `1789138380` (OpenGL).
+The size/observation images differ by at most 2/255 per RGB channel; research
+images by at most 9/255. Visual review found matching geometry, palette and
+readable labels. These cross-backend numeric differences are not a pixel-identity
+claim. Screenshots and probes are diagnostics, not a player comfort verdict.
+
+Validation/export: `build/validation/20260911T145314548Z_2ff242b1/summary.json`
+passed all 25 checks (24 fast gates and Windows export). The editor engine also
+loaded the exported EXE's pack and ran the isolated live sky fixture with 24
+moving targets on its default Vulkan backend: `build/backend-packed-live.log`
+and captures in `build/backend-packed-live/`. This checks packed resources and
+settings; it is not a benchmark of the stock release engine binary.

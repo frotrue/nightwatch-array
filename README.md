@@ -23,6 +23,11 @@ $godot = "C:\Users\user\AppData\Local\Temp\codex-godot-4.7.2\Godot_v4.7.2-stable
 
 편집기에서 F5로 실행한다. 메인 씬은 `scenes/main.tscn`이다.
 
+Windows 기본 렌더러는 Mobile/Vulkan이다. Vulkan 초기화가 불가능하면
+Compatibility/OpenGL로 전환한다. 특정 드라이버에서 문제가 있으면
+`NightwatchArray.exe --rendering-method gl_compatibility --rendering-driver opengl3`로
+호환 경로를 직접 실행할 수 있다. 실험적인 별도 렌더 스레드는 사용하지 않는다.
+
 ```powershell
 .\tools\validate.ps1 -GodotPath $godot -Build
 ```
