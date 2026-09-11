@@ -26,7 +26,7 @@ All script names below are under `scripts/`.
 | Fixed 60 Hz clock, buffered pointer segments, tick ordering | `simulation_clock.gd`, `simulation_input.gd`, `game.gd` |
 | Bounded numerical jobs (main + at most three workers); motion/contact snapshots | `simulation_workers.gd`, `meteor_motion_batch.gd`, `observation_contact_batch.gd`; pool owned by `observation_controller.gd` |
 | One meteor's lifetime, motion, progress and grading | `meteor.gd` |
-| Shared additive light submission, immutable index caches and render interpolation | `meteor_render_layer.gd`, `meteor_triangle_batch.gd` |
+| Retained additive light buffers, local index caches and render interpolation | `meteor_render_layer.gd`, `meteor_triangle_batch.gd` |
 | Cursor, tracking, additional targets, observation/sweep transitions | `observation_controller.gd` |
 | Forecast contacts, dish movement and automatic tracking | `sky_contacts.gd` |
 | Blank-sky travel charge, summon RNG and cooldown | `survey_controller.gd` |
@@ -60,14 +60,16 @@ The independent Layer 2 scene uses `scripts/probe/probe_controller.gd` and
 
 ### Meteor rendering
 
-The authored `MeteorLayer` owns shared canvas RIDs, not extra scene children.
-Meteors still own gameplay and generate the same local procedural triangles.
-`meteor_triangle_batch.gd` collects ribbon, graded-head and hotspot triangles;
-the layer submits one triangle array per contiguous additive run before drawing
-the frame. An opaque asteroid/planet is a strict run boundary, so light cannot
-move across a solid body's draw order. Native antialiased filaments, debris,
-asteroid faces and planet halo/rim retain their CanvasItem commands. Additive triangles
-may move past other additive commands inside a run; their light is commutative.
+The authored `MeteorLayer` owns one retained native canvas RID per non-solid
+meteor, without extra scene children. Meteors generate the same local procedural
+triangles; `meteor_triangle_batch.gd` combines each target's ribbon and head.
+A geometry publication uploads that target's triangles once. Intervening frames
+update only its interpolated canvas transform, so the renderer transforms the
+resident vertices. Native filaments and opaque target surfaces keep their
+CanvasItem commands and original child order. Per-target draw indices preserve
+opaque boundaries; compatible additive light retains its commutative ordering.
+This trades more retained items for fewer repeated vertex transforms and uploads.
+`render_batch_count` counts visible light items, not actual GPU draw calls.
 
 `planet_surface.gd` caches the original 576 surface cells in one triangle array,
 retaining float32 colors and triangulation. Radius/palette changes rebuild it;
@@ -83,21 +85,26 @@ Tick resolution, changed age/linger, feature changes and camera scale invalidate
 meteor geometry. Intervening render frames reuse it. The layer snapshots local
 poses before Game's physics tick and interpolates at the same engine fraction as
 the native lines; reset notifications also reset that snapshot. Paused ticks
-converge to the current pose. Topology caches duplicate source indices because
-GDScript packed arrays share mutable storage; changed trail lengths must rebuild
-both local offsets and offsets into the layer's buffer.
-The layer also retains merged run colors/indices between geometry publications.
-Geometry changes, child ordering/removal and visibility changes invalidate this
-data; interpolated poses alone do not. Published run arrays are not cleared through
-scratch aliases. World-space vertices and the triangle submission still update
-each render frame, while unchanged draw indices are not resent.
+converge to the current pose. Local topology caches duplicate source indices
+because GDScript packed arrays share mutable storage. Fan indices depend only on
+point count and are reused without changing shape/color arithmetic. The layer no
+longer merges/rebases vertices across targets. Hiding a target hides its light;
+removing it immediately frees its RID and metadata. Geometry changes mark only
+that target dirty, and pose changes never upload its unchanged triangles.
 
-Removal drops target caches immediately, frees unused run RIDs before rendering,
-and disconnects/frees remaining renderer resources on scene exit. A standalone
-meteor without this layer uses immediate submission for previews and the exact
-geometry oracle. The renderer does not change target capacity, motion/reward
-resolution, save data or the main-plus-three-worker ceiling. Geometry generation
-and GPU submission remain on main; this is not a GPU simulation implementation.
+Scene exit disconnects render/physics callbacks and frees every retained RID.
+Standalone meteors keep immediate submission for previews and independent
+geometry tests. Target capacity, motion/rewards, saves and the main-plus-three
+worker ceiling are unchanged; GPU transforms do not move simulation off CPU.
+
+### Retained arrival marks
+
+`EffectsLayer` owns `retained_arrival_marks.gd`, a bounded set of native polyline
+RIDs for transient entry strokes. Position, direction, camera scale, ink and reach
+invalidate the geometry; opacity alone updates modulation. The flash has a later
+child draw index, preserving the original particles/popups → marks → flash order.
+No scene children are introduced. Reset clears visible commands, and scene exit
+releases all RIDs. See the independent arrival-mark pixel test for the contract.
 
 ## Setup calls
 

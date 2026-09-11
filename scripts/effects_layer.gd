@@ -45,6 +45,7 @@ var view_offset := Vector2.ZERO
 var rng := RandomNumberGenerator.new()
 var observation_view: Camera2D
 var particle_instances: RefCounted
+var arrival_marks = preload("res://scripts/retained_arrival_marks.gd").new()
 
 
 func _ready() -> void:
@@ -86,6 +87,7 @@ func set_accessibility_effects(requested_motion_intensity: float, flashes_enable
 
 
 func _exit_tree() -> void:
+	arrival_marks.release()
 	shake_offset = Vector2.ZERO
 	kick_offset = Vector2.ZERO
 	view_offset = Vector2.ZERO
@@ -394,23 +396,27 @@ func _draw() -> void:
 			continue
 		var font := UITheme.sans()
 		draw_string(font, popup.p, text, HORIZONTAL_ALIGNMENT_CENTER, -1.0, int(round(float(popup.font_size) * visual_scale)), Color(popup.color, alpha))
+	var view_rect := _visible_world_rect()
+	var slot := 0
 	for marker in incoming_markers:
 		var alpha := clampf(float(marker.life) / 0.4, 0.0, 1.0)
 		var forecast := bool(marker.get("forecast", false))
 		var duration := 3.0 if forecast else 1.45
 		alpha *= smoothstep(0.0, 0.12, duration - float(marker.life))
-		var p := ArrivalVisual.edge_point(Vector2(marker.p), _visible_world_rect(), visual_scale)
+		var p := ArrivalVisual.edge_point(Vector2(marker.p), view_rect, visual_scale)
 		var direction: Vector2 = marker.dir
 		# One fading stroke is enough to indicate the entry direction.
 		var ink := UITheme.ACCENT_LINE
 		var reach := 38.0 if forecast else 26.0
-		ArrivalVisual.draw_direction(self, p, direction, visual_scale, ink, alpha, reach)
+		arrival_marks.draw_marker(self, slot, p, direction, visual_scale, ink, alpha, reach)
+		slot += 1
+	arrival_marks.finish_markers(slot)
+	arrival_marks.clear_flash()
 	if flash_strength > 0.001:
 		# Grown by the shake budget so a displaced canvas cannot expose an
 		# unpainted strip along the edge the screen shook away from.
 		var margin := Vector2.ONE * _world_px(MAX_SHAKE_OFFSET + MAX_KICK_OFFSET + 2.0)
-		draw_rect(_visible_world_rect().grow(margin.x), Color(flash_color, flash_strength), true)
-
+		arrival_marks.draw_flash(self, _visible_world_rect().grow(margin.x), Color(flash_color, flash_strength))
 
 func _draw_particles(visual_scale: float) -> void:
 	if particle_instances == null:

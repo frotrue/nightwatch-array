@@ -1,5 +1,8 @@
 extends Node2D
 
+# Topology depends only on point count; shape and colors remain live.
+var graded_fan_indices: Dictionary = {}
+
 const UITheme = preload("res://scripts/ui_theme.gd")
 const TriangleBatch = preload("res://scripts/meteor_triangle_batch.gd")
 const PlanetSurface = preload("res://scripts/planet_surface.gd")
@@ -966,13 +969,15 @@ func _draw_graded_polygon(
 	for index in range(count):
 		vertices.append(points[index])
 		colors.append(rim_color)
-	var indices := PackedInt32Array()
-	for index in range(count):
-		indices.append(0)
-		indices.append(1 + index)
-		indices.append(1 + (index + 1) % count)
+	if not graded_fan_indices.has(count):
+		var built := PackedInt32Array()
+		for index in range(count):
+			built.append(0)
+			built.append(1 + index)
+			built.append(1 + (index + 1) % count)
+		graded_fan_indices[count] = built
+	var indices: PackedInt32Array = graded_fan_indices[count]
 	triangle_batch.append(indices, vertices, colors)
-
 
 func _organic_head_points(
 	direction: Vector2,

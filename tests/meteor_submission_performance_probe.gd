@@ -49,12 +49,12 @@ func _run() -> void:
 	await create_timer(2.0).timeout
 	layer.usec = 0
 	layer.calls = 0
-	var rebuilds := layer.batch_data_rebuilds
+	var rebuilds := layer.geometry_upload_count
 	var began := Time.get_ticks_usec()
 	await create_timer(5.0).timeout
 	var elapsed := (Time.get_ticks_usec() - began) / 1000000.0
-	print("SUBMISSION_RESULT ", JSON.stringify({"fps":layer.calls / elapsed,"calls":layer.calls,"mean_submission_ms":layer.usec / 1000.0 / maxi(layer.calls, 1),"vertices":layer.rendered_vertex_count,"batches":layer.render_batch_count,"data_rebuilds":layer.batch_data_rebuilds - rebuilds}))
-	var valid := layer.calls > 0 and layer.rendered_target_count == 1000 and layer.rendered_vertex_count == 205000 and layer.render_batch_count == 1
+	print("SUBMISSION_RESULT ", JSON.stringify({"fps":layer.calls / elapsed,"calls":layer.calls,"mean_submission_ms":layer.usec / 1000.0 / maxi(layer.calls, 1),"vertices":layer.rendered_vertex_count,"batches":layer.render_batch_count,"geometry_uploads":layer.geometry_upload_count - rebuilds}))
+	var valid := layer.calls > 0 and layer.rendered_target_count == 1000 and layer.rendered_vertex_count == 205000 and layer.render_batch_count == 1000
 	driver.free()
 	layer.free()
 	print("METEOR_SUBMISSION_PASS" if valid else "METEOR_SUBMISSION_FAIL")

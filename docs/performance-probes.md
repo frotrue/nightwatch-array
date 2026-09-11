@@ -541,5 +541,6 @@ frozen-shape targets. Use a real renderer, 1152x648, with sequential A/B runs:
 & $godot --path . --resolution 1152x648 --script res://tests/meteor_submission_performance_probe.gd
 ```
 
-See [probe scope](probes.md) and the [2026-09-12 Pro review and measured baseline](history/render-pro-review-2026-09-12.md#local-measurements).
+See [probe scope](probes.md), the [earlier shared-buffer baseline](history/render-pro-review-2026-09-12.md#local-measurements),
+and the [retained-target measurements and candidate decisions](history/render-candidates-2026-09-12.md).
 This measures batch submission, not natural late-game or fully observed target FPS.

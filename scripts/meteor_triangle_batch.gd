@@ -1,6 +1,6 @@
 extends RefCounted
 
-# Keep local geometry until the layer submits the contiguous additive run.
+# Keep local geometry until the layer updates this target's retained buffer.
 # Standalone meteor fixtures retain immediate drawing and its command order.
 var vertices := PackedVector2Array()
 var colors := PackedColorArray()

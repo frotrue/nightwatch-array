@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Balance = preload("res://scripts/game_balance.gd")
+const Fixtures = preload("res://tests/support/game_fixture.gd")
 const TEST_SEED := 20260827
 const TEST_SPAN := 1.1025
 const PLAN_TYPES := ["common", "fast", "fragment", "fireball", "major", "satellite", "galaxy"]
@@ -33,6 +34,7 @@ func _check(condition: bool, message: String) -> void:
 func _run() -> void:
 	var packed: PackedScene = load("res://scenes/main.tscn")
 	var game = packed.instantiate()
+	Fixtures.configure_before_ready(game)
 	game.startup_slot_prompt_enabled = false
 	game.get_node("Tutorial").auto_start_enabled = false
 	root.add_child(game)
@@ -146,8 +148,9 @@ func _run() -> void:
 		game.sky_contacts.forecast_contact_visible(common_forecast)
 		and game.sky_contacts.forecast_contact_visible(fast_forecast)
 		and game.sky_contacts.forecast_contact_visible(fragment_forecast),
-		"all unlocked forecast types remain visible before the galaxy stage"
+		"opening forecasts remain visible before the first presentation milestone"
 	)
+	_check_progressive_forecasts(game)
 	game.effects.reset()
 	game.effects.add_kick(centre + Vector2.RIGHT, 3.0, view.meteor_screen_scale())
 	game.effects.add_shake(0.6, game._meteor_shake_scale("fragment_piece"))
@@ -206,8 +209,8 @@ func _run() -> void:
 	_check(
 		not game.sky_contacts.forecast_contact_visible(common_forecast)
 		and not game.sky_contacts.forecast_contact_visible(fast_forecast)
-		and game.sky_contacts.forecast_contact_visible(fragment_forecast),
-		"galaxy entry hides only common and fast forecast visuals"
+		and not game.sky_contacts.forecast_contact_visible(fragment_forecast),
+		"completed research hides routine forecast visuals including fragments"
 	)
 	game.sky_contacts.reset()
 	var hidden_contact := {
@@ -229,9 +232,16 @@ func _run() -> void:
 		game.sky_contacts.contacts.size() == 1
 		and int(game.sky_contacts.contacts[0].id) == int(hidden_contact.id)
 		and hidden_contact_assigned
-		and game.sky_contacts._contact_at(Vector2(hidden_contact.intercept)) == -1,
+		and game.sky_contacts._contact_at(game.sky_contacts._display_position_of(hidden_contact)) == -1,
 		"muted routine forecasts still drive automatic dishes without a hover target"
 	)
+	var resolved_meteor = game.spawner.spawn_meteor("common", centre, Vector2.RIGHT, 10.0)
+	game.sky_contacts.on_contact_resolved(hidden_contact, resolved_meteor)
+	var handed_off := false
+	for dish in game.sky_contacts.dishes:
+		if int(dish.locked_id) == resolved_meteor.get_instance_id():
+			handed_off = int(dish.assigned_id) == -1
+	_check(game.sky_contacts.contacts.is_empty() and handed_off, "hidden forecast resolves into live automatic dish tracking")
 	game.effects.reset()
 	var final_distribution := _capture_entry_distribution(
 		game.spawner, view.meteor_activity_rect()
@@ -241,11 +251,51 @@ func _run() -> void:
 	game.queue_free()
 	await process_frame
 	if failures.is_empty():
-		print("OBSERVATION_SPAN_PASS: lateral meteor activity, balanced entry boundaries, three rectangles, screen budgets, reduced meteor visuals and view motion, muted galactic routine forecasts, and continuous outer sky")
+		print("OBSERVATION_SPAN_PASS: lateral meteor activity, balanced entry boundaries, three rectangles, screen budgets, reduced meteor visuals and view motion, progressive forecast visibility with dish handoff, and continuous outer sky")
 		quit(0)
 		return
 	print("OBSERVATION_SPAN_FAIL: %d failure(s)" % failures.size())
 	quit(1)
+
+
+func _check_progressive_forecasts(game: Node) -> void:
+	var original_nodes: Dictionary = game.progression.purchased_nodes.duplicate()
+	var cases := [
+		{"node": "", "hidden": []},
+		{"node": "fragment_analysis", "hidden": ["common", "fast"]},
+		{"node": "satellite_catalog", "hidden": ["common", "fast", "fragment", "fragment_piece", "fireball"]},
+		{"node": "variable_watchlist", "hidden": ["common", "fast", "fragment", "fragment_piece", "fireball", "satellite"]},
+		{"node": "galactic_reference_frame", "hidden": ["common", "fast"]},
+		{"node": "", "hidden": []},
+	]
+	var types := ["common", "fast", "fragment", "fragment_piece", "fireball", "satellite", "major", "comet", "variable_star", "binary_star", "galaxy"]
+	for scenario in cases:
+		# Replace research state as load/reset does; later branches stand alone too.
+		game.progression.purchased_nodes = {"wide_field": true}
+		if not String(scenario.node).is_empty():
+			game.progression.purchased_nodes[scenario.node] = true
+		var lead: float = game.progression.get_forecast_lead()
+		for type_id in types:
+			var contact := {"id": 9900, "type_id": type_id, "intercept": Vector2(450, 250), "error_offset": Vector2.ZERO, "countdown": 2.0, "lead_time": 2.0}
+			var before := contact.duplicate(true)
+			game.sky_contacts.contacts.assign([contact])
+			var expected: bool = type_id not in scenario.hidden
+			_check(game.sky_contacts.forecast_contact_visible(contact) == expected, "%s visibility at %s" % [type_id, scenario.node])
+			var hit: int = game.sky_contacts._contact_at(game.sky_contacts._display_position_of(contact))
+			_check((hit == 9900) == expected, "%s hover follows current research at %s" % [type_id, scenario.node])
+			_check(contact == before and game.sky_contacts.contacts.size() == 1 and game.progression.get_forecast_lead() == lead, "visibility preserves pending contact and lead time")
+			game.effects.reset()
+			var target = game.spawner.spawn_meteor(type_id, Vector2(450, 250), Vector2.RIGHT, 10.0)
+			_check(is_instance_valid(target) and target.observed.is_connected(game._on_meteor_observed), "hidden arrivals retain their meteor and observation wiring")
+			_check(game.effects.incoming_markers.size() == (1 if expected else 0), "%s entry mark follows forecast visibility at %s" % [type_id, scenario.node])
+			target.free()
+		_check(game.progression.forecast_type_visible("anomaly_rare"), "special meteor forecasts remain visible")
+		game.effects.reset()
+		game.effects.spawn_forecast([Vector2(450, 20)])
+		_check(game.effects.incoming_markers.size() == 1 and game.effects.incoming_markers[0].forecast, "meteor shower forecast remains visible at every milestone")
+	game.progression.purchased_nodes = original_nodes
+	game.sky_contacts.contacts.clear()
+	game.effects.reset()
 
 
 func _capture_plans(spawner: Node) -> Array[String]:

@@ -515,6 +515,20 @@ func forecast_visible() -> bool:
 	return has_upgrade("wide_field") or has_upgrade("ephemeris_marks") or dish_active()
 
 
+func forecast_type_visible(type_id: String) -> bool:
+	# Presentation only: hidden contacts still fund spawn lead time and dish aiming.
+	var asteroid_stage := has_upgrade("variable_watchlist")
+	var satellite_stage := asteroid_stage or has_upgrade("satellite_catalog")
+	match type_id:
+		"common", "fast":
+			return not (satellite_stage or has_upgrade("fragment_analysis") or galaxy_unlocked())
+		"fragment", "fragment_piece", "fireball":
+			return not satellite_stage
+		"satellite":
+			return not asteroid_stage
+	return true
+
+
 func dish_active() -> bool:
 	return get_dish_count() > 0
 

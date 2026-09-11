@@ -197,6 +197,7 @@ $gates = @(
     @('ui_presentation_test', 'UI_PRESENTATION_PASS'),
     @('game_fixture_test', 'GAME_FIXTURE_PASS'),
     @('meteor_render_cache_test', 'METEOR_RENDER_CACHE_PASS'),
+    @('meteor_fan_cache_test', 'METEOR_FAN_CACHE_PASS'),
     @('performance_monitor_test', 'PERFORMANCE_MONITOR_PASS')
 )
 if ($FullEconomy) { $gates += ,@('full_tree_economy_test', 'FULL_TREE_ECONOMY_PASS') }
