@@ -90,6 +90,20 @@ a specific decision, not a routine prerequisite.
 - [docs/legacy-contracts.md](docs/legacy-contracts.md) — retained compatibility
   and diagnostic paths; read when touching those paths, not as future content requirements.
 
+## Constellation Authoring
+
+- Before adding a constellation or changing its stars/geometry, follow
+  [docs/constellation-geometry.md](docs/constellation-geometry.md).
+- Establish a real reference figure and catalogue identities first. Match its
+  star count and relative positions; do not invent, omit, duplicate, mirror or
+  stretch stars to fit a desired research count. Document any user-approved
+  simplification explicitly, including shared stars and non-star markers.
+- Verify catalogue coordinates and counts, then capture the running game and
+  compare every affected figure side by side with the reference chart/photo.
+  Check connections, clipping, overlap and selection as well as shape. Record
+  sources, count reconciliation, screenshots and remaining differences before
+  reporting completion. Generated coordinates alone are not visual validation.
+
 ## Completion Requirements
 
 - After making project changes, always run the relevant tests and build or refresh the Windows `.exe` before reporting the task as complete.
