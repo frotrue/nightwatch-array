@@ -10,7 +10,7 @@ no GUT/gdUnit installation is needed.
 .\tools\validate.ps1 -GodotPath $godot -Build
 ```
 
-This runs the 20 fast gates below, then exports Windows. Add `-FullEconomy` for
+This runs the 21 fast gates below, then exports Windows. Add `-FullEconomy` for
 changes to progression, rewards, spawning or target logic. Omit `-Build` to test only.
 The economy run inherits its seed/strategy environment; it does not force three strategies.
 
@@ -133,3 +133,17 @@ frames. Use the editor engine with `--main-pack build/windows/NightwatchArray.ex
 `NIGHTWATCH_ART_CAPTURE_DIR` to an absolute writable output directory. The release
 EXE itself does not support `--script`. It isolates auto-completion for visibility,
 so this is art review, not a player-input, economy, performance or comfort verdict.
+
+
+`constellation_geometry_test.gd` compares every pair of the 139 runtime markers
+against independent great-circle separations from the checked-in J2000 catalogue,
+checks handedness and rejects crossing edges in the Pegasus square/Little Dipper
+bowl. `python tools/project_constellations.py --check` also catches stale generated
+local positions. `constellation_extension_test.gd` checks hit ownership and both
+hold purchases in the unresolved Alpha/8 Vul pair.
+
+`constellation_geometry_preview.gd` captures 21 focused game-chart frames and two
+ordinary navigation views. Focused frames change only chart zoom/pan; markers stay
+at their actual positions. Compare them with the IAU maps linked in
+[the geometry reference](constellation-geometry.md). A shape match does not imply
+whole-sky placement, identical stick-figure conventions or photometric fidelity.

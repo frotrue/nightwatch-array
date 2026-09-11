@@ -48,7 +48,7 @@
 [세페우스자리](https://iauarchive.eso.org/static/public/constellations/pdf/CEP.pdf),
 [독수리자리](https://iauarchive.eso.org/static/public/constellations/pdf/AQL.pdf),
 [페가수스자리](https://iauarchive.eso.org/static/public/constellations/pdf/PEG.pdf) 성도를 참고했다.
-배치는 게임용으로 단순화한 형상이며 적경·적위 투영이나 정밀 위치·등급 계측도가 아니다.
+도형 내부는 [J2000 좌표의 투영](constellation-geometry.md)을 따른다. 도형 사이 배치와 별 밝기는 연구 UI 표현이며 전체 천구 계측도는 아니다.
 
 ## 모듈
 

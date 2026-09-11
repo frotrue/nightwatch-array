@@ -183,6 +183,7 @@ $gates = @(
     @('module_inventory_test', 'MODULE_INVENTORY_PASS'),
     @('deep_sky_chart_expansion_test', 'DEEP_SKY_CHART_EXPANSION_PASS'),
     @('constellation_extension_test', 'CONSTELLATION_EXTENSION_PASS'),
+    @('constellation_geometry_test', 'CONSTELLATION_GEOMETRY_PASS'),
     @('expansion_integration_test', 'EXPANSION_INTEGRATION_PASS'),
     @('observation_span_probe', 'OBSERVATION_SPAN_PASS'),
     @('content_retirement_test', 'CONTENT_RETIREMENT_PASS'),

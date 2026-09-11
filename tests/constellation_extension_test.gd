@@ -15,6 +15,11 @@ func _run() -> void:
 	var game: Node = load("res://scenes/main.tscn").instantiate()
 	Fixtures.configure_before_ready(game)
 	root.add_child(game)
+	# This fixture checks research and input, not audio playback. Reuse the
+	# existing silent service so rapid purchases do not leave WAV voices at exit.
+	game.sound.free()
+	game.sound = Fixtures.SilentSound.new()
+	game.add_child(game.sound)
 	await process_frame
 	var tree: Node = game.upgrade_tree
 	var research: Node = game.deep_sky
@@ -104,6 +109,41 @@ func _run() -> void:
 		var button: Button = tree.node_buttons.ext_trace_study
 		var screen_center: Vector2 = tree.tree_canvas.get_global_transform() * tree.node_positions.ext_trace_study
 		_check(button.get_global_rect().has_point(screen_center) and button.get_global_rect().size.x >= 27.0, "star hit area follows rotation and zoom")
+	# Alpha Vul and 8 Vul are separated by only about seven arcminutes. Their
+	# catalogue markers stay together while the available research remains hittable.
+	tree.focus_constellation("vulpecula")
+	game.progression.observation_data = 1.0e15
+	tree._refresh()
+	var pair_point: Vector2 = tree.node_buttons.ext_vul_memory.get_global_rect().get_center()
+	_check(tree._star_hit_owner(pair_point) == "ext_vul_memory", "close pair selects available first research, not last scene child")
+	var first_button: Button = tree.node_buttons.ext_vul_memory
+	var second_button: Button = tree.node_buttons.ext_vul_rhythm
+	_check(first_button._has_point(first_button.size * 0.5) and not second_button._has_point(second_button.get_global_transform().affine_inverse() * pair_point), "overlapping native buttons have exactly one hit owner")
+	await process_frame
+	var pointer := InputEventMouseMotion.new()
+	pointer.position = pair_point
+	pointer.global_position = pair_point
+	root.push_input(pointer, true)
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	press.button_mask = MOUSE_BUTTON_MASK_LEFT
+	press.position = pair_point
+	press.global_position = pair_point
+	root.push_input(press, true)
+	_check(tree.held_node_id == "ext_vul_memory", "native GUI press reaches the first close-pair star")
+	tree._process(tree.HOLD_PURCHASE_SECONDS)
+	var release: InputEventMouseButton = press.duplicate()
+	release.pressed = false
+	release.button_mask = 0
+	root.push_input(release, true)
+	_check(research.research_owned("ext_vul_memory") and tree._star_hit_owner(pair_point) == "ext_vul_rhythm", "next close-pair research becomes reachable without moving either star")
+	root.push_input(pointer, true)
+	root.push_input(press, true)
+	_check(tree.held_node_id == "ext_vul_rhythm", "native GUI press reaches the next close-pair star")
+	tree._process(tree.HOLD_PURCHASE_SECONDS)
+	root.push_input(release, true)
+	_check(research.research_owned("ext_vul_rhythm"), "both close-pair nodes retain normal hold purchase semantics")
 	game.free()
 	paused = false
 	await process_frame

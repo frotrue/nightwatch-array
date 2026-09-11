@@ -2,8 +2,10 @@
 
 [ext_resource type="Resource" path="res://resources/ui/empty.tres" id="R1"]
 [ext_resource type="Script" path="res://scripts/research_star_visual.gd" id="R2"]
+[ext_resource type="Script" path="res://scripts/research_star_button.gd" id="R3"]
 
 [node name="Node_better_lens" type="Button"]
+script = ExtResource("R3")
 custom_minimum_size = Vector2(44, 44)
 layout_mode = 0
 offset_left = 381.51178

@@ -834,7 +834,7 @@ func _run() -> void:
 	_check(not leo_mid_visual.branch_endpoint and leo_endpoint_visual.branch_endpoint, "research chart distinguishes a branch endpoint from its preceding installed star")
 	_check(is_equal_approx(leo_mid_visual.purchased_glow_scale(), 2.35) and is_equal_approx(leo_endpoint_visual.purchased_glow_scale(), 2.75), "installed-star glows shrink while branch endpoints retain modest emphasis")
 	var chart_node_stars: Dictionary = chart_data.node_star_map()
-	var adjacent_internal_edges := true
+	var non_figure_prerequisites: Array[String] = []
 	var all_prerequisites_internal := true
 	for definition in balance.UPGRADE_NODES:
 		var target_node_id := String(definition.id)
@@ -855,8 +855,11 @@ func _run() -> void:
 					edge_matches_segment = true
 					break
 			if not edge_matches_segment:
-				adjacent_internal_edges = false
-	_check(adjacent_internal_edges, "same-constellation prerequisites follow declared figure segments instead of cutting across them")
+				non_figure_prerequisites.append(prerequisite_node_id + ">" + target_node_id)
+	# Preserve this historical research dependency without drawing its incorrect
+	# diagonal through the catalogue-corrected Little Dipper bowl.
+	_check(non_figure_prerequisites == ["deep_exposure>rapid_scan"], "only the retained Ursa Minor prerequisite differs from the corrected figure")
+	_check(not game.upgrade_tree._is_figure_connection("deep_exposure", "rapid_scan"), "legacy research order never adds a false sky diagonal")
 	_check(all_prerequisites_internal, "research prerequisites stay within figures except the explicit Milky Way-to-Local-Group edge")
 	_check(opening_optics.position != opening_detection.position and opening_detection.position != opening_network.position, "opening research nodes occupy distinct constellation positions")
 	var optics_center_before := opening_optics.position + opening_optics.size * 0.5

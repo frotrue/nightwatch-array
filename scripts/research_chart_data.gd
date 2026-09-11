@@ -1,18 +1,19 @@
 extends RefCounted
 class_name ResearchChartData
 
-# Presentation-only astronomy data. Local positions preserve the recognizable
-# silhouette of each figure without coupling factual star data to screen space.
+# Catalogue-derived silhouettes: north up, east left, stereographic projection.
+# Regenerate local positions with tools/project_constellations.py; chart anchors
+# remain a research-map composition rather than a whole-sky projection.
 const CONSTELLATIONS := {
 	"cassiopeia": {
 		"branch": "optics",
 		"label_key": "CONSTELLATION_CASSIOPEIA",
 		"stars": [
-			{"id": "caph", "name_key": "STAR_CAPH", "bayer": "β Cas", "magnitude": 2.28, "local_position": Vector2(-1.00, -0.12), "node_id": "observation_streak", "kind": "star"},
-			{"id": "schedar", "name_key": "STAR_SCHEDAR", "bayer": "α Cas", "magnitude": 2.24, "local_position": Vector2(-0.54, 0.34), "node_id": "better_lens", "kind": "star"},
-			{"id": "tsih", "name_key": "STAR_TSIH", "bayer": "γ Cas", "magnitude": 2.47, "local_position": Vector2(0.00, -0.30), "node_id": "long_exposure", "kind": "star"},
-			{"id": "ruchbah", "name_key": "STAR_RUCHBAH", "bayer": "δ Cas", "magnitude": 2.68, "local_position": Vector2(0.54, 0.31), "node_id": "precision_multiplier", "kind": "star"},
-			{"id": "segin", "name_key": "STAR_SEGIN", "bayer": "ε Cas", "magnitude": 3.38, "local_position": Vector2(1.00, -0.18), "node_id": "perfect_observation", "kind": "star"}
+			{"id": "caph", "name_key": "STAR_CAPH", "bayer": "β Cas", "magnitude": 2.28, "local_position": Vector2(0.9649629, 0.0912406), "node_id": "observation_streak", "kind": "star"},
+			{"id": "schedar", "name_key": "STAR_SCHEDAR", "bayer": "α Cas", "magnitude": 2.24, "local_position": Vector2(0.3923005, 0.5628585), "node_id": "better_lens", "kind": "star"},
+			{"id": "tsih", "name_key": "STAR_TSIH", "bayer": "γ Cas", "magnitude": 2.47, "local_position": Vector2(0.0494668, -0.0533575), "node_id": "long_exposure", "kind": "star"},
+			{"id": "ruchbah", "name_key": "STAR_RUCHBAH", "bayer": "δ Cas", "magnitude": 2.68, "local_position": Vector2(-0.4932608, -0.0053296), "node_id": "precision_multiplier", "kind": "star"},
+			{"id": "segin", "name_key": "STAR_SEGIN", "bayer": "ε Cas", "magnitude": 3.38, "local_position": Vector2(-0.9134694, -0.5954121), "node_id": "perfect_observation", "kind": "star"}
 		],
 		"segments": [["caph", "schedar"], ["schedar", "tsih"], ["tsih", "ruchbah"], ["ruchbah", "segin"]]
 	},
@@ -20,14 +21,14 @@ const CONSTELLATIONS := {
 		"branch": "detection",
 		"label_key": "CONSTELLATION_BIG_DIPPER",
 		"stars": [
-			{"id": "dubhe", "name_key": "STAR_DUBHE", "bayer": "α UMa", "magnitude": 1.79, "local_position": Vector2(-0.96, -0.34), "node_id": "wide_field", "kind": "star"},
-			{"id": "merak", "name_key": "STAR_MERAK", "bayer": "β UMa", "magnitude": 2.37, "local_position": Vector2(-0.91, 0.35), "node_id": "edge_detection", "kind": "star"},
-			{"id": "phecda", "name_key": "STAR_PHECDA", "bayer": "γ UMa", "magnitude": 2.44, "local_position": Vector2(-0.19, 0.55), "node_id": "contact_ledger", "kind": "star"},
-			{"id": "megrez", "name_key": "STAR_MEGREZ", "bayer": "δ UMa", "magnitude": 3.31, "local_position": Vector2(-0.08, -0.12), "node_id": "trajectory", "kind": "star"},
-			{"id": "alioth", "name_key": "STAR_ALIOTH", "bayer": "ε UMa", "magnitude": 1.77, "local_position": Vector2(0.55, -0.22), "node_id": "rare_detection", "kind": "star"},
-			{"id": "mizar", "name_key": "STAR_MIZAR", "bayer": "ζ UMa", "magnitude": 2.23, "local_position": Vector2(1.10, -0.31), "node_id": "fragment_analysis", "kind": "star"},
-			{"id": "alcor", "name_key": "STAR_ALCOR", "bayer": "80 UMa", "magnitude": 3.99, "local_position": Vector2(1.08, -0.43), "node_id": "companion_resolution", "kind": "star"},
-			{"id": "alkaid", "name_key": "STAR_ALKAID", "bayer": "η UMa", "magnitude": 1.86, "local_position": Vector2(1.68, -0.50), "node_id": "shower_detector", "kind": "star"}
+			{"id": "dubhe", "name_key": "STAR_DUBHE", "bayer": "α UMa", "magnitude": 1.79, "local_position": Vector2(0.7973542, -0.5458729), "node_id": "wide_field", "kind": "star"},
+			{"id": "merak", "name_key": "STAR_MERAK", "bayer": "β UMa", "magnitude": 2.37, "local_position": Vector2(0.9516613, -0.1541522), "node_id": "edge_detection", "kind": "star"},
+			{"id": "phecda", "name_key": "STAR_PHECDA", "bayer": "γ UMa", "magnitude": 2.44, "local_position": Vector2(0.4354147, 0.1821991), "node_id": "contact_ledger", "kind": "star"},
+			{"id": "megrez", "name_key": "STAR_MEGREZ", "bayer": "δ UMa", "magnitude": 3.31, "local_position": Vector2(0.1731947, -0.0518420), "node_id": "trajectory", "kind": "star"},
+			{"id": "alioth", "name_key": "STAR_ALIOTH", "bayer": "ε UMa", "magnitude": 1.77, "local_position": Vector2(-0.2399855, 0.0268685), "node_id": "rare_detection", "kind": "star"},
+			{"id": "mizar", "name_key": "STAR_MIZAR", "bayer": "ζ UMa", "magnitude": 2.23, "local_position": Vector2(-0.5767241, 0.0623703), "node_id": "fragment_analysis", "kind": "star"},
+			{"id": "alcor", "name_key": "STAR_ALCOR", "bayer": "80 UMa", "magnitude": 3.99, "local_position": Vector2(-0.5900577, 0.0548313), "node_id": "companion_resolution", "kind": "star"},
+			{"id": "alkaid", "name_key": "STAR_ALKAID", "bayer": "η UMa", "magnitude": 1.86, "local_position": Vector2(-0.9508576, 0.4255979), "node_id": "shower_detector", "kind": "star"}
 		],
 		"segments": [["dubhe", "merak"], ["merak", "phecda"], ["phecda", "megrez"], ["megrez", "dubhe"], ["megrez", "alioth"], ["alioth", "mizar"], ["mizar", "alcor"], ["mizar", "alkaid"]]
 	},
@@ -35,35 +36,35 @@ const CONSTELLATIONS := {
 		"branch": "network",
 		"label_key": "CONSTELLATION_ORION",
 		"stars": [
-			{"id": "meissa", "name_key": "STAR_MEISSA", "bayer": "λ Ori", "magnitude": 3.39, "local_position": Vector2(0.00, -1.08), "node_id": "observation_scheduling", "kind": "star"},
-			{"id": "betelgeuse", "name_key": "STAR_BETELGEUSE", "bayer": "α Ori", "magnitude": 0.50, "local_position": Vector2(-0.72, -0.61), "node_id": "array_planning", "kind": "star"},
-			{"id": "bellatrix", "name_key": "STAR_BELLATRIX", "bayer": "γ Ori", "magnitude": 1.64, "local_position": Vector2(0.67, -0.56), "node_id": "thermal_management", "kind": "star"},
-			{"id": "alnitak", "name_key": "STAR_ALNITAK", "bayer": "ζ Ori", "magnitude": 1.77, "local_position": Vector2(-0.42, -0.02), "node_id": "secondary_camera", "kind": "star"},
-			{"id": "alnilam", "name_key": "STAR_ALNILAM", "bayer": "ε Ori", "magnitude": 1.69, "local_position": Vector2(0.00, 0.02), "node_id": "multi_target_analysis", "kind": "star"},
-			{"id": "mintaka", "name_key": "STAR_MINTAKA", "bayer": "δ Ori", "magnitude": 2.23, "local_position": Vector2(0.43, 0.05), "node_id": "extended_watch_protocol", "kind": "star"},
-			{"id": "trapezium", "name_key": "STAR_TRAPEZIUM", "bayer": "θ¹ Ori C", "magnitude": 5.13, "local_position": Vector2(0.02, 0.48), "node_id": "automated_tracking", "kind": "cluster"},
-			{"id": "hatysa", "name_key": "STAR_HATYSA", "bayer": "ι Ori", "magnitude": 2.75, "local_position": Vector2(0.03, 0.76), "node_id": "observatory_network", "kind": "star"},
-			{"id": "saiph", "name_key": "STAR_SAIPH", "bayer": "κ Ori", "magnitude": 2.06, "local_position": Vector2(-0.62, 1.02), "node_id": "predictive_dish_control", "kind": "star"},
-			{"id": "rigel", "name_key": "STAR_RIGEL", "bayer": "β Ori", "magnitude": 0.13, "local_position": Vector2(0.72, 1.06), "node_id": "continuous_watch_rotation", "kind": "star"}
+			{"id": "meissa", "name_key": "STAR_MEISSA", "bayer": "λ Ori", "magnitude": 3.39, "local_position": Vector2(0.0150611, -1.0907929), "node_id": "observation_scheduling", "kind": "star"},
+			{"id": "betelgeuse", "name_key": "STAR_BETELGEUSE", "bayer": "α Ori", "magnitude": 0.50, "local_position": Vector2(-0.4867586, -0.8362891), "node_id": "array_planning", "kind": "star"},
+			{"id": "bellatrix", "name_key": "STAR_BELLATRIX", "bayer": "γ Ori", "magnitude": 1.64, "local_position": Vector2(0.2659498, -0.7287053), "node_id": "thermal_management", "kind": "star"},
+			{"id": "alnitak", "name_key": "STAR_ALNITAK", "bayer": "ζ Ori", "magnitude": 1.77, "local_position": Vector2(-0.1259378, 0.1056748), "node_id": "secondary_camera", "kind": "star"},
+			{"id": "alnilam", "name_key": "STAR_ALNILAM", "bayer": "ε Ori", "magnitude": 1.69, "local_position": Vector2(-0.0118429, 0.0312127), "node_id": "multi_target_analysis", "kind": "star"},
+			{"id": "mintaka", "name_key": "STAR_MINTAKA", "bayer": "δ Ori", "magnitude": 2.23, "local_position": Vector2(0.0938100, -0.0594746), "node_id": "extended_watch_protocol", "kind": "star"},
+			{"id": "trapezium", "name_key": "STAR_TRAPEZIUM", "bayer": "θ¹ Ori C", "magnitude": 5.13, "local_position": Vector2(0.0116876, 0.4521548), "node_id": "automated_tracking", "kind": "cluster"},
+			{"id": "hatysa", "name_key": "STAR_HATYSA", "bayer": "ι Ori", "magnitude": 2.75, "local_position": Vector2(0.0077185, 0.5045125), "node_id": "observatory_network", "kind": "star"},
+			{"id": "saiph", "name_key": "STAR_SAIPH", "bayer": "κ Ori", "magnitude": 2.06, "local_position": Vector2(-0.2992893, 0.8843486), "node_id": "predictive_dish_control", "kind": "star"},
+			{"id": "rigel", "name_key": "STAR_RIGEL", "bayer": "β Ori", "magnitude": 0.13, "local_position": Vector2(0.5296017, 0.7373585), "node_id": "continuous_watch_rotation", "kind": "star"}
 		],
 		"segments": [["meissa", "betelgeuse"], ["meissa", "bellatrix"], ["betelgeuse", "alnitak"], ["bellatrix", "mintaka"], ["alnitak", "alnilam"], ["alnilam", "mintaka"], ["alnitak", "saiph"], ["mintaka", "rigel"], ["alnilam", "trapezium"], ["trapezium", "hatysa"]]
 	},
 	# Every endpoint in a research-bearing figure is assigned so each declared
 	# constellation segment can reach the installed state. The remaining
 	# background figures carry no branch until research is mapped onto them.
-	# Every star is a real member of its figure; placement between figures stays
-	# compositional, but neighbours remain the sky's real neighbours.
+	# Every star is a real member of its figure. Placement between figures is
+	# compositional and does not reproduce their actual sky neighbourhoods.
 	"andromeda": {
 		"branch": "andromeda",
 		"label_key": "CONSTELLATION_ANDROMEDA",
 		"stars": [
-			{"id": "alpheratz", "name_key": "STAR_ALPHERATZ", "bayer": "α And", "magnitude": 2.06, "local_position": Vector2(-1.00, 0.52), "node_id": "ephemeris_marks", "kind": "star"},
-			{"id": "delta_and", "name_key": "STAR_DELTA_AND", "bayer": "δ And", "magnitude": 3.27, "local_position": Vector2(-0.52, 0.34), "node_id": "satellite_catalog", "kind": "star"},
-			{"id": "mirach", "name_key": "STAR_MIRACH", "bayer": "β And", "magnitude": 2.06, "local_position": Vector2(0.02, 0.14), "node_id": "change_detection", "kind": "star"},
-			{"id": "mu_and", "name_key": "STAR_MU_AND", "bayer": "μ And", "magnitude": 3.86, "local_position": Vector2(-0.14, -0.34), "node_id": "comet_solutions", "kind": "star"},
-			{"id": "nu_and", "name_key": "STAR_NU_AND", "bayer": "ν And", "magnitude": 4.53, "local_position": Vector2(-0.24, -0.62), "node_id": "andromeda_deep_survey", "kind": "star"},
-			{"id": "andromeda_galaxy", "name_key": "STAR_ANDROMEDA_GALAXY", "bayer": "M31", "magnitude": 3.44, "local_position": Vector2(-0.36, -0.94), "node_id": "galaxy_imaging", "kind": "galaxy"},
-			{"id": "almach", "name_key": "STAR_ALMACH", "bayer": "γ And", "magnitude": 2.10, "local_position": Vector2(0.62, -0.10), "node_id": "variable_watchlist", "kind": "star"}
+			{"id": "alpheratz", "name_key": "STAR_ALPHERATZ", "bayer": "α And", "magnitude": 2.06, "local_position": Vector2(0.7525289, 0.5666438), "node_id": "ephemeris_marks", "kind": "star"},
+			{"id": "delta_and", "name_key": "STAR_DELTA_AND", "bayer": "δ And", "magnitude": 3.27, "local_position": Vector2(0.2416728, 0.4713749), "node_id": "satellite_catalog", "kind": "star"},
+			{"id": "mirach", "name_key": "STAR_MIRACH", "bayer": "β And", "magnitude": 2.06, "local_position": Vector2(-0.2318831, 0.1163175), "node_id": "change_detection", "kind": "star"},
+			{"id": "mu_and", "name_key": "STAR_MU_AND", "bayer": "μ And", "magnitude": 3.86, "local_position": Vector2(-0.0341297, -0.0935159), "node_id": "comet_solutions", "kind": "star"},
+			{"id": "nu_and", "name_key": "STAR_NU_AND", "bayer": "ν And", "magnitude": 4.53, "local_position": Vector2(0.0645999, -0.2859563), "node_id": "andromeda_deep_survey", "kind": "star"},
+			{"id": "andromeda_galaxy", "name_key": "STAR_ANDROMEDA_GALAXY", "bayer": "M31", "magnitude": 3.44, "local_position": Vector2(0.1635112, -0.3023235), "node_id": "galaxy_imaging", "kind": "galaxy"},
+			{"id": "almach", "name_key": "STAR_ALMACH", "bayer": "γ And", "magnitude": 2.10, "local_position": Vector2(-0.9562999, -0.4725405), "node_id": "variable_watchlist", "kind": "star"}
 		],
 		"segments": [["alpheratz", "delta_and"], ["delta_and", "mirach"], ["mirach", "almach"], ["mirach", "mu_and"], ["mu_and", "nu_and"], ["nu_and", "andromeda_galaxy"]]
 	},
@@ -71,14 +72,14 @@ const CONSTELLATIONS := {
 		"branch": "perseus",
 		"label_key": "CONSTELLATION_PERSEUS",
 		"stars": [
-			{"id": "eta_per", "name_key": "STAR_ETA_PER", "bayer": "η Per", "magnitude": 3.77, "local_position": Vector2(-0.86, -0.72), "node_id": "radiant_plotting", "kind": "star"},
-			{"id": "gamma_per", "name_key": "STAR_GAMMA_PER", "bayer": "γ Per", "magnitude": 2.93, "local_position": Vector2(-0.60, -0.44), "node_id": "crowd_forecast", "kind": "star"},
-			{"id": "mirfak", "name_key": "STAR_MIRFAK", "bayer": "α Per", "magnitude": 1.79, "local_position": Vector2(-0.16, -0.10), "node_id": "burst_windowing", "kind": "star"},
-			{"id": "delta_per", "name_key": "STAR_DELTA_PER", "bayer": "δ Per", "magnitude": 3.01, "local_position": Vector2(0.30, 0.10), "node_id": "adaptive_exposure_grid", "kind": "star"},
-			{"id": "epsilon_per", "name_key": "STAR_EPSILON_PER", "bayer": "ε Per", "magnitude": 2.90, "local_position": Vector2(0.54, 0.62), "node_id": "perseid_survey", "kind": "star"},
-			{"id": "zeta_per", "name_key": "STAR_ZETA_PER", "bayer": "ζ Per", "magnitude": 2.85, "local_position": Vector2(0.30, 0.96), "node_id": "perseid_outburst", "kind": "star"},
-			{"id": "algol", "name_key": "STAR_ALGOL", "bayer": "β Per", "magnitude": 2.12, "local_position": Vector2(-0.44, 0.46), "node_id": "debris_correlation", "kind": "star"},
-			{"id": "rho_per", "name_key": "STAR_RHO_PER", "bayer": "ρ Per", "magnitude": 3.39, "local_position": Vector2(-0.68, 0.76), "node_id": "cascade_sampling", "kind": "star"}
+			{"id": "eta_per", "name_key": "STAR_ETA_PER", "bayer": "η Per", "magnitude": 3.77, "local_position": Vector2(0.3689097, -0.8448732), "node_id": "radiant_plotting", "kind": "star"},
+			{"id": "gamma_per", "name_key": "STAR_GAMMA_PER", "bayer": "γ Per", "magnitude": 2.93, "local_position": Vector2(0.2316959, -0.6499776), "node_id": "crowd_forecast", "kind": "star"},
+			{"id": "mirfak", "name_key": "STAR_MIRFAK", "bayer": "α Per", "magnitude": 1.79, "local_position": Vector2(0.0129875, -0.3667365), "node_id": "burst_windowing", "kind": "star"},
+			{"id": "delta_per", "name_key": "STAR_DELTA_PER", "bayer": "δ Per", "magnitude": 3.01, "local_position": Vector2(-0.2217763, -0.2166041), "node_id": "adaptive_exposure_grid", "kind": "star"},
+			{"id": "epsilon_per", "name_key": "STAR_EPSILON_PER", "bayer": "ε Per", "magnitude": 2.90, "local_position": Vector2(-0.4685586, 0.3527804), "node_id": "perseid_survey", "kind": "star"},
+			{"id": "zeta_per", "name_key": "STAR_ZETA_PER", "bayer": "ζ Per", "magnitude": 2.85, "local_position": Vector2(-0.4653189, 0.9728349), "node_id": "perseid_outburst", "kind": "star"},
+			{"id": "algol", "name_key": "STAR_ALGOL", "bayer": "β Per", "magnitude": 2.12, "local_position": Vector2(0.2450056, 0.2977537), "node_id": "debris_correlation", "kind": "star"},
+			{"id": "rho_per", "name_key": "STAR_RHO_PER", "bayer": "ρ Per", "magnitude": 3.39, "local_position": Vector2(0.2970550, 0.4548223), "node_id": "cascade_sampling", "kind": "star"}
 		],
 		"segments": [["eta_per", "gamma_per"], ["gamma_per", "mirfak"], ["mirfak", "delta_per"], ["delta_per", "epsilon_per"], ["epsilon_per", "zeta_per"], ["mirfak", "algol"], ["algol", "rho_per"]]
 	},
@@ -86,12 +87,12 @@ const CONSTELLATIONS := {
 		"branch": "lyra",
 		"label_key": "CONSTELLATION_LYRA",
 		"stars": [
-			{"id": "vega", "name_key": "STAR_VEGA", "bayer": "α Lyr", "magnitude": 0.03, "local_position": Vector2(-0.62, -0.86), "node_id": "filter_wheel", "kind": "star"},
-			{"id": "epsilon_lyr", "name_key": "STAR_EPSILON_LYR", "bayer": "ε Lyr", "magnitude": 4.67, "local_position": Vector2(-0.06, -0.92), "node_id": "double_star_resolution", "kind": "star"},
-			{"id": "zeta_lyr", "name_key": "STAR_ZETA_LYR", "bayer": "ζ Lyr", "magnitude": 4.36, "local_position": Vector2(-0.34, -0.48), "node_id": "blue_band", "kind": "star"},
-			{"id": "sheliak", "name_key": "STAR_SHELIAK", "bayer": "β Lyr", "magnitude": 3.52, "local_position": Vector2(-0.46, 0.32), "node_id": "amber_band", "kind": "star"},
-			{"id": "sulafat", "name_key": "STAR_SULAFAT", "bayer": "γ Lyr", "magnitude": 3.24, "local_position": Vector2(0.34, 0.46), "node_id": "violet_band", "kind": "star"},
-			{"id": "delta_lyr", "name_key": "STAR_DELTA_LYR", "bayer": "δ Lyr", "magnitude": 4.30, "local_position": Vector2(0.26, -0.06), "node_id": "lyrid_spectrograph", "kind": "star"}
+			{"id": "vega", "name_key": "STAR_VEGA", "bayer": "α Lyr", "magnitude": 0.03, "local_position": Vector2(0.5921546, -0.6078787), "node_id": "filter_wheel", "kind": "star"},
+			{"id": "epsilon_lyr", "name_key": "STAR_EPSILON_LYR", "bayer": "ε Lyr", "magnitude": 4.67, "local_position": Vector2(0.2087683, -0.8340098), "node_id": "double_star_resolution", "kind": "star"},
+			{"id": "zeta_lyr", "name_key": "STAR_ZETA_LYR", "bayer": "ζ Lyr", "magnitude": 4.36, "local_position": Vector2(0.1920746, -0.2886019), "node_id": "blue_band", "kind": "star"},
+			{"id": "sheliak", "name_key": "STAR_SHELIAK", "bayer": "β Lyr", "magnitude": 3.52, "local_position": Vector2(-0.0900221, 0.8319362), "node_id": "amber_band", "kind": "star"},
+			{"id": "sulafat", "name_key": "STAR_SULAFAT", "bayer": "γ Lyr", "magnitude": 3.24, "local_position": Vector2(-0.5834598, 1.0023928), "node_id": "violet_band", "kind": "star"},
+			{"id": "delta_lyr", "name_key": "STAR_DELTA_LYR", "bayer": "δ Lyr", "magnitude": 4.30, "local_position": Vector2(-0.3195156, -0.1038387), "node_id": "lyrid_spectrograph", "kind": "star"}
 		],
 		"segments": [["vega", "epsilon_lyr"], ["vega", "zeta_lyr"], ["zeta_lyr", "sheliak"], ["sheliak", "sulafat"], ["sulafat", "delta_lyr"], ["delta_lyr", "zeta_lyr"]]
 	},
@@ -99,15 +100,15 @@ const CONSTELLATIONS := {
 		"branch": "draco",
 		"label_key": "CONSTELLATION_DRACO",
 		"stars": [
-			{"id": "eltanin", "name_key": "STAR_ELTANIN", "bayer": "γ Dra", "magnitude": 2.24, "local_position": Vector2(-1.00, -0.34), "node_id": "draco_synthesis", "kind": "star"},
-			{"id": "rastaban", "name_key": "STAR_RASTABAN", "bayer": "β Dra", "magnitude": 2.79, "local_position": Vector2(-0.86, -0.66), "node_id": "draco_cadence", "kind": "star"},
-			{"id": "nu_dra", "name_key": "STAR_NU_DRA", "bayer": "ν Dra", "magnitude": 4.88, "local_position": Vector2(-0.62, -0.52), "node_id": "draco_capacity", "kind": "star"},
-			{"id": "xi_dra", "name_key": "STAR_XI_DRA", "bayer": "ξ Dra", "magnitude": 3.75, "local_position": Vector2(-0.66, -0.20), "node_id": "draco_sweep", "kind": "star"},
-			{"id": "altais", "name_key": "STAR_ALTAIS", "bayer": "δ Dra", "magnitude": 3.07, "local_position": Vector2(-0.18, 0.10), "node_id": "draco_echo", "kind": "star"},
-			{"id": "zeta_dra", "name_key": "STAR_ZETA_DRA", "bayer": "ζ Dra", "magnitude": 3.17, "local_position": Vector2(0.24, -0.16), "node_id": "draco_storm", "kind": "star"},
-			{"id": "eta_dra", "name_key": "STAR_ETA_DRA", "bayer": "η Dra", "magnitude": 2.73, "local_position": Vector2(0.60, 0.30), "node_id": "draco_array", "kind": "star"},
-			{"id": "thuban", "name_key": "STAR_THUBAN", "bayer": "α Dra", "magnitude": 3.65, "local_position": Vector2(0.88, 0.02), "node_id": "draco_apotheosis", "kind": "star"},
-			{"id": "iota_dra", "name_key": "STAR_IOTA_DRA", "bayer": "ι Dra", "magnitude": 3.29, "local_position": Vector2(1.00, 0.58), "node_id": "galactic_reference_frame", "kind": "star"}
+			{"id": "eltanin", "name_key": "STAR_ELTANIN", "bayer": "γ Dra", "magnitude": 2.24, "local_position": Vector2(-0.5079503, 0.5377112), "node_id": "draco_synthesis", "kind": "star"},
+			{"id": "rastaban", "name_key": "STAR_RASTABAN", "bayer": "β Dra", "magnitude": 2.79, "local_position": Vector2(-0.2510463, 0.5234615), "node_id": "draco_cadence", "kind": "star"},
+			{"id": "nu_dra", "name_key": "STAR_NU_DRA", "bayer": "ν Dra", "magnitude": 4.88, "local_position": Vector2(-0.2492123, 0.3432321), "node_id": "draco_capacity", "kind": "star"},
+			{"id": "xi_dra", "name_key": "STAR_XI_DRA", "bayer": "ξ Dra", "magnitude": 3.75, "local_position": Vector2(-0.4177594, 0.2128192), "node_id": "draco_sweep", "kind": "star"},
+			{"id": "altais", "name_key": "STAR_ALTAIS", "bayer": "δ Dra", "magnitude": 3.07, "local_position": Vector2(-0.7316493, -0.6070455), "node_id": "draco_echo", "kind": "star"},
+			{"id": "zeta_dra", "name_key": "STAR_ZETA_DRA", "bayer": "ζ Dra", "magnitude": 3.17, "local_position": Vector2(-0.0310654, -0.2972867), "node_id": "draco_storm", "kind": "star"},
+			{"id": "eta_dra", "name_key": "STAR_ETA_DRA", "bayer": "η Dra", "magnitude": 2.73, "local_position": Vector2(0.2944205, -0.0595165), "node_id": "draco_array", "kind": "star"},
+			{"id": "thuban", "name_key": "STAR_THUBAN", "bayer": "α Dra", "magnitude": 3.65, "local_position": Vector2(1.1184120, -0.6263101), "node_id": "draco_apotheosis", "kind": "star"},
+			{"id": "iota_dra", "name_key": "STAR_IOTA_DRA", "bayer": "ι Dra", "magnitude": 3.29, "local_position": Vector2(0.7758505, -0.0270652), "node_id": "galactic_reference_frame", "kind": "star"}
 		],
 		"segments": [["eltanin", "xi_dra"], ["xi_dra", "nu_dra"], ["nu_dra", "rastaban"], ["rastaban", "eltanin"], ["xi_dra", "altais"], ["altais", "zeta_dra"], ["zeta_dra", "eta_dra"], ["eta_dra", "thuban"], ["thuban", "iota_dra"]]
 	},
@@ -115,29 +116,29 @@ const CONSTELLATIONS := {
 		"branch": "ursa_minor",
 		"label_key": "CONSTELLATION_URSA_MINOR",
 		"stars": [
-			{"id": "polaris", "name_key": "STAR_POLARIS", "bayer": "α UMi", "magnitude": 1.98, "local_position": Vector2(1.00, -0.62), "node_id": "polar_survey", "kind": "star"},
-			{"id": "yildun", "name_key": "STAR_YILDUN", "bayer": "δ UMi", "magnitude": 4.35, "local_position": Vector2(0.62, -0.34), "node_id": "sweep_gain", "kind": "star"},
-			{"id": "epsilon_umi", "name_key": "STAR_EPSILON_UMI", "bayer": "ε UMi", "magnitude": 4.21, "local_position": Vector2(0.22, -0.08), "node_id": "faint_recovery", "kind": "star"},
-			{"id": "zeta_umi", "name_key": "STAR_ZETA_UMI", "bayer": "ζ UMi", "magnitude": 4.29, "local_position": Vector2(-0.14, 0.14), "node_id": "sustained_sweep", "kind": "star"},
-			{"id": "eta_umi", "name_key": "STAR_ETA_UMI", "bayer": "η UMi", "magnitude": 4.95, "local_position": Vector2(-0.30, 0.54), "node_id": "deep_exposure", "kind": "star"},
-			{"id": "kochab", "name_key": "STAR_KOCHAB", "bayer": "β UMi", "magnitude": 2.07, "local_position": Vector2(-0.70, 0.20), "node_id": "rapid_scan", "kind": "star"},
-			{"id": "pherkad", "name_key": "STAR_PHERKAD", "bayer": "γ UMi", "magnitude": 3.00, "local_position": Vector2(-0.74, -0.20), "node_id": "polar_cascade", "kind": "star"}
+			{"id": "polaris", "name_key": "STAR_POLARIS", "bayer": "α UMi", "magnitude": 1.98, "local_position": Vector2(-0.0250279, -1.1306045), "node_id": "polar_survey", "kind": "star"},
+			{"id": "yildun", "name_key": "STAR_YILDUN", "bayer": "δ UMi", "magnitude": 4.35, "local_position": Vector2(-0.1621739, -0.7318698), "node_id": "sweep_gain", "kind": "star"},
+			{"id": "epsilon_umi", "name_key": "STAR_EPSILON_UMI", "bayer": "ε UMi", "magnitude": 4.21, "local_position": Vector2(-0.2179380, -0.2408580), "node_id": "faint_recovery", "kind": "star"},
+			{"id": "zeta_umi", "name_key": "STAR_ZETA_UMI", "bayer": "ζ UMi", "magnitude": 4.29, "local_position": Vector2(0.0095467, 0.2357718), "node_id": "sustained_sweep", "kind": "star"},
+			{"id": "eta_umi", "name_key": "STAR_ETA_UMI", "bayer": "η UMi", "magnitude": 4.95, "local_position": Vector2(-0.2058920, 0.4374552), "node_id": "deep_exposure", "kind": "star"},
+			{"id": "kochab", "name_key": "STAR_KOCHAB", "bayer": "β UMi", "magnitude": 2.07, "local_position": Vector2(0.3945656, 0.5742053), "node_id": "rapid_scan", "kind": "star"},
+			{"id": "pherkad", "name_key": "STAR_PHERKAD", "bayer": "γ UMi", "magnitude": 3.00, "local_position": Vector2(0.2069195, 0.8559000), "node_id": "polar_cascade", "kind": "star"}
 		],
-		"segments": [["polaris", "yildun"], ["yildun", "epsilon_umi"], ["epsilon_umi", "zeta_umi"], ["zeta_umi", "eta_umi"], ["eta_umi", "kochab"], ["kochab", "pherkad"], ["pherkad", "zeta_umi"]]
+		"segments": [["polaris", "yildun"], ["yildun", "epsilon_umi"], ["epsilon_umi", "zeta_umi"], ["zeta_umi", "eta_umi"], ["eta_umi", "pherkad"], ["pherkad", "kochab"], ["kochab", "zeta_umi"]]
 	},
 	"leo": {
 		"branch": "leo",
 		"label_key": "CONSTELLATION_LEO",
 		"stars": [
-			{"id": "regulus", "name_key": "STAR_REGULUS", "bayer": "α Leo", "magnitude": 1.40, "local_position": Vector2(-0.72, 0.52), "node_id": "leonid_radiant", "kind": "star"},
-			{"id": "eta_leo", "name_key": "STAR_ETA_LEO", "bayer": "η Leo", "magnitude": 3.48, "local_position": Vector2(-0.76, 0.16), "node_id": "compressed_cadence", "kind": "star"},
-			{"id": "algieba", "name_key": "STAR_ALGIEBA", "bayer": "γ Leo", "magnitude": 2.08, "local_position": Vector2(-0.70, -0.16), "node_id": "dense_stream", "kind": "star"},
-			{"id": "zeta_leo", "name_key": "STAR_ZETA_LEO", "bayer": "ζ Leo", "magnitude": 3.44, "local_position": Vector2(-0.78, -0.46), "node_id": "rapid_reacquisition", "kind": "star"},
-			{"id": "mu_leo", "name_key": "STAR_MU_LEO", "bayer": "μ Leo", "magnitude": 3.88, "local_position": Vector2(-0.96, -0.70), "node_id": "storm_front", "kind": "star"},
-			{"id": "epsilon_leo", "name_key": "STAR_EPSILON_LEO", "bayer": "ε Leo", "magnitude": 2.98, "local_position": Vector2(-1.00, -0.34), "node_id": "leonid_storm", "kind": "star"},
-			{"id": "chertan", "name_key": "STAR_CHERTAN", "bayer": "θ Leo", "magnitude": 3.32, "local_position": Vector2(0.26, 0.44), "node_id": "split_radiant_model", "kind": "star"},
-			{"id": "zosma", "name_key": "STAR_ZOSMA", "bayer": "δ Leo", "magnitude": 2.56, "local_position": Vector2(0.32, -0.06), "node_id": "fragment_front", "kind": "star"},
-			{"id": "denebola", "name_key": "STAR_DENEBOLA", "bayer": "β Leo", "magnitude": 2.14, "local_position": Vector2(0.96, 0.10), "node_id": "fireball_tail", "kind": "star"}
+			{"id": "regulus", "name_key": "STAR_REGULUS", "bayer": "α Leo", "magnitude": 1.40, "local_position": Vector2(0.3892024, 0.4812683), "node_id": "leonid_radiant", "kind": "star"},
+			{"id": "eta_leo", "name_key": "STAR_ETA_LEO", "bayer": "η Leo", "magnitude": 3.48, "local_position": Vector2(0.3958439, 0.1665349), "node_id": "compressed_cadence", "kind": "star"},
+			{"id": "algieba", "name_key": "STAR_ALGIEBA", "bayer": "γ Leo", "magnitude": 2.08, "local_position": Vector2(0.1945610, -0.0294357), "node_id": "dense_stream", "kind": "star"},
+			{"id": "zeta_leo", "name_key": "STAR_ZETA_LEO", "bayer": "ζ Leo", "magnitude": 3.44, "local_position": Vector2(0.2393038, -0.2640475), "node_id": "rapid_reacquisition", "kind": "star"},
+			{"id": "mu_leo", "name_key": "STAR_MU_LEO", "bayer": "μ Leo", "magnitude": 3.88, "local_position": Vector2(0.5875861, -0.4500444), "node_id": "storm_front", "kind": "star"},
+			{"id": "epsilon_leo", "name_key": "STAR_EPSILON_LEO", "bayer": "ε Leo", "magnitude": 2.98, "local_position": Vector2(0.7010766, -0.3106375), "node_id": "leonid_storm", "kind": "star"},
+			{"id": "chertan", "name_key": "STAR_CHERTAN", "bayer": "θ Leo", "magnitude": 3.32, "local_position": Vector2(-0.6561372, 0.2422511), "node_id": "split_radiant_model", "kind": "star"},
+			{"id": "zosma", "name_key": "STAR_ZOSMA", "bayer": "δ Leo", "magnitude": 2.56, "local_position": Vector2(-0.6344985, -0.0920143), "node_id": "fragment_front", "kind": "star"},
+			{"id": "denebola", "name_key": "STAR_DENEBOLA", "bayer": "β Leo", "magnitude": 2.14, "local_position": Vector2(-1.2169380, 0.2561252), "node_id": "fireball_tail", "kind": "star"}
 		],
 		"segments": [["regulus", "eta_leo"], ["eta_leo", "algieba"], ["algieba", "zeta_leo"], ["zeta_leo", "mu_leo"], ["mu_leo", "epsilon_leo"], ["regulus", "chertan"], ["chertan", "zosma"], ["zosma", "denebola"], ["denebola", "chertan"], ["algieba", "zosma"]]
 	},
@@ -145,16 +146,16 @@ const CONSTELLATIONS := {
 		"branch": "gemini",
 		"label_key": "CONSTELLATION_GEMINI",
 		"stars": [
-			{"id": "castor", "name_key": "STAR_CASTOR", "bayer": "α Gem", "magnitude": 1.58, "local_position": Vector2(-0.52, -0.94), "node_id": "echo_correlation_10", "kind": "star"},
-			{"id": "pollux", "name_key": "STAR_POLLUX", "bayer": "β Gem", "magnitude": 1.14, "local_position": Vector2(0.22, -0.86), "node_id": "single_echo_channel", "kind": "star"},
-			{"id": "tau_gem", "name_key": "STAR_TAU_GEM", "bayer": "τ Gem", "magnitude": 4.41, "local_position": Vector2(-0.40, -0.52), "node_id": "echo_correlation_20", "kind": "star"},
-			{"id": "mebsuta", "name_key": "STAR_MEBSUTA", "bayer": "ε Gem", "magnitude": 2.98, "local_position": Vector2(-0.56, -0.06), "node_id": "echo_signature_lock", "kind": "star"},
-			{"id": "upsilon_gem", "name_key": "STAR_UPSILON_GEM", "bayer": "υ Gem", "magnitude": 4.06, "local_position": Vector2(0.14, -0.34), "node_id": "dual_echo_channel", "kind": "star"},
-			{"id": "wasat", "name_key": "STAR_WASAT", "bayer": "δ Gem", "magnitude": 3.53, "local_position": Vector2(0.10, 0.22), "node_id": "triple_echo_array", "kind": "star"},
-			{"id": "tejat", "name_key": "STAR_TEJAT", "bayer": "μ Gem", "magnitude": 2.87, "local_position": Vector2(-0.86, 0.30), "node_id": "mirror_echo_solution", "kind": "star"},
-			{"id": "propus", "name_key": "STAR_PROPUS", "bayer": "η Gem", "magnitude": 3.28, "local_position": Vector2(-0.90, 0.56), "node_id": "echo_delay_line", "kind": "star"},
-			{"id": "alhena", "name_key": "STAR_ALHENA", "bayer": "γ Gem", "magnitude": 1.93, "local_position": Vector2(-0.10, 0.86), "node_id": "echo_deconfliction", "kind": "star"},
-			{"id": "alzirr", "name_key": "STAR_ALZIRR", "bayer": "ξ Gem", "magnitude": 3.35, "local_position": Vector2(0.44, 0.94), "node_id": "echo_beacon", "kind": "star"}
+			{"id": "castor", "name_key": "STAR_CASTOR", "bayer": "α Gem", "magnitude": 1.58, "local_position": Vector2(-0.6582427, -0.7318010), "node_id": "echo_correlation_10", "kind": "star"},
+			{"id": "pollux", "name_key": "STAR_POLLUX", "bayer": "β Gem", "magnitude": 1.14, "local_position": Vector2(-0.8961521, -0.3982378), "node_id": "single_echo_channel", "kind": "star"},
+			{"id": "tau_gem", "name_key": "STAR_TAU_GEM", "bayer": "τ Gem", "magnitude": 4.41, "local_position": Vector2(-0.2100543, -0.5622399), "node_id": "echo_correlation_20", "kind": "star"},
+			{"id": "mebsuta", "name_key": "STAR_MEBSUTA", "bayer": "ε Gem", "magnitude": 2.98, "local_position": Vector2(0.3357618, -0.1034389), "node_id": "echo_signature_lock", "kind": "star"},
+			{"id": "upsilon_gem", "name_key": "STAR_UPSILON_GEM", "bayer": "υ Gem", "magnitude": 4.06, "local_position": Vector2(-0.7153616, -0.2814589), "node_id": "dual_echo_channel", "kind": "star"},
+			{"id": "wasat", "name_key": "STAR_WASAT", "bayer": "δ Gem", "magnitude": 3.53, "local_position": Vector2(-0.4128046, 0.1785076), "node_id": "triple_echo_array", "kind": "star"},
+			{"id": "tejat", "name_key": "STAR_TEJAT", "bayer": "μ Gem", "magnitude": 2.87, "local_position": Vector2(0.7801717, 0.1123142), "node_id": "mirror_echo_solution", "kind": "star"},
+			{"id": "propus", "name_key": "STAR_PROPUS", "bayer": "η Gem", "magnitude": 3.28, "local_position": Vector2(0.9492727, 0.1008053), "node_id": "echo_delay_line", "kind": "star"},
+			{"id": "alhena", "name_key": "STAR_ALHENA", "bayer": "γ Gem", "magnitude": 1.93, "local_position": Vector2(0.4925968, 0.6813086), "node_id": "echo_deconfliction", "kind": "star"},
+			{"id": "alzirr", "name_key": "STAR_ALZIRR", "bayer": "ξ Gem", "magnitude": 3.35, "local_position": Vector2(0.3348123, 1.0042409), "node_id": "echo_beacon", "kind": "star"}
 		],
 		"segments": [["castor", "pollux"], ["castor", "tau_gem"], ["tau_gem", "mebsuta"], ["mebsuta", "tejat"], ["tejat", "propus"], ["pollux", "upsilon_gem"], ["upsilon_gem", "wasat"], ["wasat", "alzirr"], ["wasat", "alhena"]]
 	},
@@ -162,14 +163,14 @@ const CONSTELLATIONS := {
 		"branch": "taurus",
 		"label_key": "CONSTELLATION_TAURUS",
 		"stars": [
-			{"id": "pleiades", "name_key": "STAR_PLEIADES", "bayer": "M45", "magnitude": 1.60, "local_position": Vector2(-1.00, -0.52), "node_id": "wide_pursuit", "kind": "cluster"},
-			{"id": "epsilon_tau", "name_key": "STAR_EPSILON_TAU", "bayer": "ε Tau", "magnitude": 3.53, "local_position": Vector2(-0.30, -0.30), "node_id": "momentum_acquisition", "kind": "star"},
-			{"id": "delta_tau", "name_key": "STAR_DELTA_TAU", "bayer": "δ Tau", "magnitude": 3.76, "local_position": Vector2(-0.38, -0.02), "node_id": "cadence_memory", "kind": "star"},
-			{"id": "hyadum", "name_key": "STAR_HYADUM", "bayer": "γ Tau", "magnitude": 3.65, "local_position": Vector2(-0.44, 0.24), "node_id": "expanded_sweep", "kind": "star"},
-			{"id": "theta_tau", "name_key": "STAR_THETA_TAU", "bayer": "θ Tau", "magnitude": 3.40, "local_position": Vector2(-0.16, 0.30), "node_id": "accelerated_analysis", "kind": "star"},
-			{"id": "aldebaran", "name_key": "STAR_ALDEBARAN", "bayer": "α Tau", "magnitude": 0.85, "local_position": Vector2(0.08, 0.36), "node_id": "sustained_charge", "kind": "star"},
-			{"id": "tianguan", "name_key": "STAR_TIANGUAN", "bayer": "ζ Tau", "magnitude": 3.00, "local_position": Vector2(0.88, 0.52), "node_id": "taurus_full_gallop", "kind": "star"},
-			{"id": "elnath", "name_key": "STAR_ELNATH", "bayer": "β Tau", "magnitude": 1.65, "local_position": Vector2(0.72, -0.62), "node_id": "rapid_focus", "kind": "star"}
+			{"id": "pleiades", "name_key": "STAR_PLEIADES", "bayer": "M45", "magnitude": 1.60, "local_position": Vector2(0.9102622, -0.3526221), "node_id": "wide_pursuit", "kind": "cluster"},
+			{"id": "epsilon_tau", "name_key": "STAR_EPSILON_TAU", "bayer": "ε Tau", "magnitude": 3.53, "local_position": Vector2(0.1696510, 0.0653666), "node_id": "momentum_acquisition", "kind": "star"},
+			{"id": "delta_tau", "name_key": "STAR_DELTA_TAU", "bayer": "δ Tau", "magnitude": 3.76, "local_position": Vector2(0.2758781, 0.1899771), "node_id": "cadence_memory", "kind": "star"},
+			{"id": "hyadum", "name_key": "STAR_HYADUM", "bayer": "γ Tau", "magnitude": 3.65, "local_position": Vector2(0.3373769, 0.3366353), "node_id": "expanded_sweep", "kind": "star"},
+			{"id": "theta_tau", "name_key": "STAR_THETA_TAU", "bayer": "θ Tau", "magnitude": 3.40, "local_position": Vector2(0.1721187, 0.3208362), "node_id": "accelerated_analysis", "kind": "star"},
+			{"id": "aldebaran", "name_key": "STAR_ALDEBARAN", "bayer": "α Tau", "magnitude": 0.85, "local_position": Vector2(0.0371794, 0.2725507), "node_id": "sustained_charge", "kind": "star"},
+			{"id": "tianguan", "name_key": "STAR_TIANGUAN", "bayer": "ζ Tau", "magnitude": 3.00, "local_position": Vector2(-1.0778269, -0.1346730), "node_id": "taurus_full_gallop", "kind": "star"},
+			{"id": "elnath", "name_key": "STAR_ELNATH", "bayer": "β Tau", "magnitude": 1.65, "local_position": Vector2(-0.8246394, -0.6980708), "node_id": "rapid_focus", "kind": "star"}
 		],
 		"segments": [["pleiades", "epsilon_tau"], ["epsilon_tau", "delta_tau"], ["delta_tau", "hyadum"], ["hyadum", "theta_tau"], ["theta_tau", "aldebaran"], ["aldebaran", "tianguan"], ["epsilon_tau", "elnath"]]
 	},
@@ -177,14 +178,14 @@ const CONSTELLATIONS := {
 		"branch": "canis_major",
 		"label_key": "CONSTELLATION_CANIS_MAJOR",
 		"stars": [
-			{"id": "sirius", "name_key": "STAR_SIRIUS", "bayer": "α CMa", "magnitude": -1.46, "local_position": Vector2(-0.34, -0.86), "node_id": "sirius_fireball", "kind": "star"},
-			{"id": "mirzam", "name_key": "STAR_MIRZAM", "bayer": "β CMa", "magnitude": 1.98, "local_position": Vector2(-0.96, -0.62), "node_id": "canis_capacity_ii", "kind": "star"},
-			{"id": "muliphein", "name_key": "STAR_MULIPHEIN", "bayer": "γ CMa", "magnitude": 4.11, "local_position": Vector2(0.24, -0.72), "node_id": "canis_cadence_i", "kind": "star"},
-			{"id": "omicron_cma", "name_key": "STAR_OMICRON_CMA", "bayer": "ο² CMa", "magnitude": 3.02, "local_position": Vector2(-0.16, -0.26), "node_id": "canis_capacity_iii", "kind": "star"},
-			{"id": "wezen", "name_key": "STAR_WEZEN", "bayer": "δ CMa", "magnitude": 1.83, "local_position": Vector2(0.18, 0.34), "node_id": "canis_cadence_ii", "kind": "star"},
-			{"id": "adhara", "name_key": "STAR_ADHARA", "bayer": "ε CMa", "magnitude": 1.50, "local_position": Vector2(-0.38, 0.52), "node_id": "canis_cadence_iii", "kind": "star"},
-			{"id": "furud", "name_key": "STAR_FURUD", "bayer": "ζ CMa", "magnitude": 3.02, "local_position": Vector2(-0.64, 0.94), "node_id": "canis_opening", "kind": "star"},
-			{"id": "aludra", "name_key": "STAR_ALUDRA", "bayer": "η CMa", "magnitude": 2.45, "local_position": Vector2(0.64, 0.62), "node_id": "canis_capacity_i", "kind": "star"}
+			{"id": "sirius", "name_key": "STAR_SIRIUS", "bayer": "α CMa", "magnitude": -1.46, "local_position": Vector2(0.2111981, -0.7721627), "node_id": "sirius_fireball", "kind": "star"},
+			{"id": "mirzam", "name_key": "STAR_MIRZAM", "bayer": "β CMa", "magnitude": 1.98, "local_position": Vector2(0.8025183, -0.6168253), "node_id": "canis_capacity_ii", "kind": "star"},
+			{"id": "muliphein", "name_key": "STAR_MULIPHEIN", "bayer": "γ CMa", "magnitude": 4.11, "local_position": Vector2(-0.2856928, -0.8915421), "node_id": "canis_cadence_i", "kind": "star"},
+			{"id": "omicron_cma", "name_key": "STAR_OMICRON_CMA", "bayer": "ο² CMa", "magnitude": 3.02, "local_position": Vector2(-0.2514891, 0.0173153), "node_id": "canis_capacity_iii", "kind": "star"},
+			{"id": "wezen", "name_key": "STAR_WEZEN", "bayer": "δ CMa", "magnitude": 1.83, "local_position": Vector2(-0.3795377, 0.3038296), "node_id": "canis_cadence_ii", "kind": "star"},
+			{"id": "adhara", "name_key": "STAR_ADHARA", "bayer": "ε CMa", "magnitude": 1.50, "local_position": Vector2(-0.1343240, 0.5849347), "node_id": "canis_cadence_iii", "kind": "star"},
+			{"id": "furud", "name_key": "STAR_FURUD", "bayer": "ζ CMa", "magnitude": 3.02, "local_position": Vector2(0.7876622, 0.7308606), "node_id": "canis_opening", "kind": "star"},
+			{"id": "aludra", "name_key": "STAR_ALUDRA", "bayer": "η CMa", "magnitude": 2.45, "local_position": Vector2(-0.7503351, 0.6435899), "node_id": "canis_capacity_i", "kind": "star"}
 		],
 		"segments": [["sirius", "mirzam"], ["sirius", "muliphein"], ["sirius", "omicron_cma"], ["omicron_cma", "adhara"], ["adhara", "furud"], ["omicron_cma", "wezen"], ["wezen", "adhara"], ["wezen", "aludra"]]
 	}
@@ -226,7 +227,7 @@ const PLACEMENTS := {
 # Two stars from different figures this close read as one clump, and a research
 # star's 44x44 hit box would swallow the intruder. Stars inside one figure are
 # exempt: Mizar and Alcor are a real pair and are meant to sit on top of each
-# other. Measured minimum across the twelve figures is 48px.
+# other. Keep this clearance when adjusting the catalogue-derived figures.
 const MIN_STAR_SEPARATION := 40.0
 
 

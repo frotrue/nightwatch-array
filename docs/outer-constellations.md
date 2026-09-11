@@ -134,7 +134,7 @@ IAU의 [도마뱀자리](https://iauarchive.eso.org/static/public/constellations
 [화살자리](https://iauarchive.eso.org/static/public/constellations/pdf/SGE.pdf),
 [조랑말자리](https://iauarchive.eso.org/static/public/constellations/pdf/EQU.pdf),
 [삼각형자리](https://iauarchive.eso.org/static/public/constellations/pdf/TRI.pdf) 자료를 참고했다.
-연결선과 좌표는 게임용으로 단순화한 형상이며 적경·적위 투영이나 정밀 위치/등급 계측도가 아니다.
+별 위치는 [J2000 좌표의 도형별 투영](constellation-geometry.md)을 따른다. 연결선은 주요 별을 잇는 간략형이며, 도형 사이 배치와 별 밝기는 연구 UI 표현이다.
 기존 네 별자리 자료와 모듈·특수 유성 규칙은 [확장 설계](expansion-design.md)를 따른다.
 
 ## 이전 구현 검증 — 2026-09-08

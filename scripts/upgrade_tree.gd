@@ -1071,7 +1071,11 @@ func _cache_chart_geometry() -> void:
 		for star in ExtensionChart.CONSTELLATIONS[constellation_id].stars:
 			if star.has("shared_star_key"):
 				var key := "%s/%s" % [constellation_id, star.id]
-				base_star_positions[key] = base_star_positions[star.shared_star_key]
+				# Move the whole figure to its shared corner. Replacing only that
+				# corner would distort the catalogue-derived Pegasus square.
+				var shift: Vector2 = base_star_positions[star.shared_star_key] - base_star_positions[key]
+				for member in chart_constellations[constellation_id].stars:
+					base_star_positions[constellation_id + "/" + member.id] += shift
 				star_node_ids[key] = star_node_ids[star.shared_star_key]
 
 
@@ -1649,6 +1653,8 @@ func _build_interface() -> void:
 func _build_node_button(definition: Dictionary) -> void:
 	var node_id := String(definition.id)
 	var button: Button = preload("res://scenes/ui/research_star.tscn").instantiate()
+	button.chart = self
+	button.node_id = node_id
 	button.name = "Node_" + node_id
 	button.set_meta("node_id", node_id)
 	button.set_meta("visual_state", "hidden")
@@ -1672,6 +1678,37 @@ func _build_node_button(definition: Dictionary) -> void:
 	)
 	node_buttons[node_id] = button
 	node_hold_bars[node_id] = star_visual
+
+
+func _star_hit_owner(screen_position: Vector2) -> String:
+	var nearest := ""
+	var nearest_distance := INF
+	var candidates: Array[String] = []
+	for id: String in node_buttons:
+		var button: Button = node_buttons[id]
+		if not button.is_visible_in_tree() or button.mouse_filter == Control.MOUSE_FILTER_IGNORE:
+			continue
+		if not button.get_global_rect().has_point(screen_position):
+			continue
+		candidates.append(id)
+		var distance := button.get_global_rect().get_center().distance_squared_to(screen_position)
+		if distance < nearest_distance:
+			nearest = id
+			nearest_distance = distance
+	if nearest.is_empty(): return ""
+	if held_node_id in candidates: return held_node_id
+	var center: Vector2 = node_buttons[nearest].get_global_rect().get_center()
+	var available := ""
+	var available_distance := INF
+	for id in candidates:
+		var candidate_center: Vector2 = node_buttons[id].get_global_rect().get_center()
+		if candidate_center.distance_to(center) > 6.0 or _research_state(id) != "available":
+			continue
+		var distance := candidate_center.distance_squared_to(screen_position)
+		if distance < available_distance:
+			available = id
+			available_distance = distance
+	return available if not available.is_empty() else nearest
 
 
 func _request_tooltip_refit() -> void:
@@ -1730,8 +1767,20 @@ func _rebuild_frontier_connections() -> void:
 			continue
 		for prerequisite_variant in definition.prerequisites:
 			var source_id := String(prerequisite_variant)
-			if _cached_node_state(source_id) == "purchased":
+			if _cached_node_state(source_id) == "purchased" and _is_figure_connection(source_id, target_id):
 				frontier_connections_cache.append(PackedStringArray([source_id, target_id]))
+
+
+func _is_figure_connection(source_id: String, target_id: String) -> bool:
+	# Research prerequisites remain save-compatible. They must not introduce
+	# fictitious diagonals into a corrected astronomical figure (Ursa Minor).
+	if not node_star_records.has(source_id) or not node_star_records.has(target_id): return false
+	var source: Dictionary = node_star_records[source_id]
+	var target: Dictionary = node_star_records[target_id]
+	if source.constellation_id != target.constellation_id: return false
+	for segment in chart_constellations[source.constellation_id].segments:
+		if (segment[0] == source.star.id and segment[1] == target.star.id) or (segment[1] == source.star.id and segment[0] == target.star.id): return true
+	return false
 
 
 func _frontier_connections() -> Array[PackedStringArray]:
@@ -1745,6 +1794,10 @@ func _cached_node_state(node_id: String) -> String:
 
 
 func _draw_tree() -> void:
+	# Control refreshes its culling rectangle on layout. Our drawing extends
+	# outside that rectangle, so restore the whole-sky bounds with each redraw.
+	var sky_extent := BACKGROUND_STAR_MAX_RADIUS + 256.0
+	RenderingServer.canvas_item_set_custom_rect(tree_canvas.get_canvas_item(), true, Rect2(CHART_ORIGIN - Vector2.ONE * sky_extent, Vector2.ONE * sky_extent * 2.0))
 	_draw_chart_background()
 	var structure_alpha := _galactic_structure_alpha()
 	for constellation_id in chart_constellations:
@@ -1885,6 +1938,7 @@ func _draw_frontier_overlay() -> void:
 			var hovered_definition := Balance.upgrade_definition(hovered_node_id)
 			for prerequisite_variant in hovered_definition.prerequisites:
 				var source_id := String(prerequisite_variant)
+				if not _is_figure_connection(source_id, hovered_node_id): continue
 				if _cached_node_state(source_id) == "purchased":
 					continue
 				var presentation_alpha := _node_presentation_alpha(hovered_node_id)
@@ -2024,9 +2078,14 @@ func focus_constellation(id: String) -> void:
 	if not chart_placements.has(id): return
 	if id in ExtensionChart.ORDER and not galactic_unlocked: return
 	_cancel_node_hold()
-	var placement: Dictionary = chart_placements[id]
-	rotation_offset = -PI * 0.5 - float(placement.anchor_angle)
-	zoom = clampf(330.0 / float(placement.anchor_radius), _galactic_zoom_floor(), CONSTELLATION_ZOOM)
+	# Shared-corner figures can be translated from their nominal UI anchor.
+	# Focus the actual stars, including the complete attached Pegasus figure.
+	var center := Vector2.ZERO
+	for star in chart_constellations[id].stars:
+		center += base_star_positions[id + "/" + star.id] - CHART_ORIGIN
+	center /= float(chart_constellations[id].stars.size())
+	rotation_offset = -PI * 0.5 - center.angle()
+	zoom = clampf(330.0 / maxf(1.0, center.length()), _galactic_zoom_floor(), CONSTELLATION_ZOOM)
 	pan_position = _galactic_pan_for_zoom(zoom)
 	galactic_chart_detail = 1.0
 	for star in chart_constellations[id].stars:
