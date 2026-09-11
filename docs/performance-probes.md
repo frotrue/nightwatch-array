@@ -531,3 +531,15 @@ Validation/export: `build/validation/20260911T150510326Z_b7755fe7/summary.json`
 passed all 25 checks (24 fast gates and Windows export), with the native counter
 regression test also passing during helper compilation. Both the game EXE and
 its adjacent `NightwatchMetrics.exe` were refreshed.
+
+## Meteor submission isolation
+
+`meteor_submission_performance_probe.gd` isolates pose-only rendering of 1,000
+frozen-shape targets. Use a real renderer, 1152x648, with sequential A/B runs:
+
+```powershell
+& $godot --path . --resolution 1152x648 --script res://tests/meteor_submission_performance_probe.gd
+```
+
+See [probe scope](probes.md) and the [2026-09-12 Pro review and measured baseline](history/render-pro-review-2026-09-12.md#local-measurements).
+This measures batch submission, not natural late-game or fully observed target FPS.

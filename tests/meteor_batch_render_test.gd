@@ -108,9 +108,51 @@ func _run() -> void:
 	_check(layers[1].get_child_count() == 11, "Renderer must not introduce target children")
 	var counts: Array = []
 	for target in all_targets[1]: counts.append(target.draws)
+	var rebuilds: int = layers[1].batch_data_rebuilds
 	await _settle()
+	_check(layers[1].batch_data_rebuilds == rebuilds, "Unchanged batch colors/topology were rebuilt between ticks")
 	for i in counts.size():
 		_check(all_targets[1][i].draws == counts[i], "Unchanged meteor geometry was rebuilt between ticks")
+	# Pose-only updates must use the cached colors/indices with fresh vertices.
+	for targets in all_targets:
+		targets[0].position += Vector2(17, -9)
+	await _settle()
+	await _compare("cached_pose")
+	_check(layers[1].batch_data_rebuilds == rebuilds, "Pose-only update rebuilt topology")
+	# Changing the first target's topology changes every following index offset.
+	for targets in all_targets:
+		targets[0].trail_points.resize(4)
+		targets[0].queue_redraw()
+	await _settle()
+	await _compare("shortened_leading_trail")
+	for targets in all_targets:
+		targets[1].hide()
+	await _settle()
+	await _compare("hidden_additive")
+	for targets in all_targets:
+		targets[1].show()
+	await _settle()
+	await _compare("shown_additive")
+	# Move an opaque boundary into an existing run, then restore its position.
+	for variant in 2: layers[variant].move_child(all_targets[variant][2], 1)
+	await _settle()
+	await _compare("reordered_opaque")
+	for variant in 2: layers[variant].move_child(all_targets[variant][2], 2)
+	await _settle()
+	await _compare("restored_opaque")
+	var inserted: Array[Node2D] = []
+	for layer in layers:
+		var boundary := Polygon2D.new()
+		boundary.polygon = PackedVector2Array([Vector2(190, 100), Vector2(250, 100), Vector2(220, 165)])
+		boundary.color = Color("253044")
+		layer.add_child(boundary)
+		layer.move_child(boundary, 1)
+		inserted.append(boundary)
+	await _settle()
+	await _compare("inserted_opaque")
+	for boundary in inserted: boundary.free()
+	await _settle()
+	await _compare("removed_opaque")
 	driver.moving = true
 	for frame in 12:
 		await physics_frame
@@ -199,7 +241,7 @@ func _run() -> void:
 		for target in targets: target.queue_free()
 	driver.targets.clear()
 	await _settle()
-	_check(layers[1].geometry.is_empty() and layers[1].index_cache.is_empty() and layers[1].canvases.is_empty(), "Deleted targets retained geometry or canvas RIDs")
+	_check(layers[1].geometry.is_empty() and layers[1].index_cache.is_empty() and layers[1].canvases.is_empty() and layers[1].run_data.is_empty(), "Deleted targets retained geometry or canvas RIDs")
 	await _compare("empty")
 	# Cross the 16-bit vertex-index boundary in one real GPU batch. A count-only
 	# headless test cannot catch wrapped indices or missing light at this density.
