@@ -103,23 +103,23 @@ func _run() -> void:
 		all_targets.append(targets)
 	await _settle()
 	await _compare("overlap")
-	_check(layers[1].render_batch_count == 4, "Opaque objects must split four additive runs")
+	_check(layers[1].render_batch_count == 8, "Each non-solid target must retain its own ordered light item")
 	_check(layers[1].rendered_target_count == 8, "All eight non-solid targets must be batched")
 	_check(layers[1].get_child_count() == 11, "Renderer must not introduce target children")
 	var counts: Array = []
 	for target in all_targets[1]: counts.append(target.draws)
-	var rebuilds: int = layers[1].batch_data_rebuilds
+	var rebuilds: int = layers[1].geometry_upload_count
 	await _settle()
-	_check(layers[1].batch_data_rebuilds == rebuilds, "Unchanged batch colors/topology were rebuilt between ticks")
+	_check(layers[1].geometry_upload_count == rebuilds, "Unchanged geometry was uploaded between ticks")
 	for i in counts.size():
 		_check(all_targets[1][i].draws == counts[i], "Unchanged meteor geometry was rebuilt between ticks")
-	# Pose-only updates must use the cached colors/indices with fresh vertices.
+	# Pose-only updates must transform the unchanged resident geometry.
 	for targets in all_targets:
 		targets[0].position += Vector2(17, -9)
 	await _settle()
 	await _compare("cached_pose")
-	_check(layers[1].batch_data_rebuilds == rebuilds, "Pose-only update rebuilt topology")
-	# Changing the first target's topology changes every following index offset.
+	_check(layers[1].geometry_upload_count == rebuilds, "Pose-only update uploaded geometry")
+	# A leading target's changed topology must update its own retained buffer.
 	for targets in all_targets:
 		targets[0].trail_points.resize(4)
 		targets[0].queue_redraw()
@@ -241,10 +241,10 @@ func _run() -> void:
 		for target in targets: target.queue_free()
 	driver.targets.clear()
 	await _settle()
-	_check(layers[1].geometry.is_empty() and layers[1].index_cache.is_empty() and layers[1].canvases.is_empty() and layers[1].run_data.is_empty(), "Deleted targets retained geometry or canvas RIDs")
+	_check(layers[1].geometry.is_empty() and layers[1].retained_items.is_empty() and layers[1].item_state.is_empty() and layers[1].dirty_targets.is_empty(), "Deleted targets retained geometry or canvas RIDs")
 	await _compare("empty")
-	# Cross the 16-bit vertex-index boundary in one real GPU batch. A count-only
-	# headless test cannot catch wrapped indices or missing light at this density.
+	# Stress retained buffers beyond 65,536 total vertices. Each target now has
+	# local indices; compare actual pixels to catch missing or stale light.
 	for variant in 2:
 		for i in 1000:
 			var target := NativeArcs.new() if variant == 0 else CountedMeteor.new()
@@ -255,8 +255,8 @@ func _run() -> void:
 			target.reset_physics_interpolation()
 			for j in 12: target.trail_points.append(point - Vector2(j * 2, 0))
 	await _settle()
-	_check(layers[1].render_batch_count == 1 and layers[1].rendered_target_count == 1000, "Thousand targets did not share one light batch")
-	_check(layers[1].rendered_vertex_count > 65536, "Fixture did not exercise 32-bit indices")
+	_check(layers[1].render_batch_count == 1000 and layers[1].rendered_target_count == 1000, "Thousand targets did not retain all light items")
+	_check(layers[1].rendered_vertex_count > 65536, "Fixture did not exercise the intended total geometry load")
 	await _compare("thousand")
 	for viewport in pair: viewport.free()
 	driver.free()

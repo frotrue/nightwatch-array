@@ -32,7 +32,7 @@ Compatibility/OpenGL로 전환한다. 특정 드라이버에서 문제가 있으
 .\tools\validate.ps1 -GodotPath $godot -Build
 ```
 
-빠른 게이트 24개를 통과하면 Windows 실행 파일을 갱신한다.
+빠른 게이트 25개를 통과하면 Windows 실행 파일을 갱신한다.
 생성·보상·진행·표적 로직에 영향이 있으면 `-FullEconomy`도 추가한다.
 `-Build`를 빼면 검사만 한다. 시드·전략 설정과 추가 검증은 [probes.md](docs/probes.md)를 본다.
 

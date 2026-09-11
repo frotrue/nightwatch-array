@@ -10,7 +10,7 @@ no GUT/gdUnit installation is needed.
 .\tools\validate.ps1 -GodotPath $godot -Build
 ```
 
-This runs the 24 fast gates below, then exports Windows. Add `-FullEconomy` for
+This runs the 25 fast gates below, then exports Windows. Add `-FullEconomy` for
 changes to progression, rewards, spawning or target logic. Omit `-Build` to test only.
 The economy run inherits its seed/strategy environment; it does not force three strategies.
 
@@ -97,6 +97,7 @@ Each file below is under `tests/`. Run one while iterating with:
 | `ui_presentation_test.gd` | `UI_PRESENTATION_PASS` | Authored readout fonts/ink, independent scene state, collapsed summary defaults, initial slot localization, procedural type conversion, full integer formatting and compact/scientific notation |
 | `game_fixture_test.gd` | `GAME_FIXTURE_PASS` | Pre-ready isolation, rejected persistence, settings/binding schemas, conflict checks, notation persistence/live refresh and pointer-through numeric tooltips |
 | `meteor_render_cache_test.gd` | `METEOR_RENDER_CACHE_PASS` | Packed geometry against independent pre-optimization arithmetic across types, trails and direct mutation |
+| `meteor_fan_cache_test.gd` | `METEOR_FAN_CACHE_PASS` | Independent head fan topology and byte equality through reused/changing/empty buffers |
 
 The runner accepts each marker as an exact line prefix followed by a colon or line end.
 A marker alone cannot override an error or nonzero exit. Dispatch/arithmetic tests
@@ -130,24 +131,32 @@ coverage and earlier measurement rationale. Current workflow starts with this pa
 
 Run `meteor_batch_render_test.gd` when changing meteor geometry/submission or
 interpolation. Use the reference-capture Windows/OpenGL flags and replace the
-script path. It pairs immediate and shared rendering in two equal viewports:
+script path. It pairs immediate and retained rendering in two equal viewports:
 11 types, alternating opaque/light overlaps, moving topology, unchanged-frame
 reuse, interpolation reset, fading, visibility and removal. A separate 1,000-object
-case exceeds 65,536 vertices in one batch and compares actual pixels, covering
-32-bit index submission. It also checks run/target counts and releases target/RID
+case exceeds 65,536 total vertices across local target buffers and compares actual
+pixels. It checks retained-item/target counts and releases target/RID
 caches. The headless `meteor_render_cache_test` remains the independent arithmetic
 oracle; neither test substitutes for the other. No performance threshold belongs
 in this correctness check.
 
-The retained batch-data cases also check pose-only reuse, a shortened leading
-trail (rebasing later indices), hide/show, opaque reordering and insertion/removal.
+The retained-buffer cases also check pose-only reuse, a shortened leading
+trail, hide/show, opaque reordering and insertion/removal.
 `meteor_submission_performance_probe.gd` isolates submission: 1,000 frozen-shape
-meteors, 205,000 vertices, one additive run, 60 Hz pose-only motion, two-second
+meteors, 205,000 vertices, 1,000 retained items, 60 Hz pose-only motion, two-second
 warmup and five-second sample. Run with a real renderer at 1152x648 and no other
-GPU probes. `SUBMISSION_RESULT` reports submission CPU time, render FPS and data
-rebuilds; `METEOR_SUBMISSION_PASS` checks only that the workload ran. It bypasses
+GPU probes. `SUBMISSION_RESULT` reports submission CPU time, render FPS and geometry
+uploads; `METEOR_SUBMISSION_PASS` checks only that the workload ran. It bypasses
 gameplay capacity and does not measure observation, procedural redraw or natural
 late-game FPS. Use `late_game_render_performance_probe.gd` for that workload.
+
+`meteor_fan_cache_test.gd` independently retains the pre-cache fan arithmetic and
+compares packed vertices/colors/indices across changing and empty point counts.
+`NIGHTWATCH_FAN_BENCH=1` adds alternating CPU microbenchmarks, without a timing gate.
+`arrival_marks_render_test.gd` uses a frozen pre-cache effect draw method as its
+pixel oracle: 24 marks, fade without rebuilding, direction/type/position changes,
+removal, flash ordering, canvas modulation, camera span and reset. Run on both
+backends. `NIGHTWATCH_MARKER_BENCH=1` adds 120 fade frames for per-draw CPU timings.
 
 Its native reference also retains the pre-cache planet surface and pre-instancing
 scan arcs. Additional cases cover age-only reuse, radius/palette invalidation,
