@@ -80,6 +80,7 @@ a windowed renderer. All three main-game frame fixtures isolate player persisten
 | `frame_pacing_probe.gd` | Human input: still at 1–7s and 19–24s, rapid motion at 8–18s. `NIGHTWATCH_PROBE_SECONDS=24`, `NIGHTWATCH_RENDER_STRESS_OBJECTS=18` (32 includes Major) |
 | `observation_performance_probe.gd` | Scripted still, unpressed hover sweep and held tracking at exactly 18/32 live meteors. `NIGHTWATCH_OBSERVATION_PERF_FRAMES=360` (180–1800), 60 warm-up frames per phase |
 | `dense_input_performance_probe.gd` | 4/22 common meteors, all base/extension research flags and LINE/SLOW/WIDE/BURST/CORRELATE. 1/17/67 raw samples per 60 Hz tick, 120 ticks per case. Optional windowed frame timing; completion and natural spawning excluded |
+| `late_game_render_performance_probe.gd` | Real-time natural spawning, full research or `NIGHTWATCH_PERF_SAVE` read-only copy, one noncompleting planet, effects and sound. `NIGHTWATCH_PERF_INPUT_SAMPLES` selects 1–134 raw samples per tick (default 17); 5s warm-up + 25s measurement |
 | `research_ui_frame_probe.gd` | Idle, eight wheel events per frame, alternating inspector selections, 3.6s pull-back and final continuation chart |
 | `probe_frame_pacing_probe.gd` | Independent Layer 2 fixture. `NIGHTWATCH_PROBE_SECONDS=8`; `NIGHTWATCH_PROBE_FINISHED=1` selects finished state |
 
@@ -387,3 +388,44 @@ The final CPU and windowed dense-input probes both passed their workload checks.
 
 Bounded-worker validation: `build/validation/20260911T084705635Z_86b4ef24/summary.json`
 passed 25 checks (23 fast gates, three-seed economy, Windows export).
+
+
+## Observation selection optimization (2026-09-11)
+
+Retain all timestamped input segments and the fixed 60 Hz simulation. While
+survey keeps a valid primary, do not rank additional targets whose ranking cannot
+change that selection. Compute the soft-break distance only after a contact miss,
+and reuse the caller's immediately preceding validity check. Direct diagnostic
+calls still validate their target. No sampling/coalescing, worker-count or geometry
+change is involved.
+
+`tests/support/reference_observation_selection.gd` retains the old selection pass
+from `f7a84f0`. The threaded gate compares primary identity, tracked order, grace,
+quality and credited work, with 17/67 samples, LINE/circle, survey off/on, burst,
+hitstop and release. This reference is test-only and should stay independent.
+
+Paired CPU-only dense probe on Ryzen 5950X, Godot 4.7.2, 22 fixed targets:
+
+| Raw samples/tick | Before mean ms | After mean ms |
+|---|---:|---:|
+| 1 | 1.295 | 1.150 |
+| 17 | 3.704 | 2.833 |
+| 67 | 13.454 | 8.595 |
+
+Both runs retained 44.0 credited manual seconds and passed their workload checks.
+The 67-sample reduction in this pair is 36%; other baseline runs were closer to
+11ms, so this is not a promised gain for every machine or play session.
+Logs: `build/input-optimization-dense-{before,after}.log`.
+
+Natural-spawn windowed measurements did not establish a consistent FPS gain.
+The copied 95+42 research save at 1152x648/OpenGL, 5s warm-up + 25s measurement,
+measured before/after 94.25/73.02 FPS with 17 samples; reversing execution order
+measured after/before 93.72/84.52 FPS. A 67-sample pair measured 80.31/77.25 FPS
+with 282 completions on each side. Each run maintained approximately 60 ticks/s.
+These variable whole-game results must not be presented as a rendering improvement.
+Logs: `build/input-optimization-render-*.log`, `build/input-optimization-67-*.log`.
+
+An isolated `--render-thread separate` trial failed before completion with a fatal
+`cowdata.h` bounds error and a VSync warning. Do not enable it based on this trial;
+the project keeps its existing render thread model. The trial is not a performance
+sample. Engine rendering/driver work remains a separate optimization target.

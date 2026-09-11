@@ -61,7 +61,7 @@ Each file below is under `tests/`. Run one while iterating with:
 | Script | Expected marker | Main coverage |
 |---|---|---|
 | `performance_monitor_test.gd` | `PERFORMANCE_MONITOR_PASS` | Settings persistence/defaults, invalid values, native CPU pipe, paused/live ticks, passive input, enable/disable and scene shutdown |
-| `threaded_simulation_test.gd` | `THREADED_SIMULATION_PASS` | Live, batched single-thread and parallel motion/contact equivalence; worker cap, real worker execution, equipment/hitstop, pause and thread joins |
+| `threaded_simulation_test.gd` | `THREADED_SIMULATION_PASS` | Live reference selection, batched single-thread and parallel motion/contact equivalence at 17/67 input segments; primary/order/grace, survey toggles, worker cap, equipment/hitstop, pause and joins |
 | `research_contract_test.gd` | `RESEARCH_CONTRACT_PASS` | 95 definitions, 26 executable contracts, exact 69 unverified IDs, bidirectional en/ko claims, opening budgets |
 | `save_integrity_test.gd` | `SAVE_INTEGRITY_PASS` | Atomic replacement, injected write/rename failures, invalid slots/payloads, prior bytes and summary preservation |
 | `smoke_test.gd` | `SMOKE_TEST_PASS` | Main loop, saves, localization, held tracking/sweep, input/modals/settings, round accounting; immediate echo unlock/legacy channels, additive dish forecasts, screen-space survey counts and manual-only spectral rewards |
