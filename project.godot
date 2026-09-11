@@ -20,6 +20,12 @@ window/size/min_height=540
 window/stretch/mode="canvas_items"
 window/vsync/vsync_mode=1
 
+[physics]
+
+common/physics_ticks_per_second=60
+common/max_physics_steps_per_frame=8
+common/physics_interpolation=true
+
 [rendering]
 
 renderer/rendering_method="gl_compatibility"

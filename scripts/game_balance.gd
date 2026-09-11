@@ -628,8 +628,8 @@ const UPGRADE_NODES: Array[Dictionary] = [
 		"major": false, "affects_pacing": false
 	},
 	{
-		"id": "canis_cadence_i", "name": "Swift Signal", "icon": "1.00s", "cost": 760000,
-		"description": "Sky Activity: minimum regular meteor interval 1.00 seconds.",
+		"id": "canis_cadence_i", "name": "Swift Signal", "icon": "×2.00", "cost": 760000,
+		"description": "Sky Activity: raise the base natural spawn rate ceiling to ×2.00.",
 		"branch": "canis_major", "prerequisites": [],
 		"hidden_until": [], "effect_type": "transformation", "effect_notes": {"regular_spawn_interval_floor": 1.0},
 		"effect_contract": {"kind": "regular_spawn_interval_floor", "value": 1.0, "scope": "regular_meteor_arrivals"},
@@ -644,8 +644,8 @@ const UPGRADE_NODES: Array[Dictionary] = [
 		"major": false, "affects_pacing": false
 	},
 	{
-		"id": "canis_cadence_ii", "name": "Running Cadence", "icon": "0.85s", "cost": 1150000,
-		"description": "Sky Activity: minimum regular meteor interval 0.85 seconds.",
+		"id": "canis_cadence_ii", "name": "Running Cadence", "icon": "×2.35", "cost": 1150000,
+		"description": "Sky Activity: raise the base natural spawn rate ceiling to ×2.35.",
 		"branch": "canis_major", "prerequisites": ["canis_capacity_i"],
 		"hidden_until": ["canis_capacity_i"], "effect_type": "transformation", "effect_notes": {"regular_spawn_interval_floor": 0.85},
 		"effect_contract": {"kind": "regular_spawn_interval_floor", "value": 0.85, "scope": "regular_meteor_arrivals"},
@@ -660,8 +660,8 @@ const UPGRADE_NODES: Array[Dictionary] = [
 		"major": true, "affects_pacing": false
 	},
 	{
-		"id": "canis_cadence_iii", "name": "White-Star Tempo", "icon": "0.70s", "cost": 1750000,
-		"description": "Sky Activity: minimum regular meteor interval 0.70 seconds.",
+		"id": "canis_cadence_iii", "name": "White-Star Tempo", "icon": "×2.86", "cost": 1750000,
+		"description": "Sky Activity: raise the base natural spawn rate ceiling to ×2.86.",
 		"branch": "canis_major", "prerequisites": ["canis_opening", "canis_cadence_ii"],
 		"hidden_until": ["canis_opening", "canis_cadence_ii"], "effect_type": "transformation", "effect_notes": {"regular_spawn_interval_floor": 0.70},
 		"effect_contract": {"kind": "regular_spawn_interval_floor", "value": 0.70, "scope": "regular_meteor_arrivals"},
@@ -693,8 +693,8 @@ const UPGRADE_NODES: Array[Dictionary] = [
 		"major": true, "affects_pacing": false
 	},
 	{
-		"id": "draco_cadence", "name": "Circumpolar Cadence", "icon": "0.45s", "cost": 8000000,
-		"description": "Sky Activity: minimum regular meteor interval 0.45 seconds.",
+		"id": "draco_cadence", "name": "Circumpolar Cadence", "icon": "×4.44", "cost": 8000000,
+		"description": "Sky Activity: raise the base natural spawn rate ceiling to ×4.44.",
 		"branch": "draco", "prerequisites": ["draco_synthesis"],
 		"hidden_until": ["draco_synthesis"], "effect_type": "transformation", "effect_notes": {"regular_spawn_interval_floor": 0.45},
 		"effect_contract": {"kind": "regular_spawn_interval_floor", "value": 0.45, "scope": "regular_meteor_arrivals"},

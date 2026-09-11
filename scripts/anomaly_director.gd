@@ -4,6 +4,8 @@ const Data = preload("res://scripts/expansion_data.gd")
 const Target = preload("res://scripts/anomaly_target.gd")
 var research: Node
 var remaining := 8.0
+var opportunity_pending := false
+var occurrence_rng := RandomNumberGenerator.new()
 var scheduler_seed := 1
 var scheduler_serial := 0
 var event_serial := 0
@@ -17,6 +19,7 @@ func setup(controller: Node) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
 	scheduler_seed = rng.randi_range(1, 2147483646)
+	occurrence_rng.seed = scheduler_seed
 
 func targets() -> Array:
 	var result: Array = []
@@ -36,10 +39,10 @@ func available_kinds() -> Array[String]:
 		kinds.append("rare")
 	return kinds
 
-func _process(delta: float) -> void:
+func simulate_tick(delta: float) -> void:
 	if research == null or not research.game.observation_phase_active or not research.available():
 		return
-	var real_delta := maxf(0.0, delta / maxf(Engine.time_scale, 0.001))
+	var real_delta := maxf(0.0, delta)
 	for index in range(pending.size() - 1, -1, -1):
 		pending[index].delay -= real_delta
 		if pending[index].delay <= 0.0:
@@ -48,10 +51,15 @@ func _process(delta: float) -> void:
 			_spawn_component(descriptor)
 	if available_kinds().is_empty():
 		return
+	var rolled := occurrence_rng.randf() < get_spawn_probability()
 	remaining = maxf(0.0, remaining - real_delta)
-	if remaining > 0.0 or not targets().is_empty() or not pending.is_empty():
-		return
-	try_opportunity()
+	if remaining > 0.000001: return
+	if rolled: opportunity_pending = true
+	if opportunity_pending and targets().is_empty() and pending.is_empty(): try_opportunity()
+
+func get_spawn_probability() -> float:
+	return 1.0 / (38.0 * (0.8 if research.research_owned("ext_sweep_advanced") else 1.0) * 60.0)
+
 
 func try_opportunity() -> bool:
 	if available_kinds().is_empty() or not _safe_window(22.0) or not _space_for(1):
@@ -60,7 +68,8 @@ func try_opportunity() -> bool:
 	var ticket_id := "n/%d" % event_serial
 	_ensure_ticket(ticket_id, "rare", "natural")
 	pending.append_array(_event_descriptors(ticket_id, "rare", "single", 0.0))
-	remaining = _next_interval()
+	opportunity_pending = false
+	remaining = 0.0
 	research.changed.emit()
 	research.game._autosave_active_slot()
 	return true
@@ -81,16 +90,8 @@ func _safe_window(duration: float) -> bool:
 	return true
 
 func _space_for(count: int) -> bool:
-	if object_count() + count > 3:
-		return false
-	var spawner: Node = research.game.spawner
-	return research.game.meteor_layer.get_child_count() + spawner.pending_contacts.size() + spawner.pending_echoes.size() + object_count() + count <= 31
+	return object_count() + count <= 3
 
-func _next_interval() -> float:
-	var rng := RandomNumberGenerator.new()
-	rng.seed = scheduler_seed + scheduler_serial * 104729
-	scheduler_serial += 1
-	return rng.randf_range(32.0, 44.0) * (0.8 if research.research_owned("ext_sweep_advanced") else 1.0)
 
 func _ensure_ticket(id: String, kind: String, origin: String) -> void:
 	if not tickets.has(id):
@@ -113,6 +114,9 @@ func _spawn_component(descriptor: Dictionary) -> void:
 	research.add_child(target)
 	target.restore_progress(descriptor.get("progress", {}), descriptor.get("restart", false))
 	target._update_position(0.0)
+	target.simulation_id = research.game.allocate_simulation_id()
+	target.previous_simulation_position = target.global_position
+	target.reset_physics_interpolation()
 
 func remember_component(target: Node) -> void:
 	if not tickets.has(target.reward_ticket_id):
@@ -164,6 +168,8 @@ func end_round() -> void:
 	pending.clear()
 
 func reset() -> void:
+	opportunity_pending = false
+	occurrence_rng.seed = scheduler_seed
 	end_round()
 	tickets.clear()
 	cycle.clear()
@@ -177,7 +183,7 @@ func get_save_data() -> Dictionary:
 	for target in targets():
 		if target.alive:
 			active.append(target.get_save_data())
-	return {"remaining": remaining, "scheduler_seed": scheduler_seed, "scheduler_serial": scheduler_serial, "event_serial": event_serial, "cycle": cycle.duplicate(), "pending": _encode_pending(), "tickets": tickets.duplicate(true), "active": active}
+	return {"occurrence_state": str(occurrence_rng.state), "opportunity_pending": opportunity_pending, "remaining": remaining, "scheduler_seed": scheduler_seed, "scheduler_serial": scheduler_serial, "event_serial": event_serial, "cycle": cycle.duplicate(), "pending": _encode_pending(), "tickets": tickets.duplicate(true), "active": active}
 
 func _encode_pending() -> Array:
 	var result: Array = []
@@ -192,6 +198,11 @@ func load_save_data(data: Dictionary) -> void:
 	reset()
 	remaining = Data.number(data.get("remaining", 8.0), 44.0, 8.0)
 	scheduler_seed = maxi(1, Data.integer(data.get("scheduler_seed", scheduler_seed), 2147483646, scheduler_seed))
+	occurrence_rng.seed = scheduler_seed
+	var saved_rng = data.get("occurrence_state", "")
+	if saved_rng is String and saved_rng.is_valid_int(): occurrence_rng.state = saved_rng.to_int()
+	# A legacy countdown grants one opportunity when due, then uses independent rolls.
+	opportunity_pending = Data.flag(data.get("opportunity_pending", not data.has("occurrence_state")))
 	scheduler_serial = Data.integer(data.get("scheduler_serial", 0), 100000000)
 	event_serial = Data.integer(data.get("event_serial", 0), 100000000)
 	var saved_cycle = data.get("cycle", [])

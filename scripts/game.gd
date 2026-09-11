@@ -1,5 +1,9 @@
 extends Node2D
 
+const SimulationClock = preload("res://scripts/simulation_clock.gd")
+const MeteorMotionBatch = preload("res://scripts/meteor_motion_batch.gd")
+const PARALLEL_MOTION_THRESHOLD := 128
+var parallel_motion_enabled := true
 const UITheme = preload("res://scripts/ui_theme.gd")
 const Balance = preload("res://scripts/game_balance.gd")
 const SoundSynth = preload("res://scripts/sound_synth.gd")
@@ -7,8 +11,6 @@ const GameInputRouter = preload("res://scripts/game_input_router.gd")
 const DeepSkyResearch = preload("res://scripts/deep_sky_research.gd")
 const ModulePopup = preload("res://scripts/module_popup.gd")
 const AUTOSAVE_INTERVAL_SECONDS := 60.0
-const HITSTOP_TIME_SCALE := 0.06
-const HITSTOP_COOLDOWN_MSEC := 400
 const COMBO_STRENGTH_STEP := 0.045
 const IMPACT_TARGET_TYPES := ["fireball", "major"]
 const FLASHLESS_METEOR_TYPES := ["common", "fast"]
@@ -46,6 +48,12 @@ var sound: Node
 var input_router: Node
 var deep_sky: Node2D
 var module_popup: CanvasLayer
+var simulation_clock := SimulationClock.new()
+var _in_simulation_tick := false
+var _save_after_tick := false
+var next_simulation_id := 1
+var previous_spawn_model_record: Dictionary = {}
+
 var elapsed_time: float = 0.0
 var completed: bool = false
 var startup_slot_prompt_enabled: bool = true
@@ -72,7 +80,6 @@ var last_clean_round_result: Dictionary = {}
 var best_round_rate: float = 0.0
 var suppress_phase_transition: bool = false
 var hitstop_active: bool = false
-var hitstop_cooldown_until_msec: int = 0
 var galactic_pullback_seen: bool = false
 
 
@@ -198,6 +205,7 @@ func start_run() -> void:
 	completed = false
 	observation_round = 1
 	last_clean_round_result.clear()
+	previous_spawn_model_record.clear()
 	best_round_rate = 0.0
 	galactic_pullback_seen = false
 	hud.hide_phase_summary()
@@ -214,7 +222,6 @@ func reset_run() -> void:
 	module_popup.close()
 	completed = false
 	_release_hitstop()
-	hitstop_cooldown_until_msec = 0
 	_close_upgrade_tree_without_transition()
 	get_tree().paused = false
 	observer.reset()
@@ -231,29 +238,82 @@ func reset_run() -> void:
 	hud.show_banner(tr("BANNER_RESET"), UITheme.BANNER_SUB, 2.0)
 
 
-func _process(delta: float) -> void:
-	if completed or not observation_phase_active:
-		return
-	# Hitstop scales the engine clock. The round is the measuring stick for
-	# Data/min, so its countdown is converted back to real seconds and a freeze
-	# cannot quietly buy the player extra observation time.
-	var real_delta := delta / maxf(Engine.time_scale, 0.001)
-	elapsed_time += real_delta
-	observation_phase_remaining = maxf(0.0, observation_phase_remaining - real_delta)
+func _process(_delta: float) -> void:
+	if completed or not observation_phase_active: return
 	starfield.set_watch_progress(1.0 - observation_phase_remaining / observation_phase_duration)
-	spawner.set_phase_time_remaining(observation_phase_remaining)
 	hud.set_runtime(elapsed_time)
 	hud.set_observation_phase(observation_round, observation_phase_remaining, observation_phase_duration)
-	deep_sky.modules.advance_time(real_delta)
-	progression.update_manual_combo(real_delta)
-	survey.advance_time(real_delta)
+
+func _physics_process(_delta: float) -> void:
+	simulate_tick()
+
+func allocate_simulation_id() -> int:
+	var id := next_simulation_id
+	next_simulation_id += 1
+	return id
+
+
+func _tick_target_motion(targets: Array, delta: float) -> void:
+	var snapshots: Array = []
+	var indices: Dictionary = {}
+	if parallel_motion_enabled and targets.size() >= PARALLEL_MOTION_THRESHOLD:
+		for target in targets:
+			if target.is_queued_for_deletion() or not target.alive or not target.has_method("motion_snapshot"): continue
+			indices[target] = snapshots.size()
+			snapshots.append(target.motion_snapshot(delta))
+	var results: Array = []
+	if not snapshots.is_empty():
+		results = observer.simulation_workers.map_chunks(snapshots.size(), MeteorMotionBatch.calculate.bind(snapshots))
+	for target in targets:
+		if target.is_queued_for_deletion(): continue
+		if indices.has(target):
+			target.apply_motion_result(results[indices[target]], delta, simulation_clock.tick)
+		else:
+			target.tick_motion(SimulationClock.STEP if target.type_id == "anomaly_rare" else delta, simulation_clock.tick)
+
+func simulate_tick() -> void:
+	if completed or not observation_phase_active or get_tree().paused: return
+	_in_simulation_tick = true
+	var scale: float = simulation_clock.begin_tick()
+	var motion_delta := SimulationClock.STEP * scale
+	hitstop_active = simulation_clock.hitstop_ticks > 0
+	spawner.set_phase_time_remaining(observation_phase_remaining)
+	# Existing timers expire before this tick's completions can start new effects.
+	deep_sky.modules.advance_time(SimulationClock.STEP)
+	progression.update_manual_combo(SimulationClock.STEP)
+	survey.advance_time(SimulationClock.STEP)
+	observer.prepare_tick()
+	events.simulate_tick(SimulationClock.STEP)
+	spawner.simulate_tick(SimulationClock.STEP)
+	deep_sky.director.simulate_tick(SimulationClock.STEP)
+	var targets: Array = meteor_layer.get_children() + deep_sky.director.targets()
+	targets.sort_custom(func(a, b): return a.simulation_id < b.simulation_id)
+	_tick_target_motion(targets, motion_delta)
+	sky_contacts.simulate_tick(motion_delta)
+	spawner._refresh_secondary_camera()
+	observer.simulate_tick(motion_delta)
+	for target in targets:
+		if not target.is_queued_for_deletion():
+			target.tick_observation(SimulationClock.STEP if target.type_id == "anomaly_rare" else motion_delta)
+	# Snapshot iteration prevents fragments/procs from receiving work on their birth tick.
+	for target in targets:
+		if not target.is_queued_for_deletion(): target.tick_resolve()
+	elapsed_time += SimulationClock.STEP
+	observation_phase_remaining = maxf(0.0, observation_phase_remaining - SimulationClock.STEP)
+	if observation_phase_remaining < 0.000001: observation_phase_remaining = 0.0
+	spawner.set_phase_time_remaining(observation_phase_remaining)
+	_in_simulation_tick = false
 	if active_save_slot > 0:
-		autosave_elapsed += real_delta
+		autosave_elapsed += SimulationClock.STEP
 		if autosave_elapsed >= AUTOSAVE_INTERVAL_SECONDS:
 			autosave_elapsed = fmod(autosave_elapsed, AUTOSAVE_INTERVAL_SECONDS)
 			_autosave_active_slot()
 	if observation_phase_remaining <= 0.0:
 		_end_observation_phase()
+
+	if _save_after_tick:
+		_save_after_tick = false
+		_autosave_active_slot()
 
 
 func _observation_duration() -> float:
@@ -265,7 +325,9 @@ func _begin_observation_phase(advance_round: bool = false, remaining_override: f
 		observation_round += 1
 	var duration := _observation_duration()
 	observation_phase_duration = duration
-	observation_phase_remaining = duration if remaining_override < 0.0 else clampf(remaining_override, 0.05, duration)
+	simulation_clock.reset_boundary()
+	observer.reset()
+	observation_phase_remaining = duration if remaining_override < 0.0 else clampf(remaining_override, 0.0, duration)
 	starfield.set_watch_progress(1.0 - observation_phase_remaining / duration)
 	spawner.set_phase_time_remaining(observation_phase_remaining)
 	observation_phase_active = true
@@ -664,17 +726,11 @@ func _fragment_feedback_scale(type_id: String) -> float:
 
 
 func _apply_hitstop(duration: float) -> void:
-	if hitstop_active or Time.get_ticks_msec() < hitstop_cooldown_until_msec:
-		return
-	hitstop_active = true
-	Engine.time_scale = HITSTOP_TIME_SCALE
-	# Real-time timer. A scaled one would stretch a 70 ms freeze past a second.
-	get_tree().create_timer(duration, true, false, true).timeout.connect(_release_hitstop)
+	if simulation_clock.request_hitstop(duration): hitstop_active = true
 
 
 func _release_hitstop() -> void:
-	if hitstop_active:
-		hitstop_cooldown_until_msec = Time.get_ticks_msec() + HITSTOP_COOLDOWN_MSEC
+	simulation_clock.reset_boundary()
 	hitstop_active = false
 	Engine.time_scale = 1.0
 
@@ -873,6 +929,9 @@ func _start_tutorial_after_slot_if_needed() -> void:
 
 
 func _autosave_active_slot() -> bool:
+	if _in_simulation_tick:
+		_save_after_tick = true
+		return true
 	if active_save_slot < 1 or active_save_slot > 3:
 		return false
 	var error: Error = save_games.save_slot(active_save_slot, _build_save_data())
@@ -900,6 +959,11 @@ func _on_tutorial_replay_requested() -> void:
 func _build_save_data() -> Dictionary:
 	return {
 		"rate_measurement_version": 1,
+		"spawn_model_version": 2,
+		"previous_spawn_model_record": previous_spawn_model_record.duplicate(true),
+		"simulation": {"tick": simulation_clock.tick, "epoch": simulation_clock.epoch, "remaining_ticks": roundi(observation_phase_remaining * 60.0),
+			"hitstop": simulation_clock.hitstop_ticks, "cooldown": simulation_clock.cooldown_ticks,
+			"spawner": spawner.get_simulation_save(), "events": events.get_simulation_save()},
 		"elapsed_time": elapsed_time,
 		"observation_round": observation_round,
 		"observation_phase_active": observation_phase_active,
@@ -958,6 +1022,11 @@ func _apply_save_data(data: Dictionary) -> void:
 		"best_round_rate",
 		data.get("best_round_data", 0.0)
 	)))
+	previous_spawn_model_record = data.get("previous_spawn_model_record", {}).duplicate(true) if data.get("previous_spawn_model_record", {}) is Dictionary else {}
+	if int(data.get("spawn_model_version", 1)) < 2:
+		previous_spawn_model_record = {"last_round": last_clean_round_result.duplicate(true), "best_rate": best_round_rate}
+		last_clean_round_result.clear()
+		best_round_rate = 0.0
 	sky_contacts.refresh_dishes()
 	hud.hide_phase_summary()
 	hud.restore_tutorial(progression.success_count > 0)
@@ -972,6 +1041,19 @@ func _apply_save_data(data: Dictionary) -> void:
 			_observation_duration()
 		))
 		_begin_observation_phase(false, saved_remaining)
+		var saved_duration := float(data.get("observation_phase_duration", _observation_duration()))
+		if is_finite(saved_duration):
+			observation_phase_duration = clampf(saved_duration, Balance.BASE_OBSERVATION_DURATION, Balance.MAX_OBSERVATION_DURATION)
+			observation_phase_remaining = clampf(ceil(saved_remaining * 60.0 - 0.000001) / 60.0, 0.0, observation_phase_duration) if is_finite(saved_remaining) else observation_phase_duration
+		var simulation = data.get("simulation", {})
+		if not simulation is Dictionary: simulation = {}
+		if simulation.get("remaining_ticks") is int or simulation.get("remaining_ticks") is float:
+			observation_phase_remaining = clampi(int(simulation.remaining_ticks), 0, roundi(observation_phase_duration * 60.0)) / 60.0
+		simulation_clock.tick = maxi(0, int(simulation.get("tick", 0)))
+		simulation_clock.hitstop_ticks = clampi(int(simulation.get("hitstop", 0)), 0, 7)
+		simulation_clock.cooldown_ticks = clampi(int(simulation.get("cooldown", 0)), 0, 24)
+		spawner.restore_simulation_save(simulation.get("spawner", {}) if simulation.get("spawner", {}) is Dictionary else {}, not simulation.has("spawner"))
+		if simulation.get("events") is Dictionary: events.restore_simulation_save(simulation.events)
 		deep_sky.resume_targets()
 		var module_runtime = data.get("module_runtime", {})
 		deep_sky.modules.restore_round_state(module_runtime if module_runtime is Dictionary else {})
@@ -1000,10 +1082,14 @@ func _apply_save_data(data: Dictionary) -> void:
 		upgrade_tree.set_intermission_context(next_round, int(_observation_duration()))
 		call_deferred("_resume_upgrade_intermission")
 	_loading_save = false
+	spawner.set_phase_time_remaining(observation_phase_remaining)
+	starfield.set_watch_progress(1.0 - observation_phase_remaining / observation_phase_duration)
+	if observation_phase_active and observation_phase_remaining <= 0.0: _end_observation_phase()
 	hud._refresh_extension()
 
 
 func _supports_deep_sky_save(data: Dictionary) -> bool:
+	if int(data.get("spawn_model_version", 1)) > 2: return false
 	var deep = data.get("deep_sky", {})
 	return deep is Dictionary and DeepSkyResearch.supports_save(deep)
 

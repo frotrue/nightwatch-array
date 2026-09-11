@@ -24,7 +24,9 @@ var quality_integral := 0.0
 var quality := 0.0
 var discovered := false
 var dish_assist_rate := 0.0
-var last_auto_frame := -10
+var simulation_tick := 0
+var simulation_id := 0
+var previous_simulation_position := Vector2.ZERO
 var start_uv := Vector2(0.30, 0.35)
 var end_uv := Vector2(0.68, 0.53)
 var body_position := Vector2.ZERO
@@ -108,34 +110,44 @@ func _advance(amount: float, manual: bool) -> float:
 		manual_work += fraction
 	else:
 		automatic_work += fraction
-		if credited > 0.0:
-			last_auto_frame = Engine.get_process_frames()
+
+	return credited
+
+func _process(_delta: float) -> void:
+	queue_redraw()
+
+func tick_motion(delta: float, tick_id: int) -> void:
+	simulation_tick = tick_id
+	previous_simulation_position = global_position
+	if research == null or not research.game.observation_phase_active: return
+	if not alive:
+		_linger -= delta
+		if _linger <= 0.0: queue_free()
+		return
+	var motion_delta: float = delta * research.game.observer.motion_multiplier_for(self)
+	age += motion_delta
+	_update_position(motion_delta)
+
+func tick_observation(delta: float) -> void:
+	if can_be_tracked() and allows_automatic_assist() and dish_assist_rate > 0.0:
+		_advance(dish_assist_rate * delta, false)
+
+func tick_resolve() -> void:
+	if not alive: return
 	if stage_progress >= 1.0:
 		alive = false
 		_linger = 0.45
 		research.director.complete_component(self)
-	return credited
-
-func _process(delta: float) -> void:
-	if research == null or not research.game.observation_phase_active:
-		return
-	var real_delta := maxf(0.0, delta / maxf(Engine.time_scale, 0.001))
-	if not alive:
-		_linger -= real_delta
-		queue_redraw()
-		if _linger <= 0.0:
-			queue_free()
-		return
-	var motion_delta: float = real_delta * research.game.observer.motion_multiplier_for(self)
-	age += motion_delta
-	_update_position(motion_delta)
-	if can_be_tracked() and allows_automatic_assist() and dish_assist_rate > 0.0:
-		_advance(dish_assist_rate * real_delta, false)
-	if alive and age >= visible_lifetime:
+	elif age >= visible_lifetime:
 		research.director.expire_component(self)
 		alive = false
 		_linger = 0.35
-	queue_redraw()
+
+func simulate_tick(delta: float) -> void:
+	tick_motion(delta, simulation_tick + 1)
+	tick_observation(delta)
+	tick_resolve()
+
 
 func _update_position(delta: float) -> void:
 	if research == null or not is_inside_tree():
@@ -200,3 +212,6 @@ func restore_progress(data: Dictionary, restart_lifetime: bool = false) -> void:
 	discovered = Data.flag(data.get("discovered", false))
 	_update_position(0.0)
 	queue_redraw()
+
+func get_display_position() -> Vector2:
+	return previous_simulation_position.lerp(global_position, Engine.get_physics_interpolation_fraction())

@@ -111,6 +111,7 @@ func _installed(ids: Array[String]) -> RefCounted:
 
 func _run() -> void:
 	_check_catalogue()
+	_check_configuration_cache()
 	_check_linear_geometry()
 	_check_solid_body_contact()
 	_check_capture()
@@ -123,6 +124,19 @@ func _run() -> void:
 	else:
 		push_error(str(failures))
 		quit(1)
+
+func _check_configuration_cache() -> void:
+	var model := _installed(["wide", "wide", "capture_hold"])
+	_check(model.installed_count("wide") == 2, "cache counts duplicate modules")
+	var public_ids: Array[String] = model.installed_ids()
+	public_ids.clear()
+	_check(model.has("wide") and model.installed_count("wide") == 2, "callers cannot mutate cached inventory")
+	model.quantities["wide"] = 1
+	_check(model.installed_count("wide") == 1 and is_equal_approx(model.effect("radius"), 1.65), "quantity mutation refreshes counts and effects together")
+	model.unlocked_slots = 2
+	_check(not model.has("capture_hold"), "capacity changes deactivate cached equipment")
+	model.purchased.erase("wide")
+	_check(not model.has("wide") and is_equal_approx(model.effect("radius"), 1.0), "inventory changes invalidate cached equipment")
 
 func _check_catalogue() -> void:
 	_check(Modules.DEFINITIONS.size() == 8 and Expansion.SAMPLE_MODULES.size() == 8, "exactly eight active modules")
@@ -180,18 +194,21 @@ func _check_capture() -> void:
 	observer.progression = MockProgression.new()
 	observer.modules = _installed(["capture_hold"])
 	observer.cursor_position = meteor.position
+	observer.simulation_holding = true
 	meteor.observation_controller = observer
 	meteor.set_dish_assist_rate(0.1)
-	meteor._process(1.0)
-	control._process(0.7)
+	meteor.simulate_tick(1.0)
+	control.simulate_tick(0.7)
 	_check(meteor.position.is_equal_approx(control.position) and is_equal_approx(meteor.age, 0.7), "inside field advances motion and burnout at 70%")
 	_check(meteor.observation_progress >= 0.1, "slowdown leaves actual dish observation work unchanged")
 	_check(observer.motion_multiplier_for(meteor) == 1.0, "meteor leaving the field immediately loses slowdown")
 	observer.cursor_position = meteor.position
 	_check(is_equal_approx(observer.motion_multiplier_for(meteor), 0.7), "reentering reapplies slowdown without a one-shot flag")
 	Input.action_release(&"nw_observe")
+	observer.simulation_holding = false
 	_check(observer.motion_multiplier_for(meteor) == 1.0, "button release removes slowdown without waiting for contact refresh")
 	Input.action_press(&"nw_observe")
+	observer.simulation_holding = true
 	observer.modules.equip("", 0)
 	_check(observer.motion_multiplier_for(meteor) == 1.0, "unequip removes slowdown immediately")
 	observer.modules = _installed(["capture_hold", "linear_observation"])
@@ -203,6 +220,7 @@ func _check_capture() -> void:
 	observer.modules = _installed(["capture_hold", "capture_hold", "capture_hold", "capture_hold", "capture_hold"])
 	_check(is_equal_approx(observer.motion_multiplier_for(meteor), 0.1), "stacked slowdown never stops time completely")
 	Input.action_release(&"nw_observe")
+	observer.simulation_holding = false
 	if added_action: InputMap.erase_action(&"nw_observe")
 	meteor.free()
 	control.free()

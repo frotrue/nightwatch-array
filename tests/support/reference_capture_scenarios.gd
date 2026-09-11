@@ -269,7 +269,7 @@ func _spawn(game: Node, specimen: Array):
 		failures.append("Could not create specimen: " + String(specimen[0]))
 		return null
 	_freeze_node(meteor)
-	for _step in range(METEOR_STEPS): meteor._process(METEOR_STEP)
+	for _step in range(METEOR_STEPS): meteor.simulate_tick(METEOR_STEP)
 	return meteor
 
 

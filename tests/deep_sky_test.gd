@@ -18,6 +18,7 @@ func _run() -> void:
 	root.add_child(game)
 	await process_frame
 	game.set_process(false)
+	game.set_physics_process(false)
 	game.spawner.set_process(false)
 	game.events.set_process(false)
 	var research = game.deep_sky
@@ -116,6 +117,8 @@ func _run() -> void:
 		research.equip(ids[1], 1)
 		popup.close()
 		tree.close_tree()
+		game.observer.cursor_position = meteor.global_position
+		game.observer.previous_cursor_position = meteor.global_position
 		meteor.observation_progress = 0
 		game.observer._apply_manual_contact(meteor, 0.1)
 		if ids == ["", ""]:
@@ -389,6 +392,7 @@ func _check_ring_research(game: Node) -> void:
 	_check(research.modules.unlocked_slots == 5 and research.modules.installed_ids().size() == 5 and not paused, "full game JSON restores researched capacity and observation")
 	_check(not research.research_owned("linear_observation") and not research.research_owned("sweep_optics"), "new inventory ownership does not grant permanent research on load")
 	game.set_process(false)
+	game.set_physics_process(false)
 	game.spawner.set_process(false)
 	game.events.set_process(false)
 

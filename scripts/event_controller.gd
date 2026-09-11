@@ -92,7 +92,7 @@ func reset() -> void:
 	sky_activity_changed.emit(0.0)
 
 
-func _process(delta: float) -> void:
+func simulate_tick(delta: float) -> void:
 	if not running:
 		return
 	run_time += delta
@@ -223,7 +223,7 @@ func _update_shower(delta: float) -> void:
 	match shower_state:
 		"warning":
 			shower_timer -= delta
-			if shower_timer <= 0.0:
+			if shower_timer <= 0.000001:
 				shower_state = "active"
 				shower_timer = Balance.SHOWER_DURATION
 				shower_spawn_timer = 0.0
@@ -232,11 +232,11 @@ func _update_shower(delta: float) -> void:
 		"active":
 			shower_timer -= delta
 			shower_spawn_timer -= delta
-			if shower_spawn_timer <= 0.0:
-				shower_spawn_timer = 0.43
+			if shower_spawn_timer <= 0.000001:
+				shower_spawn_timer += 0.43
 				spawner.spawn_for_shower(shower_index)
 				shower_index += 1
-			if shower_timer <= 0.0:
+			if shower_timer <= 0.000001:
 				shower_state = "idle"
 				spawner.pause_regular_spawns = false
 				next_shower_time = run_time + rng.randf_range(40.0, 58.0)
@@ -248,7 +248,7 @@ func _update_perseid_outburst(delta: float) -> void:
 	match outburst_state:
 		"warning":
 			outburst_timer -= delta
-			if outburst_timer <= 0.0:
+			if outburst_timer <= 0.000001:
 				outburst_state = "active"
 				outburst_timer = PERSEID_OUTBURST_DURATION
 				outburst_spawn_timer = 0.0
@@ -257,11 +257,11 @@ func _update_perseid_outburst(delta: float) -> void:
 		"active":
 			outburst_timer -= delta
 			outburst_spawn_timer -= delta
-			if outburst_index < PERSEID_OUTBURST_COUNT and outburst_spawn_timer <= 0.0:
+			if outburst_index < PERSEID_OUTBURST_COUNT and outburst_spawn_timer <= 0.000001:
 				outburst_spawn_timer += PERSEID_OUTBURST_INTERVAL
 				spawner.spawn_for_perseid_outburst(outburst_index)
 				outburst_index += 1
-			if outburst_timer <= 0.0:
+			if outburst_timer <= 0.000001:
 				outburst_state = "idle"
 				spawner.pause_regular_spawns = false
 				next_outburst_time = run_time + rng.randf_range(48.0, 64.0)
@@ -273,7 +273,7 @@ func _update_canis_major(delta: float) -> void:
 	match canis_major_state:
 		"scheduled":
 			canis_major_timer -= delta
-			if canis_major_timer <= 0.0:
+			if canis_major_timer <= 0.000001:
 				trigger_canis_major_warning()
 		"warning":
 			canis_major_timer -= delta
@@ -286,3 +286,21 @@ func _update_canis_major(delta: float) -> void:
 				return
 			canis_major_state = "resolved"
 			banner_requested.emit("EVENT_MAJOR_FIREBALL", UITheme.INK_MAX)
+
+func get_simulation_save() -> Dictionary:
+	var data := {"rng": str(rng.state)}
+	for key in ["run_time", "shower_state", "shower_timer", "shower_spawn_timer", "shower_index", "next_shower_time", "outburst_state", "outburst_timer", "outburst_spawn_timer", "outburst_index", "next_outburst_time", "canis_major_state", "canis_major_timer"]:
+		data[key] = get(key)
+	return data
+
+func restore_simulation_save(data: Dictionary) -> void:
+	for key in ["run_time", "shower_timer", "shower_spawn_timer", "next_shower_time", "outburst_timer", "outburst_spawn_timer", "next_outburst_time", "canis_major_timer"]:
+		var value = data.get(key)
+		if (value is float or value is int) and is_finite(float(value)): set(key, clampf(float(value), -1.0, 1000000000.0))
+	for key in ["shower_index", "outburst_index"]:
+		if data.get(key) is float or data.get(key) is int: set(key, clampi(int(data[key]), 0, 1000))
+	for key in ["shower_state", "outburst_state"]:
+		if data.get(key) in ["idle", "warning", "active"]: set(key, data[key])
+	if data.get("canis_major_state") in ["idle", "scheduled", "warning", "resolved", "deferred"]: canis_major_state = data.canis_major_state
+	if data.get("rng") is String and data.rng.is_valid_int(): rng.state = data.rng.to_int()
+	spawner.pause_regular_spawns = shower_state != "idle" or outburst_state != "idle"

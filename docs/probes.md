@@ -10,7 +10,7 @@ no GUT/gdUnit installation is needed.
 .\tools\validate.ps1 -GodotPath $godot -Build
 ```
 
-This runs the 21 fast gates below, then exports Windows. Add `-FullEconomy` for
+This runs the 23 fast gates below, then exports Windows. Add `-FullEconomy` for
 changes to progression, rewards, spawning or target logic. Omit `-Build` to test only.
 The economy run inherits its seed/strategy environment; it does not force three strategies.
 
@@ -60,6 +60,7 @@ Each file below is under `tests/`. Run one while iterating with:
 
 | Script | Expected marker | Main coverage |
 |---|---|---|
+| `threaded_simulation_test.gd` | `THREADED_SIMULATION_PASS` | Live, batched single-thread and parallel motion/contact equivalence; worker cap, real worker execution, equipment/hitstop, pause and thread joins |
 | `research_contract_test.gd` | `RESEARCH_CONTRACT_PASS` | 95 definitions, 26 executable contracts, exact 69 unverified IDs, bidirectional en/ko claims, opening budgets |
 | `save_integrity_test.gd` | `SAVE_INTEGRITY_PASS` | Atomic replacement, injected write/rename failures, invalid slots/payloads, prior bytes and summary preservation |
 | `smoke_test.gd` | `SMOKE_TEST_PASS` | Main loop, saves, localization, held tracking/sweep, input/modals/settings, round accounting; immediate echo unlock/legacy channels, additive dish forecasts, screen-space survey counts and manual-only spectral rewards |
@@ -147,3 +148,10 @@ ordinary navigation views. Focused frames change only chart zoom/pan; markers st
 at their actual positions. Compare them with the IAU maps linked in
 [the geometry reference](constellation-geometry.md). A shape match does not imply
 whole-sky placement, identical stick-figure conventions or photometric fidelity.
+
+## Fixed simulation ticks
+
+`tests/fixed_tick_test.gd` / `FIXED_TICK_PASS`: 30/60/144/240 FPS render schedules
+with identical timestamped input, independent occurrence/entry RNG state,
+bounded capacity and forecast deferral, local hitstop and active-save replay.
+Run with `tools/validate.ps1`; it is part of the required fast gates.

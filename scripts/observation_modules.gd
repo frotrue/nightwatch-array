@@ -34,6 +34,8 @@ var _cached_purchased: Array[String] = []
 var _cached_capacity := -1
 var _cached_quantities: Dictionary = {}
 var _cached_effects: Dictionary = {}
+var _cached_installed: Array[String] = []
+var _cached_counts: Dictionary = {}
 
 func research_owned(id: String) -> bool:
 	if SLOT_RESEARCH.has(id):
@@ -85,7 +87,8 @@ func owned_count(id: String) -> int:
 	return int(quantities.get(id, 1)) if id in purchased else 0
 
 func installed_count(id: String) -> int:
-	return installed_ids().count(id)
+	_refresh_configuration()
+	return int(_cached_counts.get(id, 0))
 
 func spare_count(id: String) -> int:
 	return maxi(0, owned_count(id) - installed_count(id))
@@ -121,6 +124,11 @@ func equip(id: String, slot: int = -1) -> bool:
 	return true
 
 func installed_ids() -> Array[String]:
+	_refresh_configuration()
+	# Public callers may mutate their result without changing the cached loadout.
+	return _cached_installed.duplicate()
+
+func _collect_installed_ids() -> Array[String]:
 	var result: Array[String] = []
 	for index in range(mini(slots.size(), clampi(unlocked_slots, INITIAL_SLOTS, MAX_SLOTS))):
 		var id := slots[index]
@@ -132,17 +140,24 @@ func installed_ids() -> Array[String]:
 # `has` means active in the current loadout. Call `research_owned` when a
 # caller needs inventory state for a research or reward decision.
 func has(id: String) -> bool:
-	return id in installed_ids()
+	return installed_count(id) > 0
 
 func effect(key: String):
+	_refresh_configuration()
+	return _cached_effects.get(key)
+
+func _refresh_configuration() -> void:
 	# Array equality detects direct fixture mutation without allocating on reads.
 	if _cached_capacity != unlocked_slots or _cached_slots != slots or _cached_purchased != purchased or _cached_quantities != quantities:
-		_cached_effects = configuration(installed_ids())
+		_cached_installed = _collect_installed_ids()
+		_cached_counts.clear()
+		for id in _cached_installed:
+			_cached_counts[id] = int(_cached_counts.get(id, 0)) + 1
+		_cached_effects = configuration(_cached_installed)
 		_cached_slots = slots.duplicate()
 		_cached_purchased = purchased.duplicate()
 		_cached_quantities = quantities.duplicate()
 		_cached_capacity = unlocked_slots
-	return _cached_effects.get(key)
 
 static func configuration(selection) -> Dictionary:
 	var result := {
@@ -226,6 +241,7 @@ func advance_time(delta: float) -> void:
 		reset_round()
 	else:
 		burst_remaining = maxf(0.0, burst_remaining - maxf(0.0, delta))
+		if burst_remaining < 0.000001: burst_remaining = 0.0
 
 func burst_multiplier(key: String) -> float:
 	return stacked_effect("overcharge", key) if has("overcharge") and burst_remaining > 0.0 else 1.0

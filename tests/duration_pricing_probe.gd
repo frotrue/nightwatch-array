@@ -3,7 +3,7 @@ extends SceneTree
 const ProbeProgression = preload("res://scripts/progression_controller.gd")
 
 const TIMELINE_SECONDS := 600.0
-const STEP := 0.05
+const STEP := 1.0 / 60.0
 const DEFAULT_SEED_COUNT := 10
 const SEED_COUNT_ENV := "NIGHTWATCH_PRICING_SEEDS"
 const BASE_SEED := 20260821
@@ -157,7 +157,7 @@ func _run_timeline(duration: float, upgrades: Array, seed: int) -> Dictionary:
 		var step_count := int(round(duration / STEP))
 		for step_index in range(step_count):
 			game.spawner.set_phase_time_remaining(maxf(0.0, duration - float(step_index) * STEP))
-			game.spawner._process(STEP)
+			game.spawner.simulate_tick(STEP)
 			_process_meteors(STEP)
 		if round_completed > round_realized:
 			push_error("A cutoff object leaked into pricing round %d" % round_number)
@@ -181,6 +181,7 @@ func _run_timeline(duration: float, upgrades: Array, seed: int) -> Dictionary:
 
 func _prepare_timeline(upgrades: Array, seed: int) -> void:
 	game.set_process(false)
+	game.set_physics_process(false)
 	game.spawner.set_process(false)
 	game.events.set_process(false)
 	game.sky_contacts.set_process(false)
@@ -205,6 +206,7 @@ func _prepare_timeline(upgrades: Array, seed: int) -> void:
 	if game.spawner.meteor_spawned.is_connected(game_spawn_handler):
 		game.spawner.meteor_spawned.disconnect(game_spawn_handler)
 	game.spawner.meteor_spawned.connect(_on_meteor_spawned)
+	game.spawner.spawn_policy.reseed(seed)
 	game.spawner.rng.seed = seed
 	game.spawner.forecast_rng.seed = seed + 1000
 	game.spawner.warm_contact_rng.seed = seed + 2000
@@ -241,7 +243,7 @@ func _process_meteors(delta: float) -> void:
 				progression.get_tracking_radius(),
 				progression.get_manual_analysis_speed_multiplier()
 			)
-		meteor._process(delta)
+		meteor.simulate_tick(delta)
 		if not meteor.alive:
 			meteor.free()
 

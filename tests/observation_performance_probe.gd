@@ -39,9 +39,8 @@ class ScriptedObserver:
 
 	var scripted_cursor := VIEWPORT * 0.5
 
-	# The inherited _process still samples, finds targets, applies tracking,
-	# refreshes the HUD and schedules its real drawing. Only input sampling is
-	# replaced, so the OS cursor cannot change the workload or move the window.
+	# Inject timestamped samples into the real tick buffer; inherited rendering
+	# reads the same scripted cursor. OS input cannot change this workload.
 	func _screen_to_world(_point: Vector2) -> Vector2:
 		return scripted_cursor
 
@@ -153,8 +152,14 @@ func _prepare_game(count: int) -> void:
 		var direction := Vector2.from_angle(-0.25 + float(index % 5) * 0.12)
 		var meteor = game.spawner.spawn_meteor(type_id, start, direction * 18.0, 30.0, start + direction * 80.0)
 		if meteor == null:
-			_check(false, "Spawner rejected declared specimen %d/%d" % [index, count])
-			return
+			# Keep the historical 32-meteor rendering stress case even though the
+			# production budget now reserves slots for late bodies and specimens.
+			meteor = game.spawner.MeteorScript.new()
+			meteor.configure(game.Balance.meteor_spec(type_id), type_id, start, direction * 18.0, 30.0 / float(game.Balance.meteor_spec(type_id).lifetime), game.spawner._current_features(type_id), start + direction * 80.0, game.observation_view)
+			meteor.simulation_id = game.allocate_simulation_id()
+			game.meteor_layer.add_child(meteor)
+			game._on_meteor_spawned(meteor)
+			meteor.reset_physics_interpolation()
 		meteor.set_process(false)
 		meteor.split_done = true
 		meteor.age = 2.0
@@ -280,11 +285,10 @@ func _step(phase: String, frame: int) -> void:
 	var button := InputEventMouseButton.new()
 	button.button_index = MOUSE_BUTTON_LEFT
 	button.pressed = phase == "hold"
-	Input.parse_input_event(button)
-	game._process(FIXED_STEP)
+	observer.tick_input.push(observer.input_time + FIXED_STEP, observer.scripted_cursor, phase == "hold")
+	preload("res://tests/support/game_fixture.gd").advance_seconds(game, FIXED_STEP)
 	observer._process(FIXED_STEP)
 	for meteor in meteors:
-		meteor._process(FIXED_STEP)
 		if not meteor.alive:
 			_replenish(meteor)
 	if game.effects.is_processing() or not game.effects.particles.is_empty() or not game.effects.popups.is_empty() or game.effects.kick_amplitude > 0.0:
@@ -306,7 +310,7 @@ func _replenish(meteor) -> void:
 	meteor.observation_progress = 0.0
 	meteor.precision_focus = 0.0
 	meteor.last_quality = 0.0
-	meteor.last_manual_frame = -100
+	meteor.last_manual_tick = -100
 	meteor.manual_touched = false
 	meteor.manual_tracking_time = 0.0
 	meteor.quality_integral = 0.0

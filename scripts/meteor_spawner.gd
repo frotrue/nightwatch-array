@@ -5,6 +5,7 @@ signal rare_spawned(type_id)
 signal contact_announced(contact)
 signal contact_resolved(contact, meteor)
 
+const SpawnPolicy = preload("res://scripts/spawn_policy.gd")
 const Balance = preload("res://scripts/game_balance.gd")
 const MeteorScript = preload("res://scripts/meteor.gd")
 const MAX_TOTAL_METEORS := 32
@@ -65,6 +66,8 @@ var progression: Node
 var extension_reserved_slots := 0
 var extension_owner: Node
 var observation_view: Camera2D
+var spawn_policy := SpawnPolicy.new()
+var next_simulation_id := 1
 var rng := RandomNumberGenerator.new()
 var forecast_rng := RandomNumberGenerator.new()
 var warm_contact_rng := RandomNumberGenerator.new()
@@ -74,7 +77,6 @@ var running: bool = false
 var pause_regular_spawns: bool = false
 var next_spawn_time: float = Balance.FIRST_METEOR_DELAY
 var first_spawn_pending: bool = true
-var secondary_refresh: float = 0.0
 # Production finishes work that already has a viable partner first. The probe
 # flips this switch to measure banking on unsupported targets before dish overlap.
 var lane_selection_order: LaneSelectionOrder = LaneSelectionOrder.PARTNER_FIRST
@@ -101,6 +103,7 @@ func setup(target_layer: Node2D, progression_controller: Node, view: Camera2D = 
 	warm_contact_rng.randomize()
 	echo_rng.randomize()
 	module_rng.randomize()
+	spawn_policy.reseed(rng.seed)
 
 
 func start_spawning() -> void:
@@ -113,7 +116,7 @@ func start_spawning() -> void:
 	# does not reduce the number of payable objects in a bounded watch. Exactly
 	# one common contact anchors every measured round; never prefill a burst.
 	if forecast_enabled() and pending_contacts.is_empty():
-		_announce_regular_spawn(warm_contact_rng)
+		_announce_regular_spawn(warm_contact_rng, "common")
 
 
 func reset() -> void:
@@ -123,7 +126,6 @@ func reset() -> void:
 	pause_regular_spawns = false
 	next_spawn_time = Balance.FIRST_METEOR_DELAY
 	first_spawn_pending = true
-	secondary_refresh = 0.0
 	pending_contacts.clear()
 	pending_echoes.clear()
 	echo_burst_serial = 0
@@ -137,55 +139,77 @@ func reset() -> void:
 	leonid_storm_spawn_index = 0
 
 
-func _process(delta: float) -> void:
-	if not running:
-		return
-	secondary_refresh -= delta
-	if secondary_refresh <= 0.0:
-		secondary_refresh = 0.35
-		_refresh_secondary_camera()
+func simulate_tick(delta: float) -> void:
+	if not running: return
 	_update_pending_echoes(delta)
 	_update_pending_contacts(delta)
 	_update_leonid_storm(delta)
-	if pause_regular_spawns:
-		return
-	next_spawn_time -= delta
-	if next_spawn_time > 0.0:
-		return
-	# The research contract is a cap on live atmospheric work. Forecasts are
-	# information about future work, while same-round deep targets have their own
-	# long dwell times; charging either against this budget made better warning
-	# and deep-sky discoveries suppress ordinary meteor arrivals. Burst sources
-	# still count once their atmospheric objects are live, and every path remains
-	# bounded by MAX_TOTAL_METEORS inside spawn_meteor().
-	if _regular_active_count() >= progression.get_max_active():
-		next_spawn_time = 0.45
-		return
+	# Consume every occurrence stream, even while locked or the atmospheric sky is paused.
+	var selected := spawn_policy.roll(progression)
 	if first_spawn_pending:
+		next_spawn_time -= delta
+		if next_spawn_time > 0.000001 or pause_regular_spawns: return
 		first_spawn_pending = false
 		_spawn_first_meteor()
-	elif forecast_enabled():
-		_announce_regular_spawn()
-	else:
-		spawn_meteor(_choose_regular_type())
-	var base_interval := rng.randf_range(
-		Balance.REGULAR_SPAWN_INTERVAL_MIN,
-		Balance.REGULAR_SPAWN_INTERVAL_MAX
-	)
-	next_spawn_time = maxf(
-		progression.get_regular_spawn_interval_floor(),
-		base_interval * progression.get_spawn_interval_scale()
-	)
+	for kind in selected:
+		if pause_regular_spawns and kind not in SpawnPolicy.LATE_TYPES: continue
+		_announce_regular_spawn(spawn_policy.entries[kind], kind)
+
+func _slot_count(kinds: Array) -> int:
+	var count := 0
+	if meteor_layer != null:
+		for child in meteor_layer.get_children():
+			if not child.is_queued_for_deletion() and child.type_id in kinds: count += 1
+	return count
+
+func _has_spawn_space(kind: String, count: int = 1, natural: bool = false) -> bool:
+	if meteor_layer == null: return false
+	if kind == "major": return _slot_count(["major"]) + count <= 1
+	if kind in SpawnPolicy.LATE_TYPES:
+		var own := _slot_count([kind])
+		if own + count > SpawnPolicy.LATE_TYPE_SLOTS: return false
+		var extras := 0
+		for other in SpawnPolicy.LATE_TYPES: extras += maxi(0, _slot_count([other]) - 1)
+		return own + count <= 1 or extras + count <= 1
+	if _slot_count(REGULAR_ACTIVE_TYPES) + count > SpawnPolicy.ATMOSPHERIC_SLOTS: return false
+	return not natural or _regular_active_count() + count <= progression.get_max_active()
+
+func get_simulation_save() -> Dictionary:
+	return {"rng": spawn_policy.save_state(), "first_pending": first_spawn_pending,
+		"first_remaining": next_spawn_time, "canis_consumed": canis_major_spawned_this_round,
+		"leonid_remaining": leonid_storm_remaining, "leonid_timer": leonid_storm_timer,
+		"leonid_interval": leonid_storm_interval, "leonid_index": leonid_storm_spawn_index,
+		"proc_rng": str(rng.state), "echo_rng": str(echo_rng.state), "module_rng": str(module_rng.state),
+		"forecast_rng": str(forecast_rng.state), "entry_cells": burnout_cell_cursors.duplicate(), "entry_boundaries": entry_boundary_cursors.duplicate()}
+
+func restore_simulation_save(data: Dictionary, legacy: bool = false) -> void:
+	# Ordinary in-flight sky is intentionally not saved. Do not recreate its warm forecast.
+	for contact in pending_contacts: contact_resolved.emit(contact, null)
+	pending_contacts.clear()
+	first_spawn_pending = bool(data.get("first_pending", false))
+	next_spawn_time = clampf(float(data.get("first_remaining", 0.0)), 0.0, Balance.FIRST_METEOR_DELAY)
+	canis_major_spawned_this_round = bool(data.get("canis_consumed", canis_major_spawned_this_round))
+	leonid_storm_remaining = clampi(int(data.get("leonid_remaining", 0)), 0, 100)
+	leonid_storm_timer = maxf(0.0, float(data.get("leonid_timer", 0.0)))
+	leonid_storm_interval = maxf(0.0, float(data.get("leonid_interval", 0.0)))
+	leonid_storm_spawn_index = maxi(0, int(data.get("leonid_index", 0)))
+	if legacy: return
+	if data.get("rng") is Dictionary: spawn_policy.restore_state(data.rng)
+	for key in ["proc_rng", "echo_rng", "module_rng", "forecast_rng"]:
+		var value = data.get(key, "")
+		if value is String and value.is_valid_int():
+			var stream: RandomNumberGenerator = {"proc_rng": rng, "echo_rng": echo_rng, "module_rng": module_rng, "forecast_rng": forecast_rng}[key]
+			stream.state = value.to_int()
+	for key in ["entry_cells", "entry_boundaries"]:
+		var saved = data.get(key, {})
+		if saved is Dictionary:
+			var destination: Dictionary = burnout_cell_cursors if key == "entry_cells" else entry_boundary_cursors
+			for kind in saved:
+				if kind is String and kind.length() <= 120 and destination.size() < 1000 and (saved[kind] is float or saved[kind] is int): destination[kind] = clampi(int(saved[kind]), 0, 1000000000)
 
 
 func spawn_meteor(type_id: String = "common", custom_start := Vector2.INF, custom_velocity := Vector2.INF, lifetime_override: float = -1.0, custom_burnout := Vector2.INF, is_observation_echo: bool = false, is_leonid_storm: bool = false, is_perseid_outburst: bool = false):
-	# Shower and fragment paths intentionally bypass the regular progression cap.
-	# Keep one reserved slot for the final major target while bounding all burst
-	# paths so a missed frame cannot turn into an ever-growing render workload.
-	var extension_objects: int = extension_owner.director.object_count() if extension_owner != null else 0
-	var instance_limit: int = MAX_TOTAL_METEORS - extension_objects if type_id == "major" else MAX_TOTAL_METEORS - 1 - maxi(extension_reserved_slots, extension_objects)
-	if meteor_layer == null or meteor_layer.get_child_count() >= instance_limit:
-		return null
+	if not _has_spawn_space(type_id): return null
 	var spec := Balance.meteor_spec(type_id)
 	var start := custom_start
 	var move_velocity := custom_velocity
@@ -208,7 +232,12 @@ func spawn_meteor(type_id: String = "common", custom_start := Vector2.INF, custo
 	if is_perseid_outburst:
 		meteor.set_meta("perseid_outburst", true)
 	meteor.fragment_requested.connect(_on_fragment_requested)
+	meteor.simulation_id = next_simulation_id
+	next_simulation_id += 1
+	if get_parent().has_method("allocate_simulation_id"): meteor.simulation_id = get_parent().allocate_simulation_id()
 	meteor_layer.add_child(meteor)
+	meteor.previous_simulation_position = meteor.global_position
+	meteor.reset_physics_interpolation()
 	meteor_spawned.emit(meteor)
 	if type_id == "fireball" or type_id == "major":
 		rare_spawned.emit(type_id)
@@ -225,11 +254,7 @@ func try_spawn_module_fragments(parent, chance: float) -> int:
 	parent.set_meta("module_split_checked", true)
 	if chance <= 0.0 or module_rng.randf() >= clampf(chance, 0.0, 1.0):
 		return 0
-	var extension_objects: int = extension_owner.director.object_count() if extension_owner != null else 0
-	var limit := MAX_TOTAL_METEORS - 1 - maxi(extension_reserved_slots, extension_objects)
-	# The effect is a pair; preserve the major/deep-sky reservation even at cap.
-	if meteor_layer == null or meteor_layer.get_child_count() + 2 > limit:
-		return 0
+	if not _has_spawn_space("fragment_piece", 2): return 0
 	var direction: Vector2 = parent.velocity.normalized() if parent.velocity.length_squared() > 0.01 else Vector2.RIGHT
 	var speed := clampf(parent.velocity.length() * 0.65, 130.0, 220.0)
 	for angle in [-0.48, 0.48]:
@@ -275,8 +300,10 @@ func _spawn_observation_echo_burst(trigger_meteor = null) -> int:
 	var trigger := _echo_trigger_snapshot(trigger_meteor)
 	var scheduled := 0
 	for index in count:
-		var reserved_objects := meteor_layer.get_child_count() + pending_contacts.size() + pending_echoes.size()
-		if reserved_objects >= MAX_TOTAL_METEORS - 1 - extension_reserved_slots:
+		var queued := pending_echoes.size()
+		for contact in pending_contacts:
+			if not contact.get("natural", false): queued += 1
+		if queued >= 64:
 			break
 		var type_id := _echo_type_for_trigger(trigger)
 		var entry := _plan_echo_entry(type_id, index, count, trigger)
@@ -434,7 +461,10 @@ func _update_pending_echoes(delta: float) -> void:
 			remaining.append(echo)
 			continue
 		var entry: Dictionary = echo.entry
-		spawn_meteor(String(echo.type_id), entry.start, entry.velocity, -1.0, entry.burnout, true)
+		var meteor = spawn_meteor(String(echo.type_id), entry.start, entry.velocity, -1.0, entry.burnout, true)
+		if meteor == null and phase_time_remaining >= _echo_required_phase_time(String(echo.type_id)):
+			echo["deferred"] = float(echo.get("deferred", 0.0)) + delta
+			if float(echo.deferred) <= SpawnPolicy.DEFER_SECONDS: remaining.append(echo)
 	pending_echoes = remaining
 
 
@@ -828,10 +858,15 @@ func set_phase_time_remaining(seconds: float) -> void:
 
 # A forecast names where the object will be before it exists, and names it
 # wrong: the estimate carries an error that only resolves as the object closes.
-func _announce_regular_spawn(source_rng: RandomNumberGenerator = null) -> void:
+func _announce_regular_spawn(source_rng: RandomNumberGenerator = null, type_id: String = "common") -> void:
 	var planning_rng: RandomNumberGenerator = rng if source_rng == null else source_rng
-	var type_id := _choose_regular_type_with_rng(planning_rng)
-	var lead_time: float = progression.get_forecast_lead()
+	var lead_time: float = progression.get_forecast_lead() if forecast_enabled() else 0.0
+	var count := 0
+	for pending in pending_contacts:
+		if pending.get("natural", false) and pending.type_id == type_id: count += 1
+	if count >= SpawnPolicy.MAX_PENDING_PER_TYPE:
+		spawn_policy.counters[type_id].cap_rejected += 1
+		return
 	# Never announce a forecast that the phase clock will silently erase. The
 	# object needs both its full warning and enough centered manual time for its
 	# own catalog entry. Long Andromeda targets therefore stop announcing earlier
@@ -848,6 +883,9 @@ func _announce_regular_spawn(source_rng: RandomNumberGenerator = null) -> void:
 	var min_error: float = progression.get_forecast_min_error(type_id)
 	var max_error: float = progression.get_forecast_max_error(type_id)
 	var contact := {
+		"natural": true,
+		"deferred": 0.0,
+		"visible": forecast_enabled(),
 		"id": next_contact_id,
 		"type_id": type_id,
 		"start": entry.start,
@@ -865,22 +903,40 @@ func _announce_regular_spawn(source_rng: RandomNumberGenerator = null) -> void:
 	}
 	next_contact_id += 1
 	pending_contacts.append(contact)
-	contact_announced.emit(contact)
+	if forecast_enabled(): contact_announced.emit(contact)
 
 
 func _update_pending_contacts(delta: float) -> void:
-	for index in range(pending_contacts.size() - 1, -1, -1):
-		var contact: Dictionary = pending_contacts[index]
+	# Rotate type priority; FIFO order within each type survives temporary saturation.
+	var priority: Array = SpawnPolicy.ORDER.slice(spawn_policy.admission_cursor) + SpawnPolicy.ORDER.slice(0, spawn_policy.admission_cursor)
+	spawn_policy.admission_cursor = (spawn_policy.admission_cursor + 1) % SpawnPolicy.ORDER.size()
+	var due: Array = pending_contacts.duplicate()
+	due.sort_custom(func(a, b):
+		var left := priority.find(String(a.type_id))
+		var right := priority.find(String(b.type_id))
+		return int(a.id) < int(b.id) if left == right else left < right)
+	for contact: Dictionary in due:
 		contact.abandoned_flash = maxf(0.0, float(contact.abandoned_flash) - delta)
 		contact.countdown = maxf(0.0, float(contact.countdown) - delta)
-		if float(contact.countdown) > 0.0:
+		if float(contact.countdown) > 0.000001: continue
+		var kind := String(contact.type_id)
+		var natural := bool(contact.get("natural", false))
+		var spec := Balance.meteor_spec(kind)
+		var payable := maxf(MINIMUM_PAYABLE_TRACK_TIME, float(spec.track_time) / 1.42)
+		var blocked := not _has_spawn_space(kind, 1, natural) or (natural and pause_regular_spawns and kind not in SpawnPolicy.LATE_TYPES)
+		if phase_time_remaining < payable or (blocked and float(contact.get("deferred", 0.0)) >= SpawnPolicy.DEFER_SECONDS):
+			pending_contacts.erase(contact)
+			if natural: spawn_policy.counters[kind].expired += 1
+			contact_resolved.emit(contact, null)
 			continue
-		pending_contacts.remove_at(index)
-		var is_echo := bool(contact.get("gemini_echo", false))
-		var meteor = spawn_meteor(
-			String(contact.type_id), contact.start, contact.velocity, -1.0,
-			Vector2(contact.get("burnout", Vector2.INF)), is_echo
-		)
+		if blocked:
+			if natural and float(contact.get("deferred", 0.0)) == 0.0: spawn_policy.counters[kind].deferred += 1
+			contact["deferred"] = float(contact.get("deferred", 0.0)) + delta
+			continue
+		var meteor = spawn_meteor(kind, contact.start, contact.velocity, -1.0, Vector2(contact.get("burnout", Vector2.INF)), bool(contact.get("gemini_echo", false)))
+		if meteor == null: continue
+		pending_contacts.erase(contact)
+		if natural: spawn_policy.counters[kind].admitted += 1
 		contact_resolved.emit(contact, meteor)
 
 
@@ -933,48 +989,6 @@ func _spawn_first_meteor() -> void:
 	var target := activity.position + activity.size * Vector2(0.31, 0.57)
 	var spec := Balance.meteor_spec("common")
 	spawn_meteor("common", start, (target - start).normalized() * float(spec.speed), 5.2)
-
-
-func _choose_regular_type() -> String:
-	return _choose_regular_type_with_rng(rng)
-
-
-func _choose_regular_type_with_rng(source_rng: RandomNumberGenerator) -> String:
-	var roll := source_rng.randf()
-	var threshold := 0.0
-	if progression.has_upgrade("galaxy_imaging"):
-		threshold += 0.02
-		if roll < threshold:
-			return "galaxy"
-	if progression.has_upgrade("double_star_resolution"):
-		threshold += 0.035
-		if roll < threshold:
-			return "binary_star"
-	if progression.has_upgrade("comet_solutions"):
-		threshold += 0.045
-		if roll < threshold:
-			return "comet"
-	if progression.has_upgrade("variable_watchlist"):
-		threshold += 0.05
-		if roll < threshold:
-			return "variable_star"
-	if progression.has_upgrade("satellite_catalog"):
-		threshold += 0.075
-		if roll < threshold:
-			return "satellite"
-	if progression.has_upgrade("rare_detection"):
-		threshold += 0.075
-	if progression.has_upgrade("rare_detection") and roll < threshold:
-		return "fireball"
-	if progression.has_upgrade("fragment_analysis"):
-		threshold += 0.175
-	if progression.has_upgrade("fragment_analysis") and roll < threshold:
-		return "fragment"
-	if progression.has_upgrade("edge_detection"):
-		threshold += 0.25
-	if progression.has_upgrade("edge_detection") and roll < threshold:
-		return "fast"
-	return "common"
 
 
 func _choose_echo_type_with_rng(source_rng: RandomNumberGenerator) -> String:
@@ -1033,7 +1047,7 @@ func _lane_candidate_precedes(a, b) -> bool:
 	var b_progress := float(b.observation_progress)
 	if not is_equal_approx(a_progress, b_progress):
 		return a_progress > b_progress
-	return a.get_instance_id() < b.get_instance_id()
+	return a.simulation_id < b.simulation_id
 
 
 func _lane_candidate_priority(candidate) -> int:
@@ -1065,7 +1079,7 @@ func _on_fragment_requested(origin: Vector2, parent_velocity: Vector2, parent_ty
 	# inheriting the parent's near-stall. Major fragments keep the fireball speed.
 	if parent_type != "major":
 		burst_speed = maxf(burst_speed, float(Balance.meteor_spec("fragment").speed))
-	var available_slots := maxi(0, (MAX_TOTAL_METEORS - 1 - extension_reserved_slots) - meteor_layer.get_child_count())
+	var available_slots := maxi(0, SpawnPolicy.ATMOSPHERIC_SLOTS - _slot_count(REGULAR_ACTIVE_TYPES))
 	for index in range(mini(piece_count, available_slots)):
 		var centered := float(index) - float(piece_count - 1) * 0.5
 		var direction := burst_direction.rotated(centered * spread)

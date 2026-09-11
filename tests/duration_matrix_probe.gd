@@ -4,7 +4,7 @@ const Balance = preload("res://scripts/game_balance.gd")
 
 const DURATIONS := [20.0, 30.0, 40.0, 50.0, 60.0]
 const TIMELINE_SECONDS := 1080.0
-const STEP := 0.05
+const STEP := 1.0 / 60.0
 const DEFAULT_SEED_COUNT := 5
 const SEED_COUNT_ENV := "NIGHTWATCH_MATRIX_SEEDS"
 const BASE_SEED := 20260821
@@ -126,8 +126,8 @@ func _run_timeline(row: Dictionary, duration: float, seed: int) -> Dictionary:
 		for step_index in range(step_count):
 			var remaining := maxf(0.0, duration - float(step_index) * STEP)
 			game.spawner.set_phase_time_remaining(remaining)
-			game.spawner._process(STEP)
-			game.events._process(STEP)
+			game.spawner.simulate_tick(STEP)
+			game.events.simulate_tick(STEP)
 			if game.sky_contacts.dish_active():
 				game.sky_contacts._update_dishes(STEP)
 			_process_meteors(STEP)
@@ -164,6 +164,7 @@ func _run_timeline(row: Dictionary, duration: float, seed: int) -> Dictionary:
 func _prepare_timeline(row: Dictionary, seed: int) -> void:
 	current_row_name = String(row.name)
 	game.set_process(false)
+	game.set_physics_process(false)
 	game.spawner.set_process(false)
 	game.events.set_process(false)
 	game.sky_contacts.set_process(false)
@@ -189,6 +190,7 @@ func _prepare_timeline(row: Dictionary, seed: int) -> void:
 	game.spawner.contact_resolved.connect(_on_contact_resolved)
 	game.spawner.meteor_spawned.connect(_on_meteor_spawned)
 	game.events.shower_started.connect(_on_shower_started)
+	game.spawner.spawn_policy.reseed(seed)
 	game.spawner.rng.seed = seed
 	game.spawner.forecast_rng.seed = seed + 1000
 	game.spawner.warm_contact_rng.seed = seed + 2000
@@ -249,7 +251,7 @@ func _process_meteors(delta: float) -> void:
 				game.progression.get_tracking_radius(),
 				game.progression.get_manual_analysis_speed_multiplier()
 			)
-		meteor._process(delta)
+		meteor.simulate_tick(delta)
 		if not meteor.alive:
 			meteor.free()
 

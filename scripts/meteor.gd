@@ -38,11 +38,15 @@ var burn_wobble: float = 0.0
 var split_progress: float = 0.58
 var burnout_linger: float = 0.20
 
+var simulation_tick := 0
+var simulation_id := 0
+var previous_simulation_position := Vector2.ZERO
+
 var age: float = 0.0
 var observation_progress: float = 0.0
 var precision_focus: float = 0.0
 var last_quality: float = 0.0
-var last_manual_frame: int = -100
+var last_manual_tick: int = -100
 var base_automatic_rate: float = 0.0
 var dish_assist_rate: float = 0.0
 var lane_assist_rate: float = 0.0
@@ -86,6 +90,7 @@ func configure(spec: Dictionary, meteor_type: String, start_position: Vector2, m
 	type_id = meteor_type
 	display_name = String(spec.name)
 	position = start_position
+	previous_simulation_position = start_position
 	entry_position = start_position
 	initial_velocity = move_velocity
 	velocity = move_velocity
@@ -157,27 +162,55 @@ func _ready() -> void:
 	queue_redraw()
 
 
-func _process(delta: float) -> void:
+func _process(_delta: float) -> void:
 	_sync_visual_scale()
+	queue_redraw()
+
+func tick_motion(delta: float, tick_id: int) -> void:
+	simulation_tick = tick_id
+	previous_simulation_position = global_position
 	if not alive:
 		linger_time -= delta
-		queue_redraw()
-		if linger_time <= 0.0:
-			queue_free()
+		if linger_time <= 0.0: queue_free()
 		return
-
 	var motion_delta: float = delta * observation_controller.motion_multiplier_for(self) if is_instance_valid(observation_controller) else delta
 	age += motion_delta
 	if motion_delta > 0.0:
 		_update_burn_motion(motion_delta)
+	_sample_motion_trail(delta)
+
+
+func motion_snapshot(delta: float) -> Dictionary:
+	var motion_delta: float = delta * observation_controller.motion_multiplier_for(self) if is_instance_valid(observation_controller) else delta
+	return {"age": age, "delta": motion_delta, "position": position,
+		"velocity": velocity, "travel": travel_direction, "entry": entry_position,
+		"burnout": burnout_position, "lifetime": visible_lifetime,
+		"terminal": burn_terminal_ratio, "wobble": burn_wobble,
+		"split": split_progress, "frequency": _wobble_frequency(), "phase": wobble_phase}
+
+
+func apply_motion_result(result: Dictionary, delta: float, tick_id: int) -> void:
+	simulation_tick = tick_id
+	previous_simulation_position = global_position
+	age = result.age
+	position = result.position
+	velocity = result.velocity
+	travel_direction = result.travel
+	_sample_motion_trail(delta)
+
+
+func _sample_motion_trail(delta: float) -> void:
 
 	trail_sample_accumulator += delta
 	if trail_sample_accumulator >= 0.024:
-		trail_sample_accumulator = 0.0
+		trail_sample_accumulator = fmod(trail_sample_accumulator, 0.024)
 		trail_points.push_front(global_position)
 		if trail_points.size() > max_trail_points:
 			trail_points.pop_back()
 
+
+func tick_observation(delta: float) -> void:
+	if not alive: return
 	var auto_rate := get_automatic_rate()
 	if auto_rate > 0.0:
 		var automatic_work := auto_rate * delta
@@ -185,9 +218,12 @@ func _process(delta: float) -> void:
 		observation_progress += automatic_work
 		last_quality = maxf(last_quality * 0.96, 0.38)
 
-	if Engine.get_process_frames() - last_manual_frame > 1 and auto_rate <= 0.0:
+	if simulation_tick - last_manual_tick > 1 and auto_rate <= 0.0:
 		observation_progress = maxf(0.0, observation_progress - delta * 0.055)
 
+
+func tick_resolve() -> void:
+	if not alive: return
 	if not split_done:
 		if type_id == "fragment" and get_burn_progress() >= split_progress:
 			split_done = true
@@ -197,7 +233,7 @@ func _process(delta: float) -> void:
 			fragment_requested.emit(global_position, velocity, type_id, bool(get_meta("gemini_echo", false)), bool(get_meta("leonid_storm", false)), bool(get_meta("perseid_outburst", false)))
 
 	if observation_progress >= 1.0:
-		_finish_observation(auto_rate)
+		_finish_observation(get_automatic_rate())
 	elif age >= visible_lifetime:
 		alive = false
 		linger_duration = burnout_linger
@@ -205,6 +241,12 @@ func _process(delta: float) -> void:
 		expired.emit(self, type_id == "major")
 
 	queue_redraw()
+
+
+func simulate_tick(delta: float) -> void:
+	tick_motion(delta, simulation_tick + 1)
+	tick_observation(delta)
+	tick_resolve()
 
 
 func _wobble_frequency() -> float:
@@ -251,10 +293,10 @@ func apply_manual_observation(
 ) -> void:
 	if not alive:
 		return
-	var current_frame := Engine.get_process_frames()
-	if manual_touched and current_frame - last_manual_frame > 1:
+	var current_frame := simulation_tick
+	if manual_touched and current_frame - last_manual_tick > 1:
 		interruption_count += 1
-	last_manual_frame = current_frame
+	last_manual_tick = current_frame
 	manual_touched = true
 	var quality := clampf(1.0 - cursor_distance / maxf(tracking_radius, 1.0), 0.0, 1.0)
 	last_quality = quality
@@ -316,7 +358,7 @@ func has_dish_assist() -> bool:
 
 
 func has_non_dish_lane_partner() -> bool:
-	var manual_is_live := manual_touched and Engine.get_process_frames() - last_manual_frame <= 1
+	var manual_is_live := manual_touched and simulation_tick - last_manual_tick <= 1
 	return base_automatic_rate > 0.0 or manual_is_live
 
 
@@ -1181,3 +1223,6 @@ func _sync_visual_scale() -> void:
 		return
 	observation_visual_scale = next_scale
 	queue_redraw()
+
+func get_display_position() -> Vector2:
+	return previous_simulation_position.lerp(global_position, Engine.get_physics_interpolation_fraction())

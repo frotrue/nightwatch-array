@@ -87,10 +87,10 @@ func _check_split_module() -> void:
 			if manual:
 				game.observer.cursor_position = parent.global_position
 				game.observer._apply_manual_contact(parent, 20.0)
-				parent._process(0.0)
+				parent.simulate_tick(0.0)
 			else:
 				parent.set_dish_assist_rate(10.0)
-				parent._process(0.11)
+				parent.simulate_tick(0.11)
 			var pieces := _split_pieces()
 			_check(parent.observed_successfully and pieces.size() == 2, "real manual/automatic completion creates a pair: " + kind + "/" + str(manual))
 			if pieces.size() != 2: continue
@@ -104,7 +104,7 @@ func _check_split_module() -> void:
 				_check(piece.primary_color == parent.primary_color and piece.glow_color == parent.glow_color, "children inherit parent color")
 				game.observer.cursor_position = piece.global_position
 				game.observer._apply_manual_contact(piece, 20.0)
-				piece._process(0.0)
+				piece.simulate_tick(0.0)
 			_check(game.meteor_layer.get_child_count() == before_count and game.spawner.pending_echoes.is_empty() and game.spawner.pending_contacts.is_empty() and game.spawner.leonid_storm_remaining == 0, "children cannot resplit or launch constellation bursts")
 			_check(game.progression.total_data_earned > before_data, "collecting children awards real data")
 	_clear_split_sky()
@@ -135,8 +135,7 @@ func _check_split_module() -> void:
 	_clear_split_sky()
 	parent = game.spawner.spawn_meteor("common", Vector2(500, 280), Vector2(180, 0))
 	parent.observed_successfully = true
-	var extension_count: int = research.director.object_count()
-	var budget: int = 31 - maxi(game.spawner.extension_reserved_slots, extension_count)
+	var budget: int = game.spawner.SpawnPolicy.ATMOSPHERIC_SLOTS
 	while game.meteor_layer.get_child_count() < budget - 1:
 		game.spawner.spawn_meteor("common", Vector2(500, 280), Vector2.ZERO)
 	_check(game.spawner.try_spawn_module_fragments(parent, 1.0) == 0 and _split_pieces().is_empty(), "one free slot cannot create a partial pair or consume reserved capacity")
@@ -146,9 +145,9 @@ func _check_split_module() -> void:
 	game.spawner.try_spawn_module_fragments(parent, 1.0)
 	for piece in _split_pieces():
 		piece.set_process(false)
-		piece._process(3.0)
+		piece.simulate_tick(3.0)
 		_check(not piece.alive and not piece.observed_successfully, "uncollected split children expire")
-		piece._process(2.0)
+		piece.simulate_tick(2.0)
 	await process_frame
 	_check(_split_pieces().is_empty(), "expired children are freed")
 	_clear_split_sky()
@@ -178,13 +177,14 @@ func _sky() -> void:
 func _manual(target: Node, amount: float = 1.0) -> void:
 	var rate: float = 1.42 * game.progression.get_analysis_speed_multiplier("common") / target.required_track_time
 	target.apply_manual_observation(amount / rate + (0.00001 if amount >= 1.0 else 0.0), 0.0, 100.0)
+	target.tick_resolve()
 
 func _automatic(target: Node, amount: float = 1.0) -> void:
 	# Use the production dish rate and target time path, with a stationary test
 	# interval; spatial acquisition has its own assertion below.
 	var rate: float = game.sky_contacts._dish_assist_rate(target)
 	target.set_dish_assist_rate(rate)
-	target._process(amount / rate + 0.00001)
+	target.simulate_tick(amount / rate + 0.00001)
 	target.set_dish_assist_rate(0.0)
 
 func _check_transactions() -> void:
@@ -224,11 +224,11 @@ func _spawn_due() -> Array:
 	game.observation_phase_remaining = 60.0
 	game.events.canis_major_state = "resolved"
 	_check(research.director.try_opportunity(), "required observation opportunity fits safe window")
-	research.director._process(4.01)
+	research.director.simulate_tick(4.01)
 	var targets: Array = research.director.targets()
 	for target in targets:
 		target.set_process(false)
-		target._process(target.warning_time + 0.01)
+		target.simulate_tick(target.warning_time + 0.01)
 	return targets
 
 func _check_target_persistence() -> void:
@@ -286,9 +286,7 @@ func _check_research_loop() -> void:
 		var samples_before: int = research.samples
 		_manual(target)
 		_check(research.samples == samples_before + 3, "research grants three actual samples")
-	for index in range(10):
-		var interval: float = research.director._next_interval()
-		_check(interval >= 25.6 and interval <= 35.2, "research shortens spawn interval")
+	_check(is_equal_approx(research.director.get_spawn_probability(), 1.0 / (30.4 * 60.0)), "research raises the independent specimen probability by 25%")
 	research.director.end_round()
 
 func _check_retirement_and_budget() -> void:
@@ -300,7 +298,7 @@ func _check_retirement_and_budget() -> void:
 	_check(research.director.object_count() == 0 and research.director.tickets.is_empty(), "removed archive target is discarded without reward or reserved space")
 	for index in range(40):
 		game.spawner.spawn_meteor("common", Vector2(200, 200), Vector2.ZERO)
-	_check(game.meteor_layer.get_child_count() == 28, "ordinary spawn cap reserves three expansion components and one important target")
+	_check(game.meteor_layer.get_child_count() == 22, "ordinary spawn cap preserves six late, three specimen and one major slots")
 	var count: int = game.meteor_layer.get_child_count()
 	_check(research.director.try_opportunity(), "extension can consume its reserved budget without removing existing meteors")
 	_check(game.meteor_layer.get_child_count() == count and research.director.object_count() <= 3, "extension preserves existing targets and its three-component bound")
@@ -314,14 +312,14 @@ func _check_retirement_and_budget() -> void:
 	research.director._spawn_component({"ticket": "n/dish_test", "kind": "rare", "origin_kind": "natural", "component": 0, "start": Vector2(0.4, 0.4), "end": Vector2(0.4, 0.4)})
 	var pair: Node = research.director.targets()[0]
 	pair.set_process(false)
-	pair._process(1.6)
+	pair.simulate_tick(1.6)
 	game.sky_contacts.refresh_dishes()
 	game.sky_contacts.dishes[0].position = pair.global_position
 	game.sky_contacts.dishes[0].target = pair.global_position
 	game.sky_contacts.dishes[0].arrived = true
 	game.sky_contacts._update_dishes(0.02)
 	_check(pair.dish_assist_rate > 0.0, "actual dish acquires recognized pair in coverage")
-	pair._process(0.02)
+	pair.simulate_tick(0.02)
 	_check(pair.get_automatic_contribution() > 0.0, "actual dish work records automatic contribution")
 	research.director.end_round()
 
@@ -422,6 +420,7 @@ func _check_migration() -> void:
 
 func _check_new_modules() -> void:
 	Input.action_press(&"nw_observe")
+	game.observer.simulation_holding = true
 	_sky()
 	research.director.end_round()
 	_clear_split_sky()
@@ -438,10 +437,10 @@ func _check_new_modules() -> void:
 			game.observer.cursor_position = meteor.global_position
 			game.observer.previous_cursor_position = meteor.global_position
 			game.observer._apply_manual_contact(meteor, 20.0)
-			meteor._process(0.0)
+			meteor.simulate_tick(0.0)
 		else:
 			meteor.set_dish_assist_rate(10.0)
-			meteor._process(0.11)
+			meteor.simulate_tick(0.11)
 		_check(meteor.observed_successfully, "real completion reaches the accounting route")
 		meteor.free()
 	_check(research.modules.burst_remaining == 9.0, "thirty mixed real completions charge the burst")
@@ -450,12 +449,13 @@ func _check_new_modules() -> void:
 	research.director._spawn_component({"ticket": "n/captured", "kind": "rare", "origin_kind": "natural", "component": 0, "start": Vector2(0.3, 0.4), "end": Vector2(0.7, 0.4)})
 	var rare = research.director.targets()[0]
 	rare.set_process(false)
-	rare._process(1.6)
+	rare.simulate_tick(1.6)
 	game.observer.cursor_position = rare.position
 	game.observer.previous_cursor_position = rare.position
 	game.observer._apply_manual_contact(rare, 0.00001)
+	game.observer.simulation_holding = true
 	var rare_age: float = rare.age
-	rare._process(0.5)
+	rare.simulate_tick(0.5)
 	_check(is_equal_approx(rare.age - rare_age, 0.35), "rare meteor movement and lifetime run at 70% inside the field")
 	var saved: Dictionary = JSON.parse_string(JSON.stringify(game._build_save_data()))
 	game._apply_save_data(saved)
@@ -465,16 +465,18 @@ func _check_new_modules() -> void:
 	restored.restore_progress({"age": 2.0, "captured_once": true, "capture_remaining": 6.0})
 	game.observer.cursor_position = restored.position + Vector2(10000, 0)
 	var restored_age: float = restored.age
-	restored._process(0.5)
+	restored.simulate_tick(0.5)
 	_check(is_equal_approx(restored.age - restored_age, 0.5), "old saved capture timers cannot freeze restored targets outside the field")
 	_check(not restored.get_save_data().has("capture_remaining"), "new saves contain no lingering capture timer")
 	Input.action_release(&"nw_observe")
+	game.observer.simulation_holding = false
 	game.upgrade_tree.open_tree()
 	var remaining: float = research.modules.burst_remaining
 	game.set_process(true)
 	await process_frame
 	await process_frame
 	game.set_process(false)
+	game.set_physics_process(false)
 	_check(research.modules.burst_remaining == remaining, "chart pause does not drain the burst clock")
 	game.upgrade_tree.close_tree()
 	game._begin_observation_phase(true)
