@@ -252,6 +252,51 @@ The expiry smoke assertion now advances one explicit simulation tick: two
 uncapped render frames can contain zero ticks. It still asserts the target is
 expired and its tracking reference is cleared; production expiry logic is unchanged.
 
+## Completion-particle instancing (2026-09-11)
+
+Remaining real-play drops were profiled with all 95 base and 42 outer research
+nodes, five modules (focus, linear observation, slowdown, overcharge and wide),
+natural spawning, automatic observation and completion feedback. A second pose
+also triggered a shower. A scripted cursor feeds 17 samples per fixed tick;
+three wall seconds warm up and eight are measured, uncapped, at 1152×648 on
+the same Ryzen 9 5950X / RTX 3060 Windows/OpenGL editor binary. Saves/settings
+are isolated; Dummy audio still runs sound synthesis code.
+
+Even with only about 22 live targets, feedback reached the unchanged 220-particle
+cap. Native particle circles repeatedly rebuilt/submitted their 64-segment mesh.
+`circle_instances.gd` now keeps that same mesh resident and submits position,
+radius and color in one MultiMesh buffer, preserving order, fade and camera scale.
+Rings, labels, completion behavior, particle limits and the worker cap are unchanged.
+
+Exploratory instrumented runs (`build/live-profile-before.log` and
+`build/live-profile-after.log`) showed late-game FPS 87.99 → 164.30 and shower
+FPS 64.87 → 99.82; p99 frame times were 24.01 → 13.65 ms and 46.53 → 21.39 ms.
+These are directional evidence, not equal-work benchmarks: the wall-time runs
+had different natural target/completion mixes. Baseline shutdown also reported
+two leaked objects after sampling; the follow-up allows pending sound timers to
+finish before freeing the fixture. Do not treat that diagnostic as a clean gate.
+
+The checked-in `observation_performance_probe.gd` provides a fixed-work comparison.
+Sequential before (`680aa1e`) and after runs each completed all six default
+360-frame phases with one 60 Hz step per frame and the same completion counts.
+It excludes automatic observation, natural spawning and audio, so it exercises a
+smaller particle load than the live diagnostic. Logs:
+`build/frame-drop-observation-{before,after}.log`.
+
+| Fixed workload | Mean frame ms before → after | p99 ms before → after |
+|---|---:|---:|
+| 18 targets, held observation | 8.852 → 7.421 | 14.237 → 11.447 |
+| 32 targets, held observation | 12.438 → 10.195 | 17.158 → 12.399 |
+
+Both held phases completed ten manual observations and reached 49 particles in
+both versions. The 32-target mean fell about 18%; frames over 16.7 ms fell from
+6/360 to 0/360 in these samples. This does not establish a release-build FPS floor:
+meteor geometry and simulation still cost time, and the live shower sample still
+had frames above 16.7 ms. The paired real-GPU particle test passed all nine poses,
+with at most one 8-bit color step of difference and identical expiry/reset images.
+Validation/export: `build/validation/20260911T095636363Z_c827789d/summary.json`
+passed all 24 checks (23 fast gates and Windows export).
+
 ## Duration diagnostics
 
 | Script | Fixed workload / environment | Use |

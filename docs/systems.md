@@ -29,7 +29,7 @@ All script names below are under `scripts/`.
 | Forecast contacts, dish movement and automatic tracking | `sky_contacts.gd` |
 | Blank-sky travel charge, summon RNG and cooldown | `survey_controller.gd` |
 | Showers, Perseid events and scheduled Canis events | `event_controller.gd` |
-| Particles, packets, kick and shake | `effects_layer.gd` |
+| Particles, packets, kick and shake; shared instanced particle circles | `effects_layer.gd`, `circle_instances.gd` |
 | Synthesized cues and automatic-success aggregation | `sound_synth.gd` |
 | Global dispatch and binding metadata | `game_input_router.gd`, `game_input_bindings.gd` |
 | HUD, settings, dialogs and summary UI | `hud.gd` |
