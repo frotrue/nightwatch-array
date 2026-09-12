@@ -115,6 +115,8 @@ driver does not measure the new module progression's full-run pacing.
 | Real display settings (focus, FPS cap, VSync) | `settings_windowed_test.gd` without `--headless` |
 | Main game and palette reference corpus | `capture_reference.gd` / [visual guide](visual-validation.md#reference-corpus) |
 | Batched meteor rendering and lifecycle | `meteor_batch_render_test.gd` with the real Windows/OpenGL renderer; `METEOR_BATCH_RENDER_PASS` |
+| Common/fast atlas appearance and palette lifecycle | `meteor_head_texture_test.gd` with Vulkan and OpenGL; `METEOR_HEAD_TEXTURE_PASS` |
+| Isolated 1,000-head CPU/render cost | `meteor_head_performance_probe.gd`; `NIGHTWATCH_HEAD_TEXTURES=0` selects procedural, `1` selects atlas |
 | Instanced completion particles | `effect_instances_render_test.gd` with the real Windows/OpenGL renderer; `EFFECT_INSTANCES_RENDER_PASS` |
 | Sky/chart/module states | `deep_sky_preview.gd` / [targeted previews](visual-validation.md#targeted-previews) |
 | Settings pages in both languages | `settings_preview.gd` / [settings capture](visual-validation.md#settings-and-display) |

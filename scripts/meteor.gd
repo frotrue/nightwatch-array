@@ -7,6 +7,9 @@ const UITheme = preload("res://scripts/ui_theme.gd")
 const TriangleBatch = preload("res://scripts/meteor_triangle_batch.gd")
 const PlanetSurface = preload("res://scripts/planet_surface.gd")
 const ScanArcs = preload("res://scripts/scan_arc_instances.gd")
+const HeadTexture = preload("res://scripts/meteor_head_texture.gd")
+var textured_head_enabled := true
+var head_texture: RefCounted
 
 # The trail leaves the head at the head's own width and loses that extra width
 # fast, so the long train keeps the narrow size it was tuned to. A low exponent
@@ -525,6 +528,7 @@ func _finish_observation(auto_rate: float) -> void:
 
 
 func _draw() -> void:
+	if head_texture != null: head_texture.hide()
 	if scan_arcs != null: scan_arcs.clear()
 	drawn_age = age
 	drawn_linger = linger_time
@@ -824,6 +828,11 @@ func _trail_half_widths() -> Vector2:
 
 
 func _draw_type_silhouette(radius: float, visibility: float, visual_scale: float) -> void:
+	if textured_head_enabled and type_id in ["common", "fast"]:
+		if head_texture == null: head_texture = HeadTexture.new(get_canvas_item())
+		var phase := age * (12.5 if type_id == "fast" else 7.4) + wobble_phase
+		head_texture.draw(type_id, radius, _safe_travel_direction(), primary_color, glow_color, visibility, phase, self_modulate)
+		return
 	match type_id:
 		"satellite":
 			_draw_satellite_head(radius, visibility, visual_scale)
