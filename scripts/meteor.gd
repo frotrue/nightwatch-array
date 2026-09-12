@@ -86,6 +86,9 @@ var trail_strip_indices := PackedInt32Array()
 var trail_strip_point_count: int = -1
 var trail_station_weights := PackedFloat64Array()
 var trail_weight_point_count: int = -1
+var alternate_trail_weights := PackedFloat64Array()
+var alternate_trail_weight_count := -1
+var trail_weight_build_count := 0
 var debris_draw_points := PackedVector2Array()
 var travel_direction := Vector2.ZERO
 var trail_sample_accumulator: float = 0.0
@@ -183,16 +186,12 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	_sync_visual_scale()
 	# Tick resolution already invalidates live geometry. In between ticks Godot
-	# interpolates the native lines and MeteorLayer interpolates the light mesh;
+	# interpolates the native lines and retained light together;
 	# repeating the same procedural drawing cannot make either move more smoothly.
 	# Age/linger also cover standalone previews and the post-expiry fade.
 	if age != drawn_age or linger_time != drawn_linger:
 		queue_redraw()
 
-
-func _notification(what: int) -> void:
-	if what == NOTIFICATION_RESET_PHYSICS_INTERPOLATION and is_instance_valid(render_layer):
-		render_layer.reset_target_transform(self)
 
 func tick_motion(delta: float, tick_id: int) -> void:
 	simulation_tick = tick_id
@@ -678,6 +677,20 @@ func _draw_exposure_filament(visibility: float, visual_scale: float) -> void:
 func _ensure_trail_station_weights(point_count: int) -> void:
 	if trail_weight_point_count == point_count:
 		return
+	# Sampling alternates between N and N+1 stations as the head moves away
+	# from its newest trail sample. Keep both immutable arrays, bounded to two.
+	var previous_weights := trail_station_weights
+	var previous_count := trail_weight_point_count
+	if alternate_trail_weight_count == point_count:
+		trail_station_weights = alternate_trail_weights
+		trail_weight_point_count = point_count
+		alternate_trail_weights = previous_weights
+		alternate_trail_weight_count = previous_count
+		return
+	alternate_trail_weights = previous_weights
+	alternate_trail_weight_count = previous_count
+	trail_station_weights = PackedFloat64Array()
+	trail_weight_build_count += 1
 	# Only count/index-dependent terms are cached. Float64 keeps the original
 	# GDScript arithmetic precision; age, type, geometry and visibility stay live.
 	# Five consecutive values per station: t, taper, shoulder, alpha, turbulence.

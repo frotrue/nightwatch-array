@@ -26,7 +26,7 @@ All script names below are under `scripts/`.
 | Fixed 60 Hz clock, buffered pointer segments, tick ordering | `simulation_clock.gd`, `simulation_input.gd`, `game.gd` |
 | Bounded numerical jobs (main + at most three workers); motion/contact snapshots | `simulation_workers.gd`, `meteor_motion_batch.gd`, `observation_contact_batch.gd`; pool owned by `observation_controller.gd` |
 | One meteor's lifetime, motion, progress and grading | `meteor.gd` |
-| Retained additive light buffers, local index caches and render interpolation | `meteor_render_layer.gd`, `meteor_triangle_batch.gd` |
+| Retained additive light buffers, local index caches and native pose inheritance | `meteor_render_layer.gd`, `meteor_triangle_batch.gd` |
 | Cursor, tracking, additional targets, observation/sweep transitions | `observation_controller.gd` |
 | Forecast contacts, dish movement and automatic tracking | `sky_contacts.gd` |
 | Blank-sky travel charge, summon RNG and cooldown | `survey_controller.gd` |
@@ -63,12 +63,12 @@ The independent Layer 2 scene uses `scripts/probe/probe_controller.gd` and
 The authored `MeteorLayer` owns one retained native canvas RID per non-solid
 meteor, without extra scene children. Trails and non-atlas heads generate local
 procedural triangles; `meteor_triangle_batch.gd` combines each target's light.
-A geometry publication uploads that target's triangles once. Intervening frames
-update only its interpolated canvas transform, so the renderer transforms the
-resident vertices. Native filaments and opaque target surfaces keep their
-CanvasItem commands and original child order. Per-target draw indices preserve
-opaque boundaries; compatible additive light retains its commutative ordering.
-This trades more retained items for fewer repeated vertex transforms and uploads.
+A geometry publication uploads that target's triangles once. Its retained RID
+is a native child of the meteor, behind the meteor's own commands. Godot inherits
+pose, interpolation, visibility and sibling order without a GDScript transform
+loop on every render frame. Native filaments and opaque target surfaces keep their
+CanvasItem commands and original order. Geometry and child/visibility signals
+invalidate layer bookkeeping; unchanged frames return without scanning targets.
 `render_batch_count` counts visible light items, not actual GPU draw calls.
 
 Common/fast heads use `meteor_head_texture.gd`: one shared 1024x2048 atlas,
@@ -94,17 +94,19 @@ removes its commands; destroying its owner releases the RID. Wider/nonstandard
 arcs use the native fallback. These resources introduce no scene children.
 
 Tick resolution, changed age/linger, feature changes and camera scale invalidate
-meteor geometry. Intervening render frames reuse it. The layer snapshots local
-poses before Game's physics tick and interpolates at the same engine fraction as
-the native lines; reset notifications also reset that snapshot. Paused ticks
-converge to the current pose. Local topology caches duplicate source indices
+meteor geometry. Intervening render frames reuse it. The native meteor parent
+owns interpolation resets and paused-tick convergence for both lines and light.
+Trail station weights retain only the two most recent point counts: sampling
+alternates between N and N+1, and returning to either reuses the immutable Float64
+coefficients. Eviction allocates a new array rather than mutating the other entry.
+Local topology caches duplicate source indices
 because GDScript packed arrays share mutable storage. Fan indices depend only on
 point count and are reused without changing shape/color arithmetic. The layer no
 longer merges/rebases vertices across targets. Hiding a target hides its light;
 removing it immediately frees its RID and metadata. Geometry changes mark only
 that target dirty, and pose changes never upload its unchanged triangles.
 
-Scene exit disconnects render/physics callbacks and frees every retained RID.
+Scene exit disconnects the render callback and frees every retained RID.
 Standalone meteors keep immediate submission for previews and independent
 geometry tests. Target capacity, motion/rewards, saves and the main-plus-three
 worker ceiling are unchanged; GPU transforms do not move simulation off CPU.

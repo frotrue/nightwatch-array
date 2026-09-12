@@ -88,6 +88,7 @@ func _run() -> void:
 	_check(solid_cases == 147, "all three solid bodies render without meteor tails")
 	_check(skipped_heads > 0 and retained_heads > 0, "both sides of the first-sample threshold ran")
 	meteor.free()
+	_test_alternating_weights()
 	if failures.is_empty():
 		print("METEOR_RENDER_CACHE_PASS: 539 exact ribbon/draw cases, 264 getter mutations, 11 types and fragment sparks")
 		quit(0)
@@ -140,6 +141,23 @@ func _run_cases_in_draw(meteor: Recorder) -> void:
 	_check(not _same_bytes(PackedVector2Array([Vector2(1.0, 2.0)]), PackedVector2Array([Vector2(1.00001, 2.0)])), "coordinate comparison rejects tiny mutations")
 	_check(not _same_bytes(PackedColorArray([Color(0.5, 0.5, 0.5, 0.5)]), PackedColorArray([Color(0.5, 0.5, 0.5, 0.50001)])), "color comparison rejects tiny mutations")
 	RenderingServer.canvas_item_clear(meteor.get_canvas_item())
+
+
+func _test_alternating_weights() -> void:
+	var target := Meteor.new()
+	target._ensure_trail_station_weights(28)
+	var first := target.trail_station_weights.to_byte_array()
+	target._ensure_trail_station_weights(29)
+	var second := target.trail_station_weights.to_byte_array()
+	for i in 32:
+		target._ensure_trail_station_weights(28 if i % 2 == 0 else 29)
+		_check(target.trail_station_weights.to_byte_array() == (first if i % 2 == 0 else second), "alternating weights retain exact bytes")
+	_check(target.trail_weight_build_count == 2, "N/N+1 reuse must stop coefficient builds after warmup")
+	target._ensure_trail_station_weights(3)
+	_check(target.trail_weight_build_count == 3 and target.trail_station_weights.size() == 15, "shrinking builds a new bounded entry")
+	target._ensure_trail_station_weights(29)
+	_check(target.trail_weight_build_count == 3 and target.trail_station_weights.to_byte_array() == second, "shrink preserves the most recent other entry")
+	target.free()
 
 
 func _build_cases() -> Array[Dictionary]:
