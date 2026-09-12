@@ -81,6 +81,7 @@ a windowed renderer. All three main-game frame fixtures isolate player persisten
 | `observation_performance_probe.gd` | Scripted still, unpressed hover sweep and held tracking at exactly 18/32 live meteors. `NIGHTWATCH_OBSERVATION_PERF_FRAMES=360` (180–1800), 60 warm-up frames per phase |
 | `dense_input_performance_probe.gd` | 4/22 common meteors, all base/extension research flags and LINE/SLOW/WIDE/BURST/CORRELATE. 1/17/67 raw samples per 60 Hz tick, 120 ticks per case. Optional windowed frame timing; completion and natural spawning excluded |
 | `late_game_render_performance_probe.gd` | Real-time natural spawning, full research or `NIGHTWATCH_PERF_SAVE` read-only copy, one noncompleting planet, effects and sound. `NIGHTWATCH_PERF_INPUT_SAMPLES` selects 1–134 raw samples per tick (default 17); 5s warm-up + 25s measurement |
+| `dense_render_performance_probe.gd` | Capacity-bypassing 128/1,000 common/fast targets with real 60 Hz motion and 17 held samples/tick; 2s warm-up + 6s sample per count. No natural events, completion/expiry or survey summons. Injected success visuals keep effects active. |
 | `research_ui_frame_probe.gd` | Idle, eight wheel events per frame, alternating inspector selections, 3.6s pull-back and final continuation chart |
 | `probe_frame_pacing_probe.gd` | Independent Layer 2 fixture. `NIGHTWATCH_PROBE_SECONDS=8`; `NIGHTWATCH_PROBE_FINISHED=1` selects finished state |
 
@@ -113,6 +114,17 @@ wall-frame time includes bookkeeping. `TIME_PROCESS` is a coarse phase-end monit
 Live hover pulses use real time; use [fixed captures](visual-validation.md) for pixel comparison.
 
 ### Dense raw input regression (2026-09-11)
+
+The separate `dense_render_performance_probe.gd` requires a windowed renderer.
+It keeps source hashes, exact min/max counts, observed targets, frame count, TPS
+and inclusive tick/meteor-draw CPU timings. Motion and observer CPU are subsets
+of tick CPU and must not be added to it. It uses full base research and WIDE/SLOW/
+BURST modules; slow, long-lived targets remain on screen. This is an artificial
+overload fixture, not normal density or a guarantee of 60 TPS. A PASS establishes
+workload execution, not acceptable performance. Below 100 measured frames,
+p95/p99 are null because short overloaded runs cannot support tail estimates.
+Render-frame effects are not a deterministic gameplay digest. Use the natural
+fixture for spawning/completion workloads and paired runs for gain claims.
 
 `dense_input_performance_probe.gd` supplements the one-sample observation fixture:
 17 samples/tick approximates a 1,000 Hz mouse and 67 approximates 4,000 Hz.

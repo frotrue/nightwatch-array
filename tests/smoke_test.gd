@@ -11,6 +11,48 @@ const Fixtures = preload("res://tests/support/game_fixture.gd")
 var failures: Array[String] = []
 
 
+class ExtensionFixture:
+	extends Node
+	signal changed
+	var queries := 0
+	var objective := "DEEP_FIRST_HINT"
+	func current_objective() -> String:
+		queries += 1
+		return tr(objective) if not objective.is_empty() else ""
+
+
+func _verify_extension_refresh() -> void:
+	var hud = load("res://scripts/hud.gd").new()
+	var source := ExtensionFixture.new()
+	root.add_child(hud)
+	hud.deep_sky = source
+	source.changed.connect(hud._refresh_extension)
+	hud.set_observation_phase(1, 60.0, 60.0)
+	var initial_queries := source.queries
+	_check(hud.extension_readout.visible, "observation entry displays the current extension objective")
+	for frame in 300: hud.set_observation_phase(1, 60.0 - frame / 100.0, 60.0)
+	_check(source.queries == initial_queries, "frame and second changes do not poll extension state")
+	hud.set_external_readouts_covered(true)
+	source.objective = ""
+	source.changed.emit()
+	hud.set_external_readouts_covered(false)
+	_check(not hud.extension_readout.visible, "an objective removed beneath an overlay stays hidden on return")
+	source.objective = "DEEP_FIRST_HINT"
+	source.changed.emit()
+	_check(hud.extension_readout.visible, "research state changes refresh without waiting for the clock")
+	var locale := TranslationServer.get_locale()
+	TranslationServer.set_locale("ko" if locale.left(2) != "ko" else "en")
+	hud._apply_locale()
+	_check(hud.extension_objective_label.text == tr("DEEP_FIRST_HINT"), "locale invalidates extension text immediately")
+	TranslationServer.set_locale(locale)
+	hud.set_upgrade_phase(1)
+	_check(not hud.extension_readout.visible, "upgrade phase hides the objective")
+	hud.set_observation_phase(2, 60.0, 60.0)
+	_check(hud.extension_readout.visible and not hud.extension_samples_label.visible, "next round restores the objective without hidden sample text")
+	hud.free()
+	source.free()
+
+
 func _initialize() -> void:
 	call_deferred("_run")
 
@@ -88,6 +130,7 @@ func _verify_research_revision() -> void:
 
 
 func _run() -> void:
+	_verify_extension_refresh()
 	_verify_research_revision()
 	var packed: PackedScene = load("res://scenes/main.tscn")
 	_check(packed != null, "main scene loads")
