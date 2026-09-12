@@ -22,6 +22,7 @@
 |---|---|
 | [9월 12일 GPT-6 Pro 렌더 검토](render-pro-review-2026-09-12.md) | 검토 증거·권고별 판정, 배치 캐시 수정과 자연 후반·고정 형상 부하 A/B |
 | [9월 12일 최적화 후보별 검증](render-candidates-2026-09-12.md) | 도형·예고선·GPU 위치 변환 채택, 커서 분리 기각과 실제 측정 |
+| [9월 12일 유성 머리 텍스처](meteor-head-textures-2026-09-12.md) | 일반·고속의 공유 아틀라스, 외형 근사와 머리 CPU 비용·전체 FPS를 구분한 비교 |
 | [설정 UI 27종 조사](settings-reference-study.md) | 2026-09-04의 출처·채택·보류 기록 |
 | [9월 10일 모듈 교체](module-overhaul-2026-09-10.md) | 5종 삭제·3종 추가, 자동 검증과 실제 조작감 확인 범위 |
 | [모듈 UI 조사](module-workbench-reference-study.md) | 12종 기능 조사와 폐기·수정한 시각 방향 |

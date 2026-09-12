@@ -61,8 +61,8 @@ The independent Layer 2 scene uses `scripts/probe/probe_controller.gd` and
 ### Meteor rendering
 
 The authored `MeteorLayer` owns one retained native canvas RID per non-solid
-meteor, without extra scene children. Meteors generate the same local procedural
-triangles; `meteor_triangle_batch.gd` combines each target's ribbon and head.
+meteor, without extra scene children. Trails and non-atlas heads generate local
+procedural triangles; `meteor_triangle_batch.gd` combines each target's light.
 A geometry publication uploads that target's triangles once. Intervening frames
 update only its interpolated canvas transform, so the renderer transforms the
 resident vertices. Native filaments and opaque target surfaces keep their
@@ -70,6 +70,18 @@ CanvasItem commands and original child order. Per-target draw indices preserve
 opaque boundaries; compatible additive light retains its commutative ordering.
 This trades more retained items for fewer repeated vertex transforms and uploads.
 `render_batch_count` counts visible light items, not actual GPU draw calls.
+
+Common/fast heads use `meteor_head_texture.gd`: one shared 1024x2048 atlas,
+immutable quad and bounded shared palette materials. One native child RID per
+head follows the meteor's normal canvas interpolation; no scene nodes are added.
+The RGB channels store glow/core/hotspot contributions, so the shader retains
+the live palette, inherited tint, self-modulation and visibility. Sixty-four
+frames per type interpolate over a repeating 8π optical phase; subtle shape
+motion is a sampled approximation of the procedural head, not pixel-identical.
+Only common/fast heads use it. Trails, collision, size/pulse, burn timing and
+other body types retain their existing paths. The procedural switch remains for
+independent comparisons and atlas baking. Type changes hide stale head items;
+owner destruction frees their RIDs. Palette caches retain at most 16 materials.
 
 `planet_surface.gd` caches the original 576 surface cells in one triangle array,
 retaining float32 colors and triangulation. Radius/palette changes rebuild it;
