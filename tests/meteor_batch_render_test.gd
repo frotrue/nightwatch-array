@@ -109,8 +109,10 @@ func _run() -> void:
 	var counts: Array = []
 	for target in all_targets[1]: counts.append(target.draws)
 	var rebuilds: int = layers[1].geometry_upload_count
+	var reconciliations: int = layers[1].reconciliation_count
 	await _settle()
 	_check(layers[1].geometry_upload_count == rebuilds, "Unchanged geometry was uploaded between ticks")
+	_check(layers[1].reconciliation_count == reconciliations, "Stable scene rescanned targets between ticks")
 	for i in counts.size():
 		_check(all_targets[1][i].draws == counts[i], "Unchanged meteor geometry was rebuilt between ticks")
 	# Pose-only updates must transform the unchanged resident geometry.
@@ -119,6 +121,25 @@ func _run() -> void:
 	await _settle()
 	await _compare("cached_pose")
 	_check(layers[1].geometry_upload_count == rebuilds, "Pose-only update uploaded geometry")
+	_check(layers[1].reconciliation_count == reconciliations, "Pose-only update rescanned targets")
+	# Native parent transforms must also work without a geometry publication.
+	for targets in all_targets:
+		targets[0].rotation = 0.37
+		targets[0].scale = Vector2(1.2, 0.85)
+	await _settle()
+	await _compare("native_rotation_scale")
+	for targets in all_targets:
+		targets[0].physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
+		targets[0].position += Vector2(4, -3)
+	await _settle()
+	await _compare("native_interpolation_off")
+	for targets in all_targets:
+		targets[0].rotation = 0.0
+		targets[0].scale = Vector2.ONE
+		targets[0].physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_INHERIT
+		targets[0].reset_physics_interpolation()
+	await _settle()
+	await _compare("native_interpolation_restored")
 	# A leading target's changed topology must update its own retained buffer.
 	for targets in all_targets:
 		targets[0].trail_points.resize(4)

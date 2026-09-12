@@ -544,3 +544,15 @@ frozen-shape targets. Use a real renderer, 1152x648, with sequential A/B runs:
 See [probe scope](probes.md), the [earlier shared-buffer baseline](history/render-pro-review-2026-09-12.md#local-measurements),
 and the [retained-target measurements and candidate decisions](history/render-candidates-2026-09-12.md).
 This measures batch submission, not natural late-game or fully observed target FPS.
+
+## September 12 follow-up measurement controls
+
+The late-game probe now normalizes transient targets/events after loading an
+optional save (research/equipment remain), seeds warm forecasts before starting
+the phase, and seeds the anomaly scheduler/occurrence stream. Counts and frame
+times share the same post-warmup interval. `NIGHTWATCH_PERF_TRACE=1` separately
+hashes the first 1,200 ticks' target states, RNG states and meteor event order;
+compare A/A digests before measuring, then turn this audit off for timings.
+This digest is a diagnostic of sampled gameplay state, not a full save/effect
+or audio replay oracle. The pre-fix natural records remain historical workloads,
+not identical seeded replays. See the [Pro follow-up](history/pro-optimization-followup-2026-09-12.md).

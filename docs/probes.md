@@ -143,12 +143,17 @@ oracle; neither test substitutes for the other. No performance threshold belongs
 in this correctness check.
 
 The retained-buffer cases also check pose-only reuse, a shortened leading
-trail, hide/show, opaque reordering and insertion/removal.
+trail, hide/show, opaque reordering and insertion/removal, rotation/nonuniform scale,
+interpolation-mode changes and zero reconciliation on unchanged/pose-only frames.
 `meteor_submission_performance_probe.gd` isolates submission: 1,000 frozen-shape
-meteors, 205,000 vertices, 1,000 retained items, 60 Hz pose-only motion, two-second
+meteors, 150,000 tail vertices with atlas heads (default), 1,000 retained items,
+60 Hz pose-only motion, two-second
 warmup and five-second sample. Run with a real renderer at 1152x648 and no other
 GPU probes. `SUBMISSION_RESULT` reports submission CPU time, render FPS and geometry
-uploads; `METEOR_SUBMISSION_PASS` checks only that the workload ran. It bypasses
+uploads; `METEOR_SUBMISSION_PASS` checks exact workload counts and zero geometry
+uploads after warmup. `NIGHTWATCH_HEAD_TEXTURES=0` explicitly selects the old
+procedural-head workload (205,000 vertices); `1` selects the atlas workload.
+Both freeze their first geometry before the pose driver starts. It bypasses
 gameplay capacity and does not measure observation, procedural redraw or natural
 late-game FPS. Use `late_game_render_performance_probe.gd` for that workload.
 

@@ -26,6 +26,33 @@ class Driver:
 			observer.point = Vector2(576 + sin(at * 2) * 400, 300 + cos(at * 3) * 200)
 			observer.tick_input.push(at, observer.point, true)
 
+# Optional A/A audit, kept out of timed performance runs. Hash the first 1,200
+# ticks, spawn/contact/completion order, target state and gameplay RNG streams.
+class Trace:
+	extends Node
+	var game: Node
+	var ticks := 0
+	var digest := HashingContext.new()
+	func _init() -> void: digest.start(HashingContext.HASH_SHA256)
+	func record(value: Array) -> void:
+		if ticks < 1200: digest.update(JSON.stringify(value).to_utf8_buffer())
+	func spawned(target: Node) -> void:
+		record(["spawn", game.simulation_clock.tick, target.simulation_id, target.type_id, target.position, target.velocity])
+		target.observed.connect(func(meteor, reward, multiplier, manual, grade):
+			record(["complete", game.simulation_clock.tick, meteor.simulation_id, reward, multiplier, manual, grade]))
+	func _physics_process(_delta: float) -> void:
+		if ticks >= 1200: return
+		var state: Array = ["tick", game.simulation_clock.tick, game.progression.success_count, game.progression.total_data_earned]
+		for target in game.meteor_layer.get_children() + game.deep_sky.director.targets():
+			state.append([target.simulation_id, target.type_id, target.position.x, target.position.y, target.age, target.get_progress(), target.alive])
+		for rng in [game.spawner.rng, game.spawner.forecast_rng, game.spawner.warm_contact_rng, game.spawner.echo_rng, game.spawner.module_rng, game.events.rng, game.survey.rng, game.deep_sky.director.occurrence_rng]:
+			state.append(str(rng.state))
+		for kind in game.spawner.spawn_policy.ORDER:
+			state.append([str(game.spawner.spawn_policy.occurrence[kind].state), str(game.spawner.spawn_policy.entries[kind].state)])
+		record(state)
+		ticks += 1
+		if ticks == 1200: print("LATE_RENDER_TRACE ", digest.finish().hex_encode())
+
 func _initialize() -> void:
 	_run.call_deferred()
 
@@ -62,8 +89,15 @@ func _run() -> void:
 			game.deep_sky.modules.grant_copy(id)
 			game.deep_sky.modules.equip(id)
 		game._sync_galactic_systems()
-	game._begin_observation_phase()
-	# Explicitly seed every spawn stream, including policy rolls and module splits.
+	# A copied save supplies research/equipment, not a partly random transient sky.
+	game.spawner.reset()
+	for target in game.meteor_layer.get_children(): target.free()
+	game.events.reset()
+	game.effects.reset()
+	game.deep_sky.director.scheduler_seed = 663322
+	game.deep_sky.director.reset()
+	for target in game.deep_sky.director.targets(): target.free()
+	# Seed BEFORE start_spawning creates its first warm forecast.
 	game.spawner.rng.seed = 556611
 	game.spawner.forecast_rng.seed = 112233
 	game.spawner.warm_contact_rng.seed = 442233
@@ -72,7 +106,17 @@ func _run() -> void:
 	game.spawner.spawn_policy.reseed(771155)
 	game.events.rng.seed = 901234
 	game.effects.rng.seed = 778899
+	game._begin_observation_phase()
+	# begin_round intentionally installs its own deterministic survey seed.
 	game.survey.rng.seed = 332211
+	var tracer: Trace
+	if OS.get_environment("NIGHTWATCH_PERF_TRACE") == "1":
+		tracer = Trace.new()
+		tracer.game = game
+		tracer.process_physics_priority = 100
+		game.spawner.meteor_spawned.connect(tracer.spawned)
+		game.spawner.contact_announced.connect(func(contact): tracer.record(["contact", game.simulation_clock.tick, contact]))
+		root.add_child(tracer)
 	# Guarantee the expensive solid surface throughout the sample; stochastic
 	# planet admission alone can miss it entirely. This one diagnostic target
 	# moves normally but cannot complete during the measurement window.
@@ -94,7 +138,7 @@ func _run() -> void:
 	print("LATE_RENDER_ENV ", JSON.stringify({"engine":Engine.get_version_info().string,
 		"renderer":RenderingServer.get_current_rendering_method(), "viewport":str(root.size),
 		"copied_save":not saved_path.is_empty(), "warmup":WARMUP, "sample":SAMPLE, "noncompleting_planets":1,
-		"input_samples_per_tick":driver.samples_per_tick,
+		"input_samples_per_tick":driver.samples_per_tick, "trace_enabled":tracer != null,
 		"base_research":game.progression.purchased_nodes.size(), "outer_research":game.deep_sky.state.research_ids.size()}))
 	var frames: Array[float] = []
 	var started := Time.get_ticks_usec()
@@ -108,12 +152,15 @@ func _run() -> void:
 		await process_frame
 		var now := Time.get_ticks_usec()
 		if (now - started) / 1000000.0 > WARMUP:
-			if first_tick < 0: first_tick = game.simulation_clock.tick
-			frames.append((now - last) / 1000.0)
-		targets = maxi(targets, game.meteor_layer.get_child_count())
-		particles = maxi(particles, game.effects.particles.size())
-		for target in game.meteor_layer.get_children():
-			if target.type_id == "galaxy": planets += 1
+			if first_tick < 0:
+				first_tick = game.simulation_clock.tick
+				successes = game.progression.success_count
+			else:
+				frames.append((now - last) / 1000.0)
+				targets = maxi(targets, game.meteor_layer.get_child_count())
+				particles = maxi(particles, game.effects.particles.size())
+				for target in game.meteor_layer.get_children():
+					if target.type_id == "galaxy": planets += 1
 		last = now
 	var elapsed: float = frames.reduce(func(a, b): return a + b, 0.0) / 1000.0
 	frames.sort()
@@ -127,6 +174,7 @@ func _run() -> void:
 		"ticks_per_second":(game.simulation_clock.tick - first_tick) / elapsed,
 		"draw_calls_end":Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)}))
 	driver.free()
+	if tracer != null: tracer.free()
 	game.set_physics_process(false)
 	await create_timer(0.25).timeout # Settle delayed sound cues before freeing owners.
 	game.free()
