@@ -120,6 +120,15 @@ child draw index, preserving the original particles/popups → marks → flash o
 No scene children are introduced. Reset clears visible commands, and scene exit
 releases all RIDs. See the independent arrival-mark pixel test for the contract.
 
+### HUD and effect updates
+
+The extension readout refreshes on observation entry/exit, `deep_sky.changed`,
+locale application and explicit load synchronization. Frame/second countdown
+updates do not poll it. Overlay transitions retain their own visibility refresh;
+sample text is shown in the module UI, so the hidden HUD sample label is not formatted.
+Particle and popup damping coefficients are shared within each frame update.
+Position integration, expiry order and packet delivery signals are unchanged.
+
 ## Setup calls
 
 `Game` injects progression and the observation view into consumers; consumers

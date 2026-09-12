@@ -251,11 +251,12 @@ func _process(delta: float) -> void:
 	_update_shake(delta)
 	_update_kick(delta)
 	_update_view_offset()
+	var particle_damping := pow(0.12, delta) if not particles.is_empty() else 1.0
 	for index in range(particles.size() - 1, -1, -1):
 		var particle := particles[index]
 		particle.life = float(particle.life) - delta
 		particle.p = Vector2(particle.p) + Vector2(particle.v) * delta
-		particle.v = Vector2(particle.v) * pow(0.12, delta)
+		particle.v = Vector2(particle.v) * particle_damping
 		particles[index] = particle
 		if float(particle.life) <= 0.0:
 			particles.remove_at(index)
@@ -343,6 +344,9 @@ func _apply_view_transform() -> void:
 
 
 func _update_packets(delta: float) -> void:
+	if popups.is_empty():
+		return
+	var popup_damping := pow(0.2, delta)
 	for index in range(popups.size() - 1, -1, -1):
 		var popup := popups[index]
 		var age := float(popup.age) + delta
@@ -351,7 +355,7 @@ func _update_packets(delta: float) -> void:
 		if anchor == Vector2.ZERO:
 			# No delivery target bound: drift and fade like the old readout.
 			popup.p = Vector2(popup.p) + Vector2(popup.v) * delta
-			popup.v = Vector2(popup.v) * pow(0.2, delta)
+			popup.v = Vector2(popup.v) * popup_damping
 			popup.alpha = clampf((1.35 - age) / 0.45, 0.0, 1.0)
 			popups[index] = popup
 			if age >= 1.35:
@@ -359,7 +363,7 @@ func _update_packets(delta: float) -> void:
 			continue
 		if age < PACKET_RISE_TIME:
 			popup.p = Vector2(popup.p) + Vector2(popup.v) * delta
-			popup.v = Vector2(popup.v) * pow(0.2, delta)
+			popup.v = Vector2(popup.v) * popup_damping
 			popup.origin = popup.p
 			popup.alpha = 1.0
 			popups[index] = popup

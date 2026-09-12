@@ -261,6 +261,7 @@ func set_runtime(seconds: float) -> void:
 
 
 func set_observation_phase(round_number: int, seconds_remaining: float, phase_duration: float = 0.0) -> void:
+	var entering_observation := not phase_display_configured or not observation_phase_active
 	if phase_duration > 0.0:
 		phase_window_seconds = maxi(1, ceili(phase_duration))
 	var whole_seconds := maxi(0, ceili(seconds_remaining))
@@ -277,7 +278,10 @@ func set_observation_phase(round_number: int, seconds_remaining: float, phase_du
 	set_phase_window(float(whole_seconds) / maxf(1.0, float(phase_window_seconds)))
 	if phase_changed:
 		_refresh_phase_time_label()
-	_refresh_extension()
+	# Research/load and locale changes already refresh this through their signals.
+	# The remaining phase dependency changes only when observation starts/stops.
+	if entering_observation:
+		_refresh_extension()
 
 
 func set_upgrade_phase(completed_round: int) -> void:
@@ -936,15 +940,11 @@ func _refresh_extension() -> void:
 	if extension_readout == null:
 		return
 	var objective := ""
-	var modules_visible := false
 	if observation_phase_active and deep_sky != null and deep_sky.has_method("current_objective"):
 		objective = String(deep_sky.current_objective()).strip_edges()
-		modules_visible = deep_sky.has_method("modules_unlocked") and bool(deep_sky.modules_unlocked())
 	extension_objective_label.text = objective
 	extension_objective_label.visible = not objective.is_empty()
 	extension_samples_label.visible = false # Samples are shown beside the draw action, not over the sky.
-	if modules_visible:
-		extension_samples_label.text = tr("EXT_SAMPLES_COUNT") % maxi(0, int(deep_sky.get("samples")))
 	extension_should_show = extension_objective_label.visible or extension_samples_label.visible
 	if not _in_round_readouts_covered():
 		extension_readout.visible = extension_should_show
