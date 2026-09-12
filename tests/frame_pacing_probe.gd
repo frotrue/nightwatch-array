@@ -90,7 +90,8 @@ func _probe_seconds_from_environment() -> float:
 func _prepare_render_stress() -> void:
 	game.spawner.pause_regular_spawns = true
 	var viewport_size := root.get_visible_rect().size
-	var regular_objects := mini(render_stress_objects, game.spawner.MAX_TOTAL_METEORS - 1)
+	# Keep the documented 18/32-object fixture independent of the safety budget.
+	var regular_objects := mini(render_stress_objects, 31)
 	var columns := 6
 	var rows := maxi(1, int(ceil(float(regular_objects) / float(columns))))
 	for index in range(regular_objects):
@@ -104,7 +105,7 @@ func _prepare_render_stress() -> void:
 		meteor.trail_points.clear()
 		for trail_index in range(meteor.max_trail_points):
 			meteor.trail_points.append(start - direction * float(trail_index) * 7.0)
-	if render_stress_objects >= game.spawner.MAX_TOTAL_METEORS:
+	if render_stress_objects >= 32:
 		game.spawner.spawn_major_fireball()
 
 
@@ -115,7 +116,7 @@ func _render_stress_objects_from_environment() -> int:
 	if not configured.is_valid_int():
 		push_warning("Ignoring invalid %s=%s" % [RENDER_STRESS_OBJECTS_ENV, configured])
 		return RENDER_STRESS_OBJECTS
-	return clampi(configured.to_int(), 1, game.spawner.MAX_TOTAL_METEORS)
+	return clampi(configured.to_int(), 1, 32)
 
 
 func _print_second_stats() -> void:

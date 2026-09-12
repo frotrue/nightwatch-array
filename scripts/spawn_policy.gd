@@ -15,7 +15,9 @@ const UNLOCKS := {
 	"satellite": "satellite_catalog", "variable_star": "variable_watchlist",
 	"comet": "comet_solutions", "binary_star": "double_star_resolution", "galaxy": "galaxy_imaging",
 }
-const ATMOSPHERIC_SLOTS := 22
+# Emergency ceiling only. The research active-target limit gates new natural
+# arrivals, while proc children can use headroom without taking late reservations.
+const ATMOSPHERIC_SAFETY_SLOTS := 54
 const LATE_SLOTS := 6
 const LATE_TYPE_SLOTS := 2
 const MAX_PENDING_PER_TYPE := 32
