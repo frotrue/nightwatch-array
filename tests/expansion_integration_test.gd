@@ -135,7 +135,12 @@ func _check_split_module() -> void:
 	_clear_split_sky()
 	parent = game.spawner.spawn_meteor("common", Vector2(500, 280), Vector2(180, 0))
 	parent.observed_successfully = true
-	var budget: int = game.spawner.SpawnPolicy.ATMOSPHERIC_SLOTS
+	for i in 21: game.spawner.spawn_meteor("common", Vector2(500, 280), Vector2.ZERO)
+	_check(game.spawner.try_spawn_module_fragments(parent, 1.0) == 2 and _split_pieces().size() == 2, "module pair survives the former 22-object shared cap")
+	_clear_split_sky()
+	parent = game.spawner.spawn_meteor("common", Vector2(500, 280), Vector2(180, 0))
+	parent.observed_successfully = true
+	var budget: int = game.spawner.SpawnPolicy.ATMOSPHERIC_SAFETY_SLOTS
 	while game.meteor_layer.get_child_count() < budget - 1:
 		game.spawner.spawn_meteor("common", Vector2(500, 280), Vector2.ZERO)
 	_check(game.spawner.try_spawn_module_fragments(parent, 1.0) == 0 and _split_pieces().is_empty(), "one free slot cannot create a partial pair or consume reserved capacity")
@@ -296,14 +301,17 @@ func _check_retirement_and_budget() -> void:
 	research.director.load_save_data({"tickets": {"a/old": {"kind": "afterglow", "origin_kind": "archive", "components": {}}}, "active": [{"kind": "afterglow", "origin_kind": "archive", "ticket": "a/old"}]})
 	research.director.resume_targets()
 	_check(research.director.object_count() == 0 and research.director.tickets.is_empty(), "removed archive target is discarded without reward or reserved space")
-	for index in range(40):
+	for index in range(game.spawner.MAX_TOTAL_METEORS + 6):
 		game.spawner.spawn_meteor("common", Vector2(200, 200), Vector2.ZERO)
-	_check(game.meteor_layer.get_child_count() == 22, "ordinary spawn cap preserves six late, three specimen and one major slots")
+	_check(game.meteor_layer.get_child_count() == game.spawner.SpawnPolicy.ATMOSPHERIC_SAFETY_SLOTS, "atmospheric safety ceiling preserves six late, three specimen and one major slots")
+	for kind in game.spawner.SpawnPolicy.LATE_TYPES:
+		_check(game.spawner.spawn_meteor(kind) != null, "late reservation survives a saturated atmospheric sky: " + kind)
+	_check(game.spawner.spawn_meteor("galaxy") != null and game.spawner.spawn_meteor("galaxy") == null, "late shared extra still respects the per-kind ceiling")
 	var count: int = game.meteor_layer.get_child_count()
 	_check(research.director.try_opportunity(), "extension can consume its reserved budget without removing existing meteors")
 	_check(game.meteor_layer.get_child_count() == count and research.director.object_count() <= 3, "extension preserves existing targets and its three-component bound")
-	game.spawner.spawn_meteor("major", Vector2(200, 200), Vector2.ZERO)
-	_check(game.meteor_layer.get_child_count() + research.director.object_count() <= 32, "important target retains its reserved slot within total32")
+	_check(game.spawner.spawn_meteor("major", Vector2(200, 200), Vector2.ZERO) != null, "important target retains its reserved slot")
+	_check(game.meteor_layer.get_child_count() + research.director.object_count() <= game.spawner.MAX_TOTAL_METEORS, "combined targets stay within the final safety budget")
 	research.director.end_round()
 	game.spawner.reset()
 	await process_frame

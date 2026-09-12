@@ -760,7 +760,7 @@ func _run() -> void:
 	_check(String(first_storm_target.type_id) == "fragment" and String(last_storm_target.type_id) == "fireball", "Fragment Front and Fireball Tail bookend the storm without changing its count")
 	_check(is_zero_approx(research_probe.get_automation_strength("fireball")), "the Leonid tail fireball remains a manual-only product")
 	# Leave three atmospheric slots for the fragment-tag regression.
-	while echo_layer.get_child_count() > echo_spawner.SpawnPolicy.ATMOSPHERIC_SLOTS - 3:
+	while echo_layer.get_child_count() > echo_spawner.SpawnPolicy.ATMOSPHERIC_SAFETY_SLOTS - 3:
 		echo_layer.get_child(echo_layer.get_child_count() - 1).free()
 	var leonid_children_before_split := echo_layer.get_child_count()
 	echo_spawner._on_fragment_requested(Vector2(460, 240), Vector2(90, 0), "fragment", false, true, false)

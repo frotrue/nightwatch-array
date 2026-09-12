@@ -184,6 +184,7 @@ func _test_lifecycle() -> void:
 	paused = false
 
 func _test_policy() -> void:
+	_test_fragment_admission()
 	check(is_equal_approx(Policy.mean_interval(1.6, 2.4, 1.15), 2.0), "floor below interval")
 	check(is_equal_approx(Policy.mean_interval(0.4, 0.8, 1.0), 1.0), "floor above interval")
 	check(is_equal_approx(Policy.mean_interval(0.4, 0.8, 0.6), 0.65), "floor intersects interval")
@@ -205,7 +206,7 @@ func _test_policy() -> void:
 	left.restore_state(saved)
 	check(left.roll(game.progression) == expected, "RNG state resumes the exact next draw")
 	check(before > 0.0, "calibration produces a finite positive multiplier")
-	for i in 22: game.spawner.spawn_meteor("common", Vector2(300, 200), Vector2(1, 0), 100.0)
+	for i in Policy.ATMOSPHERIC_SAFETY_SLOTS: game.spawner.spawn_meteor("common", Vector2(300, 200), Vector2(1, 0), 100.0)
 	check(game.spawner.spawn_meteor("common") == null, "atmospheric hard capacity is bounded")
 	for kind in Policy.LATE_TYPES:
 		check(game.spawner.spawn_meteor(kind) != null, "late type has reserved space: " + kind)
@@ -223,4 +224,33 @@ func _test_policy() -> void:
 	game._apply_save_data(data)
 	check(game.spawner.spawn_policy.save_state() == data.simulation.spawner.rng, "active save restores independent RNG streams")
 	check(game.spawner.pending_contacts.is_empty(), "load does not duplicate a warm forecast")
+	game.free()
+
+
+func _test_fragment_admission() -> void:
+	# Reproduce the old 22-slot failure through both actual split entry points.
+	for early_completion in [false, true]:
+		for occupied in [20, 21, 22]:
+			var game = _game()
+			var parent = game.spawner.spawn_meteor("fragment", Vector2(500, 300), Vector2(80, 0), 5.0)
+			for i in occupied - 1: game.spawner.spawn_meteor("common", Vector2(300, 200), Vector2(1, 0), 10.0)
+			if early_completion: parent.observation_progress = 1.0
+			else: parent.age = parent.visible_lifetime * parent.split_progress + 0.0001
+			parent.tick_resolve()
+			check(game.spawner._slot_count(["fragment_piece"]) == 3, "full three-piece split at former cap, completion=%s count=%d" % [early_completion, occupied])
+			parent.tick_resolve()
+			check(game.spawner._slot_count(["fragment_piece"]) == 3, "completed split is not duplicated")
+			game.free()
+	var game = _game()
+	var last
+	for i in game.progression.get_max_active(): last = game.spawner.spawn_meteor("fragment_piece", Vector2(500, 300), Vector2(10, 0), 5.0)
+	check(not game.spawner._has_spawn_space("common", 1, true), "an active fragment cloud pauses new natural arrivals")
+	check(game.spawner._has_spawn_space("fragment_piece", 3), "natural arrival throttling does not reject a triggered split")
+	last.alive = false
+	check(game.spawner._has_spawn_space("common", 1, true), "completed linger does not consume the research active limit")
+	# Emergency capacity still includes both children and fading parents.
+	while game.spawner._has_spawn_space("fragment_piece"):
+		game.spawner.spawn_meteor("fragment_piece", Vector2(500, 300), Vector2(10, 0), 5.0)
+	check(game.spawner._slot_count(game.spawner.REGULAR_ACTIVE_TYPES) == Policy.ATMOSPHERIC_SAFETY_SLOTS, "children and linger reach exactly the safety ceiling")
+	check(game.spawner.spawn_meteor("fragment_piece") == null, "final overload guard rejects further children")
 	game.free()

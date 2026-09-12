@@ -8,7 +8,7 @@ signal contact_resolved(contact, meteor)
 const SpawnPolicy = preload("res://scripts/spawn_policy.gd")
 const Balance = preload("res://scripts/game_balance.gd")
 const MeteorScript = preload("res://scripts/meteor.gd")
-const MAX_TOTAL_METEORS := 32
+const MAX_TOTAL_METEORS := SpawnPolicy.ATMOSPHERIC_SAFETY_SLOTS + SpawnPolicy.LATE_SLOTS + 3 + 1
 const FORECAST_INTERCEPT_DISTANCE := 190.0
 const MINIMUM_PAYABLE_TRACK_TIME := 0.95
 const ENTRY_MARGIN := 24.0
@@ -171,7 +171,7 @@ func _has_spawn_space(kind: String, count: int = 1, natural: bool = false) -> bo
 		var extras := 0
 		for other in SpawnPolicy.LATE_TYPES: extras += maxi(0, _slot_count([other]) - 1)
 		return own + count <= 1 or extras + count <= 1
-	if _slot_count(REGULAR_ACTIVE_TYPES) + count > SpawnPolicy.ATMOSPHERIC_SLOTS: return false
+	if _slot_count(REGULAR_ACTIVE_TYPES) + count > SpawnPolicy.ATMOSPHERIC_SAFETY_SLOTS: return false
 	return not natural or _regular_active_count() + count <= progression.get_max_active()
 
 func get_simulation_save() -> Dictionary:
@@ -1079,7 +1079,7 @@ func _on_fragment_requested(origin: Vector2, parent_velocity: Vector2, parent_ty
 	# inheriting the parent's near-stall. Major fragments keep the fireball speed.
 	if parent_type != "major":
 		burst_speed = maxf(burst_speed, float(Balance.meteor_spec("fragment").speed))
-	var available_slots := maxi(0, SpawnPolicy.ATMOSPHERIC_SLOTS - _slot_count(REGULAR_ACTIVE_TYPES))
+	var available_slots := maxi(0, SpawnPolicy.ATMOSPHERIC_SAFETY_SLOTS - _slot_count(REGULAR_ACTIVE_TYPES))
 	for index in range(mini(piece_count, available_slots)):
 		var centered := float(index) - float(piece_count - 1) * 0.5
 		var direction := burst_direction.rotated(centered * spread)
