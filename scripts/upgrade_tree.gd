@@ -12,7 +12,7 @@ const UITheme = preload("res://scripts/ui_theme.gd")
 const StarNodeVisual = preload("res://scripts/research_star_visual.gd")
 const ACTION_CHART := &"nw_chart"
 const ACTION_MENU_BACK := &"nw_menu_back"
-const ATLAS_ACTION_ORIGIN := Vector2(34, 390)
+const ATLAS_ACTION_ORIGIN := Vector2(34, 438)
 const ATLAS_ACTION_SIZE := Vector2(172, 34)
 const ATLAS_ACTION_STEP := Vector2(0, 46)
 const RAW_DEBUG_KEYS := [
@@ -963,7 +963,7 @@ func _refresh_constellation_detail_line() -> void:
 		var constellation_id := String(star_record.constellation_id)
 		group_label = tr(String(chart_constellations[constellation_id].label_key)).split("  /  ")[0]
 	if galactic_unlocked:
-		completion_detail_label.text = tr("ATLAS_FIELD_RECORDS") % [group_label, _extension_owned_count()]
+		completion_detail_label.text = tr("ATLAS_FIELD_RECORDS") % [group_label, _extension_owned_count(), extension_definitions.size()]
 		return
 	var non_draco_installed := 0
 	for definition in Balance.UPGRADE_NODES:
@@ -1491,6 +1491,8 @@ func _build_interface() -> void:
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerCounts18"),
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerCounts19"),
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerCounts20"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerCounts21"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerCounts22"),
 	]
 	constellation_ledger_hits = [
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits0"),
@@ -1514,6 +1516,8 @@ func _build_interface() -> void:
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits18"),
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits19"),
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits20"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits21"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits22"),
 	]
 	constellation_ledger_leaders = [
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders0"),
@@ -1537,6 +1541,8 @@ func _build_interface() -> void:
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders18"),
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders19"),
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders20"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders21"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders22"),
 	]
 	constellation_ledger_names = [
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames0"),
@@ -1560,6 +1566,8 @@ func _build_interface() -> void:
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames18"),
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames19"),
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames20"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames21"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames22"),
 	]
 	constellation_ledger_notes = [
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes0"),
@@ -1583,6 +1591,8 @@ func _build_interface() -> void:
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes18"),
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes19"),
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes20"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes21"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes22"),
 	]
 	content_clip = view.get_node("%TreeViewport")
 	controls_label = view.get_node("%ConstellationInspector").get_node("%ControlsLabel")
@@ -1641,6 +1651,8 @@ func _build_interface() -> void:
 	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits18").pressed.connect(focus_constellation.bind("sagitta"))
 	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits19").pressed.connect(focus_constellation.bind("equuleus"))
 	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits20").pressed.connect(focus_constellation.bind("triangulum"))
+	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits21").pressed.connect(focus_constellation.bind("cancer"))
+	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits22").pressed.connect(focus_constellation.bind("sagittarius"))
 	view.get_node("%ConstellationInspector").get_node("%InspectorDetailsButton").toggled.connect(_set_inspector_details)
 	view.get_node("%HubReturnButton").pressed.connect(_frame_galaxy)
 	view.get_node("%AtlasActions0").pressed.connect(_atlas_action.bind(0))

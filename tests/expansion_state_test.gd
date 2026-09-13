@@ -14,7 +14,7 @@ func _initialize() -> void:
 			if state.research_ready(id):
 				state.research_ids.append(id)
 				advanced = true
-	_check(state.research_ids.size() == 42, "all 42 research nodes reachable by predecessor alone")
+	_check(state.research_ids.size() == 55, "all 55 research nodes reachable by predecessor alone")
 	_check(state.draw_cost() == 6 and state.sample_reward() == 3, "late research changes cost and reward")
 	state = State.new()
 	state.research_ids.append("ext_protocol")

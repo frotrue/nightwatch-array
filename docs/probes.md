@@ -211,18 +211,23 @@ EXE itself does not support `--script`. It isolates auto-completion for visibili
 so this is art review, not a player-input, economy, performance or comfort verdict.
 
 
-`constellation_geometry_test.gd` compares every pair of the 139 runtime markers
+`constellation_geometry_test.gd` compares every pair of the 158 runtime markers
 against independent great-circle separations from the checked-in J2000 catalogue,
 checks handedness and rejects crossing edges in the Pegasus square/Little Dipper
 bowl. `python tools/project_constellations.py --check` also catches stale generated
 local positions. `constellation_extension_test.gd` checks hit ownership and both
-hold purchases in the unresolved Alpha/8 Vul pair.
+hold purchases in the unresolved Alpha/8 Vul pair, the 11 visible outer ledger rows,
+and each new Cancer/Sagittarius research hit target.
 
-`constellation_geometry_preview.gd` captures 21 focused game-chart frames and two
+`constellation_geometry_preview.gd` captures 23 focused game-chart frames and two
 ordinary navigation views. Focused frames change only chart zoom/pan; markers stay
 at their actual positions. Compare them with the IAU maps linked in
 [the geometry reference](constellation-geometry.md). A shape match does not imply
 whole-sky placement, identical stick-figure conventions or photometric fidelity.
+Add `-- --outer-celestial` for six Korean/English normal-focus views of Sagitta,
+Cancer and Sagittarius. The black-hole gate also checks the new minimal unlock
+path, family spawn/reward multipliers, live automatic work, upgraded gravity
+radius/duration, and save roundtrip.
 
 ## Fixed simulation ticks
 

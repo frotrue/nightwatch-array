@@ -128,16 +128,16 @@ EXT_RESEARCH_DEL_RESONANCE_NAME,Echo Reinforcement,공명 강화
 EXT_RESEARCH_DEL_RESONANCE_DESC,Echo chance: 70% → 75%.,공명 확률 70% → 75%.
 EXT_RESEARCH_DEL_SCHOOL_NAME,Echo Formation,공명 대열
 EXT_RESEARCH_DEL_SCHOOL_DESC,Meteors per Echo: 7 → 8.,공명으로 나타나는 유성 7 → 8개.
-EXT_RESEARCH_SGE_CADENCE_NAME,Entry cadence,유성 진입 주기
-EXT_RESEARCH_SGE_CADENCE_DESC,Natural celestial spawn chance +5.3%.,자연 천체 출현 확률 +5.3%.
-EXT_RESEARCH_SGE_FORECAST_NAME,Early Arrival Warning,빠른 출현 예고
-EXT_RESEARCH_SGE_FORECAST_DESC,Arrival warnings appear 1.2 seconds earlier.,출현 예고를 1.2초 더 일찍 표시합니다.
-EXT_RESEARCH_SGE_SOLUTION_NAME,Arrival Position Refinement,정확한 위치 예고
-EXT_RESEARCH_SGE_SOLUTION_DESC,Arrival position error decreases by 35%.,출현 예고의 위치 오차 35% 감소.
-EXT_RESEARCH_SGE_WINDOW_NAME,Long passage,긴 통과
-EXT_RESEARCH_SGE_WINDOW_DESC,Atmospheric meteor lifetime +12%.,대기권 유성의 소멸까지 남은 시간 +12%.
-EXT_RESEARCH_SGE_STREAM_NAME,Dense passage,촘촘한 통과
-EXT_RESEARCH_SGE_STREAM_DESC,Natural celestial spawn chance +8.7%.,자연 천체 출현 확률 +8.7%.
+EXT_RESEARCH_SGE_CADENCE_NAME,Asteroid Observation,소행성 관측
+EXT_RESEARCH_SGE_CADENCE_DESC,Unlocks rocky asteroids.,커다란 바위 소행성이 나타납니다.
+EXT_RESEARCH_SGE_FORECAST_NAME,Asteroid Search,소행성 탐색
+EXT_RESEARCH_SGE_FORECAST_DESC,Asteroid and ice asteroid spawn chance +35%.,소행성·얼음 소행성 출현 확률 +35%.
+EXT_RESEARCH_SGE_SOLUTION_NAME,Ice Asteroid Observation,얼음 소행성 관측
+EXT_RESEARCH_SGE_SOLUTION_DESC,Unlocks ice asteroids.,얼음 소행성이 나타납니다.
+EXT_RESEARCH_SGE_WINDOW_NAME,Asteroid Tracking,소행성 추적
+EXT_RESEARCH_SGE_WINDOW_DESC,Asteroid and ice asteroid observation speed +30%.,소행성·얼음 소행성 관측 속도 +30%.
+EXT_RESEARCH_SGE_STREAM_NAME,Asteroid Analysis,소행성 분석
+EXT_RESEARCH_SGE_STREAM_DESC,Asteroid and ice asteroid Data +50%.,소행성·얼음 소행성 데이터 +50%.
 EXT_RESEARCH_EQU_FOCUS_NAME,Dish focus,접시 집속
 EXT_RESEARCH_EQU_FOCUS_DESC,Dish observation speed +15%.,접시 관측 속도 +15%.
 EXT_RESEARCH_EQU_MOUNT_NAME,Dish Tracking Drive,접시 추적 장치
@@ -152,3 +152,29 @@ EXT_RESEARCH_TRI_ANALYSIS_NAME,Integrated analysis,통합 분석
 EXT_RESEARCH_TRI_ANALYSIS_DESC,Manual observation speed +10%.,수동 관측 속도 +10%.
 EXT_RESEARCH_TRI_CATALOGUE_NAME,Calibrated catalogue,보정 관측 목록
 EXT_RESEARCH_TRI_CATALOGUE_DESC,All observation Data +15%.,모든 관측 데이터 +15%.
+EXT_RESEARCH_CNC_PLANET_NAME,Planet Observation,행성 관측
+EXT_RESEARCH_CNC_PLANET_DESC,Unlocks planets.,커다란 행성이 나타납니다.
+EXT_RESEARCH_CNC_ARRIVALS_NAME,Planet Search,행성 탐색
+EXT_RESEARCH_CNC_ARRIVALS_DESC,Planet spawn chance +35%.,행성 출현 확률 +35%.
+EXT_RESEARCH_CNC_TRACKING_NAME,Planet Tracking,행성 추적
+EXT_RESEARCH_CNC_TRACKING_DESC,Planet observation speed +30%.,행성 관측 속도 +30%.
+EXT_RESEARCH_CNC_YIELD_NAME,Planet Analysis,행성 분석
+EXT_RESEARCH_CNC_YIELD_DESC,Planet Data +50%.,행성 데이터 +50%.
+EXT_RESEARCH_CNC_SURVEY_NAME,Planet Survey,행성 정밀 관측
+EXT_RESEARCH_CNC_SURVEY_DESC,Planet spawn chance and Data +30% each.,행성 출현 확률·데이터 각각 +30%.
+EXT_RESEARCH_SGR_BLACK_HOLE_NAME,Black Hole Observation,블랙홀 관측
+EXT_RESEARCH_SGR_BLACK_HOLE_DESC,Unlocks black holes. Observe one to gather nearby bodies.,블랙홀이 나타납니다. 관측하면 주변 천체를 당깁니다.
+EXT_RESEARCH_SGR_REACH_NAME,Gravity Reach,넓은 중력
+EXT_RESEARCH_SGR_REACH_DESC,Black hole gathering radius +25%.,블랙홀이 천체를 당기는 범위 +25%.
+EXT_RESEARCH_SGR_HOLD_NAME,Gravity Hold,중력 잔류
+EXT_RESEARCH_SGR_HOLD_DESC,Gathered bodies remain slowed for 1 extra second.,모인 천체의 감속 시간 +1초.
+EXT_RESEARCH_SGR_TRACKING_NAME,Black Hole Tracking,블랙홀 추적
+EXT_RESEARCH_SGR_TRACKING_DESC,Black hole observation speed +30%.,블랙홀 관측 속도 +30%.
+EXT_RESEARCH_SGR_YIELD_NAME,Black Hole Analysis,블랙홀 분석
+EXT_RESEARCH_SGR_YIELD_DESC,Black hole Data +50%.,블랙홀 데이터 +50%.
+EXT_RESEARCH_SGR_ARRIVALS_NAME,Black Hole Search,블랙홀 탐색
+EXT_RESEARCH_SGR_ARRIVALS_DESC,Black hole spawn chance +35%.,블랙홀 출현 확률 +35%.
+EXT_RESEARCH_SGR_WIDE_NAME,Wide Gravity,광역 중력
+EXT_RESEARCH_SGR_WIDE_DESC,Black hole gathering radius +20%.,블랙홀이 천체를 당기는 범위 +20%.
+EXT_RESEARCH_SGR_LINGER_NAME,Lasting Gravity,오래 머무는 중력
+EXT_RESEARCH_SGR_LINGER_DESC,Gathered bodies remain slowed for 1 extra second.,모인 천체의 감속 시간 +1초.

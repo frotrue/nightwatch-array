@@ -470,8 +470,8 @@ UPGRADE_SATELLITE_CATALOG_NAME,Satellite Catalog,인공위성 목록
 UPGRADE_SATELLITE_CATALOG_DESC,Unlocks slow-moving satellites for observation.,천천히 이동하는 인공위성을 관측할 수 있습니다.
 UPGRADE_CHANGE_DETECTION_NAME,Change Detection,변화 탐지
 UPGRADE_CHANGE_DETECTION_DESC,"Identifies satellites, asteroids, comets and planets. Maximum forecast error: about 2% of screen width.",위성·소행성·혜성·행성의 종류를 예고합니다. 최대 위치 오차: 화면 너비의 약 2%.
-UPGRADE_VARIABLE_WATCHLIST_NAME,Asteroid Observation,소행성 관측
-UPGRADE_VARIABLE_WATCHLIST_DESC,"Unlocks large, rocky asteroids. Finish observing them within the round.",커다란 바위 소행성이 나타납니다. 회차 안에 관측을 완료해야 합니다.
+UPGRADE_VARIABLE_WATCHLIST_NAME,Long-Target Tracking,장기 표적 추적
+UPGRADE_VARIABLE_WATCHLIST_DESC,Satellite and comet manual observation speed +30%.,인공위성·혜성 수동 관측 속도 +30%.
 UPGRADE_COMET_SOLUTIONS_NAME,Comet Tracking,혜성 추적
 UPGRADE_COMET_SOLUTIONS_DESC,Unlocks slow comets that remain until the round ends.,회차가 끝날 때까지 머무는 느린 혜성을 관측할 수 있습니다.
 UPGRADE_ANDROMEDA_DEEP_SURVEY_NAME,Long-Target Survey,장기 표적 관측
@@ -500,10 +500,10 @@ UPGRADE_LEONID_STORM_NAME,Storm Zenith,폭풍 정점
 UPGRADE_LEONID_STORM_DESC,Storm trigger: 6 → 5 manual observations. Meteors per storm: 16 → 20 over 7 seconds.,폭풍 발동에 필요한 수동 관측 6 → 5회. 7초간 발생 유성 16 → 20개.
 UPGRADE_PERSEID_OUTBURST_NAME,Perseid Outburst,페르세우스 유성군 돌발
 UPGRADE_PERSEID_OUTBURST_DESC,"Unlocks Perseid bursts: 8 meteors over 3.4 seconds, after a warning. All Observation Data ×2 (automatic included).",예고 뒤 3.4초간 유성 8개가 나타나는 페르세우스 돌발 유성우를 엽니다. 모든 관측 데이터 2배(자동 포함).
-UPGRADE_DOUBLE_STAR_RESOLUTION_NAME,Ice Asteroid Observation,얼음 소행성 관측
-UPGRADE_DOUBLE_STAR_RESOLUTION_DESC,Unlocks ice asteroids and accurate arrival forecasts. All Observation Data ×2 (automatic included).,얼음 소행성과 정확한 출현 예고를 엽니다. 모든 관측 데이터 2배(자동 포함).
-UPGRADE_GALAXY_IMAGING_NAME,Planet Observation,행성 관측
-UPGRADE_GALAXY_IMAGING_DESC,Unlocks planets and black holes. Observed black holes gather nearby bodies. All Observation Data ×2 (automatic included).,행성·블랙홀이 나타납니다. 블랙홀 관측 시 주변 천체를 모읍니다. 모든 관측 데이터 2배(자동 포함).
+UPGRADE_DOUBLE_STAR_RESOLUTION_NAME,Precision Analysis,정밀 분석
+UPGRADE_DOUBLE_STAR_RESOLUTION_DESC,Accurate ice asteroid forecasts. All Observation Data ×2 (automatic included).,정확한 얼음 소행성 예보. 모든 관측 데이터 2배 (자동 포함).
+UPGRADE_GALAXY_IMAGING_NAME,Deep-Sky Analysis,심우주 분석
+UPGRADE_GALAXY_IMAGING_DESC,All Observation Data ×2 (automatic included).,모든 관측 데이터 2배 (자동 포함).
 UPGRADE_SPLIT_RADIANT_MODEL_NAME,Split Radiant Model,분할 복사점 모형
 UPGRADE_SPLIT_RADIANT_MODEL_DESC,Storm meteors alternate between 2 mirrored entry areas.,폭풍 유성이 대칭인 두 구역에서 번갈아 나타납니다.
 UPGRADE_FRAGMENT_FRONT_NAME,Fragment Front,파편 전선

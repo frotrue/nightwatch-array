@@ -4,8 +4,9 @@ extends RefCounted
 # Run tools/project_constellations.py to update positions. Chart anchors remain
 # compositional; membership/Bayer labels follow the linked IAU charts.
 # Alpheratz is the SAME existing Andromeda star at the shared Pegasus corner.
-const ORDER := ["pegasus", "lacerta", "cygnus", "aquila", "vulpecula", "delphinus", "sagitta", "equuleus", "triangulum"]
+const ORDER := ["pegasus", "lacerta", "cygnus", "aquila", "vulpecula", "delphinus", "sagitta", "equuleus", "triangulum", "cancer", "sagittarius"]
 const COLORS := {
+	"cancer": Color("A6BCC9"), "sagittarius": Color("B1A6C6"),
 	"aquila": Color("C7A6C5"),
 	"pegasus": Color("D4DAE5"), "cygnus": Color("8BB8D5"),
 	"lacerta": Color("BFC4A6"),
@@ -114,8 +115,41 @@ const CONSTELLATIONS := {
 		],
 		"segments": [["alpha_tri", "beta_tri"], ["beta_tri", "gamma_tri"], ["gamma_tri", "alpha_tri"]],
 	},
+	"cancer": {
+		"label_key": "ATLAS_CANCER", "branch": "cancer",
+		"stars": [
+			{"id": "iota_cnc", "name_key": "ATLAS_IOTA_CNC", "bayer": "ι Cnc", "local_position": Vector2(-0.1050066, -1.0421640), "node_id": "ext_cnc_planet", "kind": "star", "magnitude": 4.02},
+			{"id": "gamma_cnc", "name_key": "ATLAS_GAMMA_CNC", "bayer": "γ Cnc", "local_position": Vector2(-0.0344805, -0.3406176), "node_id": "ext_cnc_arrivals", "kind": "star", "magnitude": 4.66},
+			{"id": "delta_cnc", "name_key": "ATLAS_DELTA_CNC", "bayer": "δ Cnc", "local_position": Vector2(-0.0670067, -0.0232517), "node_id": "ext_cnc_tracking", "kind": "star", "magnitude": 3.94},
+			{"id": "alpha_cnc", "name_key": "ATLAS_ALPHA_CNC", "bayer": "α Cnc", "local_position": Vector2(-0.3935500, 0.5765926), "node_id": "ext_cnc_yield", "kind": "star", "magnitude": 4.25},
+			{"id": "beta_cnc", "name_key": "ATLAS_BETA_CNC", "bayer": "β Cnc", "local_position": Vector2(0.6000438, 0.8294407), "node_id": "ext_cnc_survey", "kind": "star", "magnitude": 3.52},
+		],
+		"segments": [["iota_cnc", "gamma_cnc"], ["gamma_cnc", "delta_cnc"], ["delta_cnc", "alpha_cnc"], ["delta_cnc", "beta_cnc"]],
+	},
+	"sagittarius": {
+		"label_key": "ATLAS_SAGITTARIUS", "branch": "sagittarius",
+		"stars": [
+			{"id": "gamma_sgr", "name_key": "ATLAS_GAMMA_SGR", "bayer": "γ² Sgr", "local_position": Vector2(0.7066166, 0.3531014), "node_id": "ext_sgr_black_hole", "kind": "star", "magnitude": 2.99},
+			{"id": "delta_sgr", "name_key": "ATLAS_DELTA_SGR", "bayer": "δ Sgr", "local_position": Vector2(0.4318835, 0.2846246), "node_id": "ext_sgr_reach", "kind": "star", "magnitude": 2.7},
+			{"id": "epsilon_sgr", "name_key": "ATLAS_EPSILON_SGR", "bayer": "ε Sgr", "local_position": Vector2(0.3567458, 0.6679491), "node_id": "ext_sgr_hold", "kind": "star", "magnitude": 1.85},
+			{"id": "zeta_sgr", "name_key": "ATLAS_ZETA_SGR", "bayer": "ζ Sgr", "local_position": Vector2(-0.3309796, 0.2846972), "node_id": "ext_sgr_tracking", "kind": "star", "magnitude": 2.6},
+			{"id": "tau_sgr", "name_key": "ATLAS_TAU_SGR", "bayer": "τ Sgr", "local_position": Vector2(-0.4188193, 0.1011711), "node_id": "ext_sgr_yield", "kind": "star", "magnitude": 3.32},
+			{"id": "sigma_sgr", "name_key": "ATLAS_SIGMA_SGR", "bayer": "σ Sgr", "local_position": Vector2(-0.2028334, -0.0220775), "node_id": "ext_sgr_arrivals", "kind": "star", "magnitude": 2.02},
+			{"id": "phi_sgr", "name_key": "ATLAS_PHI_SGR", "bayer": "φ Sgr", "local_position": Vector2(-0.0208281, 0.0344592), "node_id": "ext_sgr_wide", "kind": "star", "magnitude": 3.17},
+			{"id": "lambda_sgr", "name_key": "ATLAS_LAMBDA_SGR", "bayer": "λ Sgr", "local_position": Vector2(0.3162370, -0.0930608), "node_id": "ext_sgr_linger", "kind": "star", "magnitude": 2.81},
+			{"id": "mu_sgr", "name_key": "ATLAS_MU_SGR", "bayer": "μ Sgr", "local_position": Vector2(0.6084505, -0.4503209), "node_id": "", "kind": "star", "magnitude": 3.86},
+			{"id": "eta_sgr", "name_key": "ATLAS_ETA_SGR", "bayer": "η Sgr", "local_position": Vector2(0.4590574, 0.8760933), "node_id": "", "kind": "star", "magnitude": 3.11},
+			{"id": "rho_sgr", "name_key": "ATLAS_RHO_SGR", "bayer": "ρ¹ Sgr", "local_position": Vector2(-0.7513326, -0.7160612), "node_id": "", "kind": "star", "magnitude": 3.93},
+			{"id": "pi_sgr", "name_key": "ATLAS_PI_SGR", "bayer": "π Sgr", "local_position": Vector2(-0.4983105, -0.4587852), "node_id": "", "kind": "star", "magnitude": 2.89},
+			{"id": "omicron_sgr", "name_key": "ATLAS_OMICRON_SGR", "bayer": "ο Sgr", "local_position": Vector2(-0.3956613, -0.4019811), "node_id": "", "kind": "star", "magnitude": 3.77},
+			{"id": "xi_sgr", "name_key": "ATLAS_XI_SGR", "bayer": "ξ² Sgr", "local_position": Vector2(-0.2602259, -0.4598092), "node_id": "", "kind": "star", "magnitude": 3.51},
+		],
+		"segments": [["gamma_sgr", "delta_sgr"], ["gamma_sgr", "epsilon_sgr"], ["delta_sgr", "epsilon_sgr"], ["epsilon_sgr", "zeta_sgr"], ["zeta_sgr", "phi_sgr"], ["phi_sgr", "delta_sgr"], ["phi_sgr", "lambda_sgr"], ["lambda_sgr", "delta_sgr"], ["phi_sgr", "sigma_sgr"], ["sigma_sgr", "tau_sgr"], ["tau_sgr", "zeta_sgr"], ["lambda_sgr", "mu_sgr"], ["epsilon_sgr", "eta_sgr"], ["rho_sgr", "pi_sgr"], ["pi_sgr", "omicron_sgr"], ["omicron_sgr", "xi_sgr"]],
+	},
 }
 const PLACEMENTS := {
+	"cancer": {"anchor_angle": -0.42, "anchor_radius": 1240.0, "scale": 120.0, "tilt": 0.0},
+	"sagittarius": {"anchor_angle": -1.1, "anchor_radius": 1280.0, "scale": 155.0, "tilt": 0.0},
 	"pegasus": {"anchor_angle": 2.9161895, "anchor_radius": 730.94335, "scale": 115.0, "tilt": 4.9218285},
 	"cygnus": {"anchor_angle": 2.247, "anchor_radius": 846.46, "scale": 112.0, "tilt": -0.32},
 	"aquila": {"anchor_angle": 2.449, "anchor_radius": 1065.27, "scale": 100.0, "tilt": 0.10},

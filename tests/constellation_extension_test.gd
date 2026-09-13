@@ -39,7 +39,7 @@ func _run() -> void:
 	tree.focus_outer_constellations()
 	game.progression.observation_data = 2000000000.0
 	tree._refresh()
-	_check(tree.chart_constellations.size() == 21 and tree.extension_definitions.size() == 42, "nine figures and forty-two stars extend the original chart")
+	_check(tree.chart_constellations.size() == 23 and tree.extension_definitions.size() == 55, "eleven figures and fifty-five research stars extend the original chart")
 	_check(original_geometry == tree.base_star_positions, "unlock preserves the original positions")
 	_check(tree.base_star_positions["pegasus/alpheratz"] == tree.base_star_positions["andromeda/alpheratz"], "Pegasus shares the original Alpheratz corner")
 	_check(tree.constellation_ledger_hits.size() == tree._constellation_order().size(), "ledger has exactly one hit target per active constellation")
@@ -47,6 +47,12 @@ func _run() -> void:
 		var row: int = tree._constellation_order().find(constellation)
 		tree.constellation_ledger_hits[row].pressed.emit()
 		_check(tree.node_star_records[tree.selected_node_id].constellation_id == constellation, "ledger click focuses its displayed constellation: " + constellation)
+		_check(tree.constellation_ledger_hits[row].get_global_rect().end.y < tree.atlas_navigation.get_global_rect().position.y, "ledger row is not covered by navigation: " + constellation)
+		if constellation in ["cancer", "sagittarius"]:
+			for star in Extension.CONSTELLATIONS[constellation].stars:
+				if String(star.node_id).is_empty(): continue
+				var screen: Vector2 = tree.tree_canvas.get_global_transform() * tree.node_positions[star.node_id]
+				_check(tree.node_buttons[star.node_id].is_visible_in_tree() and tree._star_hit_owner(screen) == star.node_id, "new research star is selectable: " + star.node_id)
 	var seen: Dictionary = {}
 	for constellation in Extension.ORDER:
 		for star in Extension.CONSTELLATIONS[constellation].stars:
@@ -58,7 +64,7 @@ func _run() -> void:
 			_check(tree.node_buttons[id].get_parent() == tree.tree_canvas, "original and new stars share the same canvas")
 	for id in Modules.RESEARCH_IDS + Data.RESEARCH_ORDER:
 		_check(seen.has(id), "acquisition remains reachable: " + id)
-	_check(Data.MODULE_BRANCHES.size() == 2 and Extension.ORDER.size() - Data.MODULE_BRANCHES.size() == 7, "only two of nine branches support modules")
+	_check(Data.MODULE_BRANCHES.size() == 2 and Extension.ORDER.size() - Data.MODULE_BRANCHES.size() == 9, "only two of eleven branches support modules")
 	_check(tree.content_clip.visible and tree.constellation_ledger.visible, "research opens on the constellation chart")
 	_check(tree.node_positions.better_lens.distance_to(tree.CHART_ORIGIN) > 100.0, "original geometry does not collapse into a miniature")
 	var visible_original := 0

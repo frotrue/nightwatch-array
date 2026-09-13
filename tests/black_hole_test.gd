@@ -69,6 +69,7 @@ func _run() -> void:
 		check(game.meteor_layer.get_child_count() == 0, "load clears transient captured sky")
 		game.free()
 	_test_policy()
+	_test_outer_research()
 	_test_lensed_contacts()
 	await _test_worker_parity()
 	if failures.is_empty(): print("BLACK_HOLE_PASS: unlock, reserved spawn, completion, radius, capture/release, save cleanup and worker parity")
@@ -79,7 +80,10 @@ func _test_policy() -> void:
 	var policy := Policy.new(87)
 	check(policy.probability("black_hole", game.progression) == 0.0, "black hole locked initially")
 	game.progression.purchased_nodes["galaxy_imaging"] = true
-	check(policy.probability("black_hole", game.progression) > 0.0, "planet research unlocks black hole")
+	check(policy.probability("black_hole", game.progression) == 0.0, "old base research no longer unlocks black hole")
+	game.progression.purchased_nodes["galactic_reference_frame"] = true
+	game.deep_sky.state.research_ids.append("ext_sgr_black_hole")
+	check(policy.probability("black_hole", game.progression) > 0.0, "Sagittarius research unlocks black hole")
 	var old_save := policy.save_state()
 	old_save.occurrence.erase("black_hole")
 	old_save.entries.erase("black_hole")
@@ -93,6 +97,69 @@ func _test_policy() -> void:
 	game.spawner.pending_contacts.back().countdown = 0.0
 	game.spawner._update_pending_contacts(STEP)
 	check(game.spawner._slot_count(["black_hole"]) == 1, "ordinary forecast admits black hole")
+	game.free()
+
+func _test_outer_research() -> void:
+	var game = _game()
+	var p = game.progression
+	var state = game.deep_sky.state
+	var policy := Policy.new(201)
+	for id in ["variable_watchlist", "double_star_resolution", "galaxy_imaging"]: p.purchased_nodes[id] = true
+	for kind in Policy.OUTER_UNLOCKS:
+		check(policy.probability(kind, p) == 0.0, "legacy base purchase does not unlock " + kind)
+	var old_multiplier: float = p.get_observation_value_multiplier("common", 1)
+	check(is_equal_approx(p.get_analysis_speed_multiplier("satellite"), 1.3) and is_equal_approx(p.get_analysis_speed_multiplier("comet"), 1.3), "base tracking benefits existing small targets")
+	p.purchased_nodes["galactic_reference_frame"] = true
+	state.research_ids.append("ext_protocol")
+	# Cross-figure progression follows only the selected path, not full completion.
+	for id in ["ext_sge_cadence", "ext_sge_forecast", "ext_sge_solution", "ext_cnc_planet", "ext_cnc_tracking", "ext_sgr_black_hole"]:
+		check(state.research_ready(id), "minimal path reaches " + id)
+		state.research_ids.append(id)
+	for kind in Policy.OUTER_UNLOCKS:
+		check(policy.probability(kind, p) > 0.0, "new research admits " + kind)
+	check(not state.research_ids.has("ext_sge_stream") and not state.research_ids.has("ext_cnc_survey"), "capstones are optional for the next figure")
+	var baseline := {}
+	for kind in ["variable_star", "binary_star", "galaxy", "black_hole"]:
+		baseline[kind] = {"chance": policy.probability(kind, p), "value": p.get_observation_value_multiplier(kind, 1)}
+	for id in game.deep_sky.Data.RESEARCH_ORDER:
+		if game.deep_sky.Data.RESEARCH[id].get("branch", "") in ["sagitta", "cancer", "sagittarius"] and id not in state.research_ids: state.research_ids.append(id)
+	for kind in baseline:
+		var spawn_gain := 1.35 * 1.3 if kind == "galaxy" else (1.35 if kind == "black_hole" else 1.0)
+		var value_gain := 1.5 * 1.3 if kind == "galaxy" else 1.5
+		check(is_equal_approx(policy.probability(kind, p) / baseline[kind].chance, spawn_gain), "independent spawn gain for " + kind)
+		check(is_equal_approx(p.get_observation_value_multiplier(kind, 1) / baseline[kind].value, value_gain), "reward gain for " + kind)
+		var target = game.spawner.spawn_meteor(kind, Vector2(500, 300), Vector2.RIGHT, 30.0)
+		check(is_equal_approx(target.analysis_speed_multiplier, p.get_analysis_speed_multiplier(kind)), "manual speed reaches live " + kind)
+		target.base_automatic_rate = 0.1
+		target.dish_assist_rate = 0.2
+		target.tick_observation(0.1)
+		check(is_equal_approx(target.observation_progress, 0.039), "automatic work gains exactly 30 percent for " + kind)
+		target.free()
+	check(is_equal_approx(p.get_observation_value_multiplier("common", 1), old_multiplier), "base data bonuses remain and outer family buffs do not leak into common meteors")
+	var hole = game.spawner.spawn_meteor("black_hole", Vector2(500, 300), Vector2.RIGHT, 30.0)
+	var inside = game.spawner.spawn_meteor("common", Vector2(859, 300), Vector2.RIGHT, 30.0)
+	var outside = game.spawner.spawn_meteor("common", Vector2(861, 300), Vector2.RIGHT, 30.0)
+	hole.observation_progress = 1.0
+	hole.tick_resolve()
+	check(inside.gravity_capture != null and outside.gravity_capture == null, "live completion applies the upgraded 360 pixel radius")
+	if inside.gravity_capture != null:
+		check(is_equal_approx(inside.gravity_capture.slow_seconds, 3.0), "two duration researches add two seconds to capture")
+		for tick in 170: inside.tick_motion(STEP, tick)
+		check(inside.gravity_capture != null, "upgraded slowing outlasts the original duration")
+		for tick in 65: inside.tick_motion(STEP, tick + 170)
+		check(inside.gravity_capture == null, "upgraded slowing still expires")
+	var before: Array = state.research_ids.duplicate()
+	var save: Dictionary = JSON.parse_string(JSON.stringify(game._build_save_data()))
+	game.deep_sky.state.research_ids.clear()
+	game._apply_save_data(save)
+	check(game.deep_sky.state.research_ids == before and p.has_upgrade("galaxy_imaging") and p.has_extension_research("ext_sgr_black_hole"), "save roundtrip retains base and outer research ownership")
+	for invalid in [0, 4.5, 5, true, "4"]:
+		check(not game.deep_sky.supports_save({"version": invalid}), "reject malformed or future save version")
+	save.deep_sky.extension.catalogue_version = 4
+	save.deep_sky.extension.research_ids = ["ext_protocol", "ext_sge_cadence", "ext_sge_forecast", "ext_sge_solution"]
+	game._apply_save_data(save)
+	check(p.has_extension_research("ext_sge_solution") and is_equal_approx(p.get_celestial_multiplier("variable_star", "spawn"), 1.35), "v4 Sagitta purchases retain their IDs and gain their new effects")
+	check(policy.probability("galaxy", p) == 0.0 and policy.probability("black_hole", p) == 0.0 and p.has_upgrade("galaxy_imaging"), "v4 base records survive without granting Cancer or Sagittarius")
 	game.free()
 
 func _test_lensed_contacts() -> void:

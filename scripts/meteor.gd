@@ -67,6 +67,7 @@ var wide_field_enabled: bool = false
 var precision_enabled: bool = false
 var perfect_enabled: bool = false
 var analysis_speed_multiplier: float = 1.0
+var celestial_speed_multiplier: float = 1.0
 var spectral_calibrated: bool = false
 var spectral_capstone_enabled: bool = false
 var manual_touched: bool = false
@@ -146,6 +147,7 @@ func configure(spec: Dictionary, meteor_type: String, start_position: Vector2, m
 	perfect_enabled = bool(features.get("perfect", false))
 	base_automatic_rate = float(features.get("automation", 0.0))
 	analysis_speed_multiplier = maxf(0.1, float(features.get("analysis_speed", 1.0)))
+	celestial_speed_multiplier = maxf(0.1, float(features.get("celestial_speed", 1.0)))
 	spectral_calibrated = bool(features.get("spectral_calibrated", false))
 	spectral_capstone_enabled = bool(features.get("spectral_capstone", false))
 	observation_view = view
@@ -216,10 +218,10 @@ func tick_motion(delta: float, tick_id: int) -> void:
 	_sample_motion_trail(delta)
 
 
-func begin_gravity_capture(centre: Vector2, world_scale: float) -> bool:
+func begin_gravity_capture(centre: Vector2, world_scale: float, extra_slow_seconds: float = 0.0) -> bool:
 	if not alive or is_queued_for_deletion() or type_id == "black_hole": return false
 	gravity_capture = GravityCapture.new()
-	gravity_capture.configure(self, centre, world_scale)
+	gravity_capture.configure(self, centre, world_scale, extra_slow_seconds)
 	return true
 
 
@@ -365,6 +367,7 @@ func set_features(features: Dictionary) -> void:
 	perfect_enabled = bool(features.get("perfect", perfect_enabled))
 	base_automatic_rate = float(features.get("automation", base_automatic_rate))
 	analysis_speed_multiplier = maxf(0.1, float(features.get("analysis_speed", analysis_speed_multiplier)))
+	celestial_speed_multiplier = maxf(0.1, float(features.get("celestial_speed", celestial_speed_multiplier)))
 	spectral_calibrated = bool(features.get("spectral_calibrated", spectral_calibrated))
 	spectral_capstone_enabled = bool(features.get("spectral_capstone", spectral_capstone_enabled))
 	if base_automatic_rate != previous_automatic_rate:
@@ -396,7 +399,7 @@ func set_lane_assist_rate(value: float) -> void:
 
 
 func get_automatic_rate() -> float:
-	return base_automatic_rate + dish_assist_rate + lane_assist_rate
+	return (base_automatic_rate + dish_assist_rate + lane_assist_rate) * celestial_speed_multiplier
 
 
 func allows_automatic_assist() -> bool:

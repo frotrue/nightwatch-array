@@ -43,7 +43,7 @@ func _initialize() -> void:
 					if absf(sky_area) < 0.000001: continue
 					var chart_area := (points[b] - points[a]).cross(points[c] - points[a])
 					_check(sky_area * chart_area > 0.0, "mirrored figure: " + cid)
-	_check(total == 139 and catalogue.size() == 139, "all 21 figures and shared markers are covered")
+	_check(total == 158 and catalogue.size() == 158, "all 23 figures and shared markers are covered")
 	for cid in ["pegasus", "ursa_minor"]:
 		var figure: Dictionary = chart.chart_constellations[cid]
 		for a in figure.segments.size():
@@ -55,7 +55,7 @@ func _initialize() -> void:
 				_check(crossing == null, "crossed square/bowl: " + cid)
 	chart.free()
 	for failure in failures: push_error(failure)
-	print("CONSTELLATION_GEOMETRY_%s: 21 figures / 139 markers, maximum normalized angular-spacing error %.5f" % ["PASS" if failures.is_empty() else "FAIL", maximum_error])
+	print("CONSTELLATION_GEOMETRY_%s: 23 figures / 158 markers, maximum normalized angular-spacing error %.5f" % ["PASS" if failures.is_empty() else "FAIL", maximum_error])
 	quit(0 if failures.is_empty() else 1)
 
 func _check(condition: bool, message: String) -> void:

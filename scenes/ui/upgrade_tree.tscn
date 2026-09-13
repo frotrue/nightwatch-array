@@ -69,9 +69,9 @@ unique_name_in_owner = true
 z_index = 30
 layout_mode = 0
 offset_left = 24.0
-offset_top = 376.0
+offset_top = 424.0
 offset_right = 216.0
-offset_bottom = 530.0
+offset_bottom = 578.0
 color = Color(0.03529412, 0.023529412, 0.015686275, 1)
 
 [node name="AtlasActions0" type="Button" parent="."]
@@ -79,9 +79,9 @@ unique_name_in_owner = true
 z_index = 31
 layout_mode = 0
 offset_left = 34.0
-offset_top = 482.0
+offset_top = 530.0
 offset_right = 206.0
-offset_bottom = 516.0
+offset_bottom = 564.0
 theme_override_colors/font_color = Color(1, 0.7058824, 0.5568628, 1)
 theme_override_font_sizes/font_size = 12
 flat = true

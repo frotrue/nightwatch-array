@@ -9,8 +9,10 @@ var elapsed := 0.0
 var start := Vector2.ZERO
 var destination := Vector2.ZERO
 var released := false
+var slow_seconds := SLOW_SECONDS
 
-func configure(target: Node2D, centre: Vector2, world_scale: float) -> void:
+func configure(target: Node2D, centre: Vector2, world_scale: float, extra_slow_seconds: float = 0.0) -> void:
+	slow_seconds = SLOW_SECONDS + maxf(0.0, extra_slow_seconds)
 	start = target.position
 	var offset := start - centre
 	var distance := offset.length()
@@ -35,11 +37,11 @@ func advance(target: Node2D, delta: float) -> bool:
 			target.burnout_position += shift
 			target.position = destination
 			released = true
-		var slow_delta := maxf(0.0, minf(elapsed, PULL_SECONDS + SLOW_SECONDS) - maxf(before, PULL_SECONDS))
-		var normal_delta := maxf(0.0, elapsed - maxf(before, PULL_SECONDS + SLOW_SECONDS))
+		var slow_delta := maxf(0.0, minf(elapsed, PULL_SECONDS + slow_seconds) - maxf(before, PULL_SECONDS))
+		var normal_delta := maxf(0.0, elapsed - maxf(before, PULL_SECONDS + slow_seconds))
 		target.age += slow_delta * SLOW_SCALE + normal_delta
 		target._update_burn_motion(delta)
 	if delta > 0.000001:
 		target.velocity = (target.position - previous) / delta
 		if not target.velocity.is_zero_approx(): target.travel_direction = target.velocity.normalized()
-	return elapsed >= PULL_SECONDS + SLOW_SECONDS
+	return elapsed >= PULL_SECONDS + slow_seconds

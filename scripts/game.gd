@@ -600,10 +600,11 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 	meteor.completion_glint_enabled = effects.screen_flashes_enabled
 	if meteor.type_id == "black_hole" and observation_phase_active:
 		var world_scale: float = observation_view.screen_length_to_world(1.0)
-		var radius: float = meteor.BLACK_HOLE_PULL_RADIUS * world_scale
+		var radius: float = meteor.BLACK_HOLE_PULL_RADIUS * world_scale * progression.extension_effect("gravity_radius")
+		var extra_slow: float = progression.extension_effect("gravity_slow_seconds", 0.0)
 		for target in meteor_layer.get_children():
 			if target.global_position.distance_squared_to(meteor.global_position) <= radius * radius:
-				target.begin_gravity_capture(meteor.position, world_scale)
+				target.begin_gravity_capture(meteor.position, world_scale, extra_slow)
 	if observation_phase_active:
 		deep_sky.modules.record_completion(meteor)
 	observer.release_target(meteor)

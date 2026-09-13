@@ -49,6 +49,12 @@ func _run() -> void:
 	await _capture(game, "normal_overview")
 	tree.focus_outer_constellations()
 	await _capture(game, "outer_overview")
+	if "--outer-celestial" in OS.get_cmdline_user_args():
+		for locale in ["ko", "en"]:
+			_set_locale(game, locale)
+			for cid in ["sagitta", "cancer", "sagittarius"]:
+				tree.focus_constellation(cid)
+				await _capture(game, locale + "_focus_" + cid)
 	var manifest := FileAccess.open(output.path_join("manifest.json"), FileAccess.WRITE)
 	manifest.store_string(JSON.stringify({"positions": positions, "frames": records, "failures": failures, "synthetic": true}, "\t"))
 	manifest.close()
