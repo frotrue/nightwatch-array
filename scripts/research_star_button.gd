@@ -1,6 +1,6 @@
 extends Button
 
-# Keep the marker on its catalogue coordinate. Resolve overlapping hit boxes
+# Follow the chart's readable marker position. Resolve overlapping hit boxes
 # by distance instead of scene order, and prefer unfinished research when a
 # real close pair cannot be separated at the current screen scale.
 var chart: Node

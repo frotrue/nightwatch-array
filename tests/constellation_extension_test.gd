@@ -136,7 +136,7 @@ func _run() -> void:
 		var screen_center: Vector2 = tree.tree_canvas.get_global_transform() * tree.node_positions.ext_trace_study
 		_check(button.get_global_rect().has_point(screen_center) and button.get_global_rect().size.x >= 27.0, "star hit area follows rotation and zoom")
 	# Alpha Vul and 8 Vul are separated by only about seven arcminutes. Their
-	# catalogue markers stay together while the available research remains hittable.
+	# readable markers are separated while retaining native hold purchases.
 	tree.focus_constellation("vulpecula")
 	game.progression.observation_data = 1.0e15
 	tree._refresh()
@@ -163,7 +163,15 @@ func _run() -> void:
 	release.pressed = false
 	release.button_mask = 0
 	root.push_input(release, true)
-	_check(research.research_owned("ext_vul_memory") and tree._star_hit_owner(pair_point) == "ext_vul_rhythm", "next close-pair research becomes reachable without moving either star")
+	var next_point: Vector2 = second_button.get_global_rect().get_center()
+	_check(research.research_owned("ext_vul_memory") and pair_point.distance_to(next_point) >= tree.MIN_STAR_SCREEN_SEPARATION - 0.1, "close-pair research has distinct visible centers")
+	_check(tree._star_hit_owner(pair_point) == "ext_vul_memory" and tree._star_hit_owner(next_point) == "ext_vul_rhythm", "each separated center keeps its own input owner after purchase")
+	pointer.position = next_point
+	pointer.global_position = next_point
+	press.position = next_point
+	press.global_position = next_point
+	release.position = next_point
+	release.global_position = next_point
 	root.push_input(pointer, true)
 	root.push_input(press, true)
 	_check(tree.held_node_id == "ext_vul_rhythm", "native GUI press reaches the next close-pair star")

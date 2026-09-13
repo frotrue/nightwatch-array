@@ -26,6 +26,17 @@ var affordable := false
 var hovered := false
 var pulse_phase := 0.0
 var branch_endpoint := false
+var neighbor_clearance := INF
+
+
+func set_neighbor_clearance(value: float) -> void:
+	if neighbor_clearance == value: return
+	neighbor_clearance = value
+	queue_redraw()
+
+
+func _spaced_radius(desired: float, core_radius: float) -> float:
+	return minf(desired, maxf(core_radius + 1.2, neighbor_clearance * 0.45))
 
 
 func set_fill_progress(ratio: float, elapsed: float) -> void:
@@ -103,11 +114,11 @@ func _draw() -> void:
 		_draw_cluster_marker(center, radius)
 	match visual_state:
 		"purchased":
-			draw_circle(center, radius * purchased_glow_scale(), state_ink(Color(UITheme.STAR_INSTALLED_GLOW, 0.22 if hovered else 0.13)))
+			draw_circle(center, _spaced_radius(radius * purchased_glow_scale(), radius), state_ink(Color(UITheme.STAR_INSTALLED_GLOW, 0.22 if hovered else 0.13)))
 			draw_circle(center, radius, state_ink(UITheme.STAR_INSTALLED))
 		"available":
 			if affordable:
-				draw_circle(center, radius * 5.2 * pulse, state_ink(Color(UITheme.STAR_READY_RING, 0.50)), false, 1.0, true)
+				draw_circle(center, _spaced_radius(radius * 5.2 * pulse, radius), state_ink(Color(UITheme.STAR_READY_RING, 0.50)), false, 1.0, true)
 				draw_circle(center, radius, state_ink(UITheme.STAR_READY_FILL))
 				draw_circle(center, radius, state_ink(UITheme.STAR_READY_BORDER), false, 1.0, true)
 			else:
@@ -117,13 +128,14 @@ func _draw() -> void:
 		_:
 			draw_circle(center, maxf(1.25, radius * 0.5), state_ink(Color(UITheme.STAR_BACKGROUND, 0.30)))
 	if hovered and visual_state != "hidden":
-		draw_circle(center, radius * 2.6, state_ink(Color(UITheme.STAR_READY_RING, 0.28)), false, 1.0, true)
+		draw_circle(center, _spaced_radius(radius * 2.6, radius), state_ink(Color(UITheme.STAR_READY_RING, 0.28)), false, 1.0, true)
 	if hold_ratio > 0.0:
 		# The gauge wraps the star so hand and eye watch the same place.
-		draw_arc(center, radius + UITheme.px(11.0), 0.0, TAU, 48, Color(UITheme.HORIZON_TICK, 0.40), 1.0, true)
+		var gauge_radius := _spaced_radius(radius + UITheme.px(11.0), radius)
+		draw_arc(center, gauge_radius, 0.0, TAU, 48, Color(UITheme.HORIZON_TICK, 0.40), 1.0, true)
 		draw_arc(
 			center,
-			radius + UITheme.px(11.0),
+			gauge_radius,
 			-PI * 0.5,
 			-PI * 0.5 + TAU * hold_ratio,
 			48,
