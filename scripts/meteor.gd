@@ -6,6 +6,10 @@ var graded_fan_indices: Dictionary = {}
 const UITheme = preload("res://scripts/ui_theme.gd")
 const TriangleBatch = preload("res://scripts/meteor_triangle_batch.gd")
 const PlanetSurface = preload("res://scripts/planet_surface.gd")
+const GravityCapture = preload("res://scripts/gravity_capture.gd")
+const BLACK_HOLE_PULL_RADIUS := 240.0
+var gravity_capture: RefCounted
+var optical_lens: Node2D
 const ScanArcs = preload("res://scripts/scan_arc_instances.gd")
 const HeadTexture = preload("res://scripts/meteor_head_texture.gd")
 var textured_head_enabled := true
@@ -203,10 +207,20 @@ func tick_motion(delta: float, tick_id: int) -> void:
 		if linger_time <= 0.0: queue_free()
 		return
 	var motion_delta: float = delta * observation_controller.motion_multiplier_for(self) if is_instance_valid(observation_controller) else delta
-	age += motion_delta
-	if motion_delta > 0.0:
-		_update_burn_motion(motion_delta)
+	if gravity_capture != null:
+		if gravity_capture.advance(self, motion_delta): gravity_capture = null
+	else:
+		age += motion_delta
+		if motion_delta > 0.0:
+			_update_burn_motion(motion_delta)
 	_sample_motion_trail(delta)
+
+
+func begin_gravity_capture(centre: Vector2, world_scale: float) -> bool:
+	if not alive or is_queued_for_deletion() or type_id == "black_hole": return false
+	gravity_capture = GravityCapture.new()
+	gravity_capture.configure(self, centre, world_scale)
+	return true
 
 
 func motion_snapshot(delta: float) -> Dictionary:
@@ -415,7 +429,7 @@ func get_tracking_radius(base_radius: float) -> float:
 
 func is_solid_body() -> bool:
 	# Stable save IDs; the former star/galaxy artwork is no longer rendered.
-	return type_id in ["variable_star", "binary_star", "galaxy"]
+	return type_id in ["variable_star", "binary_star", "galaxy", "black_hole"]
 
 
 func get_observation_body_radius() -> float:
@@ -518,6 +532,7 @@ func _finish_observation(auto_rate: float) -> void:
 	alive = false
 	observed_successfully = true
 	linger_duration = 0.62 if type_id != "major" else 1.1
+	if type_id == "black_hole": linger_duration = 1.05
 	linger_time = linger_duration
 	var was_manual := manual_touched
 	var multiplier := get_predicted_multiplier()
@@ -862,6 +877,9 @@ func _draw_type_silhouette(radius: float, visibility: float, visual_scale: float
 			return
 		"galaxy":
 			_draw_planet_head(radius, visibility)
+			return
+		"black_hole":
+			_draw_black_hole_head(radius, visibility)
 			return
 
 	# Shape numbers live in `_head_profile` so the trail's shoulder reads the
@@ -1230,6 +1248,27 @@ func _draw_planet_completion(radius: float, visibility: float) -> void:
 		draw_line(Vector2(x, -half_height), Vector2(x, half_height), Color(glow_color, alpha / (1.0 + absf(float(band)))), maxf(0.8, radius * 0.045), true)
 
 
+func _draw_black_hole_head(radius: float, visibility: float) -> void:
+	# Reference direction: a dark spherical silhouette with a faint cool rim.
+	# The background supplies the lensed light; there is no equatorial disc.
+	var completion := observed_successfully and not alive
+	var pulse := sin((1.0 - visibility) * PI) if completion and completion_glint_enabled else 0.0
+	var ink := Color("a9a9c6").lerp(Color("e7e6f4"), pulse * 0.45)
+	# Layered narrow arcs soften the limb without a large emissive halo.
+	for layer in range(4, 0, -1):
+		draw_arc(Vector2.ZERO, radius * (1.0 + float(layer) * 0.018), 0.0, TAU, 64, Color(ink, visibility * (0.018 + pulse * 0.012)), radius * 0.075, true)
+	draw_circle(Vector2.ZERO, radius, Color("030309", visibility), true, -1.0, true)
+	# A barely visible violet reflection keeps the interior dark at game scale.
+	for layer in 5:
+		var fraction := float(layer) / 5.0
+		draw_circle(Vector2(-0.12, 0.12) * radius, radius * (0.84 - fraction * 0.10), Color("393047", visibility * 0.022), true, -1.0, true)
+	draw_arc(Vector2.ZERO, radius * 1.014, 0.0, TAU, 64, Color(ink, visibility * (0.23 + pulse * 0.23)), maxf(0.65, radius * 0.022), true)
+	draw_arc(Vector2.ZERO, radius * 1.026, PI * 0.92, PI * 1.72, 36, Color(ink, visibility * (0.22 + pulse * 0.10)), maxf(0.65, radius * 0.026), true)
+	if completion and completion_motion_scale > 0.0:
+		var ripple := radius * lerpf(1.75, 1.0, 1.0 - visibility)
+		draw_arc(Vector2.ZERO, ripple, 0.0, TAU, 48, Color(ink, sin(visibility * PI) * 0.12), 0.8, true)
+
+
 func _draw_planet_head(radius: float, visibility: float) -> void:
 	# Latitude strips follow a lit sphere. No rings, orbit lines or star-shaped core.
 	draw_circle(Vector2.ZERO, radius * 1.04, Color(glow_color, visibility * 0.09), true, -1.0, true)
@@ -1290,7 +1329,7 @@ func _head_scale() -> float:
 			return 0.50
 		"major":
 			return 0.43
-		"satellite", "variable_star", "comet", "binary_star", "galaxy":
+		"satellite", "variable_star", "comet", "binary_star", "galaxy", "black_hole":
 			return 0.84
 		_:
 			return 0.72
@@ -1329,5 +1368,11 @@ func _sync_visual_scale() -> void:
 	observation_visual_scale = next_scale
 	queue_redraw()
 
+func get_observation_position(fraction: float) -> Vector2:
+	var point := previous_simulation_position.lerp(global_position, fraction)
+	if type_id != "black_hole" and is_instance_valid(optical_lens):
+		return optical_lens.project_position(point, fraction)
+	return point
+
 func get_display_position() -> Vector2:
-	return previous_simulation_position.lerp(global_position, Engine.get_physics_interpolation_fraction())
+	return get_observation_position(Engine.get_physics_interpolation_fraction())

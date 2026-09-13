@@ -10,7 +10,7 @@ no GUT/gdUnit installation is needed.
 .\tools\validate.ps1 -GodotPath $godot -Build
 ```
 
-This runs the 25 fast gates below, then exports Windows. Add `-FullEconomy` for
+This runs the 26 fast gates below, then exports Windows. Add `-FullEconomy` for
 changes to progression, rewards, spawning or target logic. Omit `-Build` to test only.
 The economy run inherits its seed/strategy environment; it does not force three strategies.
 
@@ -44,6 +44,11 @@ Windows display, both the default Vulkan backend and explicit
 The background test compares original native circles/sunrise triangles against
 batched output through night, dawn, sunrise, camera pullback, resize, empty and
 refilled buffers. These GPU comparisons are separate from the headless gates.
+
+`black_hole_test.gd` is a headless gate for spawn/unlock, capture lifecycle and
+serial/worker parity. Run `black_hole_review.gd` with the same real-renderer flags
+on both backends for lens off/on pixel boundaries, completion pose captures,
+and agreement between the rendered meteor image and its manual observation centre.
 
 The Windows telemetry build also compiles/runs `native/gpu_usage_test.cpp`:
 engine selection (3D, Graphics, Compute, Copy, multiple adapters), PID isolation,

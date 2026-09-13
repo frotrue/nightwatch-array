@@ -32,7 +32,7 @@ Compatibility/OpenGL로 전환한다. 특정 드라이버에서 문제가 있으
 .\tools\validate.ps1 -GodotPath $godot -Build
 ```
 
-빠른 게이트 25개를 통과하면 Windows 실행 파일을 갱신한다.
+빠른 게이트 26개를 통과하면 Windows 실행 파일을 갱신한다.
 생성·보상·진행·표적 로직에 영향이 있으면 `-FullEconomy`도 추가한다.
 `-Build`를 빼면 검사만 한다. 시드·전략 설정과 추가 검증은 [probes.md](docs/probes.md)를 본다.
 
@@ -84,6 +84,7 @@ Windows 기본 위치는 `%APPDATA%\Godot\app_userdata\Nightwatch Array\`다.
 | D / N / A | 데이터 +100 / 구매 가능한 첫 연구 / 전 연구 구매 |
 | G | 표본 소모·연출 없이 모듈 1개 즉시 획득 (자동 장착 없음) |
 | M / R / S | 일반 유성 / 발광 유성 / 유성우 생성 |
+| B | 블랙홀 생성 |
 | F | Sirius 연구 설치 후 해당 회차의 큰개자리 거대 유성 경고 |
 | Backspace | 런 리셋 |
 

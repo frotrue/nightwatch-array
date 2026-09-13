@@ -571,7 +571,7 @@ func forecast_classifies(type_id: String = "") -> bool:
 
 
 func is_deep_target(type_id: String) -> bool:
-	return type_id in ["satellite", "variable_star", "comet", "binary_star", "galaxy"]
+	return type_id in ["satellite", "variable_star", "comet", "binary_star", "galaxy", "black_hole"]
 
 
 func is_andromeda_target(type_id: String) -> bool:

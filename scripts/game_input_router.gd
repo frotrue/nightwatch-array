@@ -16,6 +16,7 @@ const DEBUG_KEYS := [
 	KEY_A,
 	KEY_G,
 	KEY_M,
+	KEY_B,
 	KEY_R,
 	KEY_S,
 	KEY_F,

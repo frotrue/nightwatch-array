@@ -1,24 +1,26 @@
 extends RefCounted
 
 const Clock = preload("res://scripts/simulation_clock.gd")
-const ORDER := ["common", "fast", "fragment", "fireball", "satellite", "variable_star", "comet", "binary_star", "galaxy"]
-const LATE_TYPES := ["satellite", "variable_star", "comet", "binary_star", "galaxy"]
+const ORDER := ["common", "fast", "fragment", "fireball", "satellite", "variable_star", "comet", "binary_star", "galaxy", "black_hole"]
+const LATE_TYPES := ["satellite", "variable_star", "comet", "binary_star", "galaxy", "black_hole"]
 const BASE_PROBABILITIES := {
 	"common": 0.5 / 60.0, "fast": 0.125 / 60.0,
 	"fragment": 0.0875 / 60.0, "fireball": 0.0375 / 60.0,
 	"satellite": 0.0375 / 60.0, "variable_star": 0.025 / 60.0,
 	"comet": 0.0225 / 60.0, "binary_star": 0.0175 / 60.0,
 	"galaxy": 0.01 / 60.0,
+	"black_hole": 0.008 / 60.0,
 }
 const UNLOCKS := {
 	"fast": "edge_detection", "fragment": "fragment_analysis", "fireball": "rare_detection",
 	"satellite": "satellite_catalog", "variable_star": "variable_watchlist",
 	"comet": "comet_solutions", "binary_star": "double_star_resolution", "galaxy": "galaxy_imaging",
+	"black_hole": "galaxy_imaging",
 }
 # Emergency ceiling only. The research active-target limit gates new natural
 # arrivals, while proc children can use headroom without taking late reservations.
 const ATMOSPHERIC_SAFETY_SLOTS := 54
-const LATE_SLOTS := 6
+const LATE_SLOTS := 7
 const LATE_TYPE_SLOTS := 2
 const MAX_PENDING_PER_TYPE := 32
 const DEFER_SECONDS := 2.0

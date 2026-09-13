@@ -260,7 +260,7 @@ func _prepare_contact_batch() -> void:
 		_contact_indices[target] = snapshots.size()
 		ordered_targets.append(target)
 		snapshots.append({
-			"previous": _target_position_at(target, 0.0), "current": target.global_position,
+			"previous": _target_position_at(target, 0.0), "current": _target_position_at(target, 1.0),
 			"radius": radius, "extent": _linear_target_extents(target, radius) if _tick_linear else Vector2.ONE,
 		})
 	var segments: Array = []
@@ -425,9 +425,14 @@ func _target_position_at(target, fraction: float) -> Vector2:
 		if not _tick_positions.has(target):
 			var end: Vector2 = target.global_position
 			var start: Vector2 = target.previous_simulation_position if "previous_simulation_position" in target else end
+			if target.has_method("get_observation_position"):
+				start = target.get_observation_position(0.0)
+				end = target.get_observation_position(1.0)
 			_tick_positions[target] = Vector4(start.x, start.y, end.x, end.y)
 		var points: Vector4 = _tick_positions[target]
 		return Vector2(lerpf(points.x, points.z, fraction), lerpf(points.y, points.w, fraction))
+	if target.has_method("get_observation_position"):
+		return target.get_observation_position(0.0).lerp(target.get_observation_position(1.0), fraction)
 	return target.previous_simulation_position.lerp(target.global_position, fraction) if "previous_simulation_position" in target else target.global_position
 
 func _circle_contact_interval(target, radius: float) -> Vector2:
@@ -601,11 +606,11 @@ func _target_children() -> Array:
 func _target_contact_distance(target, point: Vector2) -> float:
 	if _linear_enabled():
 		var radius: float = _tracking_radius_for(target)
-		var relative: Vector2 = (point - target.global_position).abs() / _linear_target_extents(target, radius)
+		var relative: Vector2 = (point - _target_position_at(target, 1.0)).abs() / _linear_target_extents(target, radius)
 		return maxf(relative.x, relative.y) * radius
 	if target.has_method("get_manual_contact_distance"):
 		return float(target.get_manual_contact_distance(point))
-	return point.distance_to(target.global_position)
+	return point.distance_to(_target_position_at(target, 1.0))
 
 
 func _target_cursor_path_distance(target) -> float:
