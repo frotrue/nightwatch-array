@@ -43,6 +43,26 @@ func _run() -> void:
 	_check(original_geometry == tree.base_star_positions, "unlock preserves the original positions")
 	_check(tree.base_star_positions["pegasus/alpheratz"] == tree.base_star_positions["andromeda/alpheratz"], "Pegasus shares the original Alpheratz corner")
 	_check(tree.constellation_ledger_hits.size() == tree._constellation_order().size(), "ledger has exactly one hit target per active constellation")
+	for constellation in tree.ChartData.CONSTELLATIONS:
+		tree.focus_constellation(constellation)
+		for star in tree.chart_constellations[constellation].stars:
+			var screen: Vector2 = tree.tree_canvas.get_global_transform() * tree.star_positions[constellation + "/" + star.id]
+			_check(Rect2(180, 130, 720, 410).has_point(screen), "focused completed figure remains inside the chart: " + constellation)
+		var id: String = tree.selected_node_id
+		_check(tree.node_buttons[id].mouse_filter == Control.MOUSE_FILTER_STOP, "completed stars retain input after visual dimming")
+		# Restore the overview zoom while keeping this figure above the horizon.
+		tree.zoom = 0.43
+		tree.pan_position = tree._galactic_pan_for_zoom(tree.zoom)
+		tree._layout_chart()
+		tree._apply_transform()
+		_check(tree.node_hold_bars[id].modulate.a < 1.0 or tree.shared_star_node_ids.has(id), "completed overview stars are subdued except shared outer corners")
+		tree.node_buttons[id].button_down.emit()
+		tree.node_buttons[id].button_up.emit()
+		_check(tree.zoom > 0.8 and tree.selected_node_id == id and tree.held_node_id.is_empty(), "clicking a completed star zooms in without buying or changing selection")
+		var reading_center: Vector2 = (Vector2(560, 330) - tree.pan_position) / tree.zoom
+		tree._zoom_at(Vector2(576, 324), 0.9)
+		_check((tree.pan_position + reading_center * tree.zoom).distance_to(Vector2(560, 330)) < 0.001, "zooming a selected legacy figure retains its reading center")
+	tree.focus_outer_constellations()
 	for constellation in Extension.ORDER:
 		var row: int = tree._constellation_order().find(constellation)
 		tree.constellation_ledger_hits[row].pressed.emit()

@@ -105,6 +105,46 @@ Control의 레이아웃 갱신 뒤에도 유지되도록 매번 다시 그릴 �
 
 ## 검증과 비교 자료
 
+### 2026-09-13 확장 전후 크기 구분
+
+확장 전에는 기존 크기를 유지한다. 확장 후에는 기존 12개 도형을 각 도형의
+표식 중심 주위로 75% 균일 축소한다. 카탈로그 좌표와 기준 배치 캐시는 보존하고
+화면용 배치만 바꾼다. 기존 완료 별·선은 전체 보기에서 밝기 58%로 낮추며,
+확대율 0.65~1.0 구간에서 원래 밝기로 돌아온다. 별을 누르면 해당 도형을 확대한다.
+확장 11개 도형은 크기를 유지한다. 페가수스는 공유 알페라츠까지 전체를 평행 이동하며,
+알페라츠의 밝기는 확장 별과 동일하게 유지한다. 입력 판정은 밝기와 분리한다.
+
+- 대상별 기준/게임 표식 수: 카시오페이아 5/5, 북두칠성 8/8, 오리온 10/10,
+  안드로메다 7/7, 페르세우스 8/8, 거문고 6/6, 용 9/9, 작은곰 7/7,
+  사자 9/9, 쌍둥이 10/10, 황소 8/8, 큰개 8/8, 페가수스 6/6.
+  총 101표식·100고유 천체이며 M31 은하·M45 성단과 공유 알페라츠를 포함한다.
+  전체 23개 도형은 158표식·157고유 천체·150연구를 유지한다.
+- 자료는 위의 J2000 카탈로그와 IAU / Sky & Telescope 성도를 그대로 사용했다.
+  [CAS](https://iauarchive.eso.org/static/public/constellations/pdf/CAS.pdf),
+  [UMA](https://iauarchive.eso.org/static/public/constellations/pdf/UMA.pdf),
+  [ORI](https://iauarchive.eso.org/static/public/constellations/pdf/ORI.pdf),
+  [AND](https://iauarchive.eso.org/static/public/constellations/pdf/AND.pdf),
+  [PER](https://iauarchive.eso.org/static/public/constellations/pdf/PER.pdf),
+  [LYR](https://iauarchive.eso.org/static/public/constellations/pdf/LYR.pdf),
+  [DRA](https://iauarchive.eso.org/static/public/constellations/pdf/DRA.pdf),
+  [UMI](https://iauarchive.eso.org/static/public/constellations/pdf/UMI.pdf),
+  [LEO](https://iauarchive.eso.org/static/public/constellations/pdf/LEO.pdf),
+  [GEM](https://iauarchive.eso.org/static/public/constellations/pdf/GEM.pdf),
+  [TAU](https://iauarchive.eso.org/static/public/constellations/pdf/TAU.pdf),
+  [CMA](https://iauarchive.eso.org/static/public/constellations/pdf/CMA.pdf),
+  [PEG](https://iauarchive.eso.org/static/public/constellations/pdf/PEG.pdf).
+- 변경 전 캡처: `build/constellation_geometry_review/1789307269/`.
+  변경 후 37장: `build/constellation_geometry_review/1789307370/`.
+  `comparisons/sheet_1.png`~`sheet_5.png`에서 대상 13개를 실제 성도와 대조했다.
+  게임 쪽 별 이름은 비교용 덧표시이며 회전·기존 간략형·평면 투영 차이는 유지한다.
+  새 별 추가·누락·뒤집힘·연결 변경은 없다. 가까운 복수 표식은 확대에서도
+  광원이 겹칠 수 있으며 기존 가까운 별 선택 처리를 유지한다.
+- 23개 도형의 모든 별 쌍에 대해 축소 전후 벡터 비율을 검사하고, 재캐시·확장 해제 시
+  복원과 공유 별 일치를 검사한다. 12개 기존 도형의 자연 확대 보기에서 화면 내 배치와
+  클릭 후 선택 유지·구매 미발생을 검사한다. 캡처의 연결선 누락·잘림 검사도 통과했다.
+- `build/validation/20260913T135305419Z_44fe795f/summary.json`: 기본 검사 26개와
+  Windows 실행 파일 내보내기 통과. 삭제된 옛 연구 ID 입력은 확대 전에 무시한다.
+
 - `constellation_geometry_test.gd`: 실행 중인 158개 위치의 모든 별 쌍 간격을 실제
   구면 각거리와 비교한다. 좌우 방향·대사각형과 국자 머리의 선 교차도 검사한다.
   현재 최대 정규화 간격 차이는 약 0.0051이며 평면 투영의 차이를 포함한다.

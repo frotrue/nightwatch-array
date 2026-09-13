@@ -49,6 +49,10 @@ func _run() -> void:
 	await _capture(game, "normal_overview")
 	tree.focus_outer_constellations()
 	await _capture(game, "outer_overview")
+	if "--legacy-scale" in OS.get_cmdline_user_args():
+		for cid in tree.ChartData.CONSTELLATIONS:
+			tree.focus_constellation(cid)
+			await _capture(game, "natural_focus_" + cid)
 	if "--outer-celestial" in OS.get_cmdline_user_args():
 		for locale in ["ko", "en"]:
 			_set_locale(game, locale)

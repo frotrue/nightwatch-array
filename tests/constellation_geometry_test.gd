@@ -44,6 +44,24 @@ func _initialize() -> void:
 					var chart_area := (points[b] - points[a]).cross(points[c] - points[a])
 					_check(sky_area * chart_area > 0.0, "mirrored figure: " + cid)
 	_check(total == 158 and catalogue.size() == 158, "all 23 figures and shared markers are covered")
+	var original: Dictionary = chart.base_star_positions.duplicate()
+	_check(chart._chart_source_positions() == original, "unexpanded chart retains its original presentation")
+	chart.galactic_unlocked = true
+	var expanded: Dictionary = chart._chart_source_positions().duplicate()
+	for cid in chart.chart_constellations:
+		var stars: Array = chart.chart_constellations[cid].stars
+		var scale_amount: float = 1.0 if cid in chart.ExtensionChart.ORDER else chart.COMPLETED_FIGURE_SCALE
+		for a in stars.size():
+			for b in range(a + 1, stars.size()):
+				var key_a: String = cid + "/" + stars[a].id
+				var key_b: String = cid + "/" + stars[b].id
+				var expected: Vector2 = (original[key_a] - original[key_b]) * scale_amount
+				_check(expected.distance_to(expanded[key_a] - expanded[key_b]) < 0.001, "expansion preserves every relative vector: " + cid)
+	_check(Vector2(expanded["pegasus/alpheratz"]).is_equal_approx(expanded["andromeda/alpheratz"]), "shrinking Andromeda keeps the complete Pegasus attached")
+	chart._cache_chart_geometry()
+	_check(chart.base_star_positions == original and chart._chart_source_positions() == expanded, "rebuilding cannot accumulate shrink or shared-corner translation")
+	chart.galactic_unlocked = false
+	_check(chart._chart_source_positions() == original, "loading an unexpanded save restores full-size legacy figures")
 	for cid in ["pegasus", "ursa_minor"]:
 		var figure: Dictionary = chart.chart_constellations[cid]
 		for a in figure.segments.size():
