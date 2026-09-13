@@ -1825,7 +1825,6 @@ func _draw_tree() -> void:
 					"galaxy":
 						_draw_background_galaxy(point, star_radius, alpha)
 			tree_canvas.draw_circle(point, maxf(1.2, star_radius * 0.55), Color(UITheme.STAR_BACKGROUND, alpha))
-	_draw_extension_labels()
 	if progression != null and (structure_alpha > 0.01):
 		_draw_frontier_overlay()
 	# The ground goes on last. Half the sky now sits below the horizon at any
@@ -2131,22 +2130,3 @@ func _refresh_extension_inspector(id: String) -> void:
 	tooltip_action.add_theme_color_override("font_color", UITheme.TOOLTIP_ACTION)
 	tooltip_panel.visible = _constellation_panel_active()
 	_layout_constellation_overlays()
-
-func _draw_extension_labels() -> void:
-	if not galactic_unlocked: return
-	for id in ExtensionChart.ORDER:
-		var bounds := Rect2()
-		var first := true
-		for star in chart_constellations[id].stars:
-			var point: Vector2 = star_positions[id + "/" + star.id]
-			if first: bounds = Rect2(point, Vector2.ZERO); first = false
-			else: bounds = bounds.expand(point)
-		if bounds.get_center().y > CHART_ORIGIN.y: continue
-		var screen_top: float = tree_canvas.position.y + bounds.position.y * zoom
-		var anchor := Vector2(bounds.get_center().x, bounds.end.y + 25.0 / zoom) if screen_top < 150 or id == "cygnus" else Vector2(bounds.get_center().x, bounds.position.y - 18.0 / zoom)
-		var label := tr(chart_constellations[id].label_key)
-		var font := UITheme.sans()
-		var width := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
-		tree_canvas.draw_set_transform(anchor, 0.0, Vector2.ONE / zoom)
-		tree_canvas.draw_string(font, Vector2(-width * 0.5, 0), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, UITheme.INK_MID)
-		tree_canvas.draw_set_transform(Vector2.ZERO)
