@@ -74,6 +74,8 @@ var automatic_contribution: float = 0.0
 var observation_controller: Node
 var alive: bool = true
 var observed_successfully: bool = false
+var completion_motion_scale := 1.0
+var completion_glint_enabled := true
 var split_done: bool = false
 var linger_time: float = 0.0
 var linger_duration: float = 0.20
@@ -538,6 +540,8 @@ func _draw() -> void:
 	if is_solid_body():
 		var body_visibility := get_burn_visibility() if alive else clampf(linger_time / maxf(linger_duration, 0.001), 0.0, 1.0)
 		_draw_type_silhouette(body_radius * visual_scale * _head_scale(), body_visibility, visual_scale)
+		if type_id == "galaxy" and observed_successfully and not alive:
+			_draw_planet_completion(body_radius * visual_scale * _head_scale(), body_visibility)
 		return
 	var burn_visibility := get_burn_visibility()
 	var burn_tail_scale := get_burn_tail_scale()
@@ -1154,6 +1158,9 @@ func _draw_asteroid_head(radius: float, visibility: float, icy: bool) -> void:
 		var angle := TAU * float(index) / float(count)
 		var roughness := 0.84 + 0.11 * sin(angle * 3.0 + wobble_phase) + 0.05 * cos(angle * 5.0)
 		points.append((Vector2(cos(angle), sin(angle) * 0.85) * radius * roughness).rotated(rotation_phase))
+	if observed_successfully and not alive and completion_motion_scale > 0.0:
+		_draw_asteroid_completion(points, radius, visibility, icy, rotation_phase)
+		return
 	draw_colored_polygon(points, Color(primary_color.darkened(0.58), visibility))
 	var core := Vector2(-0.14, -0.12).rotated(rotation_phase) * radius
 	for index in range(count):
@@ -1179,6 +1186,48 @@ func _draw_asteroid_head(radius: float, visibility: float, icy: bool) -> void:
 			var centre := Vector2(crater.x, crater.y).rotated(rotation_phase) * radius
 			draw_circle(centre, radius * crater.z, Color("292724", visibility), true, -1.0, true)
 			draw_arc(centre, radius * crater.z, 0.3, 2.8, 14, Color(primary_color, visibility * 0.48), 0.8, true)
+
+
+func _draw_asteroid_completion(points: PackedVector2Array, radius: float, visibility: float, icy: bool, rotation_phase: float) -> void:
+	# Reuse the body's faces during its existing linger; these are never targets.
+	var elapsed := 1.0 - visibility
+	var release := clampf((elapsed - 0.12) / 0.88, 0.0, 1.0)
+	var core := Vector2(-0.14, -0.12).rotated(rotation_phase) * radius
+	var stride := 1 if icy else 2
+	for index in range(0, points.size(), stride):
+		var face := PackedVector2Array([core])
+		for corner in range(mini(stride, points.size() - index) + 1):
+			face.append(points[(index + corner) % points.size()])
+		var centre := Vector2.ZERO
+		for point in face: centre += point
+		centre /= float(face.size())
+		var drift := centre.normalized() * (1.05 if icy else 0.65) + _safe_travel_direction() * 0.28
+		var offset := drift * radius * release * completion_motion_scale
+		var spin := sin(float(index) * 2.4 + wobble_phase) * release * (0.65 if icy else 0.35) * completion_motion_scale
+		for corner in range(face.size()):
+			face[corner] = (face[corner] - centre).rotated(spin) + centre + offset
+		var light := clampf(0.42 - centre.normalized().dot(Vector2(0.6, 0.8)) * 0.25, 0.13, 0.75)
+		var tint := primary_color.darkened(1.0 - light)
+		if icy and index % 3 == 0: tint = primary_color.lerp(Color.WHITE, 0.23)
+		if completion_glint_enabled:
+			var glint := sin(clampf(elapsed / 0.32, 0.0, 1.0) * PI)
+			tint = tint.lerp(glow_color, glint * (0.55 if icy else 0.28))
+		tint = tint.darkened(release * (0.12 if icy else 0.38))
+		draw_colored_polygon(face, Color(tint, visibility))
+		face.append(face[0])
+		draw_polyline(face, Color(glow_color if icy else primary_color, visibility * (0.45 if icy else 0.25)), 0.8, true)
+
+
+func _draw_planet_completion(radius: float, visibility: float) -> void:
+	if completion_motion_scale <= 0.0 or not completion_glint_enabled: return
+	# Chords stay inside the sphere: no expanding ring or screen-wide flash.
+	var progress := 1.0 - visibility
+	var sweep := lerpf(-radius, radius, progress)
+	var alpha := sin(progress * PI) * visibility * 0.38 * completion_motion_scale
+	for band in range(-2, 3):
+		var x := clampf(sweep + float(band) * radius * 0.045, -radius, radius)
+		var half_height := sqrt(maxf(0.0, radius * radius - x * x))
+		draw_line(Vector2(x, -half_height), Vector2(x, half_height), Color(glow_color, alpha / (1.0 + absf(float(band)))), maxf(0.8, radius * 0.045), true)
 
 
 func _draw_planet_head(radius: float, visibility: float) -> void:
