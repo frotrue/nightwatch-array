@@ -22,6 +22,7 @@ $godot = "C:\Users\user\AppData\Local\Temp\codex-godot-4.7.2\Godot_v4.7.2-stable
 ```
 
 편집기에서 F5로 실행한다. 메인 씬은 `scenes/main.tscn`이다.
+게임 시작 시 Godot 로고는 표시하지 않으며, 초기 로딩은 하늘과 같은 어두운 배경을 사용한다.
 
 Windows 기본 렌더러는 Mobile/Vulkan이다. Vulkan 초기화가 불가능하면
 Compatibility/OpenGL로 전환한다. 특정 드라이버에서 문제가 있으면
