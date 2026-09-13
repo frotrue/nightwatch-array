@@ -116,10 +116,10 @@ const CONSTELLATIONS := {
 	},
 }
 const PLACEMENTS := {
-	"pegasus": {"anchor_angle": 2.879, "anchor_radius": 713.86, "scale": 115.0, "tilt": 4.9218285},
+	"pegasus": {"anchor_angle": 2.9161895, "anchor_radius": 730.94335, "scale": 115.0, "tilt": 4.9218285},
 	"cygnus": {"anchor_angle": 2.247, "anchor_radius": 846.46, "scale": 112.0, "tilt": -0.32},
 	"aquila": {"anchor_angle": 2.449, "anchor_radius": 1065.27, "scale": 100.0, "tilt": 0.10},
-	"lacerta": {"anchor_angle": 3.55, "anchor_radius": 900, "scale": 95, "tilt": 0.12},
+	"lacerta": {"anchor_angle": 3.48, "anchor_radius": 930, "scale": 95, "tilt": 0.12},
 	"vulpecula": {"anchor_angle": 0.97, "anchor_radius": 930, "scale": 106, "tilt": -0.15},
 	"delphinus": {"anchor_angle": 0.25, "anchor_radius": 920, "scale": 112, "tilt": 0.1},
 	"sagitta": {"anchor_angle": -0.48, "anchor_radius": 910, "scale": 110, "tilt": 0.18},
