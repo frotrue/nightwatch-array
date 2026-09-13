@@ -11,8 +11,10 @@ uniform float strength : hint_range(0.0, 1.0) = 1.0;
 void fragment() {
 	vec2 p = UV * 2.0 - 1.0;
 	float r = length(p);
-	float mask = (1.0 - smoothstep(0.72, 1.0, r)) * smoothstep(0.18, 0.25, r);
-	float bend = 0.19 * exp(-pow((r - 0.38) / 0.19, 2.0));
+	float mask = (1.0 - smoothstep(0.72, 1.0, r)) * smoothstep(0.31, 0.34, r);
+	// Radial inverse-distance deflection stretches nearby stars around the
+	// silhouette. Taper to zero locally instead of warping the whole sky.
+	float bend = 0.145 / max(r, 0.33) * (1.0 - smoothstep(0.55, 1.0, r));
 	vec2 source_uv = SCREEN_UV - p / max(r, 0.001) * bend * screen_extent * strength;
 	vec3 warped = textureLod(background, clamp(source_uv, vec2(0.0), vec2(1.0)), 0.0).rgb;
 	COLOR = vec4(warped, mask * visibility);

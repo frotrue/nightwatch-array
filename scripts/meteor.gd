@@ -1248,23 +1248,24 @@ func _draw_planet_completion(radius: float, visibility: float) -> void:
 
 
 func _draw_black_hole_head(radius: float, visibility: float) -> void:
-	# Restrained accretion disc and dark centre; the background lens is a
-	# separate screen-reading surface behind every observable target.
+	# Reference direction: a dark spherical silhouette with a faint cool rim.
+	# The background supplies the lensed light; there is no equatorial disc.
 	var completion := observed_successfully and not alive
 	var pulse := sin((1.0 - visibility) * PI) if completion and completion_glint_enabled else 0.0
-	var ink := primary_color.lerp(Color("fff4de"), pulse * 0.65)
-	var disc := PackedVector2Array()
-	for index in range(49):
-		var angle := TAU * float(index) / 48.0
-		disc.append(Vector2(cos(angle) * radius * 1.65, sin(angle) * radius * 0.34).rotated(-0.16))
-	draw_polyline(disc, Color(glow_color, visibility * 0.12), radius * 0.22, true)
-	draw_polyline(disc, Color(ink, visibility * 0.65), maxf(1.0, radius * 0.055), true)
-	draw_circle(Vector2.ZERO, radius * 0.72, Color("020307", visibility), true, -1.0, true)
-	draw_arc(Vector2.ZERO, radius * 0.77, PI * 0.94, PI * 2.06, 40, Color(ink, visibility * 0.80), maxf(1.0, radius * 0.05), true)
-	draw_polyline(disc.slice(0, 25), Color(ink, visibility * (0.78 + pulse * 0.22)), maxf(1.2, radius * 0.075), true)
+	var ink := Color("a9a9c6").lerp(Color("e7e6f4"), pulse * 0.45)
+	# Layered narrow arcs soften the limb without a large emissive halo.
+	for layer in range(4, 0, -1):
+		draw_arc(Vector2.ZERO, radius * (1.0 + float(layer) * 0.018), 0.0, TAU, 64, Color(ink, visibility * (0.018 + pulse * 0.012)), radius * 0.075, true)
+	draw_circle(Vector2.ZERO, radius, Color("030309", visibility), true, -1.0, true)
+	# A barely visible violet reflection keeps the interior dark at game scale.
+	for layer in 5:
+		var fraction := float(layer) / 5.0
+		draw_circle(Vector2(-0.12, 0.12) * radius, radius * (0.84 - fraction * 0.10), Color("393047", visibility * 0.022), true, -1.0, true)
+	draw_arc(Vector2.ZERO, radius * 1.014, 0.0, TAU, 64, Color(ink, visibility * (0.23 + pulse * 0.23)), maxf(0.65, radius * 0.022), true)
+	draw_arc(Vector2.ZERO, radius * 1.026, PI * 0.92, PI * 1.72, 36, Color(ink, visibility * (0.22 + pulse * 0.10)), maxf(0.65, radius * 0.026), true)
 	if completion and completion_motion_scale > 0.0:
-		var ripple := radius * lerpf(2.4, 0.8, 1.0 - visibility)
-		draw_arc(Vector2.ZERO, ripple, 0.0, TAU, 48, Color(glow_color, sin(visibility * PI) * 0.24), 1.0, true)
+		var ripple := radius * lerpf(1.75, 1.0, 1.0 - visibility)
+		draw_arc(Vector2.ZERO, ripple, 0.0, TAU, 48, Color(ink, sin(visibility * PI) * 0.12), 0.8, true)
 
 
 func _draw_planet_head(radius: float, visibility: float) -> void:
