@@ -26,7 +26,6 @@ var affordable := false
 var hovered := false
 var pulse_phase := 0.0
 var branch_endpoint := false
-var galaxy_rotation := 0.0
 
 
 func set_fill_progress(ratio: float, elapsed: float) -> void:
@@ -89,30 +88,6 @@ func _draw_cluster_marker(center: Vector2, radius: float) -> void:
 		)
 
 
-func _draw_galaxy_marker(center: Vector2, _radius: float) -> void:
-	# Galaxy markers use elongated discs. Keep the
-	# transform contained here so labels and later nodes never inherit rotation.
-	var spec_radius := clampf(12.6 - magnitude * 0.52, 4.6, 13.0)
-	var major := UITheme.px(spec_radius) / GALACTIC_NODE_SCREEN_SCALE
-	var minor := major * 0.33
-	draw_set_transform(center, galaxy_rotation)
-	match visual_state:
-		"purchased":
-			draw_ellipse(Vector2.ZERO, major * 2.5, major * 1.5, state_ink(Color(UITheme.STAR_INSTALLED_GLOW, 0.20 if hovered else 0.075)))
-			draw_ellipse(Vector2.ZERO, major, minor, state_ink(UITheme.STAR_INSTALLED if hovered else Color(UITheme.STAR_INSTALLED_GLOW, 0.86)))
-		"available":
-			var pulse := 0.16 + (0.06 * sin(pulse_phase) if affordable else 0.0)
-			draw_ellipse(Vector2.ZERO, major * 2.5, major * 1.5, state_ink(Color(UITheme.STAR_READY_RING, pulse)))
-			draw_ellipse(Vector2.ZERO, major, minor, state_ink(UITheme.STAR_READY_FILL if affordable else Color(UITheme.STAR_SHORT_BORDER, 0.74)))
-		"locked", "teaser":
-			draw_ellipse(Vector2.ZERO, major, minor, state_ink(Color(UITheme.STAR_LOCKED, 0.30)))
-		_:
-			draw_ellipse(Vector2.ZERO, major, minor, state_ink(Color(UITheme.STAR_BACKGROUND, 0.26)))
-	if hold_ratio > 0.0:
-		draw_ellipse_arc(Vector2.ZERO, major * 1.34, minor * 2.4, -PI * 0.5, -PI * 0.5 + TAU * hold_ratio, 42, state_ink(UITheme.STAR_READY_RING), UITheme.px(2.0), true)
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-
-
 func _process(delta: float) -> void:
 	pulse_phase = fmod(pulse_phase + delta * 3.2, TAU)
 	queue_redraw()
@@ -122,9 +97,8 @@ func _draw() -> void:
 	var center := size * 0.5
 	var radius := visual_radius()
 	var pulse := 1.0 + (sin(pulse_phase) * 0.12 if visual_state == "available" and affordable else 0.0)
-	if star_kind == "galaxy":
-		_draw_galaxy_marker(center, radius)
-		return
+	# M31 retains its catalogue identity but uses the same compact research
+	# marker and interaction rings as neighboring nodes.
 	if star_kind == "cluster" and visual_state != "hidden":
 		_draw_cluster_marker(center, radius)
 	match visual_state:

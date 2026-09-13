@@ -192,19 +192,6 @@ func _test_draw_routing() -> void:
 
 func _expected_draw_inks(kind: String, state: String, affordable: bool, interaction: bool) -> Array[Color]:
 	var result: Array[Color] = []
-	if kind == "galaxy":
-		match state:
-			"purchased":
-				result = [Color(UITheme.STAR_INSTALLED_GLOW, 0.20 if interaction else 0.075), UITheme.STAR_INSTALLED if interaction else Color(UITheme.STAR_INSTALLED_GLOW, 0.86)]
-			"available":
-				result = [Color(UITheme.STAR_READY_RING, 0.16), UITheme.STAR_READY_FILL if affordable else Color(UITheme.STAR_SHORT_BORDER, 0.74)]
-			"locked", "teaser":
-				result = [Color(UITheme.STAR_LOCKED, 0.30)]
-			_:
-				result = [Color(UITheme.STAR_BACKGROUND, 0.26)]
-		if interaction:
-			result.append(UITheme.STAR_READY_RING)
-		return result
 	if kind == "cluster" and state != "hidden":
 		result.append(Color(UITheme.STAR_BACKGROUND, 0.30))
 	match state:

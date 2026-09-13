@@ -367,7 +367,6 @@ func _build_palette_plate(game: Node, id: String) -> void:
 				visual.size = Vector2(44, 44)
 				visual.scale = Vector2.ONE * 0.64
 				visual.position = cell.get_center() - visual.size * visual.scale * 0.5
-				visual.galaxy_rotation = -0.32
 				visual.set_meta("palette_branch", branch)
 				visual.set_meta("palette_row", row_index)
 				visual.set_meta("palette_cell", cell)
