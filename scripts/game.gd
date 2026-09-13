@@ -581,7 +581,10 @@ func handle_debug_key_input(event: InputEvent) -> void:
 
 func _on_meteor_spawned(meteor) -> void:
 	meteor.observation_controller = observer
-	if meteor.type_id == "black_hole": black_hole_lens.track(meteor)
+	meteor.optical_lens = black_hole_lens
+	if meteor.type_id == "black_hole":
+		meteor.z_index = 2 # Above the lens at 11; ordinary meteors remain at 10.
+		black_hole_lens.track(meteor)
 	meteor.observed.connect(_on_meteor_observed)
 	meteor.expired.connect(_on_meteor_expired)
 	if progression.has_upgrade("wide_field") and progression.forecast_type_visible(String(meteor.type_id)):

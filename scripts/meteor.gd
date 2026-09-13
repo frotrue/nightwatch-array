@@ -9,6 +9,7 @@ const PlanetSurface = preload("res://scripts/planet_surface.gd")
 const GravityCapture = preload("res://scripts/gravity_capture.gd")
 const BLACK_HOLE_PULL_RADIUS := 240.0
 var gravity_capture: RefCounted
+var optical_lens: Node2D
 const ScanArcs = preload("res://scripts/scan_arc_instances.gd")
 const HeadTexture = preload("res://scripts/meteor_head_texture.gd")
 var textured_head_enabled := true
@@ -1367,5 +1368,11 @@ func _sync_visual_scale() -> void:
 	observation_visual_scale = next_scale
 	queue_redraw()
 
+func get_observation_position(fraction: float) -> Vector2:
+	var point := previous_simulation_position.lerp(global_position, fraction)
+	if type_id != "black_hole" and is_instance_valid(optical_lens):
+		return optical_lens.project_position(point, fraction)
+	return point
+
 func get_display_position() -> Vector2:
-	return previous_simulation_position.lerp(global_position, Engine.get_physics_interpolation_fraction())
+	return get_observation_position(Engine.get_physics_interpolation_fraction())

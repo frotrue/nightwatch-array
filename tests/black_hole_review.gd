@@ -82,6 +82,38 @@ func _run() -> void:
 				if Vector2(x, y).distance_to(Vector2(576, 300)) > 105.0: outside += 1
 	if changed < 80 or outside > 0: failures.append("lens pixel boundary: changed=%d outside=%d" % [changed, outside])
 	print("BLACK_HOLE_LENS_PIXELS changed=", changed, " outside=", outside)
+	pattern.hide()
+	var sample = game.spawner.spawn_meteor("common", centre + Vector2(40, 0), Vector2(100, 0), 30.0)
+	sample.age = 3.0
+	sample.primary_color = Color(0.2, 1.0, 0.2)
+	sample.glow_color = sample.primary_color
+	sample.base_automatic_rate = 0.0
+	sample.previous_simulation_position = sample.global_position
+	sample.reset_physics_interpolation()
+	_freeze(game)
+	game.black_hole_lens.motion_scale = 0.0
+	game.black_hole_lens._process(0.0)
+	await _capture(game, "06_meteor_lens_off")
+	var original := _green_centroid(root.get_texture().get_image())
+	game.black_hole_lens.motion_scale = 1.0
+	game.black_hole_lens._process(0.0)
+	await _capture(game, "07_meteor_lens_on")
+	var bent := _green_centroid(root.get_texture().get_image())
+	var predicted: Vector2 = game.observation_view.world_to_screen(sample.get_observation_position(1.0))
+	if original == Vector2.INF or bent == Vector2.INF or bent.distance_to(original) < 8.0 or bent.distance_to(predicted) > 6.0:
+		failures.append("meteor lens/selection mismatch: original=%s actual=%s predicted=%s" % [original, bent, predicted])
+	print("METEOR_LENS_CENTRE original=", original, " rendered=", bent, " selection=", predicted)
 	game.free()
 	paused = false
 	_finish("BLACK_HOLE_REVIEW", "%d captures at " % records.size() + ProjectSettings.globalize_path(output))
+
+func _green_centroid(frame: Image) -> Vector2:
+	var total := 0.0
+	var centre := Vector2.ZERO
+	for y in range(270, 331):
+		for x in range(580, 686):
+			var color := frame.get_pixel(x, y)
+			var weight := maxf(0.0, color.g - maxf(color.r, color.b) * 1.6)
+			total += weight
+			centre += Vector2(x, y) * weight
+	return centre / total if total > 0.01 else Vector2.INF

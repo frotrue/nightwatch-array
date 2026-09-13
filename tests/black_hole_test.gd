@@ -69,6 +69,7 @@ func _run() -> void:
 		check(game.meteor_layer.get_child_count() == 0, "load clears transient captured sky")
 		game.free()
 	_test_policy()
+	_test_lensed_contacts()
 	await _test_worker_parity()
 	if failures.is_empty(): print("BLACK_HOLE_PASS: unlock, reserved spawn, completion, radius, capture/release, save cleanup and worker parity")
 	quit(0 if failures.is_empty() else 1)
@@ -92,6 +93,31 @@ func _test_policy() -> void:
 	game.spawner.pending_contacts.back().countdown = 0.0
 	game.spawner._update_pending_contacts(STEP)
 	check(game.spawner._slot_count(["black_hole"]) == 1, "ordinary forecast admits black hole")
+	game.free()
+
+func _test_lensed_contacts() -> void:
+	var game = _game()
+	var hole = game.spawner.spawn_meteor("black_hole", Vector2(500, 300), Vector2(1, 0), 30.0)
+	hole.age = 4.0
+	var sample = game.spawner.spawn_meteor("common", Vector2(540, 300), Vector2(1, 0), 30.0)
+	var physical: Vector2 = sample.global_position
+	var apparent: Vector2 = sample.get_observation_position(1.0)
+	check(apparent.distance_to(physical) > 8.0 and sample.global_position == physical, "optical image shifts without moving the physical target")
+	check(game.observer._target_contact_distance(sample, apparent) < 0.001, "visual centre receives centred manual quality")
+	game.observer.previous_cursor_position = apparent
+	game.observer.cursor_position = apparent
+	check(game.observer._circle_contact_interval(sample, 1.0) == Vector2(0, 1), "circle contact follows the lensed image")
+	check(game.observer._linear_contact_interval(sample, 1.0) == Vector2(0, 1), "linear contact follows the lensed image")
+	game.observer._begin_tick_cache()
+	var cached: Vector2 = game.observer._target_position_at(sample, 0.4)
+	game.observer._end_tick_cache()
+	check(cached == game.observer._target_position_at(sample, 0.4), "cached and uncached optical contact poses match")
+	game.black_hole_lens.motion_scale = 0.0
+	check(sample.get_observation_position(1.0) == physical, "reduced motion restores original image and contact centre")
+	game.black_hole_lens.motion_scale = 1.0
+	check(hole.get_observation_position(1.0) == hole.global_position, "black hole never lenses itself")
+	hole.free()
+	check(sample.get_observation_position(1.0) == physical, "removing the lens clears optical selection offsets")
 	game.free()
 
 func _test_worker_parity() -> void:

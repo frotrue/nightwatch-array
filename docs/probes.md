@@ -47,7 +47,8 @@ refilled buffers. These GPU comparisons are separate from the headless gates.
 
 `black_hole_test.gd` is a headless gate for spawn/unlock, capture lifecycle and
 serial/worker parity. Run `black_hole_review.gd` with the same real-renderer flags
-on both backends for lens off/on pixel boundaries and completion pose captures.
+on both backends for lens off/on pixel boundaries, completion pose captures,
+and agreement between the rendered meteor image and its manual observation centre.
 
 The Windows telemetry build also compiles/runs `native/gpu_usage_test.cpp`:
 engine selection (3D, Graphics, Compute, Copy, multiple adapters), PID isolation,

@@ -17,7 +17,7 @@ height = 2
 
 [node name="BlackHoleLens" type="Node2D"]
 physics_interpolation_mode = 2
-z_index = -18
+z_index = 11
 script = ExtResource("1_script")
 
 [node name="BackgroundCopy" type="BackBufferCopy" parent="."]

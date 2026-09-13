@@ -5,6 +5,28 @@ extends Node2D
 var target: Node2D
 var motion_scale := 1.0
 
+# Invert the shader's radial sampling for the primary visible image. Tick
+# endpoints use tick poses; cursor/beam presentation uses interpolated poses.
+func project_position(point: Vector2, fraction: float) -> Vector2:
+	if not is_instance_valid(target) or motion_scale <= 0.0 or not target.is_visible_in_tree(): return point
+	var centre: Vector2 = target.previous_simulation_position.lerp(target.global_position, fraction)
+	var extent: float = target.body_radius * target._head_scale() * target._current_visual_scale() * 3.0
+	var offset := point - centre
+	var distance := offset.length()
+	if distance >= extent or distance < 0.001: return point
+	var visibility: float = target.get_burn_visibility() if target.alive else clampf(target.linger_time / maxf(target.linger_duration, 0.001), 0.0, 1.0)
+	var strength := clampf(motion_scale, 0.0, 1.0) * visibility
+	if strength <= 0.0: return point
+	var source_radius := distance / extent
+	var low := source_radius
+	var high := 1.0
+	for iteration in 14:
+		var radius := (low + high) * 0.5
+		var bend := 0.145 / maxf(radius, 0.33) * (1.0 - smoothstep(0.55, 1.0, radius))
+		if radius - bend * strength < source_radius: low = radius
+		else: high = radius
+	return centre + offset / distance * ((low + high) * 0.5 * extent)
+
 func _ready() -> void:
 	set_process(false)
 
