@@ -490,7 +490,7 @@ const UPGRADE_NODES: Array[Dictionary] = [
 	},
 	{
 		"id": "galaxy_imaging", "name": "Planet Observation", "icon": "M31", "cost": 90000,
-		"description": "Unlocks large planets for observation. All Observation Data ×2 (automatic included).",
+		"description": "Unlocks planets and black holes. Observed black holes gather nearby bodies. All Observation Data ×2 (automatic included).",
 		"branch": "andromeda", "prerequisites": ["andromeda_deep_survey"],
 		"hidden_until": ["andromeda_deep_survey"], "effect_type": "discovery",
 		"effect_notes": {"target_type": "galaxy"},
@@ -875,6 +875,14 @@ static func meteor_spec(type_id: String) -> Dictionary:
 				"spectral_band": "amber",
 				"burn_terminal_ratio": 0.94, "burn_fade_start": 0.97, "burn_style": "planet",
 				"burnout_linger": 0.48,
+			}
+		"black_hole":
+			return {
+				"name": "BLACK HOLE", "speed": 28.0, "lifetime": 32.0,
+				"radius": 38.0, "trail": 0, "value": 240.0, "track_time": 4.8,
+				"color": Color("eed3a4"), "glow": Color("c98e55"),
+				"spectral_band": "amber", "burn_terminal_ratio": 0.94,
+				"burn_fade_start": 0.96, "burn_style": "black_hole", "burnout_linger": 0.4,
 			}
 		_:
 			return {

@@ -1,0 +1,29 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/black_hole_lens.gd" id="1_script"]
+[ext_resource type="Shader" path="res://resources/shaders/black_hole_lens.gdshader" id="2_shader"]
+
+[sub_resource type="ShaderMaterial" id="Material_lens"]
+resource_local_to_scene = true
+shader = ExtResource("2_shader")
+
+[sub_resource type="Gradient" id="Gradient_white"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="Texture_quad"]
+gradient = SubResource("Gradient_white")
+width = 2
+height = 2
+
+[node name="BlackHoleLens" type="Node2D"]
+physics_interpolation_mode = 2
+z_index = -18
+script = ExtResource("1_script")
+
+[node name="BackgroundCopy" type="BackBufferCopy" parent="."]
+copy_mode = 0
+
+[node name="Lens" type="Sprite2D" parent="."]
+visible = false
+material = SubResource("Material_lens")
+texture = SubResource("Texture_quad")

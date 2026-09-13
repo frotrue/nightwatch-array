@@ -244,7 +244,7 @@ HUD_DEBUG_TITLE,DEBUG ARRAY  [F9 hide],디버그 관측망  [F9 숨기기]
 HUD_DEBUG_DATA,Ctrl+Shift+D   +100 data,Ctrl+Shift+D   데이터 +100
 HUD_DEBUG_NEXT,Ctrl+Shift+N   Purchase next available node,Ctrl+Shift+N   다음 노드 구매
 HUD_DEBUG_ALL,Ctrl+Shift+A   Purchase all nodes,Ctrl+Shift+A   모든 노드 구매
-HUD_DEBUG_METEOR,Ctrl+Shift+M   Spawn meteor,Ctrl+Shift+M   유성 생성
+HUD_DEBUG_METEOR,Ctrl+Shift+M / B   Meteor / black hole,Ctrl+Shift+M / B   유성 / 블랙홀 생성
 HUD_DEBUG_RARE,Ctrl+Shift+R   Spawn luminous meteor,Ctrl+Shift+R   발광 유성 생성
 HUD_DEBUG_SHOWER,Ctrl+Shift+S   Trigger shower,Ctrl+Shift+S   유성우 시작
 HUD_DEBUG_FINAL,Ctrl+Shift+F   Trigger Canis Major event,Ctrl+Shift+F   큰개자리 거대 유성 이벤트 시작
@@ -503,7 +503,7 @@ UPGRADE_PERSEID_OUTBURST_DESC,"Unlocks Perseid bursts: 8 meteors over 3.4 second
 UPGRADE_DOUBLE_STAR_RESOLUTION_NAME,Ice Asteroid Observation,얼음 소행성 관측
 UPGRADE_DOUBLE_STAR_RESOLUTION_DESC,Unlocks ice asteroids and accurate arrival forecasts. All Observation Data ×2 (automatic included).,얼음 소행성과 정확한 출현 예고를 엽니다. 모든 관측 데이터 2배(자동 포함).
 UPGRADE_GALAXY_IMAGING_NAME,Planet Observation,행성 관측
-UPGRADE_GALAXY_IMAGING_DESC,Unlocks large planets for observation. All Observation Data ×2 (automatic included).,커다란 행성이 나타납니다. 모든 관측 데이터 2배(자동 포함).
+UPGRADE_GALAXY_IMAGING_DESC,Unlocks planets and black holes. Observed black holes gather nearby bodies. All Observation Data ×2 (automatic included).,행성·블랙홀이 나타납니다. 블랙홀 관측 시 주변 천체를 모읍니다. 모든 관측 데이터 2배(자동 포함).
 UPGRADE_SPLIT_RADIANT_MODEL_NAME,Split Radiant Model,분할 복사점 모형
 UPGRADE_SPLIT_RADIANT_MODEL_DESC,Storm meteors alternate between 2 mirrored entry areas.,폭풍 유성이 대칭인 두 구역에서 번갈아 나타납니다.
 UPGRADE_FRAGMENT_FRONT_NAME,Fragment Front,파편 전선
@@ -597,6 +597,7 @@ METEOR_VARIABLE_STAR,ASTEROID,소행성
 METEOR_COMET,LONG-ARC COMET,장주기 혜성
 METEOR_BINARY_STAR,ICE ASTEROID,얼음 소행성
 METEOR_GALAXY,PLANET,행성
+METEOR_BLACK_HOLE,BLACK HOLE,블랙홀
 METEOR_EXOPLANET_TRANSIT,EXOPLANET TRANSIT,외계행성 통과
 METEOR_EXOPLANET_CANDIDATE,HOST CANDIDATE,호스트 후보
 METEOR_COMPARISON_STAR,COMPARISON STAR,비교별

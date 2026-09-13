@@ -30,6 +30,7 @@ const SHAKE_TRAUMA_CEILING := 0.88
 @onready var starfield: Node2D = $Starfield
 @onready var twinkle_stars: Node2D = $TwinkleStars
 @onready var meteor_layer: Node2D = $MeteorLayer
+@onready var black_hole_lens: Node2D = $BlackHoleLens
 @onready var effects: Node2D = $EffectsLayer
 @onready var observer: Node2D = $ObservationController
 @onready var sky_contacts: Node2D = $SkyContacts
@@ -260,6 +261,7 @@ func _tick_target_motion(targets: Array, delta: float) -> void:
 	if parallel_motion_enabled and targets.size() >= PARALLEL_MOTION_THRESHOLD:
 		for target in targets:
 			if target.is_queued_for_deletion() or not target.alive or not target.has_method("motion_snapshot"): continue
+			if target.gravity_capture != null: continue
 			indices[target] = snapshots.size()
 			snapshots.append(target.motion_snapshot(delta))
 	var results: Array = []
@@ -562,6 +564,8 @@ func handle_debug_key_input(event: InputEvent) -> void:
 				hud.show_banner(tr("BANNER_DEBUG_MODULE") % tr("MODULE_%s_NAME" % id.to_upper()), UITheme.INK_MID, 2.0)
 		KEY_M:
 			spawner.spawn_meteor("common")
+		KEY_B:
+			spawner.spawn_meteor("black_hole")
 		KEY_R:
 			spawner.spawn_meteor("fireball")
 		KEY_S:
@@ -577,6 +581,7 @@ func handle_debug_key_input(event: InputEvent) -> void:
 
 func _on_meteor_spawned(meteor) -> void:
 	meteor.observation_controller = observer
+	if meteor.type_id == "black_hole": black_hole_lens.track(meteor)
 	meteor.observed.connect(_on_meteor_observed)
 	meteor.expired.connect(_on_meteor_expired)
 	if progression.has_upgrade("wide_field") and progression.forecast_type_visible(String(meteor.type_id)):
@@ -590,6 +595,12 @@ func _on_meteor_spawned(meteor) -> void:
 func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: bool, quality_grade: String) -> void:
 	meteor.completion_motion_scale = effects.motion_intensity
 	meteor.completion_glint_enabled = effects.screen_flashes_enabled
+	if meteor.type_id == "black_hole" and observation_phase_active:
+		var world_scale: float = observation_view.screen_length_to_world(1.0)
+		var radius: float = meteor.BLACK_HOLE_PULL_RADIUS * world_scale
+		for target in meteor_layer.get_children():
+			if target.global_position.distance_squared_to(meteor.global_position) <= radius * radius:
+				target.begin_gravity_capture(meteor.position, world_scale)
 	if observation_phase_active:
 		deep_sky.modules.record_completion(meteor)
 	observer.release_target(meteor)
@@ -817,6 +828,7 @@ func _apply_accessibility_settings() -> void:
 	if settings != null and settings.has_method("are_screen_flashes_enabled"):
 		flashes_enabled = bool(settings.are_screen_flashes_enabled())
 	effects.set_accessibility_effects(motion_scale, flashes_enabled)
+	if black_hole_lens != null: black_hole_lens.motion_scale = motion_scale
 	if meteor_layer != null:
 		for meteor in meteor_layer.get_children():
 			meteor.completion_motion_scale = motion_scale
