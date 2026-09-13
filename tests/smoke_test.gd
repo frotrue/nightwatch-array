@@ -874,7 +874,7 @@ func _run() -> void:
 			deep_sky_marker_kinds[String(marker_star.id)] = String(marker_star.kind)
 	_check(String(deep_sky_marker_kinds.trapezium) == "cluster", "the Trapezium uses a cluster marker instead of a research-state disc")
 	_check(String(deep_sky_marker_kinds.pleiades) == "cluster", "the Pleiades use an asymmetric point cluster instead of a node-like disc")
-	_check(String(deep_sky_marker_kinds.andromeda_galaxy) == "galaxy", "M31 uses an elongated galaxy marker instead of a node-like disc")
+	_check(String(deep_sky_marker_kinds.andromeda_galaxy) == "galaxy", "M31 retains its galaxy catalogue identity with a shared circular research marker")
 	var leo_mid_visual = game.upgrade_tree.node_hold_bars["storm_front"]
 	var leo_endpoint_visual = game.upgrade_tree.node_hold_bars["leonid_storm"]
 	_check(not leo_mid_visual.branch_endpoint and leo_endpoint_visual.branch_endpoint, "research chart distinguishes a branch endpoint from its preceding installed star")

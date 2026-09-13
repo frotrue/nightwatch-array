@@ -30,6 +30,7 @@ const RAW_DEBUG_KEYS := [
 const TREE_SIZE := Vector2(1460, 780)
 const MIN_ZOOM := 0.55
 const MAX_ZOOM := 1.28
+const COMPLETED_FIGURE_SCALE := 0.75
 const GALACTIC_ZOOM := 0.18
 # Installing every node earns a wider frame. The galaxy map still opens at
 # GALACTIC_ZOOM; this only lowers the floor the player can pull back to, so the
@@ -54,6 +55,8 @@ const CONSTELLATION_ZOOM := UITheme.SCALE * 1.06
 const ROTATION_STEP := deg_to_rad(6.0)
 const DEFAULT_ROTATION := 0.0
 const STAR_HIT_SIZE := Vector2(44.0, 44.0)
+const MIN_STAR_SCREEN_SEPARATION := 18.0
+const STAR_SCREEN_EDGE_GAP := 6.0
 const TOOLTIP_SIZE := Vector2(318.0, 0.0)
 # custom_minimum_size only sets a floor. A long branch or star line still
 # widens the panel past it, and the clamp below then measures an already
@@ -132,6 +135,11 @@ var star_positions: Dictionary = {}
 var node_positions: Dictionary = {}
 var node_star_records: Dictionary = {}
 var base_star_positions: Dictionary = {}
+var expanded_star_positions: Dictionary = {}
+var shared_star_node_ids: Dictionary = {}
+var readable_star_positions: Dictionary = {}
+var star_neighbor_clearances: Dictionary = {}
+var spacing_cache_key := Vector2(-1, -1)
 var star_node_ids: Dictionary = {}
 
 var hovered_node_id: String = ""
@@ -464,6 +472,7 @@ func _zoom_at(screen_position: Vector2, factor: float) -> void:
 		return
 	var local_focus := (screen_position - tree_canvas.global_position) / old_zoom
 	pan_position += local_focus * (old_zoom - zoom)
+	_layout_chart()
 	_apply_transform()
 
 
@@ -574,9 +583,16 @@ func _galactic_zoom_floor() -> float:
 
 
 func _zoom_galactic_chart(factor: float) -> void:
+	var old_zoom := zoom
+	var focused_view := not pan_position.is_equal_approx(_galactic_pan_for_zoom(old_zoom))
 	zoom = clampf(zoom * factor, _galactic_zoom_floor(), MAX_ZOOM)
 	galactic_chart_detail = 1.0
-	pan_position = _galactic_pan_for_zoom(zoom)
+	if focused_view:
+		# Keep a selected legacy figure in the reading area during Ctrl+wheel.
+		var focus_point := Vector2(560, 330)
+		pan_position = focus_point - (focus_point - pan_position) * zoom / old_zoom
+	else:
+		pan_position = _galactic_pan_for_zoom(zoom)
 	_layout_chart()
 	_apply_transform()
 	_update_galactic_presentation()
@@ -662,6 +678,7 @@ func _frame_frontier() -> void:
 	# the 1152×648 project viewport without changing any simulation coordinates.
 	zoom = CONSTELLATION_ZOOM
 	pan_position = Vector2(UITheme.px(880.0), UITheme.px(1008.0)) - CHART_ORIGIN * zoom
+	_layout_chart()
 	_apply_transform()
 
 
@@ -1051,8 +1068,10 @@ func _radial_halo_texture(offsets: PackedFloat32Array, colors: PackedColorArray)
 
 
 func _cache_chart_geometry() -> void:
+	spacing_cache_key = Vector2(-1, -1)
 	base_star_positions.clear()
 	star_node_ids.clear()
+	shared_star_node_ids.clear()
 	for constellation_id in chart_constellations:
 		var constellation: Dictionary = chart_constellations[constellation_id]
 		var placement: Dictionary = chart_placements[constellation_id]
@@ -1077,6 +1096,144 @@ func _cache_chart_geometry() -> void:
 				for member in chart_constellations[constellation_id].stars:
 					base_star_positions[constellation_id + "/" + member.id] += shift
 				star_node_ids[key] = star_node_ids[star.shared_star_key]
+				shared_star_node_ids[star_node_ids[key]] = true
+	expanded_star_positions = base_star_positions.duplicate()
+	# Keep the catalogue geometry immutable. Only the post-expansion view uses
+	# smaller legacy figures, uniformly scaled around their own star centroid.
+	for constellation_id in ChartData.CONSTELLATIONS:
+		var stars: Array = chart_constellations[constellation_id].stars
+		var center := Vector2.ZERO
+		for star in stars:
+			center += Vector2(base_star_positions[constellation_id + "/" + star.id])
+		center /= float(stars.size())
+		for star in stars:
+			var key: String = constellation_id + "/" + star.id
+			expanded_star_positions[key] = center + (Vector2(base_star_positions[key]) - center) * COMPLETED_FIGURE_SCALE
+	# The outer figure retains its full size and follows its shared corner.
+	for constellation_id in ExtensionChart.ORDER:
+		for star in chart_constellations[constellation_id].stars:
+			if not star.has("shared_star_key"): continue
+			var shift: Vector2 = expanded_star_positions[star.shared_star_key] - expanded_star_positions[constellation_id + "/" + star.id]
+			for member in chart_constellations[constellation_id].stars:
+				expanded_star_positions[constellation_id + "/" + member.id] += shift
+
+
+func _chart_source_positions() -> Dictionary:
+	return expanded_star_positions if galactic_unlocked else base_star_positions
+
+
+func _readable_chart_positions() -> Dictionary:
+	var cache_key := Vector2(zoom, 1.0 if galactic_unlocked else 0.0)
+	if spacing_cache_key == cache_key: return readable_star_positions
+	var source := _chart_source_positions()
+	readable_star_positions = source.duplicate()
+	# User-approved readability offsets are applied to the view, never the
+	# catalogue. Solve in unrotated space so wheel rotation cannot shuffle stars.
+	for cid in chart_constellations:
+		var stars: Array = chart_constellations[cid].stars
+		var keys: Array[String] = []
+		var radii: Array[float] = []
+		var figure_zoom := maxf(zoom, CONSTELLATION_ZOOM) if cid in ExtensionChart.ORDER else zoom
+		for star in stars:
+			keys.append(cid + "/" + star.id)
+			radii.append(clampf(7.4 - float(star.magnitude) * 0.82, 3.4, 7.4) * figure_zoom)
+		for iteration in range(32):
+			var largest_overlap := 0.0
+			for a in keys.size():
+				for b in range(a + 1, keys.size()):
+					var separation := maxf(MIN_STAR_SCREEN_SEPARATION, radii[a] + radii[b] + STAR_SCREEN_EDGE_GAP) / maxf(zoom, 0.001)
+					var delta: Vector2 = readable_star_positions[keys[b]] - readable_star_positions[keys[a]]
+					var overlap := separation - delta.length()
+					if overlap <= 0.0: continue
+					largest_overlap = maxf(largest_overlap, overlap)
+					var direction := delta.normalized() if delta.length_squared() > 0.000001 else Vector2.RIGHT.rotated(float(a + b))
+					var correction := direction * overlap * 0.5
+					readable_star_positions[keys[a]] -= correction
+					readable_star_positions[keys[b]] += correction
+			if largest_overlap * zoom < 0.01: break
+	# Alpheratz is one marker. Move the complete outer figure to its shared
+	# corner after spacing, preserving its square and the shared input owner.
+	for cid in ExtensionChart.ORDER:
+		for star in chart_constellations[cid].stars:
+			if not star.has("shared_star_key"): continue
+			var shift: Vector2 = readable_star_positions[star.shared_star_key] - readable_star_positions[cid + "/" + star.id]
+			for member in chart_constellations[cid].stars:
+				readable_star_positions[cid + "/" + member.id] += shift
+			readable_star_positions[cid + "/" + star.id] = readable_star_positions[star.shared_star_key]
+	_separate_neighboring_figures()
+	star_neighbor_clearances.clear()
+	for cid in chart_constellations:
+		for star in chart_constellations[cid].stars:
+			var key: String = cid + "/" + star.id
+			if not star_node_ids.has(key): continue
+			var id: String = star_node_ids[key]
+			var clearance: float = star_neighbor_clearances.get(id, INF)
+			for other in chart_constellations[cid].stars:
+				if other.id == star.id: continue
+				clearance = minf(clearance, Vector2(readable_star_positions[key]).distance_to(readable_star_positions[cid + "/" + other.id]))
+			star_neighbor_clearances[id] = clearance
+	spacing_cache_key = cache_key
+	return readable_star_positions
+
+
+func _separate_neighboring_figures() -> void:
+	var groups := {}
+	for cid in chart_constellations:
+		if cid in ExtensionChart.ORDER and not galactic_unlocked: continue
+		var group_id: String = cid
+		for star in chart_constellations[cid].stars:
+			if star.has("shared_star_key"): group_id = String(star.shared_star_key).get_slice("/", 0)
+		if not groups.has(group_id): groups[group_id] = []
+		for star in chart_constellations[cid].stars:
+			groups[group_id].append(cid + "/" + star.id)
+	var ids: Array = groups.keys()
+	var gap := maxf(MIN_STAR_SCREEN_SEPARATION, 14.8 * maxf(zoom, CONSTELLATION_ZOOM) + STAR_SCREEN_EDGE_GAP) / maxf(zoom, 0.001)
+	for iteration in range(16):
+		var moved := false
+		for a in ids.size():
+			for b in range(a + 1, ids.size()):
+				var one: Array = groups[ids[a]]
+				var two: Array = groups[ids[b]]
+				var bounds_a := Rect2(readable_star_positions[one[0]], Vector2.ZERO)
+				var bounds_b := Rect2(readable_star_positions[two[0]], Vector2.ZERO)
+				for key in one: bounds_a = bounds_a.expand(readable_star_positions[key])
+				for key in two: bounds_b = bounds_b.expand(readable_star_positions[key])
+				if not bounds_a.grow(gap).intersects(bounds_b, true): continue
+				var closest := Vector2.INF
+				for key_a in one:
+					for key_b in two:
+						var delta: Vector2 = readable_star_positions[key_b] - readable_star_positions[key_a]
+						if delta.length_squared() < closest.length_squared(): closest = delta
+				var overlap := gap - closest.length()
+				if overlap * zoom < 0.01: continue
+				var direction := closest.normalized() if closest.length_squared() > 0.000001 else Vector2.RIGHT
+				var correction := direction * overlap * 0.5
+				for key in one: readable_star_positions[key] -= correction
+				for key in two: readable_star_positions[key] += correction
+				moved = true
+		if not moved: break
+	# Hidden shared corners still follow their owning base figure.
+	if not galactic_unlocked:
+		for cid in ExtensionChart.ORDER:
+			for star in chart_constellations[cid].stars:
+				if star.has("shared_star_key"):
+					var shift: Vector2 = readable_star_positions[star.shared_star_key] - readable_star_positions[cid + "/" + star.id]
+					for member in chart_constellations[cid].stars:
+						readable_star_positions[cid + "/" + member.id] += shift
+					readable_star_positions[cid + "/" + star.id] = readable_star_positions[star.shared_star_key]
+
+
+func _completed_figure_tone(constellation_id: String) -> float:
+	if not galactic_unlocked or constellation_id in ExtensionChart.ORDER or progression == null:
+		return 1.0
+	if not _constellation_complete(constellation_id): return 1.0
+	return lerpf(0.58, 1.0, smoothstep(0.65, 1.0, zoom))
+
+
+func _update_star_tone(node_id: String) -> void:
+	# Dimming the visual must not disable the button's presentation/input gate.
+	var tone := 1.0 if shared_star_node_ids.has(node_id) else _completed_figure_tone(node_star_records[node_id].constellation_id)
+	node_hold_bars[node_id].modulate.a = tone
 
 
 func _layout_chart() -> void:
@@ -1085,9 +1242,10 @@ func _layout_chart() -> void:
 	chart_layout_passes += 1
 	star_positions.clear()
 	node_positions.clear()
-	for star_key_variant in base_star_positions:
+	var positions := _readable_chart_positions()
+	for star_key_variant in positions:
 		var star_key := String(star_key_variant)
-		var base_position := Vector2(base_star_positions[star_key])
+		var base_position := Vector2(positions[star_key])
 		var rotated_position := CHART_ORIGIN + (base_position - CHART_ORIGIN).rotated(rotation_offset)
 		var chart_position := _present_chart_position(rotated_position)
 		star_positions[star_key] = chart_position
@@ -1101,7 +1259,9 @@ func _layout_chart() -> void:
 		button.position = center - button.size * 0.5
 		var presentation_alpha := _node_presentation_alpha(String(node_id))
 		button.scale = Vector2.ONE * _node_render_scale(String(node_id), presentation_alpha)
+		node_hold_bars[node_id].set_neighbor_clearance(float(star_neighbor_clearances.get(node_id, INF)) / button.scale.x)
 		button.modulate.a = presentation_alpha
+		_update_star_tone(String(node_id))
 		button.mouse_filter = Control.MOUSE_FILTER_STOP if presentation_alpha >= 0.92 and _node_interaction_ready(String(node_id)) else Control.MOUSE_FILTER_IGNORE
 		button.visible = (
 			bool(button.get_meta("revealed", true))
@@ -1143,6 +1303,11 @@ func _is_node_above_horizon(node_id: String) -> bool:
 
 func _on_node_hold_started(node_id: String) -> void:
 	_cancel_node_hold()
+	if not node_star_records.has(node_id): return
+	if galactic_unlocked and galactic_pullback_seen and not _is_extension_node(node_id) and zoom < 0.8:
+		focus_constellation(node_star_records[node_id].constellation_id)
+		selected_node_id = node_id
+		_refresh_constellation_inspector(node_id)
 	if hovered_node_id == node_id and not tooltip_suppressed_until_motion:
 		_show_node_tooltip(node_id)
 	if progression == null or _research_state(node_id) != "available" or not _can_research(node_id):
@@ -1268,6 +1433,7 @@ func _refresh() -> void:
 		button.set_meta("revealed", visible)
 		var presentation_alpha := _node_presentation_alpha(node_id)
 		button.modulate.a = presentation_alpha
+		_update_star_tone(node_id)
 		button.mouse_filter = Control.MOUSE_FILTER_STOP if presentation_alpha >= 0.92 and _node_interaction_ready(node_id) else Control.MOUSE_FILTER_IGNORE
 		button.visible = visible and presentation_alpha > 0.01 and _is_node_above_horizon(node_id)
 		button.set_meta("visual_state", visual_state)
@@ -1816,20 +1982,21 @@ func _draw_tree() -> void:
 		if constellation_id in ExtensionChart.ORDER and not galactic_unlocked:
 			continue
 		var constellation: Dictionary = chart_constellations[constellation_id]
+		var figure_alpha := structure_alpha * _completed_figure_tone(constellation_id)
 		for segment_variant in constellation.segments:
 			var segment: Array = segment_variant
 			var start := Vector2(star_positions["%s/%s" % [constellation_id, String(segment[0])]])
 			var finish := Vector2(star_positions["%s/%s" % [constellation_id, String(segment[1])]])
 			var states := _segment_states(constellation_id, segment)
 			var segment_color := _segment_color(states)
-			segment_color.a *= structure_alpha
+			segment_color.a *= figure_alpha
 			tree_canvas.draw_line(start, finish, segment_color, _segment_width(states), true)
 		for star_variant in constellation.stars:
 			var star: Dictionary = star_variant
 			var point := Vector2(star_positions["%s/%s" % [constellation_id, String(star.id)]])
 			var star_radius := _magnitude_radius(float(star.magnitude))
 			var node_id := String(star.get("node_id", ""))
-			var alpha := (0.23 if node_id.is_empty() else 0.12) * structure_alpha
+			var alpha := (0.23 if node_id.is_empty() else 0.12) * figure_alpha
 			if node_id.is_empty():
 				match String(star.kind):
 					"cluster":
@@ -2092,12 +2259,21 @@ func focus_constellation(id: String) -> void:
 	# Shared-corner figures can be translated from their nominal UI anchor.
 	# Focus the actual stars, including the complete attached Pegasus figure.
 	var center := Vector2.ZERO
+	var positions := _readable_chart_positions()
 	for star in chart_constellations[id].stars:
-		center += base_star_positions[id + "/" + star.id] - CHART_ORIGIN
+		center += positions[id + "/" + star.id] - CHART_ORIGIN
 	center /= float(chart_constellations[id].stars.size())
 	rotation_offset = -PI * 0.5 - center.angle()
 	zoom = clampf(330.0 / maxf(1.0, center.length()), _galactic_zoom_floor(), CONSTELLATION_ZOOM)
 	pan_position = _galactic_pan_for_zoom(zoom)
+	if galactic_unlocked and id in ChartData.CONSTELLATIONS:
+		var rotated_center := CHART_ORIGIN + center.rotated(rotation_offset)
+		var bounds := Rect2(rotated_center, Vector2.ZERO)
+		for star in chart_constellations[id].stars:
+			var point := CHART_ORIGIN + (Vector2(positions[id + "/" + star.id]) - CHART_ORIGIN).rotated(rotation_offset)
+			bounds = bounds.expand(point)
+		zoom = minf(MAX_ZOOM, minf(500.0 / maxf(1.0, bounds.size.x), 290.0 / maxf(1.0, bounds.size.y)))
+		pan_position = Vector2(560, 330) - bounds.get_center() * zoom
 	galactic_chart_detail = 1.0
 	for star in chart_constellations[id].stars:
 		if not String(star.node_id).is_empty():

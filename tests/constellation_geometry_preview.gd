@@ -49,12 +49,27 @@ func _run() -> void:
 	await _capture(game, "normal_overview")
 	tree.focus_outer_constellations()
 	await _capture(game, "outer_overview")
+	if "--legacy-scale" in OS.get_cmdline_user_args():
+		for cid in tree.ChartData.CONSTELLATIONS:
+			tree.focus_constellation(cid)
+			await _capture(game, "natural_focus_" + cid)
 	if "--outer-celestial" in OS.get_cmdline_user_args():
 		for locale in ["ko", "en"]:
 			_set_locale(game, locale)
 			for cid in ["sagitta", "cancer", "sagittarius"]:
 				tree.focus_constellation(cid)
 				await _capture(game, locale + "_focus_" + cid)
+	if "--node-spacing" in OS.get_cmdline_user_args():
+		_set_locale(game, "ko")
+		tree.configure_galactic_state(false, false)
+		for cid in ["andromeda", "big_dipper", "orion", "taurus"]:
+			tree.focus_constellation(cid)
+			await _capture(game, "unexpanded_" + cid)
+		game.progression.purchased_nodes.erase("galaxy_imaging")
+		tree.focus_constellation("andromeda")
+		tree._on_node_hovered("galaxy_imaging")
+		tree.node_hold_bars.galaxy_imaging.set_fill_progress(0.5, 0.0)
+		await _capture(game, "andromeda_research_hold")
 	var manifest := FileAccess.open(output.path_join("manifest.json"), FileAccess.WRITE)
 	manifest.store_string(JSON.stringify({"positions": positions, "frames": records, "failures": failures, "synthetic": true}, "\t"))
 	manifest.close()
