@@ -51,6 +51,7 @@ func _run() -> void:
 	_test_particle_categories(game.effects)
 	_test_completion_grade_text(game.effects)
 	_test_meteor_routing(game)
+	_test_solid_body_completion(game)
 	_test_distant_and_event_paths(game)
 	_test_caps(game.effects)
 	await _test_installation_rule(game)
@@ -65,6 +66,32 @@ func _run() -> void:
 	else:
 		print("EFFECT_FEEDBACK_FAIL: %d failure(s)" % failures.size())
 		quit(1)
+
+
+func _test_solid_body_completion(game) -> void:
+	for type_id in ["variable_star", "binary_star", "galaxy"]:
+		game.effects.set_accessibility_effects(0.0, false)
+		var target = game.spawner.spawn_meteor(type_id, CENTRE, Vector2(120, 20), 10.0)
+		_check(target != null, type_id + " fixture spawns")
+		if target == null: continue
+		var count: int = game.meteor_layer.get_child_count()
+		var completions := [0]
+		var fragments := [0]
+		target.observed.connect(func(_m, _r, _v, _manual, _grade): completions[0] += 1)
+		target.fragment_requested.connect(func(_p, _v, _t, _e, _l, _s): fragments[0] += 1)
+		target._finish_observation(1.0)
+		var data: float = game.progression.observation_data
+		_check(not target.alive and target.observed_successfully, type_id + " completes before visual breakup")
+		_check(target.completion_motion_scale == 0.0 and not target.completion_glint_enabled, type_id + " inherits accessibility")
+		target._finish_observation(1.0)
+		target.tick_motion(0.3, 1)
+		_check(completions[0] == 1 and fragments[0] == 0, type_id + " has one completion and no gameplay fragments")
+		_check(game.progression.observation_data == data and game.meteor_layer.get_child_count() == count, type_id + " visual linger adds no reward or target")
+		_check(not target.is_queued_for_deletion(), type_id + " remains for completion feedback")
+		target.tick_motion(0.4, 2)
+		_check(target.is_queued_for_deletion(), type_id + " releases its existing linger slot")
+		target.free()
+	game.effects.set_accessibility_effects(1.0, true)
 
 
 func _test_round_dawn() -> void:

@@ -588,6 +588,8 @@ func _on_meteor_spawned(meteor) -> void:
 
 
 func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: bool, quality_grade: String) -> void:
+	meteor.completion_motion_scale = effects.motion_intensity
+	meteor.completion_glint_enabled = effects.screen_flashes_enabled
 	if observation_phase_active:
 		deep_sky.modules.record_completion(meteor)
 	observer.release_target(meteor)
@@ -815,6 +817,11 @@ func _apply_accessibility_settings() -> void:
 	if settings != null and settings.has_method("are_screen_flashes_enabled"):
 		flashes_enabled = bool(settings.are_screen_flashes_enabled())
 	effects.set_accessibility_effects(motion_scale, flashes_enabled)
+	if meteor_layer != null:
+		for meteor in meteor_layer.get_children():
+			meteor.completion_motion_scale = motion_scale
+			meteor.completion_glint_enabled = flashes_enabled
+			meteor.queue_redraw()
 
 
 func _upgrade_name(definition: Dictionary) -> String:
