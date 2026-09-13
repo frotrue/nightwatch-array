@@ -116,6 +116,14 @@ func _test_lensed_contacts() -> void:
 	check(sample.get_observation_position(1.0) == physical, "reduced motion restores original image and contact centre")
 	game.black_hole_lens.motion_scale = 1.0
 	check(hole.get_observation_position(1.0) == hole.global_position, "black hole never lenses itself")
+	var close: Vector2 = hole.global_position + Vector2(2, 0)
+	var close_image: Vector2 = game.black_hole_lens.project_position(close, 1.0)
+	check(close_image.is_finite() and close_image.distance_to(hole.global_position) > hole.body_radius, "near-aligned primary image remains visible outside the shadow")
+	var distant: Vector2 = hole.global_position + Vector2(1000, 0)
+	check(game.black_hole_lens.project_position(distant, 1.0) == distant, "far-field contacts are unchanged")
+	game.black_hole_lens.motion_scale = 0.5
+	var half_strength: Vector2 = sample.get_observation_position(1.0)
+	check(half_strength.x > physical.x and half_strength.x < apparent.x, "reduced lens strength returns the apparent centre continuously")
 	hole.free()
 	check(sample.get_observation_position(1.0) == physical, "removing the lens clears optical selection offsets")
 	game.free()

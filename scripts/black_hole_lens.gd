@@ -4,13 +4,16 @@ extends Node2D
 @onready var lens: Sprite2D = $Lens
 var target: Node2D
 var motion_scale := 1.0
+const EXTENT_RADII := 5.0
+const EINSTEIN_RADIUS := 0.34
+const TAPER_START := 0.6
 
 # Invert the shader's radial sampling for the primary visible image. Tick
 # endpoints use tick poses; cursor/beam presentation uses interpolated poses.
 func project_position(point: Vector2, fraction: float) -> Vector2:
 	if not is_instance_valid(target) or motion_scale <= 0.0 or not target.is_visible_in_tree(): return point
 	var centre: Vector2 = target.previous_simulation_position.lerp(target.global_position, fraction)
-	var extent: float = target.body_radius * target._head_scale() * target._current_visual_scale() * 3.0
+	var extent: float = target.body_radius * target._head_scale() * target._current_visual_scale() * EXTENT_RADII
 	var offset := point - centre
 	var distance := offset.length()
 	if distance >= extent or distance < 0.001: return point
@@ -22,12 +25,14 @@ func project_position(point: Vector2, fraction: float) -> Vector2:
 	var high := 1.0
 	for iteration in 14:
 		var radius := (low + high) * 0.5
-		var bend := 0.145 / maxf(radius, 0.33) * (1.0 - smoothstep(0.55, 1.0, radius))
+		var bend := EINSTEIN_RADIUS * EINSTEIN_RADIUS / maxf(radius, 0.12) * (1.0 - smoothstep(TAPER_START, 1.0, radius))
 		if radius - bend * strength < source_radius: low = radius
 		else: high = radius
 	return centre + offset / distance * ((low + high) * 0.5 * extent)
 
 func _ready() -> void:
+	lens.material.set_shader_parameter("einstein_radius", EINSTEIN_RADIUS)
+	lens.material.set_shader_parameter("taper_start", TAPER_START)
 	set_process(false)
 
 func track(body: Node2D) -> void:
@@ -47,10 +52,10 @@ func _process(_delta: float) -> void:
 	if not is_instance_valid(target): return
 	lens.global_position = target.get_display_position() if target.is_physics_interpolated_and_enabled() else target.global_position
 	var radius: float = target.body_radius * target._head_scale() * target._current_visual_scale()
-	lens.scale = Vector2.ONE * radius * 3.0
+	lens.scale = Vector2.ONE * radius * EXTENT_RADII
 	var canvas_scale := get_viewport().get_canvas_transform().get_scale()
 	var viewport_size := get_viewport_rect().size
-	var extent := Vector2.ONE * radius * 3.0 * canvas_scale
+	var extent := Vector2.ONE * radius * EXTENT_RADII * canvas_scale
 	var screen_position := get_viewport().get_canvas_transform() * lens.global_position
 	var on_screen := Rect2(-extent, viewport_size + extent * 2.0).has_point(screen_position)
 	lens.visible = target.is_visible_in_tree() and on_screen and motion_scale > 0.0
