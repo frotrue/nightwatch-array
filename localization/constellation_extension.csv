@@ -19,8 +19,8 @@ ATLAS_EXPAND,Outer constellations,바깥 별자리
 ATLAS_RETURN,Return to the star chart,성도로 돌아가기
 ATLAS_PLANS,Observation plans,관측 계획
 ATLAS_ANALYSIS,Specimen analysis,표본 분석
-ATLAS_NEW_SKY,9 outer constellations · 7 observation / 2 module branches,바깥 별자리 9개 · 관측 성장 7 / 모듈 지원 2
-ATLAS_FIELD_RECORDS,%s · %d / 42 outer stars,%s · 바깥 연구별 %d / 42
+ATLAS_NEW_SKY,11 outer constellations · 9 observation / 2 module branches,바깥 별자리 11개 · 관측 성장 9 / 모듈 지원 2
+ATLAS_FIELD_RECORDS,%s · %d / %d outer stars,%s · 바깥 연구별 %d / %d
 ATLAS_COORDINATE_REQUIRED,Research Galactic Reference Frame to begin.,은하 기준 좌표계를 연구하면 열립니다.
 ATLAS_OPEN_PLAN,Open this observation plan,관련 관측 계획 열기
 ATLAS_DELTA_AQL,Delta Aquilae,독수리자리 델타
@@ -62,8 +62,31 @@ ATLAS_ROLE_VULPECULA,Observation rhythm,연속 관측
 ATLAS_DELPHINUS,Delphinus,돌고래자리
 ATLAS_ROLE_DELPHINUS,Observation echoes,관측 반향
 ATLAS_SAGITTA,Sagitta,화살자리
-ATLAS_ROLE_SAGITTA,Meteor arrivals,유성 발견
+ATLAS_ROLE_SAGITTA,Asteroids,소행성 관측
 ATLAS_EQUULEUS,Equuleus,조랑말자리
 ATLAS_ROLE_EQUULEUS,Dish automation,접시 자동화
 ATLAS_TRIANGULUM,Triangulum,삼각형자리
 ATLAS_ROLE_TRIANGULUM,Data analysis,데이터 분석
+ATLAS_CANCER,Cancer,게자리
+ATLAS_ROLE_CANCER,Planet Observation,행성 관측
+ATLAS_IOTA_CNC,ι Cnc,ι Cnc
+ATLAS_GAMMA_CNC,γ Cnc,γ Cnc
+ATLAS_DELTA_CNC,δ Cnc,δ Cnc
+ATLAS_ALPHA_CNC,α Cnc,α Cnc
+ATLAS_BETA_CNC,β Cnc,β Cnc
+ATLAS_SAGITTARIUS,Sagittarius,궁수자리
+ATLAS_ROLE_SAGITTARIUS,Black Holes,블랙홀
+ATLAS_GAMMA_SGR,γ² Sgr,γ² Sgr
+ATLAS_DELTA_SGR,δ Sgr,δ Sgr
+ATLAS_EPSILON_SGR,ε Sgr,ε Sgr
+ATLAS_ZETA_SGR,ζ Sgr,ζ Sgr
+ATLAS_TAU_SGR,τ Sgr,τ Sgr
+ATLAS_SIGMA_SGR,σ Sgr,σ Sgr
+ATLAS_PHI_SGR,φ Sgr,φ Sgr
+ATLAS_LAMBDA_SGR,λ Sgr,λ Sgr
+ATLAS_MU_SGR,μ Sgr,μ Sgr
+ATLAS_ETA_SGR,η Sgr,η Sgr
+ATLAS_RHO_SGR,ρ¹ Sgr,ρ¹ Sgr
+ATLAS_PI_SGR,π Sgr,π Sgr
+ATLAS_OMICRON_SGR,ο Sgr,ο Sgr
+ATLAS_XI_SGR,ξ² Sgr,ξ² Sgr

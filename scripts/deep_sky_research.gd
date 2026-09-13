@@ -213,7 +213,8 @@ func get_save_data() -> Dictionary:
 
 static func supports_save(data: Dictionary) -> bool:
 	var version = data.get("version", 1)
-	if not (version is int or version is float) or version not in [1, 2, 3, 4]:
+	# JSON numbers are floats; Array membership would reject 4.0 against int 4.
+	if not (version is int or version is float) or not is_finite(float(version)) or floorf(float(version)) != float(version) or version < 1 or version > 4:
 		return false
 	var extension = data.get("extension", {})
 	if extension is Dictionary and extension.has("catalogue_version"):

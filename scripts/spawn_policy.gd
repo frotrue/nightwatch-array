@@ -13,10 +13,9 @@ const BASE_PROBABILITIES := {
 }
 const UNLOCKS := {
 	"fast": "edge_detection", "fragment": "fragment_analysis", "fireball": "rare_detection",
-	"satellite": "satellite_catalog", "variable_star": "variable_watchlist",
-	"comet": "comet_solutions", "binary_star": "double_star_resolution", "galaxy": "galaxy_imaging",
-	"black_hole": "galaxy_imaging",
+	"satellite": "satellite_catalog", "comet": "comet_solutions",
 }
+const OUTER_UNLOCKS := {"variable_star": "ext_sge_cadence", "binary_star": "ext_sge_solution", "galaxy": "ext_cnc_planet", "black_hole": "ext_sgr_black_hole"}
 # Emergency ceiling only. The research active-target limit gates new natural
 # arrivals, while proc children can use headroom without taking late reservations.
 const ATMOSPHERIC_SAFETY_SLOTS := 54
@@ -54,8 +53,12 @@ static func mean_interval(low: float, high: float, floor_value: float) -> float:
 	return (floor_value * (floor_value - low) + (high * high - floor_value * floor_value) * 0.5) / (high - low)
 
 func probability(kind: String, progression: Node) -> float:
-	if UNLOCKS.has(kind) and not progression.has_upgrade(UNLOCKS[kind]): return 0.0
-	return _scaled_probability(kind, progression.get_spawn_probability_multiplier())
+	if not unlocked(kind, progression): return 0.0
+	return _scaled_probability(kind, progression.get_spawn_probability_multiplier() * progression.get_celestial_multiplier(kind, "spawn"))
+
+static func unlocked(kind: String, progression: Node) -> bool:
+	if OUTER_UNLOCKS.has(kind): return progression.has_extension_research(OUTER_UNLOCKS[kind])
+	return not UNLOCKS.has(kind) or progression.has_upgrade(UNLOCKS[kind])
 
 func _scaled_probability(kind: String, multiplier: float) -> float:
 	return clampf(float(BASE_PROBABILITIES[kind]) * multiplier, 0.0, 1.0)
@@ -65,7 +68,7 @@ func roll(progression: Node) -> Array[String]:
 	var multiplier: float = progression.get_spawn_probability_multiplier()
 	for kind: String in ORDER:
 		var value: float = occurrence[kind].randf()
-		var chance := 0.0 if UNLOCKS.has(kind) and not progression.has_upgrade(UNLOCKS[kind]) else _scaled_probability(kind, multiplier)
+		var chance := 0.0 if not unlocked(kind, progression) else _scaled_probability(kind, multiplier * progression.get_celestial_multiplier(kind, "spawn"))
 		if value < chance:
 			selected.append(kind)
 			counters[kind].rolled += 1

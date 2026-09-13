@@ -12,7 +12,8 @@
 | [기능별 상세 기준](design-details.md) | 모듈·관측·성도·표현의 현재 값과 동작 |
 | [고정 틱·출현](fixed-tick-simulation.md) | 60틱 실행 순서, 천체별 확률, 연구 보정, 등장 공간·저장 |
 | [별자리 좌표](constellation-geometry.md) | 실제 천체 좌표·투영·연결선·가까운 별 선택과 재생성 |
-| [바깥 별자리](outer-constellations.md) | 9개 별자리·42개 연구의 역할, 선행·가격·영구 효과 |
+| [바깥 별자리](outer-constellations.md) | 11개 별자리·55개 연구의 역할, 선행·가격·영구 효과 |
+| [확장 이후 천체](outer-celestial-research.md) | 소행성·행성·블랙홀의 새 해금, 저장 적용과 실제 성도 비교 |
 | [특수 유성과 모듈](expansion-design.md) | 표본, 모듈 획득, 중복 편성, 뽑기 연출·저장 |
 | [시스템 참조](systems.md) | 소유권, 주요 흐름, 저장과 캐시 경계 |
 | [씬 작성 기준](scene-authoring.md) | 고정 UI·리소스 분리, 직접 그리기 예외, 기존 동작 보존 |

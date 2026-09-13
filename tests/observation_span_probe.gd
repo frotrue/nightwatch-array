@@ -260,11 +260,12 @@ func _run() -> void:
 
 func _check_progressive_forecasts(game: Node) -> void:
 	var original_nodes: Dictionary = game.progression.purchased_nodes.duplicate()
+	var original_outer: Array = game.deep_sky.state.research_ids.duplicate()
 	var cases := [
 		{"node": "", "hidden": []},
 		{"node": "fragment_analysis", "hidden": ["common", "fast"]},
 		{"node": "satellite_catalog", "hidden": ["common", "fast", "fragment", "fragment_piece", "fireball"]},
-		{"node": "variable_watchlist", "hidden": ["common", "fast", "fragment", "fragment_piece", "fireball", "satellite"]},
+		{"node": "ext_sge_cadence", "hidden": ["common", "fast", "fragment", "fragment_piece", "fireball", "satellite"]},
 		{"node": "galactic_reference_frame", "hidden": ["common", "fast"]},
 		{"node": "", "hidden": []},
 	]
@@ -272,6 +273,10 @@ func _check_progressive_forecasts(game: Node) -> void:
 	for scenario in cases:
 		# Replace research state as load/reset does; later branches stand alone too.
 		game.progression.purchased_nodes = {"wide_field": true}
+		game.deep_sky.state.research_ids.clear()
+		if scenario.node == "ext_sge_cadence":
+			game.progression.purchased_nodes["galactic_reference_frame"] = true
+			game.deep_sky.state.research_ids.append("ext_sge_cadence")
 		if not String(scenario.node).is_empty():
 			game.progression.purchased_nodes[scenario.node] = true
 		var lead: float = game.progression.get_forecast_lead()
@@ -294,6 +299,7 @@ func _check_progressive_forecasts(game: Node) -> void:
 		game.effects.spawn_forecast([Vector2(450, 20)])
 		_check(game.effects.incoming_markers.size() == 1 and game.effects.incoming_markers[0].forecast, "meteor shower forecast remains visible at every milestone")
 	game.progression.purchased_nodes = original_nodes
+	game.deep_sky.state.research_ids.assign(original_outer)
 	game.sky_contacts.contacts.clear()
 	game.effects.reset()
 

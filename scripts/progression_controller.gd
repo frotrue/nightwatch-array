@@ -517,7 +517,7 @@ func forecast_visible() -> bool:
 
 func forecast_type_visible(type_id: String) -> bool:
 	# Presentation only: hidden contacts still fund spawn lead time and dish aiming.
-	var asteroid_stage := has_upgrade("variable_watchlist")
+	var asteroid_stage := has_extension_research("ext_sge_cadence")
 	var satellite_stage := asteroid_stage or has_upgrade("satellite_catalog")
 	match type_id:
 		"common", "fast":
@@ -579,9 +579,10 @@ func is_andromeda_target(type_id: String) -> bool:
 
 
 func _base_get_analysis_speed_multiplier(type_id: String) -> float:
+	var multiplier := 1.3 if has_upgrade("variable_watchlist") and type_id in ["satellite", "comet"] else 1.0
 	if has_upgrade("andromeda_deep_survey") and is_andromeda_target(type_id):
-		return 1.25
-	return 1.0
+		multiplier *= 1.25
+	return multiplier
 
 
 func get_observation_value_multiplier(type_id: String, active_target_count: int) -> float:
@@ -601,7 +602,7 @@ func get_observation_value_multiplier(type_id: String, active_target_count: int)
 		multiplier *= 1.18
 	if type_id in ["fragment", "fragment_piece"]:
 		multiplier *= extension_effect("fragment_data")
-	return multiplier * extension_effect("data")
+	return multiplier * extension_effect("data") * get_celestial_multiplier(type_id, "value")
 
 
 func is_perseid_survey_active(active_target_count: int) -> bool:
@@ -614,6 +615,18 @@ func is_research_complete() -> bool:
 
 func galaxy_unlocked() -> bool:
 	return has_upgrade("galactic_reference_frame")
+
+func has_extension_research(id: String) -> bool:
+	return galaxy_unlocked() and extension_state != null and id in extension_state.research_ids
+
+func get_celestial_multiplier(type_id: String, effect: String) -> float:
+	if not galaxy_unlocked(): return 1.0
+	var family := ""
+	match type_id:
+		"variable_star", "binary_star": family = "asteroid"
+		"galaxy": family = "planet"
+		"black_hole": family = "black_hole"
+	return extension_effect(family + "_" + effect) if not family.is_empty() else 1.0
 
 
 func get_observation_span() -> float:
@@ -712,7 +725,7 @@ func get_forecast_min_error(type_id: String = "") -> float:
 	return _base_get_forecast_min_error(type_id) * extension_effect("forecast_error")
 
 func get_analysis_speed_multiplier(type_id: String) -> float:
-	return _base_get_analysis_speed_multiplier(type_id) * extension_effect("analysis_speed")
+	return _base_get_analysis_speed_multiplier(type_id) * extension_effect("analysis_speed") * get_celestial_multiplier(type_id, "speed")
 
 func get_spawn_probability_multiplier() -> float:
 	# Preserve the old research pacing curve without retaining a shared spawn clock.

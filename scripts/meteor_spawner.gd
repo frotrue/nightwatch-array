@@ -1014,6 +1014,7 @@ func _current_features(type_id: String) -> Dictionary:
 		"perfect": progression.has_upgrade("perfect_observation"),
 		"automation": progression.get_automation_strength(type_id),
 		"analysis_speed": progression.get_analysis_speed_multiplier(type_id),
+		"celestial_speed": progression.get_celestial_multiplier(type_id, "speed"),
 		"spectral_calibrated": progression.has_upgrade("%s_band" % spectral_band),
 		"spectral_capstone": progression.has_upgrade("lyrid_spectrograph"),
 	}

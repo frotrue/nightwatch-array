@@ -68,7 +68,7 @@ func _run() -> void:
 		for research_id in game.deep_sky.Data.RESEARCH_ORDER:
 			if game.deep_sky.can_purchase(research_id):
 				progressed = game.deep_sky.purchase(research_id) or progressed
-	if game.deep_sky.state.research_ids.size() != 42: failures.append("not all outer research purchased")
+	if game.deep_sky.state.research_ids.size() != 55: failures.append("not all outer research purchased")
 	for locale in ["en", "ko"]:
 		_set_locale(game, locale)
 		for figure in game.upgrade_tree.ExtensionChart.ORDER:

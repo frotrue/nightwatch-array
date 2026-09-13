@@ -877,3 +877,85 @@ theme_override_styles/pressed = ExtResource("R5")
 theme_override_styles/hover = ExtResource("R5")
 theme_override_styles/focus = ExtResource("R5")
 flat = true
+
+[node name="ConstellationLedgerNames21" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 11
+text = "Cancer"
+
+[node name="ConstellationLedgerLeaders21" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="ConstellationLedgerNotes21" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerCounts21" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0 / 0"
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerHits21" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+tooltip_text = "Cancer"
+theme_override_styles/normal = ExtResource("R5")
+theme_override_styles/pressed = ExtResource("R5")
+theme_override_styles/hover = ExtResource("R5")
+theme_override_styles/focus = ExtResource("R5")
+flat = true
+
+[node name="ConstellationLedgerNames22" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.73333335, 0.68235296, 0.64705884, 1)
+theme_override_fonts/font = ExtResource("R4")
+theme_override_font_sizes/font_size = 11
+text = "Sagittarius"
+
+[node name="ConstellationLedgerLeaders22" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+mouse_filter = 2
+color = Color(0.33333334, 0.23529412, 0.19215687, 0.55)
+
+[node name="ConstellationLedgerNotes22" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.38039216, 0.33333334, 0.30588236, 1)
+theme_override_fonts/font = ExtResource("R2")
+theme_override_font_sizes/font_size = 7
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerCounts22" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_colors/font_color = Color(0.6, 0.47058824, 0.4, 1)
+theme_override_fonts/font = ExtResource("R1")
+theme_override_font_sizes/font_size = 7
+text = "0 / 0"
+horizontal_alignment = 2
+
+[node name="ConstellationLedgerHits22" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+tooltip_text = "Sagittarius"
+theme_override_styles/normal = ExtResource("R5")
+theme_override_styles/pressed = ExtResource("R5")
+theme_override_styles/hover = ExtResource("R5")
+theme_override_styles/focus = ExtResource("R5")
+flat = true

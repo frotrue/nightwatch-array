@@ -371,10 +371,10 @@ const UPGRADE_NODES: Array[Dictionary] = [
 		"major": false
 	},
 	{
-		"id": "variable_watchlist", "name": "Asteroid Observation", "icon": "≈", "cost": 220000,
-		"description": "Unlocks large, rocky asteroids. Finish observing them within the round.",
+		"id": "variable_watchlist", "name": "Long-Target Tracking", "icon": "≈", "cost": 220000,
+		"description": "Satellite and comet manual observation speed +30%.",
 		"branch": "andromeda", "prerequisites": ["change_detection"],
-		"hidden_until": ["change_detection"], "effect_type": "discovery", "effect_notes": {"target_type": "variable_star"},
+		"hidden_until": ["change_detection"], "effect_type": "transformation", "effect_notes": {"small_body_tracking": 1.3},
 		"major": true
 	},
 	{
@@ -479,21 +479,21 @@ const UPGRADE_NODES: Array[Dictionary] = [
 		"major": true, "affects_pacing": false
 	},
 	{
-		"id": "double_star_resolution", "name": "Ice Asteroid Observation", "icon": "⁚", "cost": 12000,
-		"description": "Unlocks ice asteroids and accurate arrival forecasts. All Observation Data ×2 (automatic included).",
+		"id": "double_star_resolution", "name": "Precision Analysis", "icon": "⁚", "cost": 12000,
+		"description": "Accurate ice asteroid forecasts. All Observation Data ×2 (automatic included).",
 		"branch": "lyra", "prerequisites": ["filter_wheel"],
 		"hidden_until": ["filter_wheel"], "effect_type": "discovery",
-		"effect_notes": {"target_type": "binary_star"},
+		"effect_notes": {"precise_forecast": true},
 		"runtime_parameters": {"observation_value_multiplier": 2.0},
 		"effect_contract": {"kind": "observation_value_multiplier", "value": 2.0, "scope": "all_observation_data"},
 		"major": true, "affects_pacing": false
 	},
 	{
-		"id": "galaxy_imaging", "name": "Planet Observation", "icon": "M31", "cost": 90000,
-		"description": "Unlocks planets and black holes. Observed black holes gather nearby bodies. All Observation Data ×2 (automatic included).",
+		"id": "galaxy_imaging", "name": "Deep-Sky Analysis", "icon": "M31", "cost": 90000,
+		"description": "All Observation Data ×2 (automatic included).",
 		"branch": "andromeda", "prerequisites": ["andromeda_deep_survey"],
 		"hidden_until": ["andromeda_deep_survey"], "effect_type": "discovery",
-		"effect_notes": {"target_type": "galaxy"},
+		"effect_notes": {"deep_analysis": true},
 		"runtime_parameters": {"observation_value_multiplier": 2.0},
 		"effect_contract": {"kind": "observation_value_multiplier", "value": 2.0, "scope": "all_observation_data"},
 		"major": true, "affects_pacing": false
