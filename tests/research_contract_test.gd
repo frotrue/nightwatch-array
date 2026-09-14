@@ -346,8 +346,8 @@ func _verify_combined_value_multiplier(progression, multiplier_ids: Array) -> vo
 		var contract: Dictionary = Balance.upgrade_definition(node_id).effect_contract
 		expected_product *= float(contract.value)
 	var actual_product: float = progression.get_observation_value_multiplier("common", 0)
-	_check(is_equal_approx(expected_product, 8192.0), "ten multiplier contracts combine to x8192")
-	_check(is_equal_approx(actual_product, expected_product), "runtime global multiplier matches the independent x8192 contract product")
+	_check(is_equal_approx(expected_product, 729.0), "ten multiplier contracts combine to x729")
+	_check(is_equal_approx(actual_product, expected_product), "runtime global multiplier matches the independent x729 contract product")
 
 
 func _verify_claims_bidirectionally(contract_ids_by_kind: Dictionary) -> void:
@@ -384,9 +384,9 @@ func _verify_claims_bidirectionally(contract_ids_by_kind: Dictionary) -> void:
 		if not contract.is_empty():
 			match String(contract.kind):
 				"observation_value_multiplier":
-					var value := int(round(float(contract.value)))
-					_check("Observation Data ×%d" % value in english and "automatic included" in english, node_id + " English copy exposes the exact multiplier and its automation scope")
-					_check("관측 데이터 %d배" % value in korean and "자동 포함" in korean, node_id + " Korean copy exposes the exact multiplier and its automation scope")
+					var value := ("%.2f" % float(contract.value)).trim_suffix("0").trim_suffix("0").trim_suffix(".")
+					_check("Observation Data ×%s" % value in english and "automatic included" in english, node_id + " English copy exposes the exact multiplier and its automation scope")
+					_check("관측 데이터 %s배" % value in korean and "자동 포함" in korean, node_id + " Korean copy exposes the exact multiplier and its automation scope")
 				"observation_duration_bonus":
 					_check("10 seconds" in english and "future observation window" in english, node_id + " English copy exposes the 10-second future-window delta")
 					_check("10초" in korean and "다음 관측부터 관측 시간을" in korean, node_id + " Korean copy exposes the 10-second future-window delta")
@@ -421,6 +421,7 @@ func _verify_claims_bidirectionally(contract_ids_by_kind: Dictionary) -> void:
 func _claims_global_multiplier(english: String, korean: String) -> bool:
 	return (
 		"Observation Data ×" in english
+		or "관측 데이터 1.5배" in korean
 		or "관측 데이터 2배" in korean
 		or "관측 데이터 4배" in korean
 		or "관측 데이터 8배" in korean

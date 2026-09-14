@@ -70,7 +70,7 @@ func _verify_research_revision() -> void:
 		if dish:
 			progression.purchased_nodes["secondary_camera"] = true
 		var before: float = progression.get_forecast_lead()
-		progression.observation_data = 16000.0
+		progression.observation_data = 20000.0
 		_check(progression.request_purchase("ephemeris_marks"), "earlier forecasts can be bought with or without a dish")
 		_check(is_equal_approx(progression.get_forecast_lead() - before, 1.0), "ephemeris adds a full second even when the dish already supplies forecasts")
 	progression.reset()
@@ -327,12 +327,12 @@ func _run() -> void:
 	var observatory_definition: Dictionary = balance.upgrade_definition("observatory_network")
 	var triple_echo_definition: Dictionary = balance.upgrade_definition("triple_echo_array")
 	var leonid_storm_definition: Dictionary = balance.upgrade_definition("leonid_storm")
-	var global_x2_ids := [
+	var global_value_ids := [
 		"perfect_observation", "shower_detector", "taurus_full_gallop",
 		"double_star_resolution", "perseid_outburst", "echo_delay_line",
 		"galaxy_imaging", "fireball_tail",
 	]
-	await _run_feedback_regressions(packed, global_x2_ids)
+	await _run_feedback_regressions(packed, global_value_ids)
 	await _run_survey_regressions(packed, balance)
 	game.settings.set_language("ko", false)
 	await process_frame
@@ -377,10 +377,10 @@ func _run() -> void:
 		== "폭풍 발동에 필요한 수동 관측 6 → 5회. 7초간 발생 유성 16 → 20개.",
 		"Korean Leonid Storm description names the five-observation twenty-meteor capstone"
 	)
-	for multiplier_id in global_x2_ids:
+	for multiplier_id in global_value_ids:
 		var multiplier_definition: Dictionary = balance.upgrade_definition(multiplier_id)
 		var multiplier_description: String = game.upgrade_tree._upgrade_description(multiplier_definition)
-		_check("데이터 2배" in multiplier_description and "자동 포함" in multiplier_description, "%s exposes its global multiplier in Korean" % multiplier_id)
+		_check("데이터 %s배" % ("2" if multiplier_id in ["perfect_observation", "shower_detector"] else "1.5") in multiplier_description and "자동 포함" in multiplier_description, "%s exposes its global multiplier in Korean" % multiplier_id)
 	_check(TranslationServer.translate("UPGRADE_ERROR_NEED_DATA") % 12 == "데이터가 12개 더 필요합니다", "Korean shortfall text is a complete sentence")
 	_check(TranslationServer.translate("TREE_NEED_MORE") % [8, 12] == "◇  데이터 8 / 12", "Korean tree affordability text shows current and required Data")
 	_check(TranslationServer.translate("SAVE_RESET_PROMPT") % 2 == "슬롯 2의 모든 진행 상황을 삭제합니다. 이 작업은 되돌릴 수 없습니다.", "Korean reset warning clearly explains permanent deletion")
@@ -446,10 +446,10 @@ func _run() -> void:
 			game.upgrade_tree._upgrade_description(localized_definition) == String(localized_definition.description),
 			"%s fallback description stays in sync with English localization" % String(localized_definition.id)
 		)
-	for multiplier_id in global_x2_ids:
+	for multiplier_id in global_value_ids:
 		var multiplier_definition: Dictionary = balance.upgrade_definition(multiplier_id)
 		var multiplier_description: String = game.upgrade_tree._upgrade_description(multiplier_definition)
-		_check("Observation Data ×2" in multiplier_description and "automatic included" in multiplier_description, "%s exposes its global multiplier in English" % multiplier_id)
+		_check("Observation Data ×%s" % ("2" if multiplier_id in ["perfect_observation", "shower_detector"] else "1.5") in multiplier_description and "automatic included" in multiplier_description, "%s exposes its global multiplier in English" % multiplier_id)
 	_check(
 		String(secondary_camera_definition.description)
 		== game.upgrade_tree._upgrade_description(secondary_camera_definition),
@@ -513,7 +513,7 @@ func _run() -> void:
 			draco_probe.purchased_nodes[String(draco_gate_definition.id)] = true
 	_check(draco_probe.upgrade_level == 86 and draco_probe.get_node_state("draco_synthesis") == "available", "completing the other eleven constellations reveals Draco's first star")
 	_check(draco_probe.get_node_state("draco_cadence") == "hidden", "Draco still reveals only one internal step at a time")
-	_check(draco_probe.debug_purchase_node("draco_synthesis") and is_equal_approx(draco_probe.get_observation_value_multiplier("common", 1), 1024.0), "All-Sky Synthesis multiplies the legacy x256 array to x1024")
+	_check(draco_probe.debug_purchase_node("draco_synthesis") and is_equal_approx(draco_probe.get_observation_value_multiplier("common", 1), 182.25), "All-Sky Synthesis multiplies the pre-Draco x45.5625 array to x182.25")
 	_check(draco_probe.debug_purchase_node("draco_cadence") and is_equal_approx(draco_probe.get_regular_spawn_interval_floor(), 0.45), "Circumpolar Cadence lowers the regular-arrival floor to 0.45 seconds")
 	_check(draco_probe.debug_purchase_node("draco_capacity") and draco_probe.get_max_active() == 18, "Dragon-Spine Array raises regular active capacity from twelve to eighteen")
 	_check(draco_probe.debug_purchase_node("draco_sweep"), "Coiled-Sky Sweep follows the capacity step")
@@ -521,12 +521,12 @@ func _run() -> void:
 	_check(draco_probe.debug_purchase_node("draco_echo") and is_equal_approx(draco_probe.get_observation_echo_probability(), 0.65) and draco_probe.get_observation_echo_count() == 6, "Polar Resonance raises the manual echo to sixty-five percent and six entries")
 	_check(draco_probe.debug_purchase_node("draco_storm") and draco_probe.get_leonid_trigger_count() == 2 and draco_probe.get_leonid_storm_count() == 30, "Radiant Convergence arms thirty-object storms after two manual observations")
 	_check(draco_probe.debug_purchase_node("draco_array") and draco_probe.get_dish_count() == 4 and draco_probe.get_secondary_slots() == 4, "Total Array expands both steerable dishes and automatic lanes to four")
-	_check(draco_probe.debug_purchase_node("draco_apotheosis") and is_equal_approx(draco_probe.get_observation_value_multiplier("common", 1), 8192.0), "Dragon's Eye raises the completed constellation economy to x8192")
+	_check(draco_probe.debug_purchase_node("draco_apotheosis") and is_equal_approx(draco_probe.get_observation_value_multiplier("common", 1), 729.0), "Dragon's Eye raises the completed constellation economy to x729")
 	_check(not draco_probe.galaxy_unlocked() and draco_probe.debug_purchase_node("galactic_reference_frame") and draco_probe.galaxy_unlocked(), "the final Draco node unlocks the galactic reference frame")
 	_check(draco_probe.is_research_complete(), "Draco completes the 95 active base studies")
 	var draco_save_probe = load("res://scripts/progression_controller.gd").new()
 	draco_save_probe.load_save_data(draco_probe.get_save_data())
-	_check(draco_save_probe.galaxy_unlocked() and is_equal_approx(draco_save_probe.get_observation_value_multiplier("common", 1), 8192.0), "Draco culmination and galaxy state survive ID-based saves")
+	_check(draco_save_probe.galaxy_unlocked() and is_equal_approx(draco_save_probe.get_observation_value_multiplier("common", 1), 729.0), "Draco culmination and galaxy state survive ID-based saves")
 	draco_save_probe.free()
 	draco_probe.free()
 	var streak_display_probe = load("res://scripts/progression_controller.gd").new()
@@ -582,13 +582,13 @@ func _run() -> void:
 	_check(research_probe.debug_purchase_node("comet_solutions"), "Comet Solutions opens its long-arc target family")
 	_check(research_probe.debug_purchase_node("andromeda_deep_survey"), "Andromeda capstone follows the comet arm")
 	_check(research_probe.forecast_classifies("comet") and research_probe.get_forecast_max_error("comet") == 22.0, "Change Detection classifies and tightens deep-target forecasts")
-	_check(is_equal_approx(research_probe.get_analysis_speed_multiplier("comet"), 1.25 * 1.3) and is_equal_approx(research_probe.get_observation_value_multiplier("comet", 1), 2.6), "Andromeda's conditional value bonus stacks over Taurus's global x2 growth")
+	_check(is_equal_approx(research_probe.get_analysis_speed_multiplier("comet"), 1.25 * 1.3) and is_equal_approx(research_probe.get_observation_value_multiplier("comet", 1), 1.95), "Andromeda's conditional value bonus stacks over Taurus's global x1.5 growth")
 	_check(research_probe.debug_purchase_node("perseid_outburst"), "Perseid Outburst arrives after the completed Perseus survey")
 	_check(research_probe.debug_purchase_node("filter_wheel"), "Lyra calibration framework opens before the double-star side branch")
 	_check(research_probe.debug_purchase_node("double_star_resolution"), "Double-Star Resolution follows Vega without a hidden success gate")
 	_check(research_probe.debug_purchase_node("galaxy_imaging"), "Galaxy Imaging follows the completed Andromeda survey")
 	_check(research_probe.forecast_classifies("binary_star") and research_probe.get_forecast_max_error("binary_star") == 22.0, "Double-Star Resolution classifies and tightens binary-star forecasts")
-	_check(research_probe.get_analysis_speed_multiplier("galaxy") == 1.25 and is_equal_approx(research_probe.get_observation_value_multiplier("galaxy", 1), 20.8), "Galaxy fields combine the four purchased global x2 leaves with Andromeda's conditional value bonus")
+	_check(research_probe.get_analysis_speed_multiplier("galaxy") == 1.25 and is_equal_approx(research_probe.get_observation_value_multiplier("galaxy", 1), 6.58125), "Galaxy fields combine the four purchased global x1.5 leaves with Andromeda's conditional value bonus")
 	_check(research_probe.debug_purchase_node("echo_correlation_10") and is_equal_approx(research_probe.get_observation_echo_probability(), 0.10), "Gemini correlation opens at a ten-percent manual trigger chance")
 	_check(research_probe.get_observation_echo_count() == 1, "the first Gemini purchase immediately opens one extra meteor")
 	_check(research_probe.debug_purchase_node("single_echo_channel") and research_probe.get_observation_echo_count() == 2, "the first channel upgrade raises each echo to two meteors")
@@ -793,9 +793,9 @@ func _run() -> void:
 	_check(not balance.upgrade_definition("observation_scheduling").is_empty(), "duration research is present in the tree")
 	_check(int(balance.upgrade_definition("observation_scheduling").cost) == 150, "the first duration step uses the measured full-tree economy price")
 	_check(int(balance.upgrade_definition("thermal_management").cost) == 450, "the second duration step uses the measured full-tree economy price")
-	_check(int(balance.upgrade_definition("extended_watch_protocol").cost) == 700, "the third duration step uses the measured full-tree economy price")
-	_check(int(balance.upgrade_definition("continuous_watch_rotation").cost) == 1000, "the fourth duration step uses the measured full-tree economy price")
-	_check(int(balance.upgrade_definition("filter_wheel").cost) == 10000, "Calibration Framework remains cheaper than its Double-Star Resolution successor")
+	_check(int(balance.upgrade_definition("extended_watch_protocol").cost) == 1000, "the third duration step uses the measured full-tree economy price")
+	_check(int(balance.upgrade_definition("continuous_watch_rotation").cost) == 1800, "the fourth duration step uses the measured full-tree economy price")
+	_check(int(balance.upgrade_definition("filter_wheel").cost) == 15000, "Calibration Framework remains cheaper than its Double-Star Resolution successor")
 	_check(balance.upgrade_definition("wide_field").prerequisites == ["edge_detection"], "Wide Field stays inside the detection constellation")
 	_check(balance.upgrade_definition("thermal_management").prerequisites == ["observation_scheduling"], "Thermal Management stays inside Orion's duration arm")
 	_check(balance.upgrade_definition("continuous_watch_rotation").prerequisites == ["extended_watch_protocol"], "Continuous Watch Rotation stays inside Orion")
@@ -1605,12 +1605,12 @@ func _run() -> void:
 	game.progression.debug_purchase_all()
 	_check(game.progression.upgrade_level == balance.research_node_count(), "all functional tree nodes unlock through prerequisite-safe debug purchase")
 	_check(game.progression.is_research_complete(), "the progression controller recognizes the complete research graph")
-	_check(is_equal_approx(game.progression.get_observation_value_multiplier("common", 1), 8192.0), "the eight legacy leaves and two Draco multipliers produce exact unconditional x8192 observation value growth")
+	_check(is_equal_approx(game.progression.get_observation_value_multiplier("common", 1), 729.0), "the eight base reward leaves and two Draco multipliers produce exact unconditional x729 observation value growth")
 	_check(game.progression.galaxy_unlocked() and game.starfield.galactic_mode, "the final Draco purchase switches the live sky into its galactic visual state")
 	_check(game.events.canis_major_state == "idle", "purchasing Sirius during a live round waits until the next round to schedule its event")
 	var completed_save_probe = load("res://scripts/progression_controller.gd").new()
 	completed_save_probe.load_save_data(game.progression.get_save_data())
-	_check(completed_save_probe.is_research_complete() and completed_save_probe.galaxy_unlocked() and is_equal_approx(completed_save_probe.get_observation_value_multiplier("common", 1), 8192.0), "ID-based completed saves retain every purchased node and the galactic x8192 endpoint")
+	_check(completed_save_probe.is_research_complete() and completed_save_probe.galaxy_unlocked() and is_equal_approx(completed_save_probe.get_observation_value_multiplier("common", 1), 729.0), "ID-based completed saves retain every purchased node and the galactic x729 endpoint")
 	completed_save_probe.free()
 	game.upgrade_tree._refresh()
 	await process_frame
@@ -2600,7 +2600,7 @@ func _decorative_controls_pass_mouse(node: Node) -> bool:
 	return true
 
 
-func _run_feedback_regressions(packed: PackedScene, global_x2_ids: Array) -> void:
+func _run_feedback_regressions(packed: PackedScene, global_value_ids: Array) -> void:
 	var feedback_game = packed.instantiate()
 	feedback_game.startup_slot_prompt_enabled = false
 	feedback_game.get_node("Tutorial").auto_start_enabled = false
@@ -2617,7 +2617,7 @@ func _run_feedback_regressions(packed: PackedScene, global_x2_ids: Array) -> voi
 	feedback_game.effects.reset()
 
 	# The same common observation must keep the same presentation at x1 and
-	# x256 even though the second Data packet carries 256 times the amount.
+	# the purchased reward leaves, while their Data packet grows independently.
 	var x1_target = feedback_game.spawner.spawn_meteor(
 		"common", Vector2(420.0, 240.0), Vector2.ZERO, 4.0
 	)
@@ -2629,32 +2629,32 @@ func _run_feedback_regressions(packed: PackedScene, global_x2_ids: Array) -> voi
 	x1_target.free()
 	feedback_game.effects.reset()
 	feedback_game.progression.reset_manual_combo()
-	for multiplier_id in global_x2_ids:
+	for multiplier_id in global_value_ids:
 		feedback_game.progression.purchased_nodes[String(multiplier_id)] = true
-	var x256_data_before: float = feedback_game.progression.observation_data
-	var x256_target = feedback_game.spawner.spawn_meteor(
+	var boosted_data_before: float = feedback_game.progression.observation_data
+	var boosted_target = feedback_game.spawner.spawn_meteor(
 		"common", Vector2(420.0, 240.0), Vector2.ZERO, 4.0
 	)
-	x256_target.set_meta("gemini_echo", true)
-	feedback_game._on_meteor_observed(x256_target, 22.0, 1.55, true, "GOOD")
-	var x256_data_gain: float = feedback_game.progression.observation_data - x256_data_before
-	var x256_popup: Dictionary = feedback_game.effects.popups.back()
+	boosted_target.set_meta("gemini_echo", true)
+	feedback_game._on_meteor_observed(boosted_target, 22.0, 1.55, true, "GOOD")
+	var boosted_data_gain: float = feedback_game.progression.observation_data - boosted_data_before
+	var boosted_popup: Dictionary = feedback_game.effects.popups.back()
 	var last_voice_index := posmod(
 		feedback_game.sound.next_voice - 1,
 		feedback_game.sound.voice_pool.size()
 	)
 	var intrinsic_success_pitch: float = feedback_game.sound.voice_pool[last_voice_index].pitch_scale
-	_check(is_equal_approx(x256_data_gain, 22.0 * 256.0), "x256 research still multiplies the actual observation Data")
+	_check(is_equal_approx(boosted_data_gain, 1002.0), "x45.5625 research still multiplies the actual observation Data")
 	_check(
 		feedback_game.effects.particles.size() == x1_particle_count
 		and is_equal_approx(feedback_game.effects.flash_strength, x1_flash_strength)
 		and is_equal_approx(feedback_game.effects.kick_amplitude, x1_kick_amplitude),
-		"the same target keeps identical feedback strength at x1 and x256"
+		"the same target keeps identical feedback strength at x1 and x45.5625"
 	)
-	_check("x1.55" in String(x256_popup.text) and "x396.80" not in String(x256_popup.text), "the Data packet suffix reports intrinsic observation technique instead of research economy")
+	_check("x1.55" in String(boosted_popup.text) and "x70.62" not in String(boosted_popup.text), "the Data packet suffix reports intrinsic observation technique instead of research economy")
 	_check(is_equal_approx(intrinsic_success_pitch, 1.0 + 0.55 * 0.045), "the success pitch reads the intrinsic observation multiplier")
-	_check(is_equal_approx(feedback_game.progression.best_multiplier, 1.55), "the best manual multiplier excludes x256 research economy")
-	x256_target.free()
+	_check(is_equal_approx(feedback_game.progression.best_multiplier, 1.55), "the best manual multiplier excludes x45.5625 research economy")
+	boosted_target.free()
 
 	# Automatic completions can deliver economic Data but cannot rewrite a stat
 	# whose player-facing label explicitly says it is manual.

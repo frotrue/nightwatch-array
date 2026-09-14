@@ -499,23 +499,23 @@ UPGRADE_STORM_FRONT_DESC,Storm trigger: 7 → 6 manual observations. Meteors per
 UPGRADE_LEONID_STORM_NAME,Storm Zenith,폭풍 정점
 UPGRADE_LEONID_STORM_DESC,Storm trigger: 6 → 5 manual observations. Meteors per storm: 16 → 20 over 7 seconds.,폭풍 발동에 필요한 수동 관측 6 → 5회. 7초간 발생 유성 16 → 20개.
 UPGRADE_PERSEID_OUTBURST_NAME,Perseid Outburst,페르세우스 유성군 돌발
-UPGRADE_PERSEID_OUTBURST_DESC,"Unlocks Perseid bursts: 8 meteors over 3.4 seconds, after a warning. All Observation Data ×2 (automatic included).",예고 뒤 3.4초간 유성 8개가 나타나는 페르세우스 돌발 유성우를 엽니다. 모든 관측 데이터 2배(자동 포함).
+UPGRADE_PERSEID_OUTBURST_DESC,"Unlocks Perseid bursts: 8 meteors over 3.4 seconds, after a warning. All Observation Data ×1.5 (automatic included).",예고 뒤 3.4초간 유성 8개가 나타나는 페르세우스 돌발 유성우를 엽니다. 모든 관측 데이터 1.5배(자동 포함).
 UPGRADE_DOUBLE_STAR_RESOLUTION_NAME,Precision Analysis,정밀 분석
-UPGRADE_DOUBLE_STAR_RESOLUTION_DESC,Accurate ice asteroid forecasts. All Observation Data ×2 (automatic included).,정확한 얼음 소행성 예보. 모든 관측 데이터 2배 (자동 포함).
+UPGRADE_DOUBLE_STAR_RESOLUTION_DESC,Accurate ice asteroid forecasts. All Observation Data ×1.5 (automatic included).,정확한 얼음 소행성 예보. 모든 관측 데이터 1.5배 (자동 포함).
 UPGRADE_GALAXY_IMAGING_NAME,Deep-Sky Analysis,심우주 분석
-UPGRADE_GALAXY_IMAGING_DESC,All Observation Data ×2 (automatic included).,모든 관측 데이터 2배 (자동 포함).
+UPGRADE_GALAXY_IMAGING_DESC,All Observation Data ×1.5 (automatic included).,모든 관측 데이터 1.5배 (자동 포함).
 UPGRADE_SPLIT_RADIANT_MODEL_NAME,Split Radiant Model,분할 복사점 모형
 UPGRADE_SPLIT_RADIANT_MODEL_DESC,Storm meteors alternate between 2 mirrored entry areas.,폭풍 유성이 대칭인 두 구역에서 번갈아 나타납니다.
 UPGRADE_FRAGMENT_FRONT_NAME,Fragment Front,파편 전선
 UPGRADE_FRAGMENT_FRONT_DESC,Each meteor storm starts with a splitting meteor.,각 유성 폭풍이 분열 유성으로 시작합니다.
 UPGRADE_FIREBALL_TAIL_NAME,Luminous Meteor Tail,발광 유성 꼬리
-UPGRADE_FIREBALL_TAIL_DESC,Each meteor storm ends with a manual-only luminous meteor. All Observation Data ×2 (automatic included).,각 유성 폭풍의 마지막에 수동 관측 전용 발광 유성이 나타납니다. 모든 관측 데이터 2배(자동 포함).
+UPGRADE_FIREBALL_TAIL_DESC,Each meteor storm ends with a manual-only luminous meteor. All Observation Data ×1.5 (automatic included).,각 유성 폭풍의 마지막에 수동 관측 전용 발광 유성이 나타납니다. 모든 관측 데이터 1.5배(자동 포함).
 UPGRADE_ECHO_SIGNATURE_LOCK_NAME,Echo Signature Lock,공명 신호 고정
 UPGRADE_ECHO_SIGNATURE_LOCK_DESC,"Echoes repeat the observed meteor type: common, fast, fragment or luminous meteor. Other types give a random meteor.",공명이 관측한 유성 종류를 복제합니다(일반·고속·분열·발광 유성). 그 외에는 무작위.
 UPGRADE_MIRROR_ECHO_SOLUTION_NAME,Opposite-Side Echo,맞은편 공명
 UPGRADE_MIRROR_ECHO_SOLUTION_DESC,Echo meteors appear from the opposite side on a mirrored path.,공명 유성이 반대편에서 대칭 경로로 나타납니다.
 UPGRADE_ECHO_DELAY_LINE_NAME,Echo Delay Line,공명 지연선
-UPGRADE_ECHO_DELAY_LINE_DESC,Echo meteors arrive 0.75 seconds apart. All Observation Data ×2 (automatic included).,공명 유성이 0.75초 간격으로 차례로 나타납니다. 모든 관측 데이터 2배(자동 포함).
+UPGRADE_ECHO_DELAY_LINE_DESC,Echo meteors arrive 0.75 seconds apart. All Observation Data ×1.5 (automatic included).,공명 유성이 0.75초 간격으로 차례로 나타납니다. 모든 관측 데이터 1.5배(자동 포함).
 UPGRADE_ECHO_DECONFLICTION_NAME,Echo Spacing,공명 간격 조정
 UPGRADE_ECHO_DECONFLICTION_DESC,Spreads echo meteors apart to prevent overlap.,공명 유성을 서로 떨어뜨려 겹침을 줄입니다.
 UPGRADE_ECHO_BEACON_NAME,Echo Beacon,공명 비콘
@@ -557,7 +557,7 @@ UPGRADE_DRACO_STORM_DESC,Storm trigger: 5 → 2 manual observations. Meteors per
 UPGRADE_DRACO_ARRAY_NAME,Total Array,총력 관측망
 UPGRADE_DRACO_ARRAY_DESC,Movable dishes: 2 → 4. Automatic support: 2 → 4 targets.,접시 2 → 4대. 자동 지원 표적 2 → 4개.
 UPGRADE_DRACO_APOTHEOSIS_NAME,Dragon's Eye,용의 눈
-UPGRADE_DRACO_APOTHEOSIS_DESC,All Observation Data ×8 (automatic included).,모든 관측 데이터 8배(자동 포함).
+UPGRADE_DRACO_APOTHEOSIS_DESC,All Observation Data ×4 (automatic included).,모든 관측 데이터 4배(자동 포함).
 UPGRADE_GALACTIC_REFERENCE_FRAME_NAME,Galactic Reference Frame,은하 기준 좌표계
 UPGRADE_GALACTIC_REFERENCE_FRAME_DESC,"Unlocks outer research, rare meteors and modules.",바깥 연구·특수 유성·모듈을 엽니다.
 RESEARCH_GROUP_LOCAL_GROUP,LOCAL GROUP / PHENOMENA,국부은하군 / 천체 현상
@@ -570,7 +570,7 @@ UPGRADE_ACCELERATED_ANALYSIS_DESC,Observation Streak: each success adds +4% manu
 UPGRADE_SUSTAINED_CHARGE_NAME,Sustained Charge,지속 가속
 UPGRADE_SUSTAINED_CHARGE_DESC,Observation Streak time limit: 3.5 → 4 seconds. Bonus steps: 5 → 7.,관측 연속 제한 시간 3.5 → 4초. 강화 횟수 상한 5 → 7회.
 UPGRADE_TAURUS_FULL_GALLOP_NAME,Full Gallop,전력 질주
-UPGRADE_TAURUS_FULL_GALLOP_DESC,Observation Streak time limit: 4 → 5 seconds. Bonus steps: 7 → 10. All Observation Data ×2 (automatic included).,관측 연속 제한 시간 4 → 5초. 강화 횟수 상한 7 → 10회. 모든 관측 데이터 2배(자동 포함).
+UPGRADE_TAURUS_FULL_GALLOP_DESC,Observation Streak time limit: 4 → 5 seconds. Bonus steps: 7 → 10. All Observation Data ×1.5 (automatic included).,관측 연속 제한 시간 4 → 5초. 강화 횟수 상한 7 → 10회. 모든 관측 데이터 1.5배(자동 포함).
 UPGRADE_POLAR_SURVEY_NAME,Sky Sweep,하늘 훑기
 UPGRADE_POLAR_SURVEY_DESC,Each sweep of about 40% screen width has a 30% summon chance. Keep holding to switch between empty-sky sweeping and target observation.,빈 하늘을 화면 너비의 약 40% 훑으면 30% 확률로 유성 발생. 누른 채 표적을 조준하면 관측합니다.
 UPGRADE_SWEEP_GAIN_NAME,Sweep Gain,훑기 증폭
