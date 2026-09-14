@@ -154,6 +154,9 @@ pixels. It checks retained-item/target counts and releases target/RID
 caches. The headless `meteor_render_cache_test` remains the independent arithmetic
 oracle; neither test substitutes for the other. No performance threshold belongs
 in this correctness check.
+The animated planet uses the same authored material in both viewports; this test
+checks its draw order, size/palette updates and quad reuse, rather than comparing it
+to the retired static latitude-cell artwork. Material appearance is reviewed below.
 
 The retained-buffer cases also check pose-only reuse, a shortened leading
 trail, hide/show, opaque reordering and insertion/removal, rotation/nonuniform scale,
@@ -209,6 +212,22 @@ observation field and the three replacement research inspectors in Korean/Englis
 checks solid-body edge contacts with circular/single/double LINE fields at two
 camera spans. `meteor_render_cache_test` retains the full 539-case matrix, with
 147 solid-body cases explicitly requiring no meteor ribbons.
+
+`solid_body_feedback_review.gd` captures 13 frozen frames per real renderer:
+normal/evolved materials, low/high observation progress, enlarged detail, three
+completion stages, reduced motion, tint and background occlusion. It compares each
+body separately for animation and observation feedback after the arrival fade,
+requires identical paused frames, verifies that a bright marker behind each fully
+arrived body is occluded, and checks that a black body tint suppresses material light.
+Completion must not create new observation targets. `-- --animate` also records
+150 frames at 30fps, showing idle motion, observation and completion at 1.8× detail
+scale. Results live in `build/solid_body_feedback_review/<renderer>/`; the encoded
+preview is `build/solid_body_feedback_review/celestial-materials.gif`.
+The 2026-09-15 material update passed all 29 correctness gates and Windows export:
+`build/validation/20260914T164321116Z_celestial/summary.json` records 26 unchanged-code
+passes reused from the preceding run, the corrected cache fixture and remaining
+two gates, and the refreshed executable hash. Both Vulkan/OpenGL material and
+batching reviews passed; the exported pack also passed a moving 24-target sky review.
 
 `solar_target_review.gd -- --live-sky` runs a save-free moving sky with up to 24
 initial targets (respecting reserved deep-sky capacity) and captures two density

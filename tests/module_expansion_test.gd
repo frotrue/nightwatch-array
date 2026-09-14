@@ -327,7 +327,12 @@ func _check_solid_body_contact() -> void:
 		target.configure(Balance.meteor_spec(type), type, Vector2.ZERO, Vector2.RIGHT, 1.0, {}, Vector2.INF, view)
 		root.add_child(target)
 		target.set_process(false)
-		_check(target.material == null, "solid surface occludes sky instead of using meteor additive blending")
+		var alpha_blend := target.material == null
+		if target.material is ShaderMaterial:
+			var mode := RegEx.new()
+			mode.compile("render_mode[^;]*blend_mix[^;]*;")
+			alpha_blend = mode.search(target.material.shader.code) != null
+		_check(alpha_blend, "solid surface occludes sky instead of using meteor additive blending")
 		for span in [1.0, 1.5]:
 			view.observation_span = span
 			var body: float = target.get_observation_body_radius()

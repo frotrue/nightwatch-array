@@ -24,6 +24,15 @@ class Recorder:
 	var callback_count := 0
 	var trail_calls: Array = []
 	var spark_calls: Array = []
+	var asteroid_art: ShaderMaterial
+
+	func _ready() -> void:
+		super._ready()
+		# This recorder swaps types without configure to stress live getters.
+		# Prepare the spawn-owned art once, outside the draw callback.
+		asteroid_art = AsteroidSurfaceMaterial.duplicate()
+		planet_surface = PlanetSurfaceScene.instantiate()
+		add_child(planet_surface)
 
 	func _draw() -> void:
 		if not armed:
@@ -43,6 +52,8 @@ class Recorder:
 		debris_draw_points.clear()
 		trail_calls.clear()
 		spark_calls.clear()
+		material = asteroid_art if type_id in ["variable_star", "binary_star"] else (null if is_solid_body() else SHARED_ADDITIVE_MATERIAL)
+		planet_surface.hide()
 		super._draw()
 
 	func _draw_tapered_trail(visibility: float, tail_scale: float, visual_scale: float) -> void:

@@ -1,0 +1,25 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/planet_surface.gd" id="1"]
+[ext_resource type="Shader" path="res://resources/shaders/planet_surface.gdshader" id="2"]
+
+[sub_resource type="ShaderMaterial" id="Material_clouds"]
+resource_local_to_scene = true
+shader = ExtResource("2")
+
+[sub_resource type="Gradient" id="Gradient_white"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="Texture_quad"]
+gradient = SubResource("Gradient_white")
+width = 2
+height = 2
+
+[node name="PlanetSurface" type="Node2D"]
+visible = false
+script = ExtResource("1")
+
+[node name="Clouds" type="Sprite2D" parent="."]
+scale = Vector2(1.04, 1.04)
+material = SubResource("Material_clouds")
+texture = SubResource("Texture_quad")

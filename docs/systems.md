@@ -84,15 +84,22 @@ other body types retain their existing paths. The procedural switch remains for
 independent comparisons and atlas baking. Type changes hide stale head items;
 owner destruction frees their RIDs. Palette caches retain at most 16 materials.
 
-`planet_surface.gd` caches the original 576 surface cells in one triangle array,
-retaining float32 colors and triangulation. Radius/palette changes rebuild it;
-fading only updates alpha. `scan_arc_instances.gd` owns one child canvas RID per
+`scenes/planet_surface.tscn` owns a scene-local cloud shader and a single sprite
+quad. `planet_surface.gd` binds simulation age, radius, palette, observation progress,
+completion and accessibility settings; material changes do not rebuild the quad.
+The former static latitude-cell mesh has been replaced by rotating cloud belts.
+Asteroids retain their native polygon silhouettes and completion faces, with a
+per-body copy of `resources/asteroid_surface.tres` adding rock grain or layered ice.
+These materials use ordinary alpha blending and do not sample the background.
+Dust/frost remains transient drawing within the existing linger, never a new target.
+
+`scan_arc_instances.gd` owns one child canvas RID per
 scanning meteor and two instanced arc templates. The shader expands radius and
 width separately using the native five-point AA feather topology. Compatibility
 compresses custom instance attributes to float16, so high/residual pairs preserve
 subpixel motion. Real expanded bounds drive culling. Clearing an inactive scan
 removes its commands; destroying its owner releases the RID. Wider/nonstandard
-arcs use the native fallback. These resources introduce no scene children.
+arcs use the native fallback. Scan arcs introduce no scene children.
 
 Tick resolution, changed age/linger, feature changes and camera scale invalidate
 meteor geometry. Intervening render frames reuse it. The native meteor parent

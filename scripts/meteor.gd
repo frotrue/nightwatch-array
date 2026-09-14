@@ -5,7 +5,8 @@ var graded_fan_indices: Dictionary = {}
 
 const UITheme = preload("res://scripts/ui_theme.gd")
 const TriangleBatch = preload("res://scripts/meteor_triangle_batch.gd")
-const PlanetSurface = preload("res://scripts/planet_surface.gd")
+const PlanetSurfaceScene = preload("res://scenes/planet_surface.tscn")
+const AsteroidSurfaceMaterial = preload("res://resources/asteroid_surface.tres")
 const GravityCapture = preload("res://scripts/gravity_capture.gd")
 const BLACK_HOLE_PULL_RADIUS := 240.0
 const StellarVisual = preload("res://scripts/stellar_visual.gd")
@@ -110,7 +111,7 @@ var observation_view: Camera2D
 var observation_visual_scale: float = 1.0
 var triangle_batch := TriangleBatch.new()
 var render_layer: Node2D
-var planet_surface: RefCounted
+var planet_surface: Node2D
 var scan_arcs: RefCounted
 var drawn_age := -1.0
 var drawn_linger := -1.0
@@ -190,6 +191,11 @@ func _ready() -> void:
 		SHARED_ADDITIVE_MATERIAL.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
 	# Solid surfaces must occlude background stars instead of adding their light.
 	material = null if is_solid_body() else SHARED_ADDITIVE_MATERIAL
+	if type_id in ["variable_star", "binary_star"]:
+		material = AsteroidSurfaceMaterial.duplicate()
+	if type_id == "galaxy":
+		planet_surface = PlanetSurfaceScene.instantiate()
+		add_child(planet_surface)
 	if type_id == "stellar":
 		stellar_surface = StellarSurfaceScene.instantiate()
 		add_child(stellar_surface)
@@ -574,8 +580,6 @@ func _draw() -> void:
 	if is_solid_body():
 		var body_visibility := get_burn_visibility() if alive else clampf(linger_time / maxf(linger_duration, 0.001), 0.0, 1.0)
 		_draw_type_silhouette(body_radius * visual_scale * _head_scale(), body_visibility, visual_scale)
-		if type_id == "galaxy" and observed_successfully and not alive:
-			_draw_planet_completion(body_radius * visual_scale * _head_scale(), body_visibility)
 		return
 	var burn_visibility := get_burn_visibility()
 	var burn_tail_scale := get_burn_tail_scale()
@@ -1191,7 +1195,17 @@ func _draw_irregular_debris(radius: float, visibility: float, count: int) -> voi
 # Code-drawn sky art is an intentional authoring exception. A shared faceted
 # body makes the two asteroid materials readable without new overlay markers.
 func _draw_asteroid_head(radius: float, visibility: float, icy: bool) -> void:
-	var rotation_phase := age * (0.065 if icy else 0.045) + wobble_phase
+	var visual_age := age * clampf(completion_motion_scale, 0.0, 1.0)
+	var rotation_phase := visual_age * (0.11 if icy else 0.085) + wobble_phase
+	rotation_phase += sin(visual_age * 0.37 + wobble_phase) * 0.055
+	material.set_shader_parameter("radius", radius)
+	material.set_shader_parameter("rotation_phase", rotation_phase)
+	material.set_shader_parameter("age", visual_age)
+	material.set_shader_parameter("phase", wobble_phase)
+	material.set_shader_parameter("charge", observation_progress)
+	material.set_shader_parameter("icy", 1.0 if icy else 0.0)
+	material.set_shader_parameter("flashes", 1.0 if completion_glint_enabled else 0.0)
+	material.set_shader_parameter("completion", 1.0 - visibility if observed_successfully and not alive and completion_motion_scale > 0.0 else 0.0)
 	var points := PackedVector2Array()
 	var count := 9 if icy else 13
 	for index in range(count):
@@ -1206,10 +1220,10 @@ func _draw_asteroid_head(radius: float, visibility: float, icy: bool) -> void:
 	for index in range(count):
 		var next := (index + 1) % count
 		var midpoint := (points[index] + points[next]) * 0.5
-		var light := clampf(0.42 - midpoint.normalized().dot(Vector2(0.6, 0.8)) * 0.25, 0.13, 0.75)
+		var light := clampf(0.53 - midpoint.normalized().dot(Vector2(0.6, 0.8)) * 0.31, 0.18, 0.88)
 		var face_color := primary_color.darkened(1.0 - light)
 		if icy and index % 3 == 0:
-			face_color = primary_color.lerp(Color.WHITE, 0.23)
+			face_color = primary_color.lerp(Color.WHITE, 0.16)
 		draw_colored_polygon(PackedVector2Array([core, points[index], points[next]]), Color(face_color, visibility))
 	var outline := points.duplicate()
 	outline.append(points[0])
@@ -1219,13 +1233,20 @@ func _draw_asteroid_head(radius: float, visibility: float, icy: bool) -> void:
 			Vector2(-0.62, -0.32), Vector2(-0.23, -0.12), Vector2(-0.09, 0.16),
 			Vector2(0.20, 0.32), Vector2(0.38, 0.63)])
 		for index in range(crack.size()): crack[index] = (crack[index] * radius).rotated(rotation_phase)
-		draw_polyline(crack, Color("d9f6ff", visibility * 0.85), maxf(0.8, radius * 0.025), true)
+		draw_polyline(crack, Color("417f99", visibility * 0.75), maxf(1.6, radius * 0.07), true)
+		draw_polyline(crack, Color("d9f6ff", visibility * (0.55 + observation_progress * 0.35)), maxf(0.8, radius * 0.025), true)
 		draw_line(crack[2], Vector2(0.50, -0.16).rotated(rotation_phase) * radius, Color(glow_color, visibility * 0.7), maxf(0.7, radius * 0.02), true)
 	else:
 		for crater in [Vector3(-0.32, -0.19, 0.16), Vector3(0.30, 0.10, 0.21), Vector3(-0.13, 0.40, 0.10)]:
 			var centre := Vector2(crater.x, crater.y).rotated(rotation_phase) * radius
-			draw_circle(centre, radius * crater.z, Color("292724", visibility), true, -1.0, true)
-			draw_arc(centre, radius * crater.z, 0.3, 2.8, 14, Color(primary_color, visibility * 0.48), 0.8, true)
+			draw_circle(centre, radius * crater.z * 1.15, Color(primary_color.darkened(0.43), visibility), true, -1.0, true)
+			draw_circle(centre + Vector2(0.02, 0.02) * radius, radius * crater.z, Color("35302a", visibility), true, -1.0, true)
+			draw_circle(centre + Vector2(0.025, 0.025) * radius, radius * crater.z * 0.66, Color("292623", visibility), true, -1.0, true)
+			draw_arc(centre, radius * crater.z * 1.06, PI * 0.95, PI * 1.75, 16, Color(primary_color, visibility * (0.54 + observation_progress * 0.18)), maxf(0.8, radius * 0.028), true)
+		for index in 7:
+			var angle := float(index) * 2.4 + wobble_phase
+			var pit := Vector2.from_angle(angle) * radius * (0.42 + 0.17 * sin(index * 3.7))
+			draw_circle(pit.rotated(rotation_phase), radius * (0.024 + 0.012 * sin(index * 2.1)), Color("39352f", visibility * 0.7), true, -1.0, true)
 
 
 func _draw_asteroid_completion(points: PackedVector2Array, radius: float, visibility: float, icy: bool, rotation_phase: float) -> void:
@@ -1256,18 +1277,17 @@ func _draw_asteroid_completion(points: PackedVector2Array, radius: float, visibi
 		draw_colored_polygon(face, Color(tint, visibility))
 		face.append(face[0])
 		draw_polyline(face, Color(glow_color if icy else primary_color, visibility * (0.45 if icy else 0.25)), 0.8, true)
-
-
-func _draw_planet_completion(radius: float, visibility: float) -> void:
-	if completion_motion_scale <= 0.0 or not completion_glint_enabled: return
-	# Chords stay inside the sphere: no expanding ring or screen-wide flash.
-	var progress := 1.0 - visibility
-	var sweep := lerpf(-radius, radius, progress)
-	var alpha := sin(progress * PI) * visibility * 0.38 * completion_motion_scale
-	for band in range(-2, 3):
-		var x := clampf(sweep + float(band) * radius * 0.045, -radius, radius)
-		var half_height := sqrt(maxf(0.0, radius * radius - x * x))
-		draw_line(Vector2(x, -half_height), Vector2(x, half_height), Color(glow_color, alpha / (1.0 + absf(float(band)))), maxf(0.8, radius * 0.045), true)
+	# Local dust/frost accents share the existing linger and never spawn targets.
+	for index in 12:
+		var angle := float(index) * 2.399 + wobble_phase
+		var outward := Vector2.from_angle(angle)
+		var distance := radius * (0.62 + release * (1.35 if icy else 0.90)) * completion_motion_scale
+		var point := outward * distance + _safe_travel_direction() * radius * release * 0.18
+		var opacity := sin(elapsed * PI) * visibility * (0.65 if icy else 0.48)
+		var tint := primary_color
+		if icy and completion_glint_enabled: tint = tint.lerp(Color.WHITE, 0.5)
+		var speck := maxf(0.7, radius * (0.018 + 0.009 * sin(index * 3.1)))
+		draw_circle(point, speck, Color(tint, opacity), true, -1.0, true)
 
 
 func _draw_black_hole_head(radius: float, visibility: float) -> void:
@@ -1292,12 +1312,7 @@ func _draw_black_hole_head(radius: float, visibility: float) -> void:
 
 
 func _draw_planet_head(radius: float, visibility: float) -> void:
-	# Latitude strips follow a lit sphere. No rings, orbit lines or star-shaped core.
-	draw_circle(Vector2.ZERO, radius * 1.04, Color(glow_color, visibility * 0.09), true, -1.0, true)
-	if planet_surface == null:
-		planet_surface = PlanetSurface.new()
-	planet_surface.draw(self, radius, primary_color, glow_color, visibility)
-	draw_arc(Vector2.ZERO, radius, PI * 0.8, PI * 1.7, 48, Color(glow_color, visibility * 0.45), 0.9, true)
+	planet_surface.present(self, radius, visibility)
 
 
 func _ellipse_points(
