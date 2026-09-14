@@ -137,3 +137,17 @@ try {
 Its manifest declares `driver: Dummy` and `hardware_output: false`. The WAV is
 listenable evidence, not proof of hardware output. The isolated automatic pulse
 retains its intentional 160ms aggregation delay; manual success stays immediate.
+
+## First-module guide (2026-09-14)
+
+Run `tests/module_tutorial_test.gd -- --capture` with the Windows/OpenGL flags above.
+It uses isolated fixture settings and an in-memory slot recorder, never player files.
+The eight `build/module_intro_{open,draw,result,equip}_{en,ko}.png` frames exercise
+real pointer/keyboard actions. Reviewed at 1152×648: card copy fits both languages,
+targets remain unobstructed, the result effect stays readable, and the equip slot
+has no conflicting inventory tooltip. The same run passes transaction rollback,
+save resume, settings escape, reduced-motion and completion checks.
+
+The guide is authored in `scenes/ui/module_tutorial.tscn`; spotlight rectangles
+follow the live controls. It covers first draw/equip usability, not whether players
+understand every module's strategic value after returning to observation.

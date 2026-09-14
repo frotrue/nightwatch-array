@@ -141,6 +141,7 @@ func _run() -> void:
 	var game = packed.instantiate()
 	game.startup_slot_prompt_enabled = false
 	game.get_node("Tutorial").auto_start_enabled = false
+	game.get_node("ModuleTutorial").enabled = false
 	root.add_child(game)
 	await process_frame
 	await process_frame
@@ -1990,6 +1991,7 @@ func _run() -> void:
 	var open_night_game = packed.instantiate()
 	open_night_game.startup_slot_prompt_enabled = false
 	open_night_game.get_node("Tutorial").auto_start_enabled = false
+	open_night_game.get_node("ModuleTutorial").enabled = false
 	root.add_child(open_night_game)
 	await process_frame
 	await process_frame
@@ -2604,6 +2606,7 @@ func _run_feedback_regressions(packed: PackedScene, global_value_ids: Array) -> 
 	var feedback_game = packed.instantiate()
 	feedback_game.startup_slot_prompt_enabled = false
 	feedback_game.get_node("Tutorial").auto_start_enabled = false
+	feedback_game.get_node("ModuleTutorial").enabled = false
 	root.add_child(feedback_game)
 	await process_frame
 	await process_frame

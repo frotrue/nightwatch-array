@@ -74,6 +74,7 @@ static func configure_before_ready(game: Node) -> void:
 	assert(not game.is_inside_tree(), "Diagnostic services must be replaced before _ready")
 	game.startup_slot_prompt_enabled = false
 	game.get_node("Tutorial").auto_start_enabled = false
+	game.get_node("ModuleTutorial").enabled = false
 	replace_child(game, "SaveGameController", NoSaveSlots.new())
 	replace_child(game, "GameSettings", NoSettings.new())
 

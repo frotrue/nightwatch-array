@@ -38,8 +38,23 @@ func _on_progression_changed() -> void:
 func _sync_protocol() -> void:
 	if modules_unlocked() and "ext_protocol" not in state.research_ids:
 		state.research_ids.append("ext_protocol")
+	if modules_unlocked():
+		_sync_module_intro()
 	if director != null:
 		game.spawner.extension_reserved_slots = 3 if not director.available_kinds().is_empty() else 0
+
+func _sync_module_intro() -> void:
+	if state.module_intro_stage == State.Intro.UNCLAIMED:
+		# Existing players who have already used modules need no forced introduction.
+		if state.draw_serial > 0 or not modules.purchased.is_empty():
+			state.module_intro_stage = State.Intro.COMPLETE
+		else:
+			state.award_samples(Data.DRAW_COST)
+			state.module_intro_stage = State.Intro.DRAW
+	elif state.module_intro_stage == State.Intro.EQUIP:
+		# A damaged/retired saved result must never trap the player or grant again.
+		if modules.owned_count(state.module_intro_id) == 0 or state.module_intro_id in modules.slots or modules.first_empty_slot() < 0:
+			state.module_intro_stage = State.Intro.COMPLETE
 
 func available() -> bool:
 	return game != null and game.progression.galaxy_unlocked()
@@ -86,6 +101,8 @@ func equip(id: String, slot: int = -1) -> bool:
 	var before := get_save_data()
 	if not modules.equip(id, slot):
 		return false
+	if state.module_intro_stage == State.Intro.EQUIP and id == state.module_intro_id:
+		state.module_intro_stage = State.Intro.COMPLETE
 	game.observer.reset()
 	if not _commit_transaction(before, game.progression.observation_data):
 		return false

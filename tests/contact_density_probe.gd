@@ -193,6 +193,7 @@ func _run_row(row: Dictionary, mode: String) -> void:
 	game = packed.instantiate()
 	game.startup_slot_prompt_enabled = false
 	game.get_node("Tutorial").auto_start_enabled = false
+	game.get_node("ModuleTutorial").enabled = false
 	root.add_child(game)
 	await process_frame
 	await process_frame

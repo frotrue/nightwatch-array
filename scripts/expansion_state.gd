@@ -9,6 +9,10 @@ var samples_spent := 0
 var acquisition_seed := 1
 var draw_serial := 0
 var last_draw := ""
+# Per-save onboarding: unclaimed, funded first draw, drawn / awaiting equip, done.
+enum Intro { UNCLAIMED, DRAW, EQUIP, COMPLETE }
+var module_intro_stage := Intro.UNCLAIMED
+var module_intro_id := ""
 const ADDITIVE_EFFECTS := ["tracking_grace", "survey_count", "combo_window", "combo_speed", "combo_radius", "combo_cap", "echo_probability", "echo_count", "forecast_lead", "dish_count", "gravity_slow_seconds"]
 var _cached_research_ids: Array[String] = []
 var _cached_effects: Dictionary = {}
@@ -63,10 +67,13 @@ func draw_module() -> String:
 	samples_spent += draw_cost()
 	draw_serial += 1
 	last_draw = id
+	if module_intro_stage == Intro.DRAW:
+		module_intro_stage = Intro.EQUIP
+		module_intro_id = id
 	return id
 
 func get_save_data() -> Dictionary:
-	return {"retired_research_ids": retired_research_ids.duplicate(), "research_ids": research_ids.duplicate(), "samples": samples, "samples_earned": samples_earned, "samples_spent": samples_spent, "acquisition_seed": acquisition_seed, "draw_serial": draw_serial, "last_draw": last_draw, "catalogue_version": Data.CATALOGUE_VERSION}
+	return {"retired_research_ids": retired_research_ids.duplicate(), "research_ids": research_ids.duplicate(), "samples": samples, "samples_earned": samples_earned, "samples_spent": samples_spent, "acquisition_seed": acquisition_seed, "draw_serial": draw_serial, "last_draw": last_draw, "module_intro_stage": module_intro_stage, "module_intro_id": module_intro_id, "catalogue_version": Data.CATALOGUE_VERSION}
 
 func load_save_data(data: Dictionary, legacy: bool = false) -> void:
 	research_ids.clear()
@@ -98,3 +105,5 @@ func load_save_data(data: Dictionary, legacy: bool = false) -> void:
 	acquisition_seed = maxi(1, Data.integer(data.get("acquisition_seed", acquisition_seed), 2147483646, acquisition_seed))
 	draw_serial = Data.integer(data.get("draw_serial", data.get("analysis_serial", 0)), 100000000)
 	last_draw = data.get("last_draw", "") if data.get("last_draw", "") is String and data.get("last_draw", "") in Data.SAMPLE_MODULES else ""
+	module_intro_stage = Data.integer(data.get("module_intro_stage", Intro.UNCLAIMED), Intro.COMPLETE)
+	module_intro_id = data.get("module_intro_id", "") if data.get("module_intro_id", "") is String and data.get("module_intro_id", "") in Data.SAMPLE_MODULES else ""

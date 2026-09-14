@@ -43,6 +43,7 @@ All script names below are under `scripts/`.
 | Outer figure geometry and stable research/star mapping | `constellation_extension_data.gd` |
 | Module definitions, ownership, five slots, capacity and effect cache | `observation_modules.gd` |
 | Chart-owned loadout/draw modal, reveal animation and shared glyphs | `module_popup.gd`, `module_draw_window.gd`, `module_visual.gd` |
+| Per-save first-module guide, target input gating and settings access | `module_tutorial.gd`, `scenes/ui/module_tutorial.tscn`; durable stage/result in `expansion_state.gd` |
 | Palette, fonts, spec coordinates and integer formatting | `ui_theme.gd` |
 | Onboarding steps and tutorial modal focus | `tutorial_controller.gd` |
 | Slot files; persisted settings | `save_game_controller.gd`; `game_settings.gd` |

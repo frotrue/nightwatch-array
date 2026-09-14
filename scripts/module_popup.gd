@@ -29,6 +29,7 @@ var previous_pause := false
 var previous_mouse := Input.MOUSE_MODE_VISIBLE
 var previous_focus: WeakRef
 var previous_chart_visible := true
+var intro_completed_notice := false
 var overlay: Control
 var surface: Control
 var launcher: Button
@@ -203,6 +204,7 @@ func close() -> void:
 	draw_window.leave()
 	finish_animations()
 	overlay.hide()
+	intro_completed_notice = false
 	game.hud.set_external_readouts_covered(false)
 	set_process(false)
 	get_tree().paused = previous_pause
@@ -215,6 +217,8 @@ func close() -> void:
 		get_viewport().gui_release_focus()
 
 func _input(event: InputEvent) -> void:
+	if game != null and game.module_tutorial.active:
+		return
 	if is_open() and (event.is_action_pressed("nw_menu_back", false, true) or event.is_action_pressed("nw_chart", false, true)):
 		close()
 		get_viewport().set_input_as_handled()
@@ -239,6 +243,9 @@ func equip_from_inventory(id: String) -> void:
 	game.deep_sky.equip(id)
 
 func remove_module(index: int) -> void:
+	if game.module_tutorial.is_equip_target(index):
+		game.deep_sky.equip(game.deep_sky.state.module_intro_id, index)
+		return
 	if index < 0 or index >= model().unlocked_slots or model().slots[index].is_empty():
 		return
 	game.deep_sky.equip("", index)
@@ -271,8 +278,9 @@ func refresh(animate: bool = true) -> void:
 	for index in range(Modules.MAX_SLOTS):
 		var id: String = model().slots[index]
 		var locked: bool = index >= model().unlocked_slots
-		slots[index].disabled = locked or id.is_empty()
-		slots[index].focus_mode = Control.FOCUS_NONE if locked or id.is_empty() else Control.FOCUS_ALL
+		var guided_slot: bool = game.module_tutorial.is_equip_target(index)
+		slots[index].disabled = (locked or id.is_empty()) and not guided_slot
+		slots[index].focus_mode = Control.FOCUS_ALL if not slots[index].disabled else Control.FOCUS_NONE
 		slots[index].update_module(id, animate)
 		slot_captions[index].text = tr("RING_LOCKED") if locked else (tr("RING_EMPTY") if id.is_empty() else tr("MODULE_%s_SHORT" % id.to_upper()))
 		slot_captions[index].add_theme_color_override("font_color", UITheme.INK_LOW if locked else UITheme.INK_HIGH)
@@ -302,14 +310,16 @@ func refresh(animate: bool = true) -> void:
 	capacity_label.visible = installed_ids.is_empty()
 	instructions.text = tr("EXT_SAMPLES_COUNT") % game.deep_sky.samples
 	draw_button.text = tr("DRAW_OPEN")
-	hint.text = tr("AUTOSAVE_FAILURE") % game.active_save_slot if game.hud.autosave_failed else ""
-	hint.visible = game.hud.autosave_failed
+	hint.text = tr("AUTOSAVE_FAILURE") % game.active_save_slot if game.hud.autosave_failed else (tr("MODULE_INTRO_DONE") if intro_completed_notice else "")
+	hint.visible = not hint.text.is_empty()
 	if inventory_scroll != null:
 		inventory_scroll.queue_redraw()
 	surface.queue_redraw()
 	_update_tooltip()
 
 func show_module_tooltip(id: String, from_focus: bool = false) -> void:
+	if game.module_tutorial.active:
+		return
 	if not owned_buttons.has(id) or id not in model().purchased or not owned_buttons[id].visible:
 		hide_tooltip()
 		return
@@ -327,6 +337,8 @@ func _on_tile_focus(id: String) -> void:
 		inventory_scroll.ensure_control_visible(tile)
 
 func show_slot_tooltip(index: int, from_focus: bool = false) -> void:
+	if game.module_tutorial.active:
+		return
 	hover_kind = "slot"
 	hover_slot = index
 	hover_id = model().slots[index]

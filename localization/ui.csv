@@ -755,3 +755,16 @@ PERF_TICK,%.0f / 60 ticks/s · physics %.1f ms,%.0f / 60틱 · 처리 %.1f ms
 PERF_OBJECTS,%d targets · %d draws,천체 %d개 · 그리기 %d회
 PERF_SCOPE,Game process · — unavailable,게임 사용량 기준 · — 측정 불가
 PERF_UNAVAILABLE,—,—
+MODULE_INTRO_STEP,FIRST MODULE  /  %d OF 3,첫 모듈  /  %d / 3
+MODULE_INTRO_OPEN_TITLE,Your first observation module,첫 관측 모듈을 만나보세요
+MODULE_INTRO_OPEN_BODY,Modules add new ways to observe. You received 8 samples for your first draw. Open the highlighted module draw.,모듈은 새로운 관측 방식을 더해 줍니다. 첫 뽑기용 표본 8개를 받았습니다. 표시된 모듈 뽑기를 눌러 보세요.
+MODULE_INTRO_DRAW_TITLE,Draw your first module,첫 모듈을 뽑아 보세요
+MODULE_INTRO_DRAW_BODY,Use samples to draw one random module. Press the highlighted draw button.,표본을 사용하면 무작위 모듈 하나를 얻습니다. 표시된 뽑기 버튼을 눌러 보세요.
+MODULE_INTRO_REVEAL_TITLE,Reading the signal,모듈 신호를 확인하고 있어요
+MODULE_INTRO_REVEAL_BODY,Your module has been saved. Watch the reveal or use the highlighted skip button.,뽑은 모듈은 이미 저장되었습니다. 결과를 기다리거나 표시된 건너뛰기를 눌러 보세요.
+MODULE_INTRO_RESULT_TITLE,Check its effect,어떤 효과인지 살펴보세요
+MODULE_INTRO_RESULT_BODY,"This is your new module. Read its effect, then open the loadout to install it.","새로 얻은 모듈입니다. 효과를 읽어 본 뒤, 표시된 편성 버튼을 눌러 장착하러 가세요."
+MODULE_INTRO_EQUIP_TITLE,Install it in the empty slot,빈 자리에 장착해 보세요
+MODULE_INTRO_EQUIP_BODY,"Click the highlighted empty slot to install %s. Its effect applies while equipped. After this, you can change your loadout freely.",표시된 빈 자리를 누르면 %s 모듈이 장착됩니다. 장착한 동안 효과가 적용됩니다. 이후에는 자유롭게 편성을 바꿀 수 있습니다.
+MODULE_INTRO_HINT,Click the highlighted control or press Enter / Space.  %s: settings,표시된 곳 클릭 또는 Enter / Space  ·  %s: 설정
+MODULE_INTRO_DONE,Module installed. Your loadout is now yours to explore.,모듈 장착 완료. 이제 자유롭게 편성해 보세요.
