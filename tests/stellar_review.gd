@@ -45,13 +45,16 @@ func _run() -> void:
 	game.observer.previous_cursor_position = centre
 	game.observer.native_cursor_visible = false
 	_freeze(game)
+	star.stellar_surface.heat_enabled = false
+	await _capture(game, "13_body_size_comparison")
+	star.stellar_surface.heat_enabled = true
 	await _capture(game, "01_star")
 	star.age = 11.0
 	await _capture(game, "02_star_evolved")
 	if Image.load_from_file(output.path_join("01_star.png")).get_data() == Image.load_from_file(output.path_join("02_star_evolved.png")).get_data():
 		failures.append("stellar surface did not evolve with simulation age")
 	star.age = 3.0
-	star.scale = Vector2.ONE * 3.0
+	star.scale = Vector2.ONE * 2.0
 	for target in game.meteor_layer.get_children():
 		if target != star: target.hide()
 	await _capture(game, "03_star_detail")
@@ -117,14 +120,15 @@ func _review_animation(game: Node, star: Node2D, centre: Vector2, unit: float) -
 	pattern.free()
 	# This target is spawned after the star, as most real passing meteors are.
 	# Heat must reach its rendered trail without moving its simulation position.
-	var nearby := _nearby_meteor(game, centre, unit)
+	var nearby := _nearby_meteor(game, star, centre, unit)
 	var physical_position: Vector2 = nearby.position
+	var sample_rect := Rect2i(Vector2i(game.observation_view.world_to_screen(nearby.position)) - Vector2i(55, 40), Vector2i(100, 80))
 	star.stellar_surface.heat_enabled = false
 	await _capture(game, "11_nearby_meteor_heat_off")
-	var original_centre := _green_centre(root.get_texture().get_image())
+	var original_centre := _green_centre(root.get_texture().get_image(), sample_rect)
 	star.stellar_surface.heat_enabled = true
 	await _capture(game, "12_nearby_meteor_heat_on")
-	var warped_centre := _green_centre(root.get_texture().get_image())
+	var warped_centre := _green_centre(root.get_texture().get_image(), sample_rect)
 	if not original_centre.is_finite() or not warped_centre.is_finite() or original_centre.distance_to(warped_centre) < 1.0:
 		failures.append("heat did not refract the later-spawned meteor")
 	if nearby.position != physical_position: failures.append("visual heat moved the meteor's simulation position")
@@ -160,8 +164,9 @@ func _review_animation(game: Node, star: Node2D, centre: Vector2, unit: float) -
 	star.age = 3.0
 	star.observation_progress = 0.78
 
-func _nearby_meteor(game: Node, centre: Vector2, unit: float) -> Node2D:
-	var nearby = game.spawner.spawn_meteor("common", centre + Vector2(70, -18) * unit, Vector2(120, 0), 30.0)
+func _nearby_meteor(game: Node, star: Node2D, centre: Vector2, unit: float) -> Node2D:
+	var distance: float = star.get_observation_body_radius() / unit * 2.2
+	var nearby = game.spawner.spawn_meteor("common", centre + Vector2(distance, -18) * unit, Vector2(120, 0), 30.0)
 	nearby.primary_color = Color(0.08, 1.0, 0.08)
 	nearby.glow_color = nearby.primary_color
 	nearby.age = 5.0
@@ -169,11 +174,12 @@ func _nearby_meteor(game: Node, centre: Vector2, unit: float) -> Node2D:
 	nearby.set_process(false)
 	return nearby
 
-func _green_centre(frame: Image) -> Vector2:
+func _green_centre(frame: Image, region: Rect2i) -> Vector2:
 	var weighted_position := Vector2.ZERO
 	var total := 0.0
-	for y in range(235, 305):
-		for x in range(570, 665):
+	region = region.intersection(Rect2i(Vector2i.ZERO, frame.get_size()))
+	for y in range(region.position.y, region.end.y):
+		for x in range(region.position.x, region.end.x):
 			var color := frame.get_pixel(x, y)
 			var weight := maxf(0.0, color.g - maxf(color.r, color.b) * 1.6)
 			weighted_position += Vector2(x, y) * weight
@@ -183,7 +189,7 @@ func _green_centre(frame: Image) -> Vector2:
 func _capture_animation(game: Node, star: Node2D, centre: Vector2, unit: float) -> void:
 	var directory := output.path_join("animation")
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(directory))
-	var nearby := _nearby_meteor(game, centre, unit)
+	var nearby := _nearby_meteor(game, star, centre, unit)
 	game.sky_contacts.hide()
 	for frame in 150:
 		star.age = 3.0 + float(frame) / 30.0
@@ -191,7 +197,7 @@ func _capture_animation(game: Node, star: Node2D, centre: Vector2, unit: float) 
 		star.queue_redraw()
 		await process_frame
 		await RenderingServer.frame_post_draw
-		var capture := root.get_texture().get_image().get_region(Rect2i(395, 135, 310, 310))
+		var capture := root.get_texture().get_image().get_region(Rect2i(260, 0, 580, 580))
 		if capture.save_png(directory.path_join("%03d.png" % frame)) != OK: failures.append("animation frame write failed")
 	nearby.free()
 	game.sky_contacts.show()

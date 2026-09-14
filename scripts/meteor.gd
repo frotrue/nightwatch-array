@@ -1351,7 +1351,7 @@ func _head_scale() -> float:
 			return 0.50
 		"major":
 			return 0.43
-		"satellite", "variable_star", "comet", "binary_star", "galaxy", "black_hole":
+		"satellite", "variable_star", "comet", "binary_star", "galaxy", "black_hole", "stellar":
 			return 0.84
 		_:
 			return 0.72

@@ -34,4 +34,6 @@ func present(radius: float, alpha: float, age: float, phase: float, progress: fl
 	haze.material.set_shader_parameter("phase", phase)
 	haze.material.set_shader_parameter("strength", motion * alpha * tint.a)
 	haze.material.set_shader_parameter("charge", progress)
-	haze.material.set_shader_parameter("pixel_scale", clampf(radius * screen_transform.get_scale().length() / 46.0, 0.6, 2.0))
+	# Reference the full-size photosphere so enlarging the star widens the halo
+	# without doubling the previously tuned screen-space displacement.
+	haze.material.set_shader_parameter("pixel_scale", clampf(radius * screen_transform.get_scale().length() / 114.0, 0.6, 2.0))

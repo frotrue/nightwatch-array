@@ -54,6 +54,9 @@ func _test_unlock_and_save() -> void:
 	check(is_equal_approx(p.get_celestial_multiplier("galaxy", "value"), 1.0), "stellar studies do not boost planets")
 	var star = game.spawner.spawn_meteor("stellar", Vector2(500, 300), Vector2.RIGHT, 30.0)
 	check(star != null and game.spawner.spawn_meteor("stellar") == null, "one reserved star including its linger")
+	var planet = game.spawner.spawn_meteor("galaxy", Vector2(850, 300), Vector2.RIGHT, 30.0)
+	check(star.get_observation_body_radius() > planet.get_observation_body_radius(), "stellar body is visibly larger than a planet")
+	planet.free()
 	star.base_automatic_rate = 1.0
 	star.tick_observation(0.1)
 	check(is_equal_approx(star.observation_progress, 0.13), "automatic work uses stellar speed")
