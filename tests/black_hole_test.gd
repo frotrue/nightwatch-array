@@ -116,7 +116,8 @@ func _test_outer_research() -> void:
 		check(state.research_ready(id), "minimal path reaches " + id)
 		state.research_ids.append(id)
 	for kind in Policy.OUTER_UNLOCKS:
-		check(policy.probability(kind, p) > 0.0, "new research admits " + kind)
+		var unlocked: bool = Policy.OUTER_UNLOCKS[kind] in state.research_ids
+		check((policy.probability(kind, p) > 0.0) == unlocked, "only the researched celestial branch admits " + kind)
 	check(not state.research_ids.has("ext_sge_stream") and not state.research_ids.has("ext_cnc_survey"), "capstones are optional for the next figure")
 	var baseline := {}
 	for kind in ["variable_star", "binary_star", "galaxy", "black_hole"]:

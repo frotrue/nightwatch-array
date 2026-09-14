@@ -1,8 +1,8 @@
 extends RefCounted
 
 const Clock = preload("res://scripts/simulation_clock.gd")
-const ORDER := ["common", "fast", "fragment", "fireball", "satellite", "variable_star", "comet", "binary_star", "galaxy", "black_hole"]
-const LATE_TYPES := ["satellite", "variable_star", "comet", "binary_star", "galaxy", "black_hole"]
+const ORDER := ["common", "fast", "fragment", "fireball", "satellite", "variable_star", "comet", "binary_star", "galaxy", "black_hole", "stellar"]
+const LATE_TYPES := ["satellite", "variable_star", "comet", "binary_star", "galaxy", "black_hole", "stellar"]
 const BASE_PROBABILITIES := {
 	"common": 0.5 / 60.0, "fast": 0.125 / 60.0,
 	"fragment": 0.0875 / 60.0, "fireball": 0.0375 / 60.0,
@@ -10,16 +10,17 @@ const BASE_PROBABILITIES := {
 	"comet": 0.0225 / 60.0, "binary_star": 0.0175 / 60.0,
 	"galaxy": 0.01 / 60.0,
 	"black_hole": 0.008 / 60.0,
+	"stellar": 0.025 / 60.0,
 }
 const UNLOCKS := {
 	"fast": "edge_detection", "fragment": "fragment_analysis", "fireball": "rare_detection",
 	"satellite": "satellite_catalog", "comet": "comet_solutions",
 }
-const OUTER_UNLOCKS := {"variable_star": "ext_sge_cadence", "binary_star": "ext_sge_solution", "galaxy": "ext_cnc_planet", "black_hole": "ext_sgr_black_hole"}
+const OUTER_UNLOCKS := {"variable_star": "ext_sge_cadence", "binary_star": "ext_sge_solution", "galaxy": "ext_cnc_planet", "black_hole": "ext_sgr_black_hole", "stellar": "ext_sct_stellar"}
 # Emergency ceiling only. The research active-target limit gates new natural
 # arrivals, while proc children can use headroom without taking late reservations.
 const ATMOSPHERIC_SAFETY_SLOTS := 54
-const LATE_SLOTS := 7
+const LATE_SLOTS := 8
 const LATE_TYPE_SLOTS := 2
 const MAX_PENDING_PER_TYPE := 32
 const DEFER_SECONDS := 2.0

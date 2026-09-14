@@ -920,7 +920,7 @@ func _run() -> void:
 	_check(game.upgrade_tree.node_buttons["long_exposure"].visible and game.upgrade_tree.node_buttons["long_exposure"].get_meta("visual_state") == "teaser", "one upcoming system is previewed as an unresolved signal")
 	_check(opening_optics.size == game.upgrade_tree.STAR_HIT_SIZE, "research stars use compact transparent point hit targets")
 	_check(game.upgrade_tree.tooltip_panel.visible and not game.upgrade_tree.selected_node_id.is_empty(), "research chart opens with the reference-style fixed inspector selection")
-	_check(game.upgrade_tree.constellation_ledger.visible and game.upgrade_tree.constellation_ledger_counts.size() == 23, "research chart includes the original twelve and eleven outer constellation rows")
+	_check(game.upgrade_tree.constellation_ledger.visible and game.upgrade_tree.constellation_ledger_counts.size() == 24, "research chart includes the original twelve and twelve outer constellation rows")
 	_check(game.upgrade_tree.tree_canvas.find_children("*", "Label", true, false).is_empty(), "constellation chart keeps node-name text out of the central playfield")
 	game.upgrade_tree._on_node_hovered("edge_detection")
 	_check(game.upgrade_tree.tooltip_panel.visible and game.upgrade_tree.hovered_node_id == "edge_detection" and game.upgrade_tree.selected_node_id == "edge_detection", "hovering a node updates the fixed constellation inspector")

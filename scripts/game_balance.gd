@@ -876,6 +876,14 @@ static func meteor_spec(type_id: String) -> Dictionary:
 				"burn_terminal_ratio": 0.94, "burn_fade_start": 0.97, "burn_style": "planet",
 				"burnout_linger": 0.48,
 			}
+		"stellar":
+			return {
+				"name": "STAR", "speed": 30.0, "lifetime": 32.0,
+				"radius": 44.0, "trail": 0, "value": 160.0, "track_time": 4.2,
+				"color": Color("ffe0a0"), "glow": Color("ff9148"),
+				"spectral_band": "amber", "burn_terminal_ratio": 0.94,
+				"burn_fade_start": 0.96, "burn_style": "stellar", "burnout_linger": 0.4,
+			}
 		"black_hole":
 			return {
 				"name": "BLACK HOLE", "speed": 28.0, "lifetime": 32.0,

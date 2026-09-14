@@ -165,7 +165,7 @@ func _slot_count(kinds: Array) -> int:
 func _has_spawn_space(kind: String, count: int = 1, natural: bool = false) -> bool:
 	if meteor_layer == null: return false
 	if kind == "major": return _slot_count(["major"]) + count <= 1
-	if kind == "black_hole": return _slot_count(["black_hole"]) + count <= 1
+	if kind in ["black_hole", "stellar"]: return _slot_count([kind]) + count <= 1
 	if kind in SpawnPolicy.LATE_TYPES:
 		var own := _slot_count([kind])
 		if own + count > SpawnPolicy.LATE_TYPE_SLOTS: return false

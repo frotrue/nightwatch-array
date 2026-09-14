@@ -54,7 +54,7 @@ const SCENARIOS := [
 	{"id": "sky_sweep", "stage": "opening", "density": "empty_sky", "overlays": ["sweep"], "note": "Purchased Sky Sweep, 210/460 pixels of blank-sky charge; no summon roll yet.", "expected": {"meteors": 0, "installed": 1, "tracking": false, "span": 1.0}},
 	{"id": "round_summary", "stage": "intermission", "density": "empty_sky", "overlays": ["summary"], "note": "Synthetic fifth-round results through the production summary renderer.", "expected": {"meteors": 0, "installed": 0, "tracking": false, "span": 1.0}},
 	{"id": "research_chart", "stage": "constellation", "density": "81_of_95_research", "overlays": ["chart", "constellation_inspector"], "note": "Existing reference build: ten completed constellations plus three Canis nodes; canis_capacity_ii selected.", "expected": {"meteors": 0, "installed": 81, "tracking": false, "span": 1.0}},
-	{"id": "deep_sky_chart", "stage": "chart_continuation", "density": "first_branch", "overlays": ["chart", "constellation_inspector"], "note": "A completed save opens eleven outer constellations on the original chart. Fifty-five research stars share its canvas and inspector; retired nodes remain invisible.", "expected": {"meteors": 0, "installed": 95, "tracking": false, "span": 1.0}},
+	{"id": "deep_sky_chart", "stage": "chart_continuation", "density": "first_branch", "overlays": ["chart", "constellation_inspector"], "note": "A completed save opens twelve outer constellations on the original chart. Sixty research stars share its canvas and inspector; retired nodes remain invisible.", "expected": {"meteors": 0, "installed": 95, "tracking": false, "span": 1.0}},
 	{"id": "palette_active", "stage": "synthetic_palette", "density": "108_visuals_12_branches", "overlays": ["palette_diagnostic"], "note": "Synthetic12-branch input matrix using real StarNodeVisual draws: star/cluster/galaxy in purchased, affordable and unaffordable available states. Not a gameplay chart.", "expected": {"meteors": 0, "installed": 0, "tracking": false, "span": 1.0}},
 	{"id": "palette_inactive", "stage": "synthetic_palette", "density": "108_visuals_12_branches", "overlays": ["palette_diagnostic"], "note": "Synthetic12-branch input matrix using real StarNodeVisual draws: star/cluster/galaxy in locked, hidden and teaser states. Inactive silhouettes are intentionally shown as test specimens.", "expected": {"meteors": 0, "installed": 0, "tracking": false, "span": 1.0}},
 ]
@@ -234,7 +234,7 @@ func inspect(game: Node, id: String) -> Dictionary:
 	if id == "deep_sky_chart":
 		var chart: Node = game.upgrade_tree
 		_check(state.chart_mode == chart.GALACTIC_MODE_FINAL and state.chart_selection == "ext_trace_study" and chart.content_clip.is_visible_in_tree(), id, "extended constellation chart not active")
-		_check(chart.chart_constellations.size() == 23 and chart.extension_definitions.size() == 55, id, "eleven outer figures and fifty-five research stars must be present")
+		_check(chart.chart_constellations.size() == 24 and chart.extension_definitions.size() == 60, id, "twelve outer figures and sixty research stars must be present")
 		for research in chart.extension_definitions:
 			_check(chart.node_buttons[research.id].get_parent() == chart.tree_canvas, id, "extension research must share the original star canvas")
 	return state

@@ -603,9 +603,29 @@ func _on_meteor_spawned(meteor) -> void:
 		effects.spawn_incoming(meteor.global_position, meteor.velocity, marker_ink)
 
 
+func _complete_supernova(source) -> void:
+	var radius: float = source.SUPERNOVA_RADIUS * observation_view.screen_length_to_world(1.0) * progression.extension_effect("supernova_radius")
+	source.supernova_radius = radius
+	# Freeze membership before any completion callback can create new fragments.
+	# Only live, on-screen bodies count; forecasts are never completed early.
+	var candidates: Array = meteor_layer.get_children() + deep_sky.director.targets()
+	var targets: Array = []
+	var bounds: Rect2 = observation_view.atmospheric_rect()
+	for target in candidates:
+		if not target.alive or target.is_queued_for_deletion() or target.type_id in ["stellar", "black_hole"]: continue
+		if target.has_method("can_be_tracked") and not target.can_be_tracked(): continue
+		if not bounds.has_point(target.global_position): continue
+		if target.global_position.distance_squared_to(source.global_position) <= radius * radius:
+			targets.append(target)
+	for target in targets:
+		target.complete_from_supernova()
+
+
 func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: bool, quality_grade: String) -> void:
 	meteor.completion_motion_scale = effects.motion_intensity
 	meteor.completion_glint_enabled = effects.screen_flashes_enabled
+	if meteor.type_id == "stellar" and observation_phase_active:
+		_complete_supernova(meteor)
 	if meteor.type_id == "black_hole" and observation_phase_active:
 		var world_scale: float = observation_view.screen_length_to_world(1.0)
 		var radius: float = meteor.BLACK_HOLE_PULL_RADIUS * world_scale * progression.extension_effect("gravity_radius")

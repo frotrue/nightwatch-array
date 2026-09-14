@@ -10,7 +10,7 @@ no GUT/gdUnit installation is needed.
 .\tools\validate.ps1 -GodotPath $godot -Build
 ```
 
-This runs the 28 fast gates below, then exports Windows. Add `-FullEconomy` for
+This runs the 29 fast gates below, then exports Windows. Add `-FullEconomy` for
 changes to progression, rewards, spawning or target logic. Omit `-Build` to test only.
 The economy run inherits its seed/strategy environment; it does not force three strategies.
 
@@ -257,3 +257,7 @@ the ordinary headless gate only requires CPU telemetry. The windowed run capture
 Counter definitions: [GetProcessTimes](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getprocesstimes),
 [PDH formatted arrays](https://learn.microsoft.com/en-us/windows/win32/api/pdh/nf-pdh-pdhgetformattedcounterarrayw),
 and [Godot non-blocking pipes](https://docs.godotengine.org/en/stable/classes/class_os.html#class-os-method-execute-with-pipe).
+
+`stellar_test.gd` checks Scutum unlock and research, star spawn reservations, scaled supernova
+completion boundaries, exclusions, rewards/samples, fragment isolation and save/RNG migration.
+`stellar_review.gd` captures bilingual Scutum and the actual star/supernova on Vulkan and OpenGL.

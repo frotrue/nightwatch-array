@@ -769,3 +769,4 @@ MODULE_INTRO_EQUIP_BODY,Click %s in storage to equip it in the first empty slot.
 MODULE_INTRO_HINT,Click the highlighted control or press Enter / Space.  %s: settings,표시된 곳 클릭 또는 Enter / Space  ·  %s: 설정
 MODULE_INTRO_DONE,Module installed. Your loadout is now yours to explore.,모듈 장착 완료. 이제 자유롭게 편성해 보세요.
 MODULE_INTRO_PREVIEW_HINT,DEBUG PREVIEW · Changes are not saved. Esc / Ctrl+Shift+T: exit,디버그 미리보기 · 변경 사항은 저장되지 않습니다. Esc / Ctrl+Shift+T: 종료
+METEOR_STELLAR,STAR,항성

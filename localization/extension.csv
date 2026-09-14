@@ -178,3 +178,13 @@ EXT_RESEARCH_SGR_WIDE_NAME,Wide Gravity,광역 중력
 EXT_RESEARCH_SGR_WIDE_DESC,Black hole gathering radius +20%.,블랙홀이 천체를 당기는 범위 +20%.
 EXT_RESEARCH_SGR_LINGER_NAME,Lasting Gravity,오래 머무는 중력
 EXT_RESEARCH_SGR_LINGER_DESC,Gathered bodies remain slowed for 1 extra second.,모인 천체의 감속 시간 +1초.
+EXT_RESEARCH_SCT_STELLAR_NAME,Stellar Observation,항성 관측
+EXT_RESEARCH_SCT_STELLAR_DESC,"Unlocks stars. Completing one triggers a supernova that instantly observes nearby bodies, including special meteors. Excludes stars and black holes.",항성이 나타납니다. 관측 완료 시 초신성이 주변 천체·특수 유성을 즉시 관측합니다. 다른 항성·블랙홀 제외.
+EXT_RESEARCH_SCT_REACH_NAME,Expanding Shockwave,충격파 확장
+EXT_RESEARCH_SCT_REACH_DESC,Supernova radius: 180 → 240.,초신성 반경: 180 → 240.
+EXT_RESEARCH_SCT_TRACKING_NAME,Stellar Tracking,항성 추적
+EXT_RESEARCH_SCT_TRACKING_DESC,Manual and automatic star observation speed +30%.,항성 수동·자동 관측 속도 +30%.
+EXT_RESEARCH_SCT_ARRIVALS_NAME,Stellar Survey,항성 탐색
+EXT_RESEARCH_SCT_ARRIVALS_DESC,Star arrival chance +35%.,항성 출현 확률 +35%.
+EXT_RESEARCH_SCT_SUPERNOVA_NAME,Wide Supernova,광역 초신성
+EXT_RESEARCH_SCT_SUPERNOVA_DESC,Supernova radius: 240 → 300. Star data +25%.,초신성 반경: 240 → 300. 항성 데이터 +25%.

@@ -8,6 +8,9 @@ const TriangleBatch = preload("res://scripts/meteor_triangle_batch.gd")
 const PlanetSurface = preload("res://scripts/planet_surface.gd")
 const GravityCapture = preload("res://scripts/gravity_capture.gd")
 const BLACK_HOLE_PULL_RADIUS := 240.0
+const StellarVisual = preload("res://scripts/stellar_visual.gd")
+const SUPERNOVA_RADIUS := 180.0
+var supernova_radius := 0.0
 var gravity_capture: RefCounted
 var optical_lens: Node2D
 const ScanArcs = preload("res://scripts/scan_arc_instances.gd")
@@ -432,7 +435,7 @@ func get_tracking_radius(base_radius: float) -> float:
 
 func is_solid_body() -> bool:
 	# Stable save IDs; the former star/galaxy artwork is no longer rendered.
-	return type_id in ["variable_star", "binary_star", "galaxy", "black_hole"]
+	return type_id in ["variable_star", "binary_star", "galaxy", "black_hole", "stellar"]
 
 
 func get_observation_body_radius() -> float:
@@ -526,7 +529,14 @@ func is_major() -> bool:
 	return type_id == "major"
 
 
-func _finish_observation(auto_rate: float) -> void:
+func complete_from_supernova() -> void:
+	if not alive or is_queued_for_deletion() or type_id in ["stellar", "black_hole"]: return
+	automatic_contribution += maxf(0.0, 1.0 - observation_progress)
+	observation_progress = 1.0
+	_finish_observation(1.0, true)
+
+
+func _finish_observation(auto_rate: float, force_automatic: bool = false) -> void:
 	if not alive:
 		return
 	if type_id == "fragment" and not split_done:
@@ -536,13 +546,14 @@ func _finish_observation(auto_rate: float) -> void:
 	observed_successfully = true
 	linger_duration = 0.62 if type_id != "major" else 1.1
 	if type_id == "black_hole": linger_duration = 1.05
+	if type_id == "stellar": linger_duration = 0.9
 	linger_time = linger_duration
-	var was_manual := manual_touched
+	var was_manual := manual_touched and not force_automatic
 	var multiplier := get_predicted_multiplier()
 	if not was_manual and auto_rate > 0.0:
 		multiplier = 0.68
 	var reward := maxf(1.0, round(base_value * multiplier))
-	observed.emit(self, reward, multiplier, was_manual, get_quality_grade())
+	observed.emit(self, reward, multiplier, was_manual, "AUTOMATIC" if force_automatic else get_quality_grade())
 	queue_redraw()
 
 
@@ -880,6 +891,9 @@ func _draw_type_silhouette(radius: float, visibility: float, visual_scale: float
 			return
 		"galaxy":
 			_draw_planet_head(radius, visibility)
+			return
+		"stellar":
+			StellarVisual.draw(self, radius, visibility)
 			return
 		"black_hole":
 			_draw_black_hole_head(radius, visibility)

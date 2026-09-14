@@ -1662,6 +1662,7 @@ func _build_interface() -> void:
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerCounts20"),
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerCounts21"),
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerCounts22"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerCounts23"),
 	]
 	constellation_ledger_hits = [
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits0"),
@@ -1687,6 +1688,7 @@ func _build_interface() -> void:
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits20"),
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits21"),
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits22"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits23"),
 	]
 	constellation_ledger_leaders = [
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders0"),
@@ -1712,6 +1714,7 @@ func _build_interface() -> void:
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders20"),
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders21"),
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders22"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders23"),
 	]
 	constellation_ledger_names = [
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames0"),
@@ -1737,6 +1740,7 @@ func _build_interface() -> void:
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames20"),
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames21"),
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames22"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames23"),
 	]
 	constellation_ledger_notes = [
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes0"),
@@ -1762,6 +1766,7 @@ func _build_interface() -> void:
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes20"),
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes21"),
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes22"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes23"),
 	]
 	content_clip = view.get_node("%TreeViewport")
 	controls_label = view.get_node("%ConstellationInspector").get_node("%ControlsLabel")
@@ -1799,29 +1804,8 @@ func _build_interface() -> void:
 	view.get_node("%TreeCanvas").draw.connect(_draw_tree)
 	view.get_node("%ChartHeader").resized.connect(_layout_chart_header)
 	view.get_node("%ChartHeader").get_node("%CloseButton").pressed.connect(close_tree)
-	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits0").pressed.connect(focus_constellation.bind("cassiopeia"))
-	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits1").pressed.connect(focus_constellation.bind("big_dipper"))
-	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits2").pressed.connect(focus_constellation.bind("orion"))
-	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits3").pressed.connect(focus_constellation.bind("andromeda"))
-	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits4").pressed.connect(focus_constellation.bind("perseus"))
-	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits5").pressed.connect(focus_constellation.bind("lyra"))
-	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits6").pressed.connect(focus_constellation.bind("gemini"))
-	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits7").pressed.connect(focus_constellation.bind("taurus"))
-	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits8").pressed.connect(focus_constellation.bind("leo"))
-	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits9").pressed.connect(focus_constellation.bind("ursa_minor"))
-	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits10").pressed.connect(focus_constellation.bind("canis_major"))
-	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits11").pressed.connect(focus_constellation.bind("draco"))
-	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits12").pressed.connect(focus_constellation.bind("pegasus"))
-	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits13").pressed.connect(focus_constellation.bind("lacerta"))
-	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits14").pressed.connect(focus_constellation.bind("cygnus"))
-	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits15").pressed.connect(focus_constellation.bind("aquila"))
-	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits16").pressed.connect(focus_constellation.bind("vulpecula"))
-	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits17").pressed.connect(focus_constellation.bind("delphinus"))
-	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits18").pressed.connect(focus_constellation.bind("sagitta"))
-	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits19").pressed.connect(focus_constellation.bind("equuleus"))
-	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits20").pressed.connect(focus_constellation.bind("triangulum"))
-	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits21").pressed.connect(focus_constellation.bind("cancer"))
-	view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits22").pressed.connect(focus_constellation.bind("sagittarius"))
+	for index in _constellation_order().size():
+		constellation_ledger_hits[index].pressed.connect(focus_constellation.bind(_constellation_order()[index]))
 	view.get_node("%ConstellationInspector").get_node("%InspectorDetailsButton").toggled.connect(_set_inspector_details)
 	view.get_node("%HubReturnButton").pressed.connect(_frame_galaxy)
 	view.get_node("%AtlasActions0").pressed.connect(_atlas_action.bind(0))
