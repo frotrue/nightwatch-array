@@ -1,0 +1,20 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Shader" path="res://resources/shaders/stellar_surface.gdshader" id="1_shader"]
+
+[sub_resource type="ShaderMaterial" id="Material_surface"]
+resource_local_to_scene = true
+shader = ExtResource("1_shader")
+
+[sub_resource type="Gradient" id="Gradient_white"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="Texture_quad"]
+gradient = SubResource("Gradient_white")
+width = 2
+height = 2
+
+[node name="StellarSurface" type="Sprite2D"]
+visible = false
+material = SubResource("Material_surface")
+texture = SubResource("Texture_quad")

@@ -39,6 +39,17 @@ func _run() -> void:
 	game.observer.native_cursor_visible = false
 	_freeze(game)
 	await _capture(game, "01_star")
+	star.age = 11.0
+	await _capture(game, "02_star_evolved")
+	if Image.load_from_file(output.path_join("01_star.png")).get_data() == Image.load_from_file(output.path_join("02_star_evolved.png")).get_data():
+		failures.append("stellar surface did not evolve with simulation age")
+	star.age = 3.0
+	star.scale = Vector2.ONE * 3.0
+	for target in game.meteor_layer.get_children():
+		if target != star: target.hide()
+	await _capture(game, "03_star_detail")
+	star.scale = Vector2.ONE
+	for target in game.meteor_layer.get_children(): target.show()
 	star.observation_progress = 1.0
 	star.manual_touched = true
 	star.manual_tracking_time = 3.0
@@ -51,6 +62,7 @@ func _run() -> void:
 		for target in game.meteor_layer.get_children():
 			if not target.alive and target != star: target.linger_time = target.linger_duration * (1.0 - stage)
 		await _capture(game, "supernova_%02d" % int(stage * 100))
+		if star.stellar_surface.visible: failures.append("photosphere remained visible after the supernova")
 	var manifest := FileAccess.open(output.path_join("manifest.json"), FileAccess.WRITE)
 	manifest.store_string(JSON.stringify({"frames": records, "failures": failures, "synthetic": true}, "\t"))
 	manifest.close()

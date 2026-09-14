@@ -51,6 +51,19 @@
   구형 저장의 기존 난수 스트림은 복원하고 새 항성 스트림만 시드에서 시작한다.
   하늘의 항성·폭발 잔상은 기존 로드·회차 정리 방식대로 비운다.
 
+## 항성 외형
+
+항성은 주황·금색의 자체 발광 구체로 표현한다. 규칙적인 점과 동심원 대신
+구면 좌표의 다중 크기 잡음을 겹쳐 불규칙한 밝은 표면과 어두운 흐름을 만든다.
+가장자리로 갈수록 부드럽게 어두워지고, 바깥에는 희미한 코로나와 크기·위치가
+다른 홍염 고리 3개가 이어진다. 실제 유체나 항성 대기 계산은 아닌 게임용 근사다.
+
+`scenes/stellar_surface.tscn`의 로컬 셰이더 재질을 항성에만 붙인다. 화면 전체를
+읽지 않고 본체 반경 1.6배 사각 영역만 그리며, 본체는 배경을 가린다.
+표면은 실제 시뮬레이션 나이에 맞춰 천천히 흐르고 일시정지·비교 캡처에서는 멈춘다.
+관측 완료 시 표면을 숨기고 기존 초신성 충격파로 전환한다.
+본체 크기·관측 판정·경제·출현·폭발 기능은 그대로다.
+
 ## 실제 별자리 기준
 
 형태는 [IAU / Sky & Telescope 방패자리 성도](https://iauarchive.eso.org/static/public/constellations/pdf/SCT.pdf),
@@ -73,7 +86,10 @@ M11·M26은 이 연결 도형의 꼭짓점이 아니며 연구 수에 맞춰 생
 
 ## 검증
 
-- `tools/validate.ps1 -FullEconomy -Build`: 기본 검사 29개·전체 경제 검사·Windows
+- 2026-09-15 항성 외형 변경: 기본 검사 29개와 Windows 내보내기 총 30개 통과.
+  `build/validation/20260914T152329233Z_1de44fe8/summary.json`에 기록했다.
+  Vulkan·OpenGL의 항성 화면 각 8장과 유성 배치 렌더 비교도 통과했다.
+- 최초 시스템 구현의 `tools/validate.ps1 -FullEconomy -Build`: 기본 검사 29개·전체 경제 검사·Windows
   내보내기 총 31개 통과. 실행 기록은
   `build/validation/20260914T145948255Z_ed6033e0/summary.json`이며 최종 실행 파일은
   `build/windows/NightwatchArray.exe`다.
@@ -86,7 +102,9 @@ M11·M26은 이 연결 도형의 꼭짓점이 아니며 연구 수에 맞춰 생
   방패자리 확대 캡처와 기준 성도의 5별·연결을 대조했고 잘림·연결선 누락 검사를 통과했다.
   좌우 대조 자료: `build/stellar/scutum-reference-comparison.png`.
   화면 회전과 투영 차이, δ·ε의 기존 간격 보정을 제외한 새 왜곡·생략은 없다.
-- `stellar_review.gd`: Vulkan·OpenGL 각각 한국어/영어 해금 화면과 항성·폭발 진행 6장.
+- `stellar_review.gd`: Vulkan·OpenGL 각각 한국어/영어 해금 화면과 항성·폭발 진행 8장.
+  표면 변화·일시정지 고정·완료 시 표면 숨김도 검사한다. `03_star_detail`은 외형을
+  확인하기 위한 3배 확대이며 실제 게임 본체 크기는 `01_star`와 같다.
   결과는 `build/stellar/mobile/`, `build/stellar/gl_compatibility/`에 보관한다.
   완료 이벤트는 실제 보상 경로를 실행하며 비교 캡처에서는 일반 보상 팝업을 지워
   항성 자체의 연출을 확인한다. 사람 플레이의 재미나 최종 경제를 검증한 자료는 아니다.

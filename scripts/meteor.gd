@@ -9,6 +9,8 @@ const PlanetSurface = preload("res://scripts/planet_surface.gd")
 const GravityCapture = preload("res://scripts/gravity_capture.gd")
 const BLACK_HOLE_PULL_RADIUS := 240.0
 const StellarVisual = preload("res://scripts/stellar_visual.gd")
+const StellarSurfaceScene = preload("res://scenes/stellar_surface.tscn")
+var stellar_surface: Sprite2D
 const SUPERNOVA_RADIUS := 180.0
 var supernova_radius := 0.0
 var gravity_capture: RefCounted
@@ -188,6 +190,9 @@ func _ready() -> void:
 		SHARED_ADDITIVE_MATERIAL.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
 	# Solid surfaces must occlude background stars instead of adding their light.
 	material = null if is_solid_body() else SHARED_ADDITIVE_MATERIAL
+	if type_id == "stellar":
+		stellar_surface = StellarSurfaceScene.instantiate()
+		add_child(stellar_surface)
 	if get_parent().has_method("submit_target"):
 		render_layer = get_parent()
 		triangle_batch.deferred = true
