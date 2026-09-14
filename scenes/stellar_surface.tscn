@@ -25,10 +25,12 @@ visible = false
 script = ExtResource("2_script")
 
 [node name="BackgroundCopy" type="BackBufferCopy" parent="."]
+z_index = 1
 copy_mode = 0
 
 [node name="HeatHaze" type="Sprite2D" parent="."]
-scale = Vector2(1.8, 1.8)
+z_index = 1
+scale = Vector2(3.2, 3.2)
 material = SubResource("Material_heat")
 texture = SubResource("Texture_quad")
 
