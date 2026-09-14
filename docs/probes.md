@@ -10,7 +10,7 @@ no GUT/gdUnit installation is needed.
 .\tools\validate.ps1 -GodotPath $godot -Build
 ```
 
-This runs the 28 fast gates below, then exports Windows. Add `-FullEconomy` for
+This runs the 29 fast gates below, then exports Windows. Add `-FullEconomy` for
 changes to progression, rewards, spawning or target logic. Omit `-Build` to test only.
 The economy run inherits its seed/strategy environment; it does not force three strategies.
 
@@ -90,7 +90,7 @@ Each file below is under `tests/`. Run one while iterating with:
 | `expansion_state_test.gd` | `EXPANSION_STATE_PASS` | Predecessor research, replacement draw determinism, additive copies and malformed saves |
 | `module_expansion_test.gd` | `MODULE_EXPANSION_PASS` | Eight-module catalogue, swept line geometry, live field slowdown, burst lifecycle, copy persistence and retired inventory |
 | `module_inventory_test.gd` | `MODULE_INVENTORY_PASS` | Eight active entries, categories, ownership, scroll/focus controls, tooltip anchors, keyboard disclosures, condensed result context, tutorial/HUD ownership and routine banner suppression |
-| `module_tutorial_test.gd` | `MODULE_TUTORIAL_PASS` | Real pointer/keyboard gating, one-time unlock grant, atomic draw/equip failure, JSON-shaped save resume, legacy migration, settings pause and reduced motion |
+| `module_tutorial_test.gd` | `MODULE_TUTORIAL_PASS` | Real pointer/keyboard gating, one-time unlock grant, atomic draw/equip failure, JSON-shaped save resume, legacy migration, settings pause, reduced motion and Ctrl+Shift+T disposable preview/save isolation |
 | `deep_sky_chart_expansion_test.gd` | `DEEP_SKY_CHART_EXPANSION_PASS` | Dedicated draw view, animation/skip/double-click/reduced-motion, save failure and modal return |
 | `constellation_extension_test.gd` | `CONSTELLATION_EXTENSION_PASS` | Original geometry preserved, shared Alpheratz, forty-two mapped stars across nine figures, real hold purchases, permanent growth/target unlocks, save compatibility and bilingual navigation |
 | `expansion_integration_test.gd` | `EXPANSION_INTEGRATION_PASS` | Real rare targets and all research without specimen modules, duplicate rewards, transactional failure, active save/load, all seven active permanent growth roles and round context; manual/automatic split pairs, seeded hit/miss, reward, recursion exclusion, reserved capacity and expiry; mixed completion overcharge, rare-target slowdown and obsolete saved hold rejection and chart pause |
@@ -257,3 +257,7 @@ the ordinary headless gate only requires CPU telemetry. The windowed run capture
 Counter definitions: [GetProcessTimes](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getprocesstimes),
 [PDH formatted arrays](https://learn.microsoft.com/en-us/windows/win32/api/pdh/nf-pdh-pdhgetformattedcounterarrayw),
 and [Godot non-blocking pipes](https://docs.godotengine.org/en/stable/classes/class_os.html#class-os-method-execute-with-pipe).
+
+`stellar_test.gd` checks Scutum unlock and research, star spawn reservations, scaled supernova
+completion boundaries, exclusions, rewards/samples, fragment isolation and save/RNG migration.
+`stellar_review.gd` captures bilingual Scutum and the actual star/supernova on Vulkan and OpenGL.

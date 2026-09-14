@@ -43,7 +43,7 @@ func _initialize() -> void:
 					if absf(sky_area) < 0.000001: continue
 					var chart_area := (points[b] - points[a]).cross(points[c] - points[a])
 					_check(sky_area * chart_area > 0.0, "mirrored figure: " + cid)
-	_check(total == 158 and catalogue.size() == 158, "all 23 figures and shared markers are covered")
+	_check(total == 163 and catalogue.size() == 163, "all 24 figures and shared markers are covered")
 	var original: Dictionary = chart.base_star_positions.duplicate()
 	_check(chart._chart_source_positions() == original, "unexpanded chart retains its original presentation")
 	chart.galactic_unlocked = true
@@ -74,7 +74,7 @@ func _initialize() -> void:
 	_test_readable_spacing(chart)
 	chart.free()
 	for failure in failures: push_error(failure)
-	print("CONSTELLATION_GEOMETRY_%s: 23 figures / 158 markers, maximum normalized angular-spacing error %.5f" % ["PASS" if failures.is_empty() else "FAIL", maximum_error])
+	print("CONSTELLATION_GEOMETRY_%s: 24 figures / 163 markers, maximum normalized angular-spacing error %.5f" % ["PASS" if failures.is_empty() else "FAIL", maximum_error])
 	quit(0 if failures.is_empty() else 1)
 
 func _check(condition: bool, message: String) -> void:

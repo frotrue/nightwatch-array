@@ -181,8 +181,9 @@ func open() -> void:
 	previous_chart_visible = game.upgrade_tree.visible
 	var focused := get_viewport().gui_get_focus_owner()
 	previous_focus = weakref(focused) if focused != null else null
-	game._release_hitstop()
-	game.observer.reset()
+	if not game.module_tutorial.debug_preview:
+		game._release_hitstop()
+		game.observer.reset()
 	get_tree().paused = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	# Hide only the chart canvas, retaining its logical open/pause state. The
@@ -243,9 +244,6 @@ func equip_from_inventory(id: String) -> void:
 	game.deep_sky.equip(id)
 
 func remove_module(index: int) -> void:
-	if game.module_tutorial.is_equip_target(index):
-		game.deep_sky.equip(game.deep_sky.state.module_intro_id, index)
-		return
 	if index < 0 or index >= model().unlocked_slots or model().slots[index].is_empty():
 		return
 	game.deep_sky.equip("", index)
@@ -278,8 +276,7 @@ func refresh(animate: bool = true) -> void:
 	for index in range(Modules.MAX_SLOTS):
 		var id: String = model().slots[index]
 		var locked: bool = index >= model().unlocked_slots
-		var guided_slot: bool = game.module_tutorial.is_equip_target(index)
-		slots[index].disabled = (locked or id.is_empty()) and not guided_slot
+		slots[index].disabled = locked or id.is_empty()
 		slots[index].focus_mode = Control.FOCUS_ALL if not slots[index].disabled else Control.FOCUS_NONE
 		slots[index].update_module(id, animate)
 		slot_captions[index].text = tr("RING_LOCKED") if locked else (tr("RING_EMPTY") if id.is_empty() else tr("MODULE_%s_SHORT" % id.to_upper()))

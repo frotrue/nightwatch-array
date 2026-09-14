@@ -4,8 +4,9 @@ extends RefCounted
 # Run tools/project_constellations.py to update positions. Chart anchors remain
 # compositional; membership/Bayer labels follow the linked IAU charts.
 # Alpheratz is the SAME existing Andromeda star at the shared Pegasus corner.
-const ORDER := ["pegasus", "lacerta", "cygnus", "aquila", "vulpecula", "delphinus", "sagitta", "equuleus", "triangulum", "cancer", "sagittarius"]
+const ORDER := ["scutum", "pegasus", "lacerta", "cygnus", "aquila", "vulpecula", "delphinus", "sagitta", "equuleus", "triangulum", "cancer", "sagittarius"]
 const COLORS := {
+	"scutum": Color("E6AD78"),
 	"cancer": Color("A6BCC9"), "sagittarius": Color("B1A6C6"),
 	"aquila": Color("C7A6C5"),
 	"pegasus": Color("D4DAE5"), "cygnus": Color("8BB8D5"),
@@ -17,6 +18,17 @@ const COLORS := {
 	"triangulum": Color("BDAACD"),
 }
 const CONSTELLATIONS := {
+	"scutum": {
+		"label_key": "ATLAS_SCUTUM", "branch": "scutum",
+		"stars": [
+			{"id": "alpha_sct", "name_key": "ATLAS_ALPHA_SCT", "bayer": "α Sct", "local_position": Vector2(0.1983815, -0.1365263), "node_id": "ext_sct_stellar", "kind": "star", "magnitude": 3.85},
+			{"id": "beta_sct", "name_key": "ATLAS_BETA_SCT", "bayer": "β Sct", "local_position": Vector2(-0.3541092, -0.7852950), "node_id": "ext_sct_reach", "kind": "star", "magnitude": 4.22},
+			{"id": "gamma_sct", "name_key": "ATLAS_GAMMA_SCT", "bayer": "γ Sct", "local_position": Vector2(0.4649553, 1.0392963), "node_id": "ext_sct_tracking", "kind": "star", "magnitude": 4.7},
+			{"id": "delta_sct", "name_key": "ATLAS_DELTA_SCT", "bayer": "δ Sct", "local_position": Vector2(-0.1258231, 0.0133187), "node_id": "ext_sct_arrivals", "kind": "star", "magnitude": 4.72},
+			{"id": "epsilon_sct", "name_key": "ATLAS_EPSILON_SCT", "bayer": "ε Sct", "local_position": Vector2(-0.1834045, -0.1307937), "node_id": "ext_sct_supernova", "kind": "star", "magnitude": 4.9},
+		],
+		"segments": [["alpha_sct", "beta_sct"], ["beta_sct", "epsilon_sct"], ["epsilon_sct", "delta_sct"], ["delta_sct", "gamma_sct"], ["gamma_sct", "alpha_sct"]],
+	},
 	"pegasus": {
 		"label_key": "ATLAS_PEGASUS", "branch": "pegasus",
 		"stars": [
@@ -148,6 +160,7 @@ const CONSTELLATIONS := {
 	},
 }
 const PLACEMENTS := {
+	"scutum": {"anchor_angle": -2.65, "anchor_radius": 760.0, "scale": 110.0, "tilt": 0.0},
 	"cancer": {"anchor_angle": -0.42, "anchor_radius": 1240.0, "scale": 120.0, "tilt": 0.0},
 	"sagittarius": {"anchor_angle": -1.1, "anchor_radius": 1280.0, "scale": 155.0, "tilt": 0.0},
 	"pegasus": {"anchor_angle": 2.9161895, "anchor_radius": 730.94335, "scale": 115.0, "tilt": 4.9218285},

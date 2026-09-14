@@ -132,6 +132,15 @@ func tick_observation(delta: float) -> void:
 	if can_be_tracked() and allows_automatic_assist() and dish_assist_rate > 0.0:
 		_advance(dish_assist_rate * delta, false)
 
+func complete_from_supernova() -> void:
+	if not can_be_tracked() or is_queued_for_deletion(): return
+	# Explosion credit is automatic even if this target was previously touched.
+	automatic_work += maxf(0.0, 1.0 - stage_progress)
+	manual_work = 0.0
+	discovered = false
+	stage_progress = 1.0
+	tick_resolve()
+
 func tick_resolve() -> void:
 	if not alive: return
 	if stage_progress >= 1.0:

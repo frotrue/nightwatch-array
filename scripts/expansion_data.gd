@@ -1,14 +1,19 @@
 extends RefCounted
 
-const CATALOGUE_VERSION := 5
+const CATALOGUE_VERSION := 6
 const RETIRED_RESEARCH_IDS := ["ext_link_study", "record", "revisit", "ext_cep_core", "ext_cep_depth"]
 const DRAW_COST := 8
 const SAMPLE_MODULES := ["focus", "wide", "precision", "sweep_optics", "wide_correlation", "linear_observation", "capture_hold", "overcharge"]
 const MODULE_BRANCHES := ["pegasus", "lacerta"]
 const LEGACY_PURCHASE_IDS := ["focus", "wide", "precision", "record", "revisit"]
 const LEGACY_GRANTS := {"ext_sweep_study": "sweep_optics"}
-const RESEARCH_ORDER := ["ext_protocol", "slot_3", "slot_4", "slot_5", "ext_record_complete", "ext_trace_advanced", "ext_sweep_advanced", "ext_link_advanced", "ext_synthesis", "ext_combined_watch", "ext_trace_study", "focus", "precision", "ext_cyg_lock", "ext_cyg_aperture", "ext_sweep_study", "wide", "ext_aql_pair", "ext_aql_stride", "ext_aql_stream", "ext_vul_memory", "ext_vul_rhythm", "ext_vul_arc", "ext_vul_cadence", "ext_vul_flow", "ext_del_signal", "ext_del_companion", "ext_del_debris", "ext_del_resonance", "ext_del_school", "ext_sge_cadence", "ext_sge_forecast", "ext_sge_solution", "ext_sge_window", "ext_sge_stream", "ext_equ_focus", "ext_equ_mount", "ext_equ_array", "ext_equ_link", "ext_tri_photometry", "ext_tri_analysis", "ext_tri_catalogue", "ext_cnc_planet", "ext_cnc_arrivals", "ext_cnc_tracking", "ext_cnc_yield", "ext_cnc_survey", "ext_sgr_black_hole", "ext_sgr_reach", "ext_sgr_hold", "ext_sgr_tracking", "ext_sgr_yield", "ext_sgr_arrivals", "ext_sgr_wide", "ext_sgr_linger"]
+const RESEARCH_ORDER := ["ext_sct_stellar", "ext_sct_reach", "ext_sct_tracking", "ext_sct_arrivals", "ext_sct_supernova", "ext_protocol", "slot_3", "slot_4", "slot_5", "ext_record_complete", "ext_trace_advanced", "ext_sweep_advanced", "ext_link_advanced", "ext_synthesis", "ext_combined_watch", "ext_trace_study", "focus", "precision", "ext_cyg_lock", "ext_cyg_aperture", "ext_sweep_study", "wide", "ext_aql_pair", "ext_aql_stride", "ext_aql_stream", "ext_vul_memory", "ext_vul_rhythm", "ext_vul_arc", "ext_vul_cadence", "ext_vul_flow", "ext_del_signal", "ext_del_companion", "ext_del_debris", "ext_del_resonance", "ext_del_school", "ext_sge_cadence", "ext_sge_forecast", "ext_sge_solution", "ext_sge_window", "ext_sge_stream", "ext_equ_focus", "ext_equ_mount", "ext_equ_array", "ext_equ_link", "ext_tri_photometry", "ext_tri_analysis", "ext_tri_catalogue", "ext_cnc_planet", "ext_cnc_arrivals", "ext_cnc_tracking", "ext_cnc_yield", "ext_cnc_survey", "ext_sgr_black_hole", "ext_sgr_reach", "ext_sgr_hold", "ext_sgr_tracking", "ext_sgr_yield", "ext_sgr_arrivals", "ext_sgr_wide", "ext_sgr_linger"]
 const RESEARCH := {
+	"ext_sct_stellar": {"cost": 15000000.0, "requires": ["ext_protocol"], "branch": "scutum", "effects": {}},
+	"ext_sct_reach": {"cost": 25000000.0, "requires": ["ext_sct_stellar"], "branch": "scutum", "effects": {"supernova_radius": 1.3333333333333333}},
+	"ext_sct_tracking": {"cost": 30000000.0, "requires": ["ext_sct_stellar"], "branch": "scutum", "effects": {"stellar_speed": 1.3}},
+	"ext_sct_arrivals": {"cost": 35000000.0, "requires": ["ext_sct_tracking"], "branch": "scutum", "effects": {"stellar_spawn": 1.35}},
+	"ext_sct_supernova": {"cost": 45000000.0, "requires": ["ext_sct_reach", "ext_sct_arrivals"], "branch": "scutum", "effects": {"supernova_radius": 1.25, "stellar_value": 1.25}},
 	"ext_protocol": {"cost": 0.0, "requires": [], "branch": "pegasus", "effects": {}},
 	"slot_3": {"cost": 45000000.0, "requires": ["ext_protocol"], "branch": "pegasus", "effects": {"slot_capacity": 3}},
 	"slot_4": {"cost": 60000000.0, "requires": ["slot_3"], "branch": "pegasus", "effects": {"slot_capacity": 4}},

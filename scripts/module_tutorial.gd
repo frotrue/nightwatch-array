@@ -9,6 +9,8 @@ var game: Node
 var target: Button
 var phase := ""
 var settings_layer := -1
+var debug_preview := false
+var _preview_backup: Dictionary = {}
 @onready var screen: Control = $Screen
 @onready var highlight: Panel = $Screen/Highlight
 @onready var card: PanelContainer = $Screen/Card
@@ -28,9 +30,60 @@ func cancel() -> void:
 	target = null
 	screen.hide()
 	_restore_settings_layer()
+	if debug_preview:
+		_restore_debug_preview()
 
-func is_equip_target(index: int) -> bool:
-	return active and game != null and game.deep_sky.state.module_intro_stage == State.Intro.EQUIP and not game.module_popup.is_draw_open() and index == game.deep_sky.modules.first_empty_slot()
+func start_debug_preview() -> void:
+	if active or game.tutorial.active or game.hud.is_settings_open() or game.hud.is_startup_slots_open() or game.hud.is_phase_summary_open():
+		return
+	if game.module_popup.is_draw_open() and game.module_popup.draw_window.drawing:
+		return
+	if game.upgrade_tree.galactic_unlocked and not game.upgrade_tree.galactic_pullback_seen:
+		return
+	_preview_backup = {
+		"state": game.deep_sky.state, "modules": game.deep_sky.modules,
+		"paused": get_tree().paused, "mouse": Input.mouse_mode,
+		"chart": game.upgrade_tree.is_open(), "popup": game.module_popup.is_open(),
+		"draw": game.module_popup.is_draw_open(), "autosave_failed": game.hud.autosave_failed,
+		"enabled": enabled,
+		"inventory_filter": game.module_popup.inventory_filter,
+	}
+	game.module_popup.close()
+	debug_preview = true
+	enabled = true
+	game.hud.autosave_failed = false
+	# Keep the live objects intact. Only the module UI sees this disposable model.
+	game.deep_sky.state = State.new()
+	game.deep_sky.state.research_ids.append("ext_protocol")
+	game.deep_sky.state.award_samples(8)
+	game.deep_sky.state.module_intro_stage = State.Intro.DRAW
+	game.deep_sky.modules = game.deep_sky.Modules.new()
+	game.upgrade_tree.open_tree()
+	game.module_popup.refresh(false)
+	set_process(true)
+	_process(0.0)
+
+func _restore_debug_preview() -> void:
+	game.module_popup.close()
+	game.deep_sky.state = _preview_backup.state
+	game.deep_sky.modules = _preview_backup.modules
+	game.hud.autosave_failed = _preview_backup.autosave_failed
+	game.module_popup.set_inventory_filter(_preview_backup.inventory_filter)
+	if not _preview_backup.chart:
+		game.upgrade_tree.close_tree()
+	# Refresh subscribers while gameplay's change handler still ignores the preview.
+	game.deep_sky.changed.emit()
+	if _preview_backup.popup:
+		game.module_popup.open()
+		if _preview_backup.draw:
+			game.module_popup.open_draw()
+	debug_preview = false
+	game.module_popup.refresh(false)
+	get_tree().paused = _preview_backup.paused
+	Input.mouse_mode = _preview_backup.mouse
+	enabled = _preview_backup.enabled
+	set_process(enabled)
+	_preview_backup.clear()
 
 func _process(_delta: float) -> void:
 	if game == null or not enabled:
@@ -38,6 +91,9 @@ func _process(_delta: float) -> void:
 	var state = game.deep_sky.state
 	if not game.deep_sky.modules_unlocked() or state.module_intro_stage not in [State.Intro.DRAW, State.Intro.EQUIP]:
 		if active:
+			if debug_preview:
+				cancel()
+				return
 			cancel()
 			game.module_popup.intro_completed_notice = state.module_intro_stage == State.Intro.COMPLETE
 			game.module_popup.refresh(false)
@@ -57,7 +113,7 @@ func _process(_delta: float) -> void:
 	if not game.upgrade_tree.is_open():
 		game.upgrade_tree.open_tree()
 	# Let the galaxy reveal finish before taking over its controls.
-	if not game.upgrade_tree.galactic_pullback_seen:
+	if not game.upgrade_tree.galactic_pullback_seen and not debug_preview:
 		return
 	if not active:
 		active = true
@@ -85,11 +141,10 @@ func _process(_delta: float) -> void:
 			focus_rect = focus_rect.merge(draw.result_panel.get_global_rect())
 	elif state.module_intro_stage == State.Intro.EQUIP:
 		next_phase = "EQUIP"
-		var index: int = game.deep_sky.modules.first_empty_slot()
-		if index < 0:
-			return
-		next_target = popup.slots[index]
-		focus_rect = next_target.get_global_rect().merge(popup.slot_captions[index].get_global_rect())
+		next_target = popup.owned_buttons[state.module_intro_id]
+		if not next_target.visible:
+			popup.set_inventory_filter("all")
+		focus_rect = next_target.get_global_rect()
 	if phase != next_phase or target != next_target:
 		phase = next_phase
 		target = next_target
@@ -110,6 +165,8 @@ func _refresh_text() -> void:
 		var id: String = game.deep_sky.state.module_intro_id
 		body_label.text = tr("MODULE_INTRO_EQUIP_BODY") % tr("MODULE_%s_NAME" % id.to_upper())
 	hint_label.text = tr("MODULE_INTRO_HINT") % game.settings.binding_label("nw_menu_back")
+	if debug_preview:
+		hint_label.text = tr("MODULE_INTRO_PREVIEW_HINT")
 	if game.hud.autosave_failed:
 		hint_label.text = (tr("AUTOSAVE_FAILURE") % game.active_save_slot) + " " + hint_label.text
 
@@ -133,6 +190,10 @@ func _place_spotlight(rect: Rect2) -> void:
 
 func _input(event: InputEvent) -> void:
 	if not active:
+		return
+	if debug_preview and (event.is_action_pressed("nw_menu_back", false, true) or (event is InputEventKey and event.pressed and not event.echo and event.ctrl_pressed and event.shift_pressed and event.keycode == KEY_T)):
+		cancel()
+		get_viewport().set_input_as_handled()
 		return
 	if game.hud.is_settings_open():
 		if event.is_action_pressed("nw_menu_back", false, true):
