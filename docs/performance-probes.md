@@ -28,7 +28,7 @@ Strategies rank currently affordable research at intermissions. They do not rese
 money for a preferred unaffordable node or optimize human behavior. Sweep transitions
 preserve held-button charge, but direct target calls do not test the input state machine.
 
-Each sample must have 95/95 purchases, a complete research time, final ×8192
+Each sample must have 95/95 purchases, a complete research time, final ×729
 value and 1.0 span, positive manual/automatic meteor income, nonnegative bank,
 complete R/A/F/P timelines and source/bank reconciliation within 0.5 Data.
 New-research availability gaps must stay within twice the maximum observation duration

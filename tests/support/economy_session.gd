@@ -4,6 +4,7 @@ const Fixtures = preload("res://tests/support/game_fixture.gd")
 const Driver = preload("res://tests/support/economy_observer.gd")
 const Balance = preload("res://scripts/game_balance.gd")
 const Expansion = preload("res://scripts/expansion_data.gd")
+const Checkpoint = preload("res://tests/support/economy_checkpoint.gd")
 const TARGET_TYPES := ["common", "fast", "fragment", "fragment_piece", "fireball", "major",
 	"satellite", "variable_star", "binary_star", "comet", "galaxy", "black_hole", "anomaly_rare"]
 const DEFAULTS := {
@@ -31,6 +32,66 @@ var revision := 0
 var ready_for_decision := true
 var original_locale := ""
 var original_mouse_mode := 0
+var checkpoint_lineage: Array[Dictionary] = []
+var source_manifest: Dictionary = {}
+
+func save_checkpoint(path: String) -> Dictionary:
+	if not ready_for_decision or game.observation_phase_active:
+		return {"ok": false, "error": "not_at_decision_boundary"}
+	var result := Checkpoint.write_file(path, Checkpoint.capture(self), source_manifest)
+	result["revision"] = revision
+	return result
+
+func load_checkpoint(path: String, mode: String = "exact", overrides: Dictionary = {}) -> Dictionary:
+	if not ready_for_decision or game.observation_phase_active:
+		return {"ok": false, "error": "not_at_decision_boundary"}
+	if mode not in ["exact", "branch"]: return {"ok": false, "error": "invalid_resume_mode"}
+	if Checkpoint.source_manifest() != source_manifest:
+		return {"ok": false, "error": "restart_required", "hint": "Source files changed during this process. Save, restart Godot, then resume in branch mode."}
+	var saved := Checkpoint.read_file(path)
+	if not saved.ok: return saved
+	var problem := Checkpoint.validate(saved.data, self)
+	if not problem.is_empty(): return {"ok": false, "error": problem}
+	var settings: Dictionary = saved.data.config.duplicate(true)
+	settings.merge(overrides, true)
+	var errors := validate(settings)
+	if not errors.is_empty(): return {"ok": false, "error": "invalid_checkpoint_config", "details": errors}
+	if settings.seed != saved.data.config.seed:
+		return {"ok": false, "error": "checkpoint_seed_mismatch", "hint": "A checkpoint preserves its RNG history. Start a fresh run to change seed."}
+	var source := source_manifest
+	var changed: bool = saved.source != source or settings != saved.data.config or saved.data.viewport_size != game.get_viewport_rect().size
+	if mode == "exact" and changed:
+		return {"ok": false, "error": "checkpoint_environment_mismatch", "hint": "Use mode=branch to apply current code/config while retaining historical progress."}
+	# Construct a fresh isolated game so loading never inherits later runtime
+	# state. Only replace this session after the checkpoint has been validated.
+	var replacement = get_script().new()
+	await replacement.setup(tree, settings)
+	Checkpoint.restore(replacement, saved.data)
+	await tree.process_frame
+	await dispose()
+	game = replacement.game
+	config = replacement.config
+	purchase_rng = replacement.purchase_rng
+	rounds = replacement.rounds
+	purchases = replacement.purchases
+	actions = replacement.actions
+	spent = replacement.spent
+	# Loading mutates the current protocol state: never revive an old revision.
+	revision = maxi(revision, replacement.revision) + 1
+	checkpoint_lineage = replacement.checkpoint_lineage
+	checkpoint_lineage.append({"path": ProjectSettings.globalize_path(path), "sha256": saved.sha256,
+		"mode": mode, "environment_changed": changed, "round": rounds.size(),
+		"active_seconds": game.elapsed_time, "earned": game.progression.total_data_earned,
+		"spent": spent, "bank": game.progression.observation_data,
+		"purchase_count": purchases.size(),
+		"saved_viewport": [saved.data.viewport_size.x, saved.data.viewport_size.y],
+		"loaded_viewport": [game.get_viewport_rect().size.x, game.get_viewport_rect().size.y],
+		"saved_source": saved.source, "loaded_source": source,
+		"saved_config": saved.data.config.duplicate(true), "loaded_config": config.duplicate(true)})
+	tree.paused = true
+	TranslationServer.set_locale("en")
+	return {"ok": true, "revision": revision, "mode": mode, "environment_changed": changed,
+		"rounds_completed": rounds.size(), "path": ProjectSettings.globalize_path(path)}
 
 static func validate(input: Dictionary) -> Array[String]:
 	var errors: Array[String] = []
@@ -108,6 +169,7 @@ func setup(scene_tree: SceneTree, settings: Dictionary) -> void:
 	game.events.pause_for_intermission()
 	game.upgrade_tree.open_tree()
 	await tree.process_frame
+	source_manifest = Checkpoint.source_manifest()
 
 func visible_research() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
@@ -136,6 +198,7 @@ func snapshot() -> Dictionary:
 			inventory.append({"id": id, "count": game.deep_sky.modules.owned_count(id),
 				"name": tr("MODULE_%s_NAME" % id.to_upper()), "description": tr("MODULE_%s_DESC" % id.to_upper())})
 	return {"protocol": 1, "revision": revision, "phase": "decision" if ready_for_decision else "observation",
+		"checkpoint_modes": ["exact", "branch"],
 		"active_seconds": game.elapsed_time, "rounds_completed": rounds.size(),
 		"next_round_seconds": game.progression.get_observation_duration(),
 		"data": game.progression.observation_data, "research": visible_research(),
@@ -157,6 +220,12 @@ func act(command: Dictionary) -> Dictionary:
 	if not ready_for_decision: return {"ok": false, "error": "not_at_decision_boundary"}
 	if command.get("revision") != revision: return {"ok": false, "error": "stale_revision", "revision": revision}
 	var action = command.get("action", "")
+	if action in ["save", "load"]:
+		if not command.get("path") is String: return {"ok": false, "error": "invalid_checkpoint_path"}
+		if action == "save": return save_checkpoint(command.path)
+		if not command.get("mode", "exact") is String or not command.get("config", {}) is Dictionary:
+			return {"ok": false, "error": "invalid_resume_options"}
+		return await load_checkpoint(command.path, command.get("mode", "exact"), command.get("config", {}))
 	if action not in ["buy", "draw", "equip", "next_round"]: return {"ok": false, "error": "unknown_action"}
 	var ok := false
 	var detail := ""
@@ -286,7 +355,16 @@ func report() -> Dictionary:
 		empty = empty + 1 if row.purchases.is_empty() else 0
 		longest_empty = maxi(longest_empty, empty)
 		maximum_batch = maxi(maximum_batch, row.purchases.size())
-	return {"config": config, "engine": Engine.get_version_info(), "stop_reason": stop_reason(),
+	var segment := {}
+	if not checkpoint_lineage.is_empty():
+		var origin: Dictionary = checkpoint_lineage.back()
+		segment = {"rounds": rounds.size() - int(origin.round),
+			"active_seconds": game.elapsed_time - float(origin.active_seconds),
+			"earned": game.progression.total_data_earned - float(origin.earned),
+			"spent": spent - float(origin.spent), "purchases": purchases.size() - int(origin.purchase_count)}
+	return {"config": config, "engine": Engine.get_version_info(), "source": source_manifest, "stop_reason": stop_reason(),
+		"checkpoint_lineage": checkpoint_lineage,
+		"resumed_segment": segment,
 		"active_seconds": game.elapsed_time, "rounds": rounds, "purchases": purchases,
 		"actions": actions, "earned": game.progression.total_data_earned,
 		"spent": spent, "bank": game.progression.observation_data,

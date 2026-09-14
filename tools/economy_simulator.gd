@@ -9,18 +9,31 @@ func _initialize() -> void:
 func _emit(kind: String, payload: Dictionary) -> void:
 	print(PREFIX + JSON.stringify({"kind": kind, "payload": payload}))
 
+func _read_command_line() -> String:
+	# OS stdin reads are byte chunks, not JSON lines. Reading one byte also
+	# avoids waiting for a full pipe buffer while an agent waits for our reply.
+	var bytes := PackedByteArray()
+	while true:
+		var next := OS.read_buffer_from_stdin(1)
+		if next.is_empty() or next[0] == 10: break
+		bytes.append(next[0])
+	return bytes.get_string_from_utf8().trim_suffix("\r")
+
 func _run() -> void:
 	var args := OS.get_cmdline_user_args()
 	var configuration := {}
 	var output := ""
+	var resume := ""
+	var resume_mode := "exact"
+	var checkpoint_output := ""
 	var index := 0
 	while index < args.size():
 		if args[index] == "--help":
-			print("--config FILE.json --output REPORT.json; strategy=external accepts JSON lines on stdin. See docs/economy-simulator.md")
+			print("--config FILE.json --output REPORT.json --resume CHECKPOINT.json --resume-mode exact|branch --checkpoint-out CHECKPOINT.json; strategy=external accepts JSON lines on stdin. See docs/economy-simulator.md")
 			quit(0)
 			return
-		if args[index] not in ["--config", "--output"] or index + 1 >= args.size():
-			_emit("error", {"message": "Expected --config FILE or --output FILE"})
+		if args[index] not in ["--config", "--output", "--resume", "--resume-mode", "--checkpoint-out"] or index + 1 >= args.size():
+			_emit("error", {"message": "Expected a supported option and value; see --help"})
 			quit(2)
 			return
 		if args[index] == "--config":
@@ -31,8 +44,14 @@ func _run() -> void:
 				quit(2)
 				return
 			configuration = json.data
-		else:
+		elif args[index] == "--output":
 			output = args[index + 1]
+		elif args[index] == "--resume":
+			resume = args[index + 1]
+		elif args[index] == "--resume-mode":
+			resume_mode = args[index + 1]
+		else:
+			checkpoint_output = args[index + 1]
 		index += 2
 	var errors := Session.validate(configuration)
 	if not errors.is_empty():
@@ -41,11 +60,18 @@ func _run() -> void:
 		return
 	var session := Session.new()
 	await session.setup(self, configuration)
+	if not resume.is_empty():
+		var restored: Dictionary = await session.load_checkpoint(resume, resume_mode, configuration)
+		_emit("result", restored)
+		if not restored.ok:
+			await session.dispose()
+			quit(2)
+			return
 	if session.config.strategy == "external":
 		_emit("state", session.snapshot())
 		while true:
 			# Blocking only while the simulation is paused. EOF is a clean stop.
-			var line := OS.read_string_from_stdin()
+			var line := _read_command_line()
 			if line.is_empty(): break
 			var json := JSON.new()
 			if json.parse(line) != OK or not json.data is Dictionary:
@@ -75,6 +101,13 @@ func _run() -> void:
 		# Purchase after the final full round too, so its batch is measured.
 		await session.auto_purchase()
 	var report := session.report()
+	if not checkpoint_output.is_empty():
+		var saved: Dictionary = session.save_checkpoint(checkpoint_output)
+		_emit("result", saved)
+		if not saved.ok:
+			await session.dispose()
+			quit(2)
+			return
 	if not output.is_empty():
 		var file := FileAccess.open(output, FileAccess.WRITE)
 		if file == null:

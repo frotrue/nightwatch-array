@@ -58,12 +58,12 @@ func _run() -> void:
 	await process_frame
 	game.progression.observation_data = 60000000.0
 	_check(research.purchase("ext_trace_study"), "permanent tracking research is available after coordinate research")
-	game.progression.observation_data = 119999999.0
+	game.progression.observation_data = 29999999.0
 	_check(not research.purchase("focus"), "insufficient balance is rejected")
 	game.progression.observation_data = 240000000.0
 	chart.select_extension("focus")
 	_hold_chart_star(game)
-	_check(research.research_owned("focus") and research.modules.purchased.is_empty() and game.progression.observation_data == 120000000.0, "chart purchase debits once and installs permanent research without granting equipment")
+	_check(research.research_owned("focus") and research.modules.purchased.is_empty() and game.progression.observation_data == 210000000.0, "chart purchase debits once and installs permanent research without granting equipment")
 	_check(not research.purchase("focus"), "duplicate purchases never charge twice")
 	game.progression.observation_data = 240000000.0
 	_check(research.purchase("ext_sweep_study"), "sweep predecessor purchased")
