@@ -80,7 +80,7 @@ Each file below is under `tests/`. Run one while iterating with:
 
 | Script | Expected marker | Main coverage |
 |---|---|---|
-| `economy_simulator_test.gd` | `ECONOMY_SIMULATOR_PASS` | Seeded economy replay, coverage, fragment ordering, anomaly warnings/rewards, external transactions and priority saving |
+| `economy_simulator_test.gd` | `ECONOMY_SIMULATOR_PASS` | Seeded economy replay, checkpoint continuation/branching, coverage, fragment ordering, anomaly warnings/rewards, external transactions and priority saving |
 | `performance_monitor_test.gd` | `PERFORMANCE_MONITOR_PASS` | Settings persistence/defaults, invalid values, native CPU pipe, paused/live ticks, passive input, enable/disable and scene shutdown |
 | `threaded_simulation_test.gd` | `THREADED_SIMULATION_PASS` | Live reference selection, batched single-thread and parallel motion/contact equivalence at 17/67 input segments; primary/order/grace, survey toggles, worker cap, equipment/hitstop, pause and joins |
 | `research_contract_test.gd` | `RESEARCH_CONTRACT_PASS` | 95 definitions, 26 executable contracts, exact 69 unverified IDs, bidirectional en/ko claims, opening budgets |

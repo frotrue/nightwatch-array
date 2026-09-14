@@ -94,6 +94,7 @@ Windows 기본 위치는 `%APPDATA%\Godot\app_userdata\Nightwatch Array\`다.
 경제 진단은 [자동 시뮬레이터](docs/economy-simulator.md)를 사용한다. 기본값은 일반
 천체 70%·분열 조각 100% 즉시 관측이며, 실제 이벤트·보상 경로와 후속 연구를 포함한다.
 시드/구매 전략 비교와 사람·LLM이 회차 사이 구매를 직접 결정하는 JSON 명령 모드를 제공한다.
+회차 사이 상태를 저장·복원할 수 있으며, 경제 수정 후에는 분기 모드로 같은 진행 상태부터 비교한다.
 실제 조작감이나 사람의 완주 시간 검증과는 구분한다.
 
 작업 전 [AGENTS.md](AGENTS.md)와 [짧은 설계](docs/design.md)를 읽고,

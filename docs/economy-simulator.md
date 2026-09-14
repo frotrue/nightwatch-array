@@ -133,6 +133,85 @@ It excludes hidden base nodes, internal formulas, RNG state and recommended
 actions. Full diagnostic reports/configs are for the test orchestrator, not
 information to feed a black-box decision agent.
 
+## Checkpoints: resume or branch after economy edits
+
+The runner can save at any **decision boundary**, including before round one
+and after purchases/draws/equipment changes. In-flight observation is not a
+checkpoint boundary. These are diagnostic files, separate from player slots;
+use a directory under `build/`. The parent directory must already exist.
+
+External agents use these commands with the latest state revision:
+
+```json
+{"action":"save","path":"build/midgame.json","revision":42}
+{"action":"load","path":"build/midgame.json","mode":"exact","revision":42}
+```
+
+The numbers above are illustrative. Saving does not advance revision. Loading
+replaces the current session and returns a revision greater than both the live
+and saved revisions. Always use the returned state; previously queued commands
+are stale. A failed load leaves progress and revision unchanged. Saving stages
+the file beside its destination before replacement, preserving the earlier
+checkpoint if writing fails.
+
+Start a new process at a checkpoint:
+
+```powershell
+& $godot --headless --path . --script res://tools/economy_simulator.gd -- --resume build/midgame.json --output build/resumed-report.json
+```
+
+`--resume` inherits the checkpoint's entire configuration, including strategy.
+An external session prints its restored state and waits for the agent. A
+checkpoint created with an automatic strategy continues that strategy.
+`--checkpoint-out build/last-state.json` saves once at normal termination
+(quit, EOF or a configured limit), in addition to any requested report.
+
+Two explicit modes are available:
+
+| Mode | Contract |
+|---|---|
+| `exact` (default) | Requires matching tracked source hashes, engine/platform, viewport size and configuration. Retains simulation RNG streams, event scheduling, dish positions, ownership, resources and accumulated records. |
+| `branch` | Allows changed code/configuration. Retains historical purchases and money; current code calculates research effects and future prices. Records the fork boundary and old/new source/configuration in the report. |
+
+For economy iteration, save first, edit the code, then **restart Godot** and use:
+
+```powershell
+& $godot --headless --path . --script res://tools/economy_simulator.gd -- --resume build/midgame.json --resume-mode branch --output build/tuned-report.json
+```
+
+An optional `--config FILE.json` merges only supplied settings over the saved
+configuration. For example, `{"strategy":"external","max_rounds":120}` switches
+to agent decisions and extends a previously reached limit. A config change
+requires branch mode. The equivalent live command supports a `config` object:
+
+```json
+{"action":"load","path":"build/midgame.json","mode":"branch","config":{"max_rounds":120},"revision":57}
+```
+
+The original seed is retained in both modes because RNG history is restored;
+changing `seed` requires a fresh run.
+
+Limits remain **cumulative**, not additional rounds/time since loading.
+Changing source files does not hot-reload an existing Godot process. A live
+load after on-disk source edits returns `restart_required`; saving still works
+and records the source manifest captured when that session was initialized.
+
+Checkpoint envelopes are JSON containing a version, source manifest, checksum
+and base64 Variant payload. This preserves 64-bit RNG states and vector data
+without JSON rounding; object deserialization is disabled. Do not hand-edit the
+payload. Unsupported versions, malformed files, unknown research and exact-mode
+environment mismatches are rejected. Branch mode is intended for compatible
+price/effect edits, not arbitrary changes to save/runtime structure.
+
+Reports preserve historical round/action records. `checkpoint_lineage` records
+each loaded ancestor, its source/configuration and fork resources;
+`resumed_segment` reports only rounds, time, income, spending and purchases
+since the most recent load. Historical spending is never repriced or refunded.
+An old checkpoint cannot prove the new economy reaches that same state from
+zero: rerun from before the affected upgrades, and validate a fresh full run
+once an adjustment is settled. The archived September 14 report/transcript are
+not checkpoints; producing an exact checkpoint requires running the session.
+
 ## What the measurements mean
 
 Reports include per-round income, duration, manual/automatic completion counts,
@@ -164,8 +243,11 @@ python tools/economy_protocol_test.py --godot $godot
 The Godot gate is included in `tools/validate.ps1`. It covers seeded replay,
 ledger conservation, rejected commands, zero coverage, production fragment
 completion ordering, and outer research/draw/equipment transactions. The Python
-check exercises the actual stdin/stdout protocol, including stale revisions and
-EOF. Neither test asserts a desired purchasing cadence or changes prices.
+check exercises the actual stdin/stdout protocol, including stale revisions,
+EOF, save/load, cross-process continuation and branch configuration. Checkpoint
+replay compares uninterrupted and restored mid/late-game runs, including real
+dishes, fragment modules, events and subsequent module draws. Neither test
+asserts a desired purchasing cadence or changes prices.
 
 ## Recorded external playtests
 
