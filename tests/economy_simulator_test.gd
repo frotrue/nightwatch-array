@@ -56,7 +56,7 @@ func _run() -> void:
 	session.game.progression.add_debug_data(1000000000.0)
 	result = await session.act({"action": "buy", "id": "ext_trace_study", "revision": session.revision})
 	check(result.ok and session.game.deep_sky.research_owned("ext_trace_study"), "outer research purchase")
-	session.game.deep_sky.state.award_samples(8)
+	check(session.game.deep_sky.samples == 8, "first-draw grant is present in the external session")
 	result = await session.act({"action": "draw", "revision": session.revision})
 	check(result.ok and session.game.deep_sky.samples == 0, "real paid module draw")
 	var module_id: String = result.get("result", "")

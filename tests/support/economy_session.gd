@@ -234,6 +234,7 @@ func act(command: Dictionary) -> Dictionary:
 		await _run_round()
 		ok = true
 	elif action == "buy":
+		var samples_before: int = game.deep_sky.state.samples_earned
 		var id = command.get("id", "")
 		if not id is String: return {"ok": false, "error": "invalid_id"}
 		var cost := 0.0
@@ -247,6 +248,10 @@ func act(command: Dictionary) -> Dictionary:
 			spent += cost
 			purchases.append({"id": id, "cost": cost, "active_seconds": game.elapsed_time, "round": rounds.size()})
 			if not rounds.is_empty():
+				# Unlock grants happen between rounds, outside the observation ledger.
+				var bonus: int = game.deep_sky.state.samples_earned - samples_before
+				rounds.back().samples += bonus
+				rounds.back()["sample_bonus"] = int(rounds.back().get("sample_bonus", 0)) + bonus
 				rounds.back().purchases.append(id)
 				rounds.back().bank_after_purchases = game.progression.observation_data
 	elif action == "draw":

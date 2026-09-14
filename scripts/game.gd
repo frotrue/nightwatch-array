@@ -43,6 +43,7 @@ const SHAKE_TRAUMA_CEILING := 0.88
 @onready var hud: CanvasLayer = $HUD
 @onready var upgrade_tree: CanvasLayer = $UpgradeTree
 @onready var tutorial: CanvasLayer = $Tutorial
+@onready var module_tutorial: CanvasLayer = $ModuleTutorial
 @onready var observation_view: Camera2D = $ObservationView
 
 var sound: Node
@@ -148,6 +149,7 @@ func _ready() -> void:
 	add_child(module_popup)
 	module_popup.setup(self)
 	upgrade_tree.module_popup = module_popup
+	module_tutorial.setup(self)
 	upgrade_tree.bind_extension(deep_sky)
 	upgrade_tree.observatory_requested.connect(_return_to_observatory)
 
@@ -200,6 +202,7 @@ func _preferred_startup_slot() -> int:
 
 
 func start_run() -> void:
+	module_tutorial.cancel()
 	module_popup.close()
 	deep_sky.reset()
 	elapsed_time = 0.0
@@ -221,6 +224,7 @@ func start_run() -> void:
 
 
 func reset_run() -> void:
+	module_tutorial.cancel()
 	module_popup.close()
 	completed = false
 	_release_hitstop()
@@ -762,6 +766,8 @@ func _on_meteor_expired(meteor, _was_major: bool) -> void:
 
 
 func _on_upgrade_purchased(definition: Dictionary) -> void:
+	# Persist the unlock and its one-time first-draw grant in the same save.
+	deep_sky._sync_protocol()
 	tutorial.notify_upgrade_purchased()
 	sky_contacts.refresh_dishes()
 	spawner.refresh_active_features()
@@ -932,6 +938,7 @@ func _on_reset_slot_requested(slot: int) -> void:
 
 
 func _start_fresh_slot() -> void:
+	module_tutorial.cancel()
 	module_popup.close()
 	completed = false
 	_close_upgrade_tree_without_transition()
@@ -969,7 +976,7 @@ func _autosave_active_slot() -> bool:
 
 
 func _on_tutorial_replay_requested() -> void:
-	if module_popup.is_open():
+	if module_popup.is_open() or module_tutorial.active:
 		return
 	# The round summary already owns the intermission pause. Starting a modal
 	# tutorial on top would leave that pause owner behind when the tutorial moves
@@ -1019,6 +1026,7 @@ func _apply_save_data(data: Dictionary) -> void:
 		hud.show_banner(tr("EXT_SAVE_NEWER_VERSION"), UITheme.ALERT, 5.0)
 		return
 	_loading_save = true
+	module_tutorial.cancel()
 	module_popup.close()
 	sound.reset_streak_audio()
 	_close_upgrade_tree_without_transition()

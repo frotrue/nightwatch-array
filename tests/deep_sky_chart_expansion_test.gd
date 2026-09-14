@@ -19,6 +19,10 @@ func _run() -> void:
 	game.upgrade_tree.open_tree()
 	var popup: Node = game.module_popup
 	var window: Control = popup.draw_window
+	# Start the repeat-draw scenarios after spending the one-time unlock grant.
+	popup.open_draw()
+	_check(not game.deep_sky.draw_module().is_empty() and game.deep_sky.samples == 0, "unlock grant funds exactly one initial draw")
+	popup.close()
 	for locale in ["en", "ko"]:
 		game.settings.set_language(locale, false)
 		popup.draw_launcher.pressed.emit()

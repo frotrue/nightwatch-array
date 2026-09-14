@@ -245,7 +245,7 @@ func _check_popup_pointer_routing() -> void:
 	_click_in_viewport(viewport, game.module_popup.close_button.get_global_rect().get_center())
 	_check(not game.module_popup.is_open() and game.upgrade_tree.is_open() and paused, "visible popup close click returns to research without passing through")
 	game.deep_sky._sync_protocol()
-	game.deep_sky.state.award_samples(8)
+	game.deep_sky.state.award_samples(8 - game.deep_sky.samples)
 	game.module_popup.refresh()
 	_click_in_viewport(viewport, game.module_popup.draw_launcher.get_global_rect().get_center())
 	await _frames(2)

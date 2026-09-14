@@ -189,6 +189,7 @@ func _test_game_routing() -> void:
 	var game = MainScene.instantiate()
 	game.startup_slot_prompt_enabled = false
 	game.get_node("Tutorial").auto_start_enabled = false
+	game.get_node("ModuleTutorial").enabled = false
 	# Replace persistence before _ready: this routing test must never touch slots.
 	var original_slots := game.get_node("SaveGameController")
 	game.remove_child(original_slots)

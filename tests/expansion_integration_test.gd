@@ -197,7 +197,8 @@ func _check_transactions() -> void:
 	for id in ["ext_trace_study", "ext_sweep_study"]:
 		_check(research.purchase(id), "study purchase succeeds: " + id)
 	_check(research.modules.purchased.is_empty() and research.modules.installed_ids().is_empty(), "research growth does not grant or equip modules")
-	research.state.award_samples(80)
+	# Establish the transaction fixture's bank, including the unlock grant.
+	research.state.award_samples(80 - research.samples)
 	_check(research.draw_module().is_empty(), "draw requires the dedicated window")
 	game.module_popup.open_draw()
 	var before: Dictionary = research.get_save_data()

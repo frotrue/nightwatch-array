@@ -185,6 +185,7 @@ $gates = @(
     @('expansion_state_test', 'EXPANSION_STATE_PASS'),
     @('module_expansion_test', 'MODULE_EXPANSION_PASS'),
     @('module_inventory_test', 'MODULE_INVENTORY_PASS'),
+    @('module_tutorial_test', 'MODULE_TUTORIAL_PASS'),
     @('deep_sky_chart_expansion_test', 'DEEP_SKY_CHART_EXPANSION_PASS'),
     @('constellation_extension_test', 'CONSTELLATION_EXTENSION_PASS'),
     @('constellation_geometry_test', 'CONSTELLATION_GEOMETRY_PASS'),

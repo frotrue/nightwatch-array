@@ -32,7 +32,7 @@ func _initialize() -> void:
 func _run() -> void:
 	var game: Node = MainScene.instantiate()
 	Fixtures.configure_before_ready(game)
-	_check(not game.startup_slot_prompt_enabled and not game.get_node("Tutorial").auto_start_enabled, "diagnostics skip startup interaction")
+	_check(not game.startup_slot_prompt_enabled and not game.get_node("Tutorial").auto_start_enabled and not game.get_node("ModuleTutorial").enabled, "diagnostics skip startup interaction")
 	_check(game.get_node("SaveGameController") is Fixtures.NoSaveSlots, "save service is replaced before ready")
 	_check(game.get_node("GameSettings") is Fixtures.NoSettings, "settings service is replaced before ready")
 	var settings := GuardedSettings.new()

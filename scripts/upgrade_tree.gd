@@ -370,6 +370,8 @@ func _chart_action_text(key: String) -> String:
 
 
 func _input(event: InputEvent) -> void:
+	if module_popup != null and module_popup.game.module_tutorial.active:
+		return
 	if module_popup != null and module_popup.is_open():
 		return
 	if not is_open():
