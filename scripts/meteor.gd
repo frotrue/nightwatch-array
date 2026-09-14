@@ -10,7 +10,7 @@ const GravityCapture = preload("res://scripts/gravity_capture.gd")
 const BLACK_HOLE_PULL_RADIUS := 240.0
 const StellarVisual = preload("res://scripts/stellar_visual.gd")
 const StellarSurfaceScene = preload("res://scenes/stellar_surface.tscn")
-var stellar_surface: Sprite2D
+var stellar_surface: Node2D
 const SUPERNOVA_RADIUS := 180.0
 var supernova_radius := 0.0
 var gravity_capture: RefCounted

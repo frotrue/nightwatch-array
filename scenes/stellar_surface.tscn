@@ -1,10 +1,16 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Shader" path="res://resources/shaders/stellar_surface.gdshader" id="1_shader"]
+[ext_resource type="Script" path="res://scripts/stellar_surface.gd" id="2_script"]
+[ext_resource type="Shader" path="res://resources/shaders/stellar_heat.gdshader" id="3_heat"]
 
 [sub_resource type="ShaderMaterial" id="Material_surface"]
 resource_local_to_scene = true
 shader = ExtResource("1_shader")
+
+[sub_resource type="ShaderMaterial" id="Material_heat"]
+resource_local_to_scene = true
+shader = ExtResource("3_heat")
 
 [sub_resource type="Gradient" id="Gradient_white"]
 colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 1)
@@ -14,7 +20,19 @@ gradient = SubResource("Gradient_white")
 width = 2
 height = 2
 
-[node name="StellarSurface" type="Sprite2D"]
+[node name="StellarSurface" type="Node2D"]
 visible = false
+script = ExtResource("2_script")
+
+[node name="BackgroundCopy" type="BackBufferCopy" parent="."]
+copy_mode = 0
+
+[node name="HeatHaze" type="Sprite2D" parent="."]
+scale = Vector2(1.8, 1.8)
+material = SubResource("Material_heat")
+texture = SubResource("Texture_quad")
+
+[node name="Photosphere" type="Sprite2D" parent="."]
+scale = Vector2(1.8, 1.8)
 material = SubResource("Material_surface")
 texture = SubResource("Texture_quad")

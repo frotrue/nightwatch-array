@@ -4,9 +4,9 @@ extends RefCounted
 # The transient shockwave uses the source's existing completion lifetime.
 static func draw(body: Node2D, radius: float, visibility: float) -> void:
 	var phase: float = body.wobble_phase
-	var surface: Sprite2D = body.stellar_surface
-	surface.visible = not (body.observed_successfully and not body.alive)
+	var surface: Node2D = body.stellar_surface
 	if body.observed_successfully and not body.alive:
+		surface.conceal()
 		var progress := 1.0 - visibility
 		var reach: float = body.supernova_radius
 		var motion: float = body.completion_motion_scale
@@ -23,7 +23,5 @@ static func draw(body: Node2D, radius: float, visibility: float) -> void:
 			var tint := Color("fff1c7") if body.completion_glint_enabled else Color("e7934e")
 			body.draw_circle(Vector2.ZERO, core, Color(tint, visibility), true, -1.0, true)
 		return
-	surface.scale = Vector2.ONE * radius * 1.6
-	surface.self_modulate = Color(body.self_modulate, body.self_modulate.a * visibility)
-	surface.material.set_shader_parameter("age", body.age)
-	surface.material.set_shader_parameter("phase", phase)
+	surface.present(radius, visibility, body.age, phase, body.observation_progress,
+		body.completion_motion_scale, body.completion_glint_enabled, body.self_modulate)

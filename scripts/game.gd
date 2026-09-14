@@ -591,6 +591,8 @@ func handle_debug_key_input(event: InputEvent) -> void:
 
 func _on_meteor_spawned(meteor) -> void:
 	meteor.observation_controller = observer
+	meteor.completion_motion_scale = effects.motion_intensity
+	meteor.completion_glint_enabled = effects.screen_flashes_enabled
 	meteor.optical_lens = black_hole_lens
 	if meteor.type_id == "black_hole":
 		meteor.z_index = 2 # Above the lens at 11; ordinary meteors remain at 10.
