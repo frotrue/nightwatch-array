@@ -1,0 +1,6 @@
+{
+  "seed": 42,
+  "observation_chance": 0.7,
+  "fragment_chance": 1.0,
+  "strategy": "cheapest"
+}

@@ -33,7 +33,7 @@ Compatibility/OpenGL로 전환한다. 특정 드라이버에서 문제가 있으
 .\tools\validate.ps1 -GodotPath $godot -Build
 ```
 
-빠른 게이트 26개를 통과하면 Windows 실행 파일을 갱신한다.
+빠른 게이트 27개를 통과하면 Windows 실행 파일을 갱신한다.
 생성·보상·진행·표적 로직에 영향이 있으면 `-FullEconomy`도 추가한다.
 `-Build`를 빼면 검사만 한다. 시드·전략 설정과 추가 검증은 [probes.md](docs/probes.md)를 본다.
 
@@ -90,6 +90,11 @@ Windows 기본 위치는 `%APPDATA%\Godot\app_userdata\Nightwatch Array\`다.
 | Backspace | 런 리셋 |
 
 ## 개발 문서
+
+경제 진단은 [자동 시뮬레이터](docs/economy-simulator.md)를 사용한다. 기본값은 일반
+천체 70%·분열 조각 100% 즉시 관측이며, 실제 이벤트·보상 경로와 후속 연구를 포함한다.
+시드/구매 전략 비교와 사람·LLM이 회차 사이 구매를 직접 결정하는 JSON 명령 모드를 제공한다.
+실제 조작감이나 사람의 완주 시간 검증과는 구분한다.
 
 작업 전 [AGENTS.md](AGENTS.md)와 [짧은 설계](docs/design.md)를 읽고,
 [문서 지도](docs/README.md)에서 해당 기능의 참조만 찾는다.

@@ -10,7 +10,7 @@ no GUT/gdUnit installation is needed.
 .\tools\validate.ps1 -GodotPath $godot -Build
 ```
 
-This runs the 26 fast gates below, then exports Windows. Add `-FullEconomy` for
+This runs the 27 fast gates below, then exports Windows. Add `-FullEconomy` for
 changes to progression, rewards, spawning or target logic. Omit `-Build` to test only.
 The economy run inherits its seed/strategy environment; it does not force three strategies.
 
@@ -80,6 +80,7 @@ Each file below is under `tests/`. Run one while iterating with:
 
 | Script | Expected marker | Main coverage |
 |---|---|---|
+| `economy_simulator_test.gd` | `ECONOMY_SIMULATOR_PASS` | Seeded economy replay, coverage, fragment ordering, anomaly warnings/rewards, external transactions and priority saving |
 | `performance_monitor_test.gd` | `PERFORMANCE_MONITOR_PASS` | Settings persistence/defaults, invalid values, native CPU pipe, paused/live ticks, passive input, enable/disable and scene shutdown |
 | `threaded_simulation_test.gd` | `THREADED_SIMULATION_PASS` | Live reference selection, batched single-thread and parallel motion/contact equivalence at 17/67 input segments; primary/order/grace, survey toggles, worker cap, equipment/hitstop, pause and joins |
 | `research_contract_test.gd` | `RESEARCH_CONTRACT_PASS` | 95 definitions, 26 executable contracts, exact 69 unverified IDs, bidirectional en/ko claims, opening budgets |
@@ -114,6 +115,12 @@ The deep-sky gate independently tests current modules/capacity; the legacy econo
 driver does not measure the new module progression's full-run pacing.
 
 ## Additional entry points
+
+`economy_simulator_test.gd` / `ECONOMY_SIMULATOR_PASS` verifies the isolated
+instant-work economy runner and external purchase interface. See
+[economy-simulator.md](economy-simulator.md) for configuration, matrix runs,
+protocol tests and measurement limitations. The runner adds one fast gate;
+the existing 95-node economy acceptance remains independent.
 
 | Need | Script / reference |
 |---|---|

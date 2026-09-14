@@ -174,6 +174,7 @@ function Invoke-ValidationProcess {
 # These are correctness gates. Rendered captures, listening, and human-driven probes
 # remain separate reviews; a headless pass cannot replace them.
 $gates = @(
+    @('economy_simulator_test', 'ECONOMY_SIMULATOR_PASS'),
     @('fixed_tick_test', 'FIXED_TICK_PASS'),
     @('black_hole_test', 'BLACK_HOLE_PASS'),
     @('threaded_simulation_test', 'THREADED_SIMULATION_PASS'),
