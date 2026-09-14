@@ -465,6 +465,8 @@ func _current_equipment_signature() -> Array[String]:
 
 
 func _on_deep_sky_changed() -> void:
+	if module_tutorial.debug_preview:
+		return
 	if not _loading_save:
 		sky_contacts.refresh_dishes()
 		spawner.refresh_active_features()
@@ -551,6 +553,8 @@ func handle_debug_key_input(event: InputEvent) -> void:
 	if not (event.ctrl_pressed and event.shift_pressed):
 		return
 	match event.keycode:
+		KEY_T:
+			module_tutorial.start_debug_preview()
 		KEY_D:
 			progression.add_debug_data(100.0)
 			hud.show_banner(tr("BANNER_DEBUG_DATA"), UITheme.INK_MID, 1.2)
@@ -851,6 +855,8 @@ func _upgrade_name(definition: Dictionary) -> String:
 
 
 func _on_save_slot_requested(slot: int) -> void:
+	if module_tutorial.debug_preview:
+		return
 	var error: Error = save_games.save_slot(slot, _build_save_data())
 	if error == OK:
 		active_save_slot = slot
@@ -960,6 +966,8 @@ func _start_tutorial_after_slot_if_needed() -> void:
 
 
 func _autosave_active_slot() -> bool:
+	if module_tutorial.debug_preview:
+		return true
 	if _in_simulation_tick:
 		_save_after_tick = true
 		return true

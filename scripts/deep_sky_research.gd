@@ -60,7 +60,7 @@ func available() -> bool:
 	return game != null and game.progression.galaxy_unlocked()
 
 func modules_unlocked() -> bool:
-	return available()
+	return available() or (game != null and game.module_tutorial.debug_preview)
 
 func research_owned(id: String) -> bool:
 	return id in state.research_ids
@@ -103,7 +103,8 @@ func equip(id: String, slot: int = -1) -> bool:
 		return false
 	if state.module_intro_stage == State.Intro.EQUIP and id == state.module_intro_id:
 		state.module_intro_stage = State.Intro.COMPLETE
-	game.observer.reset()
+	if not game.module_tutorial.debug_preview:
+		game.observer.reset()
 	if not _commit_transaction(before, game.progression.observation_data):
 		return false
 	game.sound.play_slot_confirm()
@@ -111,6 +112,8 @@ func equip(id: String, slot: int = -1) -> bool:
 	return true
 
 func _commit_transaction(before: Dictionary, balance: float) -> bool:
+	if game.module_tutorial.debug_preview:
+		return true
 	# Slot-less diagnostic games are deliberately in-memory. Real active slots
 	# must persist the debit and result together before revealing a candidate.
 	if game.active_save_slot in [1, 2, 3] and not game._autosave_active_slot():

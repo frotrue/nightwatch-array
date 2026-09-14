@@ -11,6 +11,7 @@ const ACTION_CONTINUE := &"nw_continue"
 const ACTION_FULLSCREEN := &"nw_fullscreen"
 
 const DEBUG_KEYS := [
+	KEY_T,
 	KEY_D,
 	KEY_N,
 	KEY_A,

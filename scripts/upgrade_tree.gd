@@ -16,6 +16,7 @@ const ATLAS_ACTION_ORIGIN := Vector2(34, 438)
 const ATLAS_ACTION_SIZE := Vector2(172, 34)
 const ATLAS_ACTION_STEP := Vector2(0, 46)
 const RAW_DEBUG_KEYS := [
+	KEY_T,
 	KEY_D,
 	KEY_N,
 	KEY_A,

@@ -181,8 +181,9 @@ func open() -> void:
 	previous_chart_visible = game.upgrade_tree.visible
 	var focused := get_viewport().gui_get_focus_owner()
 	previous_focus = weakref(focused) if focused != null else null
-	game._release_hitstop()
-	game.observer.reset()
+	if not game.module_tutorial.debug_preview:
+		game._release_hitstop()
+		game.observer.reset()
 	get_tree().paused = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	# Hide only the chart canvas, retaining its logical open/pause state. The

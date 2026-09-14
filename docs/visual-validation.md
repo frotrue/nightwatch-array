@@ -151,3 +151,8 @@ save resume, settings escape, reduced-motion and completion checks.
 The guide is authored in `scenes/ui/module_tutorial.tscn`; spotlight rectangles
 follow the live controls. It covers first draw/equip usability, not whether players
 understand every module's strategic value after returning to observation.
+
+The Ctrl+Shift+T preview also captures `build/module_intro_debug_{en,ko}.png`.
+These show the locked (0/95) chart, the guided draw launcher and the explicit
+no-save/exit hint. The real-input test verifies cancellation and full completion
+restore the same saved gameplay fields without invoking the slot writer.
