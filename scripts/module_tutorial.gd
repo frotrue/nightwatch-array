@@ -46,6 +46,7 @@ func start_debug_preview() -> void:
 		"chart": game.upgrade_tree.is_open(), "popup": game.module_popup.is_open(),
 		"draw": game.module_popup.is_draw_open(), "autosave_failed": game.hud.autosave_failed,
 		"enabled": enabled,
+		"inventory_filter": game.module_popup.inventory_filter,
 	}
 	game.module_popup.close()
 	debug_preview = true
@@ -67,6 +68,7 @@ func _restore_debug_preview() -> void:
 	game.deep_sky.state = _preview_backup.state
 	game.deep_sky.modules = _preview_backup.modules
 	game.hud.autosave_failed = _preview_backup.autosave_failed
+	game.module_popup.set_inventory_filter(_preview_backup.inventory_filter)
 	if not _preview_backup.chart:
 		game.upgrade_tree.close_tree()
 	# Refresh subscribers while gameplay's change handler still ignores the preview.
@@ -82,9 +84,6 @@ func _restore_debug_preview() -> void:
 	enabled = _preview_backup.enabled
 	set_process(enabled)
 	_preview_backup.clear()
-
-func is_equip_target(index: int) -> bool:
-	return active and game != null and game.deep_sky.state.module_intro_stage == State.Intro.EQUIP and not game.module_popup.is_draw_open() and index == game.deep_sky.modules.first_empty_slot()
 
 func _process(_delta: float) -> void:
 	if game == null or not enabled:
@@ -142,11 +141,10 @@ func _process(_delta: float) -> void:
 			focus_rect = focus_rect.merge(draw.result_panel.get_global_rect())
 	elif state.module_intro_stage == State.Intro.EQUIP:
 		next_phase = "EQUIP"
-		var index: int = game.deep_sky.modules.first_empty_slot()
-		if index < 0:
-			return
-		next_target = popup.slots[index]
-		focus_rect = next_target.get_global_rect().merge(popup.slot_captions[index].get_global_rect())
+		next_target = popup.owned_buttons[state.module_intro_id]
+		if not next_target.visible:
+			popup.set_inventory_filter("all")
+		focus_rect = next_target.get_global_rect()
 	if phase != next_phase or target != next_target:
 		phase = next_phase
 		target = next_target

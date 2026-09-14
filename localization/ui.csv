@@ -764,8 +764,8 @@ MODULE_INTRO_REVEAL_TITLE,Reading the signal,모듈 신호를 확인하고 있�
 MODULE_INTRO_REVEAL_BODY,Your module has been saved. Watch the reveal or use the highlighted skip button.,뽑은 모듈은 이미 저장되었습니다. 결과를 기다리거나 표시된 건너뛰기를 눌러 보세요.
 MODULE_INTRO_RESULT_TITLE,Check its effect,어떤 효과인지 살펴보세요
 MODULE_INTRO_RESULT_BODY,"This is your new module. Read its effect, then open the loadout to install it.","새로 얻은 모듈입니다. 효과를 읽어 본 뒤, 표시된 편성 버튼을 눌러 장착하러 가세요."
-MODULE_INTRO_EQUIP_TITLE,Install it in the empty slot,빈 자리에 장착해 보세요
-MODULE_INTRO_EQUIP_BODY,"Click the highlighted empty slot to install %s. Its effect applies while equipped. After this, you can change your loadout freely.",표시된 빈 자리를 누르면 %s 모듈이 장착됩니다. 장착한 동안 효과가 적용됩니다. 이후에는 자유롭게 편성을 바꿀 수 있습니다.
+MODULE_INTRO_EQUIP_TITLE,Click your module to equip it,모듈을 눌러 장착해 보세요
+MODULE_INTRO_EQUIP_BODY,Click %s in storage to equip it in the first empty slot. Its effect applies while equipped. You can change your loadout freely afterward.,보관함의 %s 모듈을 누르면 첫 빈 자리에 자동으로 장착됩니다. 장착한 동안 효과가 적용됩니다. 이후에는 자유롭게 편성을 바꿀 수 있습니다.
 MODULE_INTRO_HINT,Click the highlighted control or press Enter / Space.  %s: settings,표시된 곳 클릭 또는 Enter / Space  ·  %s: 설정
 MODULE_INTRO_DONE,Module installed. Your loadout is now yours to explore.,모듈 장착 완료. 이제 자유롭게 편성해 보세요.
 MODULE_INTRO_PREVIEW_HINT,DEBUG PREVIEW · Changes are not saved. Esc / Ctrl+Shift+T: exit,디버그 미리보기 · 변경 사항은 저장되지 않습니다. Esc / Ctrl+Shift+T: 종료

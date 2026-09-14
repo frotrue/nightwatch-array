@@ -84,14 +84,20 @@ func _run() -> void:
 	await _click(popup.draw_window.action.get_global_rect().get_center())
 	_check(deep.state.draw_serial == 1, "repeat draw is blocked until first equip")
 	await _click(guide.target.get_global_rect().get_center())
-	_check(guide.phase == "EQUIP" and not popup.slots[0].disabled, "result confirmation exposes the guided empty slot")
+	_check(guide.phase == "EQUIP" and guide.target == popup.owned_buttons[drawn_id], "result confirmation highlights the owned module")
+	await _click(popup.slots[0].get_global_rect().get_center())
+	_check(popup.slots[0].disabled and deep.modules.installed_ids().is_empty(), "empty circles cannot equip even during the guide")
+	# A previous category selection must not hide the required module.
+	popup.set_inventory_filter("sweep" if popup._category_for(drawn_id, popup._definition(drawn_id)) != "sweep" else "trace")
+	await _frames()
+	_check(guide.target.is_visible_in_tree() and popup.inventory_filter == "all", "guide exposes its module when a category filter hides it")
 	await _capture("equip")
 	saves.fail = true
 	await _click(guide.target.get_global_rect().get_center())
 	_check(deep.modules.installed_ids().is_empty() and deep.state.module_intro_stage == State.Intro.EQUIP and guide.active, "failed equip restores pending guide")
 	saves.fail = false
 	await _click(guide.target.get_global_rect().get_center())
-	_check(deep.modules.slots[0] == drawn_id and deep.state.module_intro_stage == State.Intro.COMPLETE and not guide.active, "first slot click installs and completes")
+	_check(deep.modules.slots[0] == drawn_id and deep.state.module_intro_stage == State.Intro.COMPLETE and not guide.active, "inventory click fills the first empty slot and completes")
 	_check(popup.is_open() and paused, "completion preserves loadout pause for free editing")
 	_check(popup.hint.visible and popup.hint.text == tr("MODULE_INTRO_DONE"), "completion feedback is visible inside the loadout")
 	var complete: Dictionary = saves.saved.duplicate(true)
@@ -154,6 +160,7 @@ func _run() -> void:
 	await _restore(complete)
 	game.upgrade_tree.open_tree()
 	popup.open_draw()
+	popup.set_inventory_filter("sweep")
 	await _frames()
 	live_data = game._build_save_data().duplicate(true)
 	write_count = saves.writes
@@ -161,6 +168,7 @@ func _run() -> void:
 	_check(guide.debug_preview and guide.phase == "OPEN", "completed saves can replay from a paused module window")
 	for _i in 4: await _key(KEY_ENTER)
 	_check(not guide.debug_preview and popup.is_draw_open() and paused, "finishing preview returns to the original draw window")
+	_check(popup.inventory_filter == "sweep", "preview restores the original inventory category")
 	_check(saves.writes == write_count and game._build_save_data() == live_data, "preview draw and equip do not persist or mutate live progression")
 	for field in live_data:
 		_check(game._build_save_data()[field] == live_data[field], "preview restores saved field: " + field)

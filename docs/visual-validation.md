@@ -144,8 +144,8 @@ Run `tests/module_tutorial_test.gd -- --capture` with the Windows/OpenGL flags a
 It uses isolated fixture settings and an in-memory slot recorder, never player files.
 The eight `build/module_intro_{open,draw,result,equip}_{en,ko}.png` frames exercise
 real pointer/keyboard actions. Reviewed at 1152×648: card copy fits both languages,
-targets remain unobstructed, the result effect stays readable, and the equip slot
-has no conflicting inventory tooltip. The same run passes transaction rollback,
+targets remain unobstructed, the result effect stays readable, and the owned module tile
+is highlighted for the normal inventory-click equip action. The same run passes transaction rollback,
 save resume, settings escape, reduced-motion and completion checks.
 
 The guide is authored in `scenes/ui/module_tutorial.tscn`; spotlight rectangles
