@@ -563,7 +563,9 @@ func handle_debug_key_input(event: InputEvent) -> void:
 			if not available.is_empty():
 				progression.debug_purchase_node(available[0])
 		KEY_A:
-			progression.debug_purchase_all()
+			if progression.upgrade_level < Balance.research_node_count():
+				progression.debug_purchase_all()
+			deep_sky.debug_purchase_all_research()
 		KEY_G:
 			var id: String = deep_sky.debug_draw_module()
 			if not id.is_empty():
