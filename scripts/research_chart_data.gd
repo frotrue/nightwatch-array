@@ -220,8 +220,8 @@ const PLACEMENTS := {
 	"leo": {"anchor_angle": 1.51, "anchor_radius": 520.0, "scale": 110.0, "tilt": -0.05},
 	"ursa_minor": {"anchor_angle": 2.02, "anchor_radius": 430.0, "scale": 96.0, "tilt": 0.14},
 	"lyra": {"anchor_angle": 2.53, "anchor_radius": 360.0, "scale": 92.0, "tilt": 0.10},
-	# Keep the planet/black-hole and attached module figures clear of the inner sky.
-	"andromeda": {"anchor_angle": 3.0, "anchor_radius": 800.0, "scale": 100.0, "tilt": -0.08}
+	# Keep this base figure in the inner ring; Pegasus follows its shared star.
+	"andromeda": {"anchor_angle": 3.0, "anchor_radius": 520.0, "scale": 100.0, "tilt": -0.08}
 }
 
 
