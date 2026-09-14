@@ -14,34 +14,10 @@ class CountedMeteor:
 		draws += 1
 		super._draw()
 
-class ImmediatePlanet:
-	extends CountedMeteor
-	# Independent pre-mesh surface renderer retained as the pixel oracle.
-	func _draw_planet_head(radius: float, visibility: float) -> void:
-		# Latitude strips follow a lit sphere. No rings, orbit lines or star-shaped core.
-		draw_circle(Vector2.ZERO, radius * 1.04, Color(glow_color, visibility * 0.09), true, -1.0, true)
-		var bands := 36
-		for index in range(bands):
-			var y0 := -1.0 + 2.0 * float(index) / float(bands)
-			var y1 := -1.0 + 2.0 * float(index + 1) / float(bands)
-			var y := (y0 + y1) * 0.5
-			var width0 := sqrt(maxf(0.0, 1.0 - y0 * y0))
-			var width1 := sqrt(maxf(0.0, 1.0 - y1 * y1))
-			var band := 0.48 + 0.12 * sin(y * 22.0 + 0.7 * sin(y * 9.0))
-			for column in range(16):
-				var x0 := -1.0 + float(column) / 8.0
-				var x1 := -1.0 + float(column + 1) / 8.0
-				var x := (x0 + x1) * 0.5
-				var lighting := clampf(0.38 + 0.58 * sqrt(maxf(0.0, 1.0 - x * x - y * y * 0.35)) - x * 0.35 - y * 0.17, 0.13, 1.0)
-				var color := primary_color.darkened(1.0 - band * lighting)
-				if index % 9 in [3, 4]: color = glow_color.darkened(1.0 - lighting * 0.78)
-				draw_colored_polygon(PackedVector2Array([
-					Vector2(x0 * width0, y0) * radius, Vector2(x1 * width0, y0) * radius,
-					Vector2(x1 * width1, y1) * radius, Vector2(x0 * width1, y1) * radius]), Color(color, visibility))
-		draw_arc(Vector2.ZERO, radius, PI * 0.8, PI * 1.7, 48, Color(glow_color, visibility * 0.45), 0.9, true)
-
 class NativeArcs:
-	extends ImmediatePlanet
+	extends CountedMeteor
+	# Compare native arcs and immediate trail submissions against retained ones.
+	# Animated body materials have a separate seeded visual review.
 	func _draw_dashed_arc(radius: float, start_angle: float, arc_length: float, dash_count: int, color: Color, width: float) -> void:
 		var cell := arc_length / float(dash_count)
 		for index in range(dash_count):
@@ -183,12 +159,13 @@ func _run() -> void:
 	driver.moving = false
 	await _settle()
 	await _compare("stopped")
-	var original_surface: int = all_targets[1][2].planet_surface.revision
+	var cloud_quad: Sprite2D = all_targets[1][2].planet_surface.clouds
+	var original_surface: RID = cloud_quad.texture.get_rid()
 	for targets in all_targets:
 		targets[2].age += 0.1
 	await _settle()
 	await _compare("planet_cached_age")
-	_check(all_targets[1][2].planet_surface.revision == original_surface, "Planet rebuilt its static surface for age changes")
+	_check(cloud_quad.texture.get_rid() == original_surface, "Planet recreated its quad for age changes")
 	for targets in all_targets:
 		targets[2].body_radius *= 1.3
 		targets[2].primary_color = Color("7799cc")
@@ -196,15 +173,15 @@ func _run() -> void:
 		targets[2].queue_redraw()
 	await _settle()
 	await _compare("planet_radius_palette")
-	_check(all_targets[1][2].planet_surface.revision != original_surface, "Planet retained stale size/palette")
-	var colored_surface: int = all_targets[1][2].planet_surface.revision
+	_check(is_equal_approx(cloud_quad.scale.x, all_targets[1][2].get_observation_body_radius() * 1.04), "Planet retained stale size")
+	_check(cloud_quad.material.get_shader_parameter("primary") == all_targets[1][2].primary_color, "Planet retained stale palette")
 	for targets in all_targets:
 		targets[2].alive = false
 		targets[2].linger_time = 0.073
 		targets[2].queue_redraw()
 	await _settle()
 	await _compare("planet_translucent")
-	_check(all_targets[1][2].planet_surface.revision == colored_surface, "Planet rebuilt its mesh while fading")
+	_check(cloud_quad.texture.get_rid() == original_surface, "Planet recreated its quad while fading")
 	# Exercise subpixel shader expansion at the late camera's largest scale.
 	# Keep the actual canvas transform and shader bounds involved in culling.
 	var cameras: Array = []
