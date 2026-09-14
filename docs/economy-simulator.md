@@ -169,4 +169,8 @@ EOF. Neither test asserts a desired purchasing cadence or changes prices.
 
 ## Recorded external playtests
 
+For new runs, follow the [recording contract](playtest-recording.md) and copy the
+[journal template](templates/manual-playtest.md). Record brief reasons before
+sending actions, preserve raw states/results, and keep retrospective interpretation separate.
+
 - [2026-09-14 decision journal](history/manual-playtest-2026-09-14.md): 64 rounds, pre-action reasons, public states, rejected purchase, module choices and archived protocol evidence. Interpretation is separate from contemporaneous reasons; this is not a human completion-time benchmark.
