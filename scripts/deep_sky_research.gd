@@ -95,6 +95,29 @@ func purchase(id: String) -> bool:
 	changed.emit()
 	return true
 
+func debug_purchase_all_research() -> bool:
+	# The global debug chord also works outside the chart. Grant only current
+	# research; module copies and their paid draw sequence remain independent.
+	if not available():
+		return false
+	var before := get_save_data()
+	var runtime := modules.get_round_state()
+	var added := false
+	for id in Data.RESEARCH_ORDER:
+		if id not in state.research_ids:
+			state.research_ids.append(id)
+			added = true
+	if not added:
+		return true
+	modules.unlocked_slots = maxi(modules.unlocked_slots, int(state.effect("slot_capacity", 2.0)))
+	_sync_protocol()
+	if not _commit_transaction(before, game.progression.observation_data):
+		modules.restore_round_state(runtime)
+		return false
+	game.progression.state_changed.emit()
+	changed.emit()
+	return true
+
 func equip(id: String, slot: int = -1) -> bool:
 	if not modules_unlocked() or not game.module_popup.is_open() or game.module_popup.is_draw_open():
 		return false

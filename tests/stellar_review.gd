@@ -1,5 +1,12 @@
 extends "res://tests/module_overhaul_review.gd"
 
+class HeatReference:
+	extends Node2D
+	func _draw() -> void:
+		for y in range(-90, 91, 6):
+			for x in range(-90, 91, 6):
+				draw_circle(Vector2(x, y), 0.65, Color("94b7c9"))
+
 func _run() -> void:
 	if DisplayServer.get_name() == "headless": quit(1); return
 	var game := await _game()
@@ -38,7 +45,33 @@ func _run() -> void:
 	game.observer.previous_cursor_position = centre
 	game.observer.native_cursor_visible = false
 	_freeze(game)
+	star.stellar_surface.heat_enabled = false
+	await _capture(game, "13_body_size_comparison")
+	star.stellar_surface.heat_enabled = true
 	await _capture(game, "01_star")
+	star.age = 11.0
+	await _capture(game, "02_star_evolved")
+	if Image.load_from_file(output.path_join("01_star.png")).get_data() == Image.load_from_file(output.path_join("02_star_evolved.png")).get_data():
+		failures.append("stellar surface did not evolve with simulation age")
+	star.age = 3.0
+	star.scale = Vector2.ONE * 2.0
+	for target in game.meteor_layer.get_children():
+		if target != star: target.hide()
+	await _capture(game, "03_star_detail")
+	star.scale = Vector2.ONE
+	await _review_animation(game, star, centre, unit)
+	for target in game.meteor_layer.get_children(): target.show()
+	var hole = game.black_hole_lens.target
+	var original_hole_position: Vector2 = hole.position
+	hole.position = centre + Vector2(100, 0) * unit
+	hole.previous_simulation_position = hole.position
+	hole.reset_physics_interpolation()
+	game.black_hole_lens._process(0.0)
+	await _capture(game, "10_heat_lens_overlap")
+	hole.position = original_hole_position
+	hole.previous_simulation_position = hole.position
+	hole.reset_physics_interpolation()
+	game.black_hole_lens._process(0.0)
 	star.observation_progress = 1.0
 	star.manual_touched = true
 	star.manual_tracking_time = 3.0
@@ -51,9 +84,120 @@ func _run() -> void:
 		for target in game.meteor_layer.get_children():
 			if not target.alive and target != star: target.linger_time = target.linger_duration * (1.0 - stage)
 		await _capture(game, "supernova_%02d" % int(stage * 100))
+		if star.stellar_surface.visible: failures.append("photosphere remained visible after the supernova")
+		if star.stellar_surface.background_copy.copy_mode != BackBufferCopy.COPY_MODE_DISABLED: failures.append("completed star still copied the screen")
 	var manifest := FileAccess.open(output.path_join("manifest.json"), FileAccess.WRITE)
 	manifest.store_string(JSON.stringify({"frames": records, "failures": failures, "synthetic": true}, "\t"))
 	manifest.close()
 	game.free()
 	paused = false
 	_finish("STELLAR_REVIEW", "%d frames at " % records.size() + ProjectSettings.globalize_path(output))
+
+func _review_animation(game: Node, star: Node2D, centre: Vector2, unit: float) -> void:
+	game.black_hole_lens._process(0.0)
+	var pattern := HeatReference.new()
+	pattern.position = centre
+	pattern.scale = Vector2.ONE * unit
+	pattern.z_index = 0
+	game.add_child(pattern)
+	star.stellar_surface.heat_enabled = false
+	await _capture(game, "04_heat_reference_off")
+	var original := root.get_texture().get_image()
+	star.stellar_surface.heat_enabled = true
+	await _capture(game, "05_heat_reference_on")
+	var warped := root.get_texture().get_image()
+	var screen_centre: Vector2 = game.observation_view.world_to_screen(centre)
+	var outer_radius: float = star.get_observation_body_radius() / unit * 3.0 + 2.0
+	var changed := 0
+	var outside := 0
+	for y in 648:
+		for x in 1152:
+			if original.get_pixel(x, y) != warped.get_pixel(x, y):
+				changed += 1
+				if Vector2(x, y).distance_to(screen_centre) > outer_radius: outside += 1
+	if changed < 20 or outside > 0: failures.append("heat distortion scope: changed=%d outside=%d" % [changed, outside])
+	print("STELLAR_HEAT_PIXELS changed=", changed, " outside=", outside)
+	pattern.free()
+	# This target is spawned after the star, as most real passing meteors are.
+	# Heat must reach its rendered trail without moving its simulation position.
+	var nearby := _nearby_meteor(game, star, centre, unit)
+	var physical_position: Vector2 = nearby.position
+	var sample_rect := Rect2i(Vector2i(game.observation_view.world_to_screen(nearby.position)) - Vector2i(55, 40), Vector2i(100, 80))
+	star.stellar_surface.heat_enabled = false
+	await _capture(game, "11_nearby_meteor_heat_off")
+	var original_centre := _green_centre(root.get_texture().get_image(), sample_rect)
+	star.stellar_surface.heat_enabled = true
+	await _capture(game, "12_nearby_meteor_heat_on")
+	var warped_centre := _green_centre(root.get_texture().get_image(), sample_rect)
+	if not original_centre.is_finite() or not warped_centre.is_finite() or original_centre.distance_to(warped_centre) < 1.0:
+		failures.append("heat did not refract the later-spawned meteor")
+	if nearby.position != physical_position: failures.append("visual heat moved the meteor's simulation position")
+	print("STELLAR_NEIGHBOR_SHIFT pixels=", original_centre.distance_to(warped_centre))
+	nearby.free()
+	# Hold the normal arrival/fade envelope on its steady plateau, so this
+	# compares animation rather than the ordinary lifetime visibility change.
+	star.age = star.visible_lifetime * 0.4
+	star.completion_motion_scale = 0.0
+	await _capture(game, "06_motion_off")
+	var still := root.get_texture().get_image()
+	star.age += 1.0
+	await _capture(game, "07_motion_off_later")
+	if still.get_data() != root.get_texture().get_image().get_data(): failures.append("reduced-motion surface still animated")
+	if star.stellar_surface.background_copy.copy_mode != BackBufferCopy.COPY_MODE_DISABLED: failures.append("reduced motion still copied the screen")
+	star.completion_motion_scale = 1.0
+	star.completion_glint_enabled = false
+	star.age = 3.0
+	star.observation_progress = 0.05
+	await _capture(game, "08_low_charge")
+	var low := root.get_texture().get_image()
+	star.observation_progress = 0.95
+	await _capture(game, "09_high_charge")
+	if low.get_data() == root.get_texture().get_image().get_data(): failures.append("observation progress has no visual feedback")
+	if star.stellar_surface.photosphere.material.get_shader_parameter("pulses") != 0.0: failures.append("flash setting did not suppress light pulses")
+	star.completion_glint_enabled = true
+	star.position = Vector2(-3000, -3000)
+	star.stellar_surface.present(star.get_observation_body_radius(), 1.0, star.age, star.wobble_phase, 0.95, 1.0, true, Color.WHITE)
+	if star.stellar_surface.background_copy.copy_mode != BackBufferCopy.COPY_MODE_DISABLED: failures.append("off-screen star still copied the screen")
+	star.position = centre
+	if "--animate" in OS.get_cmdline_user_args():
+		await _capture_animation(game, star, centre, unit)
+	star.age = 3.0
+	star.observation_progress = 0.78
+
+func _nearby_meteor(game: Node, star: Node2D, centre: Vector2, unit: float) -> Node2D:
+	var distance: float = star.get_observation_body_radius() / unit * 2.2
+	var nearby = game.spawner.spawn_meteor("common", centre + Vector2(distance, -18) * unit, Vector2(120, 0), 30.0)
+	nearby.primary_color = Color(0.08, 1.0, 0.08)
+	nearby.glow_color = nearby.primary_color
+	nearby.age = 5.0
+	for i in 16: nearby.trail_points.append(nearby.position - Vector2(2.0 * i, 0.5 * i) * unit)
+	nearby.set_process(false)
+	return nearby
+
+func _green_centre(frame: Image, region: Rect2i) -> Vector2:
+	var weighted_position := Vector2.ZERO
+	var total := 0.0
+	region = region.intersection(Rect2i(Vector2i.ZERO, frame.get_size()))
+	for y in range(region.position.y, region.end.y):
+		for x in range(region.position.x, region.end.x):
+			var color := frame.get_pixel(x, y)
+			var weight := maxf(0.0, color.g - maxf(color.r, color.b) * 1.6)
+			weighted_position += Vector2(x, y) * weight
+			total += weight
+	return weighted_position / total if total > 0.0 else Vector2.INF
+
+func _capture_animation(game: Node, star: Node2D, centre: Vector2, unit: float) -> void:
+	var directory := output.path_join("animation")
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(directory))
+	var nearby := _nearby_meteor(game, star, centre, unit)
+	game.sky_contacts.hide()
+	for frame in 150:
+		star.age = 3.0 + float(frame) / 30.0
+		star.observation_progress = clampf((float(frame) - 45.0) / 110.0, 0.0, 0.95)
+		star.queue_redraw()
+		await process_frame
+		await RenderingServer.frame_post_draw
+		var capture := root.get_texture().get_image().get_region(Rect2i(260, 0, 580, 580))
+		if capture.save_png(directory.path_join("%03d.png" % frame)) != OK: failures.append("animation frame write failed")
+	nearby.free()
+	game.sky_contacts.show()

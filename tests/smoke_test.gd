@@ -2476,8 +2476,26 @@ func _run_input_routing_regressions(packed: PackedScene) -> void:
 	var debug_research_before: int = routing_game.progression.upgrade_level
 	await _push_key_event(routing_game.get_viewport(), KEY_N, true, true)
 	_check(routing_game.progression.upgrade_level == debug_research_before + 1, "debug next-research chord works in the chart")
+	var debug_expansion_before: Dictionary = routing_game.deep_sky.get_save_data()
 	await _push_key_event(routing_game.get_viewport(), KEY_A, true, true)
 	_check(routing_game.progression.upgrade_level == Balance.research_node_count(), "debug all-research chord works in the chart")
+	_check(routing_game.deep_sky.state.research_ids.size() == routing_game.deep_sky.Data.RESEARCH.size(), "debug all-research chord includes the complete expansion catalogue")
+	_check(routing_game.deep_sky.research_owned("ext_sct_stellar") and routing_game.deep_sky.research_owned("ext_sgr_black_hole") and routing_game.deep_sky.modules.unlocked_slots == 5, "debug all-research unlocks stars, black holes and all equipment slots")
+	var debug_expansion_save: Dictionary = JSON.parse_string(JSON.stringify(routing_game.deep_sky.get_save_data()))
+	var debug_restored_state = routing_game.deep_sky.State.new()
+	debug_restored_state.load_save_data(debug_expansion_save.extension)
+	_check(debug_restored_state.research_ids == routing_game.deep_sky.state.research_ids, "debug expansion ownership survives the save format")
+	# Reproduce an existing save completed by the old base-only shortcut.
+	# Finish the reveal first: its first key deliberately skips the animation.
+	routing_game.upgrade_tree._finish_galactic_pullback()
+	routing_game.deep_sky.load_save_data(debug_expansion_before)
+	debug_data_before = routing_game.progression.observation_data
+	await _push_key_event(routing_game.get_viewport(), KEY_A, true, true)
+	_check(routing_game.deep_sky.state.research_ids.size() == routing_game.deep_sky.Data.RESEARCH.size() and routing_game.progression.observation_data == debug_data_before, "all-research fills an old base-complete save without another base budget grant")
+	debug_data_before = routing_game.progression.observation_data
+	debug_modules_before = _module_copy_count(routing_game)
+	await _push_key_event(routing_game.get_viewport(), KEY_A, true, true)
+	_check(routing_game.progression.observation_data == debug_data_before and _module_copy_count(routing_game) == debug_modules_before and routing_game.deep_sky.state.research_ids.size() == routing_game.deep_sky.Data.RESEARCH.size(), "repeated all-research chord neither duplicates studies nor grants currency or module copies")
 	_check(paused and routing_game.upgrade_tree.is_open(), "debug commands preserve the chart and gameplay pause")
 	debug_data_before = routing_game.progression.observation_data
 	await _push_key_event(routing_game.get_viewport(), KEY_D)
