@@ -166,3 +166,7 @@ ledger conservation, rejected commands, zero coverage, production fragment
 completion ordering, and outer research/draw/equipment transactions. The Python
 check exercises the actual stdin/stdout protocol, including stale revisions and
 EOF. Neither test asserts a desired purchasing cadence or changes prices.
+
+## Recorded external playtests
+
+- [2026-09-14 decision journal](history/manual-playtest-2026-09-14.md): 64 rounds, pre-action reasons, public states, rejected purchase, module choices and archived protocol evidence. Interpretation is separate from contemporaneous reasons; this is not a human completion-time benchmark.

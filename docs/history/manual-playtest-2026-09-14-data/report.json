@@ -1,0 +1,4044 @@
+{
+	"actions": [
+		{
+			"active_seconds": 20.0000000000001,
+			"command": {
+				"action": "next_round",
+				"revision": 0.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 20.0000000000001,
+			"command": {
+				"action": "buy",
+				"id": "edge_detection",
+				"revision": 1.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 20.0000000000001,
+			"command": {
+				"action": "buy",
+				"id": "better_lens",
+				"revision": 2.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 39.999999999999,
+			"command": {
+				"action": "next_round",
+				"revision": 3.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 39.999999999999,
+			"command": {
+				"action": "buy",
+				"id": "observation_streak",
+				"revision": 4.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 59.9999999999979,
+			"command": {
+				"action": "next_round",
+				"revision": 5.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 59.9999999999979,
+			"command": {
+				"action": "buy",
+				"id": "array_planning",
+				"revision": 6.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 59.9999999999979,
+			"command": {
+				"action": "buy",
+				"id": "long_exposure",
+				"revision": 7.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 79.9999999999967,
+			"command": {
+				"action": "next_round",
+				"revision": 8.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 99.9999999999956,
+			"command": {
+				"action": "next_round",
+				"revision": 9.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 99.9999999999956,
+			"command": {
+				"action": "buy",
+				"id": "precision_multiplier",
+				"revision": 10.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 119.999999999994,
+			"command": {
+				"action": "next_round",
+				"revision": 11.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 140.000000000004,
+			"command": {
+				"action": "next_round",
+				"revision": 12.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 140.000000000004,
+			"command": {
+				"action": "buy",
+				"id": "observation_scheduling",
+				"revision": 13.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 170.000000000027,
+			"command": {
+				"action": "next_round",
+				"revision": 14.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 170.000000000027,
+			"command": {
+				"action": "buy",
+				"id": "wide_field",
+				"revision": 15.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 170.000000000027,
+			"command": {
+				"action": "buy",
+				"id": "contact_ledger",
+				"revision": 16.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 200.000000000051,
+			"command": {
+				"action": "next_round",
+				"revision": 17.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 200.000000000051,
+			"command": {
+				"action": "buy",
+				"id": "trajectory",
+				"revision": 18.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 200.000000000051,
+			"command": {
+				"action": "buy",
+				"id": "polar_survey",
+				"revision": 19.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 230.000000000075,
+			"command": {
+				"action": "next_round",
+				"revision": 20.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 230.000000000075,
+			"command": {
+				"action": "buy",
+				"id": "rare_detection",
+				"revision": 21.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 260.000000000092,
+			"command": {
+				"action": "next_round",
+				"revision": 22.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 260.000000000092,
+			"command": {
+				"action": "buy",
+				"id": "thermal_management",
+				"revision": 23.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 300.000000000056,
+			"command": {
+				"action": "next_round",
+				"revision": 24.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 340.000000000019,
+			"command": {
+				"action": "next_round",
+				"revision": 25.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 340.000000000019,
+			"command": {
+				"action": "buy",
+				"id": "perfect_observation",
+				"revision": 26.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 379.999999999983,
+			"command": {
+				"action": "next_round",
+				"revision": 27.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 379.999999999983,
+			"command": {
+				"action": "buy",
+				"id": "secondary_camera",
+				"revision": 28.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 419.999999999947,
+			"command": {
+				"action": "next_round",
+				"revision": 29.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 419.999999999947,
+			"command": {
+				"action": "buy",
+				"id": "fragment_analysis",
+				"revision": 30.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 419.999999999947,
+			"command": {
+				"action": "buy",
+				"id": "extended_watch_protocol",
+				"revision": 31.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 469.999999999901,
+			"command": {
+				"action": "next_round",
+				"revision": 32.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 469.999999999901,
+			"command": {
+				"action": "buy",
+				"id": "shower_detector",
+				"revision": 33.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 469.999999999901,
+			"command": {
+				"action": "buy",
+				"id": "companion_resolution",
+				"revision": 34.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 469.999999999901,
+			"command": {
+				"action": "buy",
+				"id": "continuous_watch_rotation",
+				"revision": 35.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 469.999999999901,
+			"command": {
+				"action": "buy",
+				"id": "predictive_dish_control",
+				"revision": 36.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 529.999999999847,
+			"command": {
+				"action": "next_round",
+				"revision": 37.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 529.999999999847,
+			"command": {
+				"action": "buy",
+				"id": "echo_correlation_10",
+				"revision": 38.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 529.999999999847,
+			"command": {
+				"action": "buy",
+				"id": "multi_target_analysis",
+				"revision": 39.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 529.999999999847,
+			"command": {
+				"action": "buy",
+				"id": "automated_tracking",
+				"revision": 40.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 529.999999999847,
+			"command": {
+				"action": "buy",
+				"id": "sweep_gain",
+				"revision": 41.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 589.999999999792,
+			"command": {
+				"action": "next_round",
+				"revision": 42.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 589.999999999792,
+			"command": {
+				"action": "buy",
+				"id": "echo_correlation_20",
+				"revision": 43.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 589.999999999792,
+			"command": {
+				"action": "buy",
+				"id": "observatory_network",
+				"revision": 44.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 589.999999999792,
+			"command": {
+				"action": "buy",
+				"id": "faint_recovery",
+				"revision": 45.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 649.999999999737,
+			"command": {
+				"action": "next_round",
+				"revision": 46.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 649.999999999737,
+			"command": {
+				"action": "buy",
+				"id": "echo_signature_lock",
+				"revision": 47.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 649.999999999737,
+			"command": {
+				"action": "buy",
+				"id": "sustained_sweep",
+				"revision": 48.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 709.999999999683,
+			"command": {
+				"action": "next_round",
+				"revision": 49.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 709.999999999683,
+			"command": {
+				"action": "buy",
+				"id": "single_echo_channel",
+				"revision": 50.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 709.999999999683,
+			"command": {
+				"action": "buy",
+				"id": "deep_exposure",
+				"revision": 51.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 769.999999999628,
+			"command": {
+				"action": "next_round",
+				"revision": 52.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 769.999999999628,
+			"command": {
+				"action": "buy",
+				"id": "leonid_radiant",
+				"revision": 53.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 769.999999999628,
+			"command": {
+				"action": "buy",
+				"id": "rapid_scan",
+				"revision": 54.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 829.999999999574,
+			"command": {
+				"action": "next_round",
+				"revision": 55.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 829.999999999574,
+			"command": {
+				"action": "buy",
+				"id": "dual_echo_channel",
+				"revision": 56.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 829.999999999574,
+			"command": {
+				"action": "buy",
+				"id": "filter_wheel",
+				"revision": 57.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 889.999999999519,
+			"command": {
+				"action": "next_round",
+				"revision": 58.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 889.999999999519,
+			"command": {
+				"action": "buy",
+				"id": "double_star_resolution",
+				"revision": 59.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 889.999999999519,
+			"command": {
+				"action": "buy",
+				"id": "triple_echo_array",
+				"revision": 60.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 889.999999999519,
+			"command": {
+				"action": "buy",
+				"id": "polar_cascade",
+				"revision": 61.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 949.999999999465,
+			"command": {
+				"action": "next_round",
+				"revision": 62.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 949.999999999465,
+			"command": {
+				"action": "buy",
+				"id": "radiant_plotting",
+				"revision": 63.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 949.999999999465,
+			"command": {
+				"action": "buy",
+				"id": "compressed_cadence",
+				"revision": 64.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 949.999999999465,
+			"command": {
+				"action": "buy",
+				"id": "blue_band",
+				"revision": 65.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 949.999999999465,
+			"command": {
+				"action": "buy",
+				"id": "ephemeris_marks",
+				"revision": 66.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1009.99999999941,
+			"command": {
+				"action": "next_round",
+				"revision": 67.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1009.99999999941,
+			"command": {
+				"action": "buy",
+				"id": "dense_stream",
+				"revision": 68.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1009.99999999941,
+			"command": {
+				"action": "buy",
+				"id": "amber_band",
+				"revision": 69.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1009.99999999941,
+			"command": {
+				"action": "buy",
+				"id": "satellite_catalog",
+				"revision": 70.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1009.99999999941,
+			"command": {
+				"action": "buy",
+				"id": "crowd_forecast",
+				"revision": 71.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1009.99999999941,
+			"command": {
+				"action": "buy",
+				"id": "mirror_echo_solution",
+				"revision": 72.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1069.99999999936,
+			"command": {
+				"action": "next_round",
+				"revision": 73.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1069.99999999936,
+			"command": {
+				"action": "buy",
+				"id": "echo_delay_line",
+				"revision": 74.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1069.99999999936,
+			"command": {
+				"action": "buy",
+				"id": "violet_band",
+				"revision": 75.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1129.9999999993,
+			"command": {
+				"action": "next_round",
+				"revision": 76.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1129.9999999993,
+			"command": {
+				"action": "buy",
+				"id": "burst_windowing",
+				"revision": 77.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1129.9999999993,
+			"command": {
+				"action": "buy",
+				"id": "rapid_reacquisition",
+				"revision": 78.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1129.9999999993,
+			"command": {
+				"action": "buy",
+				"id": "change_detection",
+				"revision": 79.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1129.9999999993,
+			"command": {
+				"action": "buy",
+				"id": "momentum_acquisition",
+				"revision": 80.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1129.9999999993,
+			"command": {
+				"action": "buy",
+				"id": "split_radiant_model",
+				"revision": 81.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1129.9999999993,
+			"command": {
+				"action": "buy",
+				"id": "fragment_front",
+				"revision": 82.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1189.99999999925,
+			"command": {
+				"action": "next_round",
+				"revision": 83.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1189.99999999925,
+			"command": {
+				"action": "buy",
+				"id": "fireball_tail",
+				"revision": 84.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1189.99999999925,
+			"command": {
+				"action": "buy",
+				"id": "storm_front",
+				"revision": 85.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1189.99999999925,
+			"command": {
+				"action": "buy",
+				"id": "debris_correlation",
+				"revision": 86.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1189.99999999925,
+			"command": {
+				"action": "buy",
+				"id": "comet_solutions",
+				"revision": 87.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1189.99999999925,
+			"command": {
+				"action": "buy",
+				"id": "cadence_memory",
+				"revision": 88.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1189.99999999925,
+			"command": {
+				"action": "buy",
+				"id": "adaptive_exposure_grid",
+				"revision": 89.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1189.99999999925,
+			"command": {
+				"action": "buy",
+				"id": "andromeda_deep_survey",
+				"revision": 90.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1249.99999999919,
+			"command": {
+				"action": "next_round",
+				"revision": 91.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1249.99999999919,
+			"command": {
+				"action": "buy",
+				"id": "galaxy_imaging",
+				"revision": 92.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1249.99999999919,
+			"command": {
+				"action": "buy",
+				"id": "leonid_storm",
+				"revision": 93.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1249.99999999919,
+			"command": {
+				"action": "buy",
+				"id": "perseid_survey",
+				"revision": 94.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1249.99999999919,
+			"command": {
+				"action": "buy",
+				"id": "expanded_sweep",
+				"revision": 95.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1309.99999999914,
+			"command": {
+				"action": "next_round",
+				"revision": 96.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1309.99999999914,
+			"command": {
+				"action": "buy",
+				"id": "perseid_outburst",
+				"revision": 97.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1309.99999999914,
+			"command": {
+				"action": "buy",
+				"id": "canis_opening",
+				"revision": 98.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1309.99999999914,
+			"command": {
+				"action": "buy",
+				"id": "lyrid_spectrograph",
+				"revision": 99.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1309.99999999914,
+			"command": {
+				"action": "buy",
+				"id": "cascade_sampling",
+				"revision": 100.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1309.99999999914,
+			"command": {
+				"action": "buy",
+				"id": "accelerated_analysis",
+				"revision": 101.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1309.99999999914,
+			"command": {
+				"action": "buy",
+				"id": "sustained_charge",
+				"revision": 102.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1369.99999999908,
+			"command": {
+				"action": "next_round",
+				"revision": 103.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1369.99999999908,
+			"command": {
+				"action": "buy",
+				"id": "taurus_full_gallop",
+				"revision": 104.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1369.99999999908,
+			"command": {
+				"action": "buy",
+				"id": "canis_cadence_i",
+				"revision": 105.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1369.99999999908,
+			"command": {
+				"action": "buy",
+				"id": "echo_deconfliction",
+				"revision": 106.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1369.99999999908,
+			"command": {
+				"action": "buy",
+				"id": "echo_beacon",
+				"revision": 107.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1429.99999999903,
+			"command": {
+				"action": "next_round",
+				"revision": 108.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1429.99999999903,
+			"command": {
+				"action": "buy",
+				"id": "canis_capacity_i",
+				"revision": 109.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1429.99999999903,
+			"command": {
+				"action": "buy",
+				"id": "canis_capacity_ii",
+				"revision": 110.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1429.99999999903,
+			"command": {
+				"action": "buy",
+				"id": "variable_watchlist",
+				"revision": 111.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1429.99999999903,
+			"command": {
+				"action": "buy",
+				"id": "wide_pursuit",
+				"revision": 112.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1429.99999999903,
+			"command": {
+				"action": "buy",
+				"id": "rapid_focus",
+				"revision": 113.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1429.99999999903,
+			"command": {
+				"action": "buy",
+				"id": "canis_cadence_ii",
+				"revision": 114.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1429.99999999903,
+			"command": {
+				"action": "buy",
+				"id": "canis_cadence_iii",
+				"revision": 115.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1489.99999999897,
+			"command": {
+				"action": "next_round",
+				"revision": 116.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1489.99999999897,
+			"command": {
+				"action": "buy",
+				"id": "canis_capacity_iii",
+				"revision": 117.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1549.99999999892,
+			"command": {
+				"action": "next_round",
+				"revision": 118.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1549.99999999892,
+			"command": {
+				"action": "buy",
+				"id": "sirius_fireball",
+				"revision": 119.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1609.99999999886,
+			"command": {
+				"action": "next_round",
+				"revision": 120.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1609.99999999886,
+			"command": {
+				"action": "buy",
+				"id": "draco_synthesis",
+				"revision": 121.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1669.99999999881,
+			"command": {
+				"action": "next_round",
+				"revision": 122.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1669.99999999881,
+			"command": {
+				"action": "buy",
+				"id": "draco_cadence",
+				"revision": 123.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1729.99999999876,
+			"command": {
+				"action": "next_round",
+				"revision": 124.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1729.99999999876,
+			"command": {
+				"action": "buy",
+				"id": "draco_capacity",
+				"revision": 125.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1789.9999999987,
+			"command": {
+				"action": "next_round",
+				"revision": 126.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1789.9999999987,
+			"command": {
+				"action": "buy",
+				"id": "draco_sweep",
+				"revision": 127.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1849.99999999865,
+			"command": {
+				"action": "next_round",
+				"revision": 128.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1909.99999999859,
+			"command": {
+				"action": "next_round",
+				"revision": 129.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1909.99999999859,
+			"command": {
+				"action": "buy",
+				"id": "draco_echo",
+				"revision": 130.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1969.99999999854,
+			"command": {
+				"action": "next_round",
+				"revision": 131.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 1969.99999999854,
+			"command": {
+				"action": "buy",
+				"id": "draco_storm",
+				"revision": 132.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2029.99999999848,
+			"command": {
+				"action": "next_round",
+				"revision": 133.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2089.999999999,
+			"command": {
+				"action": "next_round",
+				"revision": 134.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2089.999999999,
+			"command": {
+				"action": "buy",
+				"id": "draco_array",
+				"revision": 135.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2149.99999999976,
+			"command": {
+				"action": "next_round",
+				"revision": 136.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2149.99999999976,
+			"command": {
+				"action": "buy",
+				"id": "draco_apotheosis",
+				"revision": 137.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2210.00000000053,
+			"command": {
+				"action": "next_round",
+				"revision": 138.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2210.00000000053,
+			"command": {
+				"action": "buy",
+				"id": "galactic_reference_frame",
+				"revision": 139.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2210.00000000053,
+			"command": {
+				"action": "buy",
+				"id": "ext_del_signal",
+				"revision": 140.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2210.00000000053,
+			"command": {
+				"action": "buy",
+				"id": "ext_sge_cadence",
+				"revision": 141.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2270.00000000129,
+			"command": {
+				"action": "next_round",
+				"revision": 142.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2270.00000000129,
+			"command": {
+				"action": "buy",
+				"id": "ext_sweep_advanced",
+				"revision": 143.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2270.00000000129,
+			"command": {
+				"action": "buy",
+				"id": "ext_del_companion",
+				"revision": 144.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2270.00000000129,
+			"command": {
+				"action": "buy",
+				"id": "ext_tri_photometry",
+				"revision": 145.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2270.00000000129,
+			"command": {
+				"action": "buy",
+				"id": "ext_equ_focus",
+				"revision": 146.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2330.00000000206,
+			"command": {
+				"action": "next_round",
+				"revision": 147.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2330.00000000206,
+			"command": {
+				"action": "buy",
+				"id": "ext_del_debris",
+				"revision": 148.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2330.00000000206,
+			"command": {
+				"action": "buy",
+				"id": "ext_sge_forecast",
+				"revision": 149.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2330.00000000206,
+			"command": {
+				"action": "buy",
+				"id": "ext_trace_advanced",
+				"revision": 150.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2330.00000000206,
+			"command": {
+				"action": "buy",
+				"id": "ext_vul_memory",
+				"revision": 151.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2390.00000000282,
+			"command": {
+				"action": "next_round",
+				"revision": 152.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2390.00000000282,
+			"command": {
+				"action": "buy",
+				"id": "ext_link_advanced",
+				"revision": 153.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2390.00000000282,
+			"command": {
+				"action": "buy",
+				"id": "ext_sge_solution",
+				"revision": 154.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2390.00000000282,
+			"command": {
+				"action": "buy",
+				"id": "ext_del_resonance",
+				"revision": 155.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2390.00000000282,
+			"command": {
+				"action": "buy",
+				"id": "ext_trace_study",
+				"revision": 156.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2450.00000000358,
+			"command": {
+				"action": "next_round",
+				"revision": 157.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2450.00000000358,
+			"command": {
+				"action": "buy",
+				"id": "ext_synthesis",
+				"revision": 158.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2450.00000000358,
+			"command": {
+				"action": "buy",
+				"id": "ext_cnc_planet",
+				"revision": 159.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2450.00000000358,
+			"command": {
+				"action": "buy",
+				"id": "focus",
+				"revision": 160.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2510.00000000435,
+			"command": {
+				"action": "next_round",
+				"revision": 161.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2510.00000000435,
+			"command": {
+				"action": "buy",
+				"id": "ext_combined_watch",
+				"revision": 162.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2510.00000000435,
+			"command": {
+				"action": "buy",
+				"id": "ext_del_school",
+				"revision": 163.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2570.00000000511,
+			"command": {
+				"action": "next_round",
+				"revision": 164.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2570.00000000511,
+			"command": {
+				"action": "buy",
+				"id": "ext_cnc_tracking",
+				"revision": 165.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2570.00000000511,
+			"command": {
+				"action": "buy",
+				"id": "ext_tri_analysis",
+				"revision": 166.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2570.00000000511,
+			"command": {
+				"action": "buy",
+				"id": "ext_sge_window",
+				"revision": 167.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2570.00000000511,
+			"command": {
+				"action": "buy",
+				"id": "ext_sweep_study",
+				"revision": 168.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2630.00000000588,
+			"command": {
+				"action": "next_round",
+				"revision": 169.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2630.00000000588,
+			"command": {
+				"action": "draw",
+				"revision": 170.0
+			},
+			"result": "wide_correlation"
+		},
+		{
+			"active_seconds": 2630.00000000588,
+			"command": {
+				"action": "buy",
+				"id": "ext_sgr_black_hole",
+				"revision": 171.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2630.00000000588,
+			"command": {
+				"action": "buy",
+				"id": "ext_sge_stream",
+				"revision": 172.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2630.00000000588,
+			"command": {
+				"action": "equip",
+				"id": "wide_correlation",
+				"revision": 173.0,
+				"slot": 0.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2690.00000000664,
+			"command": {
+				"action": "next_round",
+				"revision": 174.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2690.00000000664,
+			"command": {
+				"action": "buy",
+				"id": "ext_tri_catalogue",
+				"revision": 175.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2690.00000000664,
+			"command": {
+				"action": "buy",
+				"id": "ext_equ_mount",
+				"revision": 176.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2690.00000000664,
+			"command": {
+				"action": "buy",
+				"id": "ext_vul_rhythm",
+				"revision": 177.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2750.0000000074,
+			"command": {
+				"action": "next_round",
+				"revision": 178.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2750.0000000074,
+			"command": {
+				"action": "buy",
+				"id": "ext_sgr_tracking",
+				"revision": 179.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2750.0000000074,
+			"command": {
+				"action": "buy",
+				"id": "ext_equ_array",
+				"revision": 180.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2750.0000000074,
+			"command": {
+				"action": "buy",
+				"id": "ext_vul_arc",
+				"revision": 181.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2810.00000000817,
+			"command": {
+				"action": "next_round",
+				"revision": 182.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2810.00000000817,
+			"command": {
+				"action": "buy",
+				"id": "ext_sgr_yield",
+				"revision": 183.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2810.00000000817,
+			"command": {
+				"action": "buy",
+				"id": "ext_cnc_arrivals",
+				"revision": 184.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2870.00000000893,
+			"command": {
+				"action": "next_round",
+				"revision": 185.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2870.00000000893,
+			"command": {
+				"action": "draw",
+				"revision": 186.0
+			},
+			"result": "sweep_optics"
+		},
+		{
+			"active_seconds": 2870.00000000893,
+			"command": {
+				"action": "buy",
+				"id": "ext_cnc_yield",
+				"revision": 187.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2870.00000000893,
+			"command": {
+				"action": "buy",
+				"id": "precision",
+				"revision": 188.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2870.00000000893,
+			"command": {
+				"action": "buy",
+				"id": "wide",
+				"revision": 189.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2870.00000000893,
+			"command": {
+				"action": "equip",
+				"id": "sweep_optics",
+				"revision": 190.0,
+				"slot": 1.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2930.0000000097,
+			"command": {
+				"action": "next_round",
+				"revision": 191.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2930.0000000097,
+			"command": {
+				"action": "buy",
+				"id": "ext_cnc_survey",
+				"revision": 192.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2930.0000000097,
+			"command": {
+				"action": "buy",
+				"id": "slot_3",
+				"revision": 193.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2990.00000001046,
+			"command": {
+				"action": "next_round",
+				"revision": 194.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2990.00000001046,
+			"command": {
+				"action": "buy",
+				"id": "slot_4",
+				"revision": 195.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2990.00000001046,
+			"command": {
+				"action": "buy",
+				"id": "slot_5",
+				"revision": 196.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2990.00000001046,
+			"command": {
+				"action": "buy",
+				"id": "ext_record_complete",
+				"revision": 197.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 2990.00000001046,
+			"command": {
+				"action": "draw",
+				"revision": 198.0
+			},
+			"result": "precision"
+		},
+		{
+			"active_seconds": 3050.00000001122,
+			"command": {
+				"action": "next_round",
+				"revision": 199.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 3050.00000001122,
+			"command": {
+				"action": "draw",
+				"revision": 200.0
+			},
+			"result": "sweep_optics"
+		},
+		{
+			"active_seconds": 3050.00000001122,
+			"command": {
+				"action": "buy",
+				"id": "ext_sgr_arrivals",
+				"revision": 201.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 3050.00000001122,
+			"command": {
+				"action": "buy",
+				"id": "ext_cyg_lock",
+				"revision": 202.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 3110.00000001199,
+			"command": {
+				"action": "next_round",
+				"revision": 203.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 3110.00000001199,
+			"command": {
+				"action": "draw",
+				"revision": 204.0
+			},
+			"result": "overcharge"
+		},
+		{
+			"active_seconds": 3110.00000001199,
+			"command": {
+				"action": "buy",
+				"id": "ext_cyg_aperture",
+				"revision": 205.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 3110.00000001199,
+			"command": {
+				"action": "buy",
+				"id": "ext_sgr_reach",
+				"revision": 206.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 3110.00000001199,
+			"command": {
+				"action": "buy",
+				"id": "ext_vul_cadence",
+				"revision": 207.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 3110.00000001199,
+			"command": {
+				"action": "equip",
+				"id": "overcharge",
+				"revision": 208.0,
+				"slot": 2.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 3170.00000001275,
+			"command": {
+				"action": "next_round",
+				"revision": 209.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 3170.00000001275,
+			"command": {
+				"action": "draw",
+				"revision": 210.0
+			},
+			"result": "wide"
+		},
+		{
+			"active_seconds": 3170.00000001275,
+			"command": {
+				"action": "buy",
+				"id": "ext_sgr_hold",
+				"revision": 211.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 3170.00000001275,
+			"command": {
+				"action": "buy",
+				"id": "ext_aql_pair",
+				"revision": 212.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 3170.00000001275,
+			"command": {
+				"action": "buy",
+				"id": "ext_aql_stride",
+				"revision": 213.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 3170.00000001275,
+			"command": {
+				"action": "equip",
+				"id": "wide",
+				"revision": 214.0,
+				"slot": 3.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 3170.00000001275,
+			"command": {
+				"action": "equip",
+				"id": "precision",
+				"revision": 215.0,
+				"slot": 4.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 3230.00000001352,
+			"command": {
+				"action": "next_round",
+				"revision": 216.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 3230.00000001352,
+			"command": {
+				"action": "buy",
+				"id": "ext_sgr_wide",
+				"revision": 217.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 3290.00000001428,
+			"command": {
+				"action": "next_round",
+				"revision": 218.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 3290.00000001428,
+			"command": {
+				"action": "draw",
+				"revision": 219.0
+			},
+			"result": "linear_observation"
+		},
+		{
+			"active_seconds": 3290.00000001428,
+			"command": {
+				"action": "buy",
+				"id": "ext_sgr_linger",
+				"revision": 220.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 3290.00000001428,
+			"command": {
+				"action": "equip",
+				"id": "linear_observation",
+				"revision": 221.0,
+				"slot": 1.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 3350.00000001504,
+			"command": {
+				"action": "next_round",
+				"revision": 222.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 3350.00000001504,
+			"command": {
+				"action": "buy",
+				"id": "ext_aql_stream",
+				"revision": 223.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 3350.00000001504,
+			"command": {
+				"action": "buy",
+				"id": "ext_vul_flow",
+				"revision": 224.0
+			},
+			"result": ""
+		},
+		{
+			"active_seconds": 3350.00000001504,
+			"command": {
+				"action": "buy",
+				"id": "ext_equ_link",
+				"revision": 225.0
+			},
+			"result": ""
+		}
+	],
+	"active_seconds": 3350.00000001504,
+	"bank": 46720111.0,
+	"base_research": 95,
+	"config": {
+		"auto_draw": true,
+		"auto_equip": true,
+		"automatic_equipment": true,
+		"completion_source": "manual",
+		"fragment_chance": 1.0,
+		"max_active_seconds": 14400.0,
+		"max_rounds": 300,
+		"observation_chance": 0.7,
+		"priority": [],
+		"purchase_limit": 0,
+		"quality": 0.75,
+		"seed": 42.0,
+		"strategy": "external",
+		"type_chances": {}
+	},
+	"earned": 14929021301.0,
+	"engine": {
+		"build": "official",
+		"hash": "ed1daf0bf001b61586d9930840f2f1394092c079",
+		"hex": 263938,
+		"major": 4,
+		"minor": 7,
+		"patch": 2,
+		"status": "stable",
+		"string": "4.7.2-stable (official)",
+		"timestamp": 0
+	},
+	"extension_research": 55,
+	"ledger_error": 0.0,
+	"limitations": "Synthetic economy only: speed, radius, slowdown and overcharge uptime are not human-play estimates.",
+	"longest_no_purchase_rounds": 1,
+	"maximum_purchase_batch": 7,
+	"model": "instant_work; equivalent tracking quality; no cursor geometry or survey; equipment optional",
+	"purchases": [
+		{
+			"active_seconds": 20.0000000000001,
+			"cost": 50.0,
+			"id": "edge_detection",
+			"round": 1
+		},
+		{
+			"active_seconds": 20.0000000000001,
+			"cost": 10.0,
+			"id": "better_lens",
+			"round": 1
+		},
+		{
+			"active_seconds": 39.999999999999,
+			"cost": 120.0,
+			"id": "observation_streak",
+			"round": 2
+		},
+		{
+			"active_seconds": 59.9999999999979,
+			"cost": 110.0,
+			"id": "array_planning",
+			"round": 3
+		},
+		{
+			"active_seconds": 59.9999999999979,
+			"cost": 50.0,
+			"id": "long_exposure",
+			"round": 3
+		},
+		{
+			"active_seconds": 99.9999999999956,
+			"cost": 300.0,
+			"id": "precision_multiplier",
+			"round": 5
+		},
+		{
+			"active_seconds": 140.000000000004,
+			"cost": 150.0,
+			"id": "observation_scheduling",
+			"round": 7
+		},
+		{
+			"active_seconds": 170.000000000027,
+			"cost": 100.0,
+			"id": "wide_field",
+			"round": 8
+		},
+		{
+			"active_seconds": 170.000000000027,
+			"cost": 180.0,
+			"id": "contact_ledger",
+			"round": 8
+		},
+		{
+			"active_seconds": 200.000000000051,
+			"cost": 220.0,
+			"id": "trajectory",
+			"round": 9
+		},
+		{
+			"active_seconds": 200.000000000051,
+			"cost": 120.0,
+			"id": "polar_survey",
+			"round": 9
+		},
+		{
+			"active_seconds": 230.000000000075,
+			"cost": 450.0,
+			"id": "rare_detection",
+			"round": 10
+		},
+		{
+			"active_seconds": 260.000000000092,
+			"cost": 450.0,
+			"id": "thermal_management",
+			"round": 11
+		},
+		{
+			"active_seconds": 340.000000000019,
+			"cost": 800.0,
+			"id": "perfect_observation",
+			"round": 13
+		},
+		{
+			"active_seconds": 379.999999999983,
+			"cost": 600.0,
+			"id": "secondary_camera",
+			"round": 14
+		},
+		{
+			"active_seconds": 419.999999999947,
+			"cost": 900.0,
+			"id": "fragment_analysis",
+			"round": 15
+		},
+		{
+			"active_seconds": 419.999999999947,
+			"cost": 700.0,
+			"id": "extended_watch_protocol",
+			"round": 15
+		},
+		{
+			"active_seconds": 469.999999999901,
+			"cost": 1800.0,
+			"id": "shower_detector",
+			"round": 16
+		},
+		{
+			"active_seconds": 469.999999999901,
+			"cost": 1000.0,
+			"id": "companion_resolution",
+			"round": 16
+		},
+		{
+			"active_seconds": 469.999999999901,
+			"cost": 1000.0,
+			"id": "continuous_watch_rotation",
+			"round": 16
+		},
+		{
+			"active_seconds": 469.999999999901,
+			"cost": 800.0,
+			"id": "predictive_dish_control",
+			"round": 16
+		},
+		{
+			"active_seconds": 529.999999999847,
+			"cost": 8000.0,
+			"id": "echo_correlation_10",
+			"round": 17
+		},
+		{
+			"active_seconds": 529.999999999847,
+			"cost": 1200.0,
+			"id": "multi_target_analysis",
+			"round": 17
+		},
+		{
+			"active_seconds": 529.999999999847,
+			"cost": 2200.0,
+			"id": "automated_tracking",
+			"round": 17
+		},
+		{
+			"active_seconds": 529.999999999847,
+			"cost": 180.0,
+			"id": "sweep_gain",
+			"round": 17
+		},
+		{
+			"active_seconds": 589.999999999792,
+			"cost": 11000.0,
+			"id": "echo_correlation_20",
+			"round": 18
+		},
+		{
+			"active_seconds": 589.999999999792,
+			"cost": 3500.0,
+			"id": "observatory_network",
+			"round": 18
+		},
+		{
+			"active_seconds": 589.999999999792,
+			"cost": 400.0,
+			"id": "faint_recovery",
+			"round": 18
+		},
+		{
+			"active_seconds": 649.999999999737,
+			"cost": 14000.0,
+			"id": "echo_signature_lock",
+			"round": 19
+		},
+		{
+			"active_seconds": 649.999999999737,
+			"cost": 800.0,
+			"id": "sustained_sweep",
+			"round": 19
+		},
+		{
+			"active_seconds": 709.999999999683,
+			"cost": 12000.0,
+			"id": "single_echo_channel",
+			"round": 20
+		},
+		{
+			"active_seconds": 709.999999999683,
+			"cost": 1500.0,
+			"id": "deep_exposure",
+			"round": 20
+		},
+		{
+			"active_seconds": 769.999999999628,
+			"cost": 16000.0,
+			"id": "leonid_radiant",
+			"round": 21
+		},
+		{
+			"active_seconds": 769.999999999628,
+			"cost": 2500.0,
+			"id": "rapid_scan",
+			"round": 21
+		},
+		{
+			"active_seconds": 829.999999999574,
+			"cost": 16000.0,
+			"id": "dual_echo_channel",
+			"round": 22
+		},
+		{
+			"active_seconds": 829.999999999574,
+			"cost": 10000.0,
+			"id": "filter_wheel",
+			"round": 22
+		},
+		{
+			"active_seconds": 889.999999999519,
+			"cost": 12000.0,
+			"id": "double_star_resolution",
+			"round": 23
+		},
+		{
+			"active_seconds": 889.999999999519,
+			"cost": 20000.0,
+			"id": "triple_echo_array",
+			"round": 23
+		},
+		{
+			"active_seconds": 889.999999999519,
+			"cost": 4000.0,
+			"id": "polar_cascade",
+			"round": 23
+		},
+		{
+			"active_seconds": 949.999999999465,
+			"cost": 8000.0,
+			"id": "radiant_plotting",
+			"round": 24
+		},
+		{
+			"active_seconds": 949.999999999465,
+			"cost": 20000.0,
+			"id": "compressed_cadence",
+			"round": 24
+		},
+		{
+			"active_seconds": 949.999999999465,
+			"cost": 18000.0,
+			"id": "blue_band",
+			"round": 24
+		},
+		{
+			"active_seconds": 949.999999999465,
+			"cost": 16000.0,
+			"id": "ephemeris_marks",
+			"round": 24
+		},
+		{
+			"active_seconds": 1009.99999999941,
+			"cost": 24000.0,
+			"id": "dense_stream",
+			"round": 25
+		},
+		{
+			"active_seconds": 1009.99999999941,
+			"cost": 22000.0,
+			"id": "amber_band",
+			"round": 25
+		},
+		{
+			"active_seconds": 1009.99999999941,
+			"cost": 20000.0,
+			"id": "satellite_catalog",
+			"round": 25
+		},
+		{
+			"active_seconds": 1009.99999999941,
+			"cost": 12000.0,
+			"id": "crowd_forecast",
+			"round": 25
+		},
+		{
+			"active_seconds": 1009.99999999941,
+			"cost": 17000.0,
+			"id": "mirror_echo_solution",
+			"round": 25
+		},
+		{
+			"active_seconds": 1069.99999999936,
+			"cost": 22000.0,
+			"id": "echo_delay_line",
+			"round": 26
+		},
+		{
+			"active_seconds": 1069.99999999936,
+			"cost": 26000.0,
+			"id": "violet_band",
+			"round": 26
+		},
+		{
+			"active_seconds": 1129.9999999993,
+			"cost": 18000.0,
+			"id": "burst_windowing",
+			"round": 27
+		},
+		{
+			"active_seconds": 1129.9999999993,
+			"cost": 28000.0,
+			"id": "rapid_reacquisition",
+			"round": 27
+		},
+		{
+			"active_seconds": 1129.9999999993,
+			"cost": 24000.0,
+			"id": "change_detection",
+			"round": 27
+		},
+		{
+			"active_seconds": 1129.9999999993,
+			"cost": 18000.0,
+			"id": "momentum_acquisition",
+			"round": 27
+		},
+		{
+			"active_seconds": 1129.9999999993,
+			"cost": 20000.0,
+			"id": "split_radiant_model",
+			"round": 27
+		},
+		{
+			"active_seconds": 1129.9999999993,
+			"cost": 24000.0,
+			"id": "fragment_front",
+			"round": 27
+		},
+		{
+			"active_seconds": 1189.99999999925,
+			"cost": 32000.0,
+			"id": "fireball_tail",
+			"round": 28
+		},
+		{
+			"active_seconds": 1189.99999999925,
+			"cost": 32000.0,
+			"id": "storm_front",
+			"round": 28
+		},
+		{
+			"active_seconds": 1189.99999999925,
+			"cost": 26000.0,
+			"id": "debris_correlation",
+			"round": 28
+		},
+		{
+			"active_seconds": 1189.99999999925,
+			"cost": 28000.0,
+			"id": "comet_solutions",
+			"round": 28
+		},
+		{
+			"active_seconds": 1189.99999999925,
+			"cost": 30000.0,
+			"id": "cadence_memory",
+			"round": 28
+		},
+		{
+			"active_seconds": 1189.99999999925,
+			"cost": 24000.0,
+			"id": "adaptive_exposure_grid",
+			"round": 28
+		},
+		{
+			"active_seconds": 1189.99999999925,
+			"cost": 32000.0,
+			"id": "andromeda_deep_survey",
+			"round": 28
+		},
+		{
+			"active_seconds": 1249.99999999919,
+			"cost": 90000.0,
+			"id": "galaxy_imaging",
+			"round": 29
+		},
+		{
+			"active_seconds": 1249.99999999919,
+			"cost": 300000.0,
+			"id": "leonid_storm",
+			"round": 29
+		},
+		{
+			"active_seconds": 1249.99999999919,
+			"cost": 30000.0,
+			"id": "perseid_survey",
+			"round": 29
+		},
+		{
+			"active_seconds": 1249.99999999919,
+			"cost": 45000.0,
+			"id": "expanded_sweep",
+			"round": 29
+		},
+		{
+			"active_seconds": 1309.99999999914,
+			"cost": 50000.0,
+			"id": "perseid_outburst",
+			"round": 30
+		},
+		{
+			"active_seconds": 1309.99999999914,
+			"cost": 620000.0,
+			"id": "canis_opening",
+			"round": 30
+		},
+		{
+			"active_seconds": 1309.99999999914,
+			"cost": 180000.0,
+			"id": "lyrid_spectrograph",
+			"round": 30
+		},
+		{
+			"active_seconds": 1309.99999999914,
+			"cost": 120000.0,
+			"id": "cascade_sampling",
+			"round": 30
+		},
+		{
+			"active_seconds": 1309.99999999914,
+			"cost": 65000.0,
+			"id": "accelerated_analysis",
+			"round": 30
+		},
+		{
+			"active_seconds": 1309.99999999914,
+			"cost": 95000.0,
+			"id": "sustained_charge",
+			"round": 30
+		},
+		{
+			"active_seconds": 1369.99999999908,
+			"cost": 140000.0,
+			"id": "taurus_full_gallop",
+			"round": 31
+		},
+		{
+			"active_seconds": 1369.99999999908,
+			"cost": 760000.0,
+			"id": "canis_cadence_i",
+			"round": 31
+		},
+		{
+			"active_seconds": 1369.99999999908,
+			"cost": 340000.0,
+			"id": "echo_deconfliction",
+			"round": 31
+		},
+		{
+			"active_seconds": 1369.99999999908,
+			"cost": 380000.0,
+			"id": "echo_beacon",
+			"round": 31
+		},
+		{
+			"active_seconds": 1429.99999999903,
+			"cost": 900000.0,
+			"id": "canis_capacity_i",
+			"round": 32
+		},
+		{
+			"active_seconds": 1429.99999999903,
+			"cost": 1400000.0,
+			"id": "canis_capacity_ii",
+			"round": 32
+		},
+		{
+			"active_seconds": 1429.99999999903,
+			"cost": 220000.0,
+			"id": "variable_watchlist",
+			"round": 32
+		},
+		{
+			"active_seconds": 1429.99999999903,
+			"cost": 420000.0,
+			"id": "wide_pursuit",
+			"round": 32
+		},
+		{
+			"active_seconds": 1429.99999999903,
+			"cost": 460000.0,
+			"id": "rapid_focus",
+			"round": 32
+		},
+		{
+			"active_seconds": 1429.99999999903,
+			"cost": 1150000.0,
+			"id": "canis_cadence_ii",
+			"round": 32
+		},
+		{
+			"active_seconds": 1429.99999999903,
+			"cost": 1750000.0,
+			"id": "canis_cadence_iii",
+			"round": 32
+		},
+		{
+			"active_seconds": 1489.99999999897,
+			"cost": 2100000.0,
+			"id": "canis_capacity_iii",
+			"round": 33
+		},
+		{
+			"active_seconds": 1549.99999999892,
+			"cost": 10000000.0,
+			"id": "sirius_fireball",
+			"round": 34
+		},
+		{
+			"active_seconds": 1609.99999999886,
+			"cost": 2000000.0,
+			"id": "draco_synthesis",
+			"round": 35
+		},
+		{
+			"active_seconds": 1669.99999999881,
+			"cost": 8000000.0,
+			"id": "draco_cadence",
+			"round": 36
+		},
+		{
+			"active_seconds": 1729.99999999876,
+			"cost": 30000000.0,
+			"id": "draco_capacity",
+			"round": 37
+		},
+		{
+			"active_seconds": 1789.9999999987,
+			"cost": 40000000.0,
+			"id": "draco_sweep",
+			"round": 38
+		},
+		{
+			"active_seconds": 1909.99999999859,
+			"cost": 55000000.0,
+			"id": "draco_echo",
+			"round": 40
+		},
+		{
+			"active_seconds": 1969.99999999854,
+			"cost": 70000000.0,
+			"id": "draco_storm",
+			"round": 41
+		},
+		{
+			"active_seconds": 2089.999999999,
+			"cost": 70000000.0,
+			"id": "draco_array",
+			"round": 43
+		},
+		{
+			"active_seconds": 2149.99999999976,
+			"cost": 85000000.0,
+			"id": "draco_apotheosis",
+			"round": 44
+		},
+		{
+			"active_seconds": 2210.00000000053,
+			"cost": 400000000.0,
+			"id": "galactic_reference_frame",
+			"round": 45
+		},
+		{
+			"active_seconds": 2210.00000000053,
+			"cost": 60000000.0,
+			"id": "ext_del_signal",
+			"round": 45
+		},
+		{
+			"active_seconds": 2210.00000000053,
+			"cost": 60000000.0,
+			"id": "ext_sge_cadence",
+			"round": 45
+		},
+		{
+			"active_seconds": 2270.00000000129,
+			"cost": 180000000.0,
+			"id": "ext_sweep_advanced",
+			"round": 46
+		},
+		{
+			"active_seconds": 2270.00000000129,
+			"cost": 120000000.0,
+			"id": "ext_del_companion",
+			"round": 46
+		},
+		{
+			"active_seconds": 2270.00000000129,
+			"cost": 90000000.0,
+			"id": "ext_tri_photometry",
+			"round": 46
+		},
+		{
+			"active_seconds": 2270.00000000129,
+			"cost": 60000000.0,
+			"id": "ext_equ_focus",
+			"round": 46
+		},
+		{
+			"active_seconds": 2330.00000000206,
+			"cost": 180000000.0,
+			"id": "ext_del_debris",
+			"round": 47
+		},
+		{
+			"active_seconds": 2330.00000000206,
+			"cost": 120000000.0,
+			"id": "ext_sge_forecast",
+			"round": 47
+		},
+		{
+			"active_seconds": 2330.00000000206,
+			"cost": 180000000.0,
+			"id": "ext_trace_advanced",
+			"round": 47
+		},
+		{
+			"active_seconds": 2330.00000000206,
+			"cost": 60000000.0,
+			"id": "ext_vul_memory",
+			"round": 47
+		},
+		{
+			"active_seconds": 2390.00000000282,
+			"cost": 180000000.0,
+			"id": "ext_link_advanced",
+			"round": 48
+		},
+		{
+			"active_seconds": 2390.00000000282,
+			"cost": 180000000.0,
+			"id": "ext_sge_solution",
+			"round": 48
+		},
+		{
+			"active_seconds": 2390.00000000282,
+			"cost": 240000000.0,
+			"id": "ext_del_resonance",
+			"round": 48
+		},
+		{
+			"active_seconds": 2390.00000000282,
+			"cost": 60000000.0,
+			"id": "ext_trace_study",
+			"round": 48
+		},
+		{
+			"active_seconds": 2450.00000000358,
+			"cost": 240000000.0,
+			"id": "ext_synthesis",
+			"round": 49
+		},
+		{
+			"active_seconds": 2450.00000000358,
+			"cost": 240000000.0,
+			"id": "ext_cnc_planet",
+			"round": 49
+		},
+		{
+			"active_seconds": 2450.00000000358,
+			"cost": 120000000.0,
+			"id": "focus",
+			"round": 49
+		},
+		{
+			"active_seconds": 2510.00000000435,
+			"cost": 360000000.0,
+			"id": "ext_combined_watch",
+			"round": 50
+		},
+		{
+			"active_seconds": 2510.00000000435,
+			"cost": 300000000.0,
+			"id": "ext_del_school",
+			"round": 50
+		},
+		{
+			"active_seconds": 2570.00000000511,
+			"cost": 360000000.0,
+			"id": "ext_cnc_tracking",
+			"round": 51
+		},
+		{
+			"active_seconds": 2570.00000000511,
+			"cost": 180000000.0,
+			"id": "ext_tri_analysis",
+			"round": 51
+		},
+		{
+			"active_seconds": 2570.00000000511,
+			"cost": 180000000.0,
+			"id": "ext_sge_window",
+			"round": 51
+		},
+		{
+			"active_seconds": 2570.00000000511,
+			"cost": 60000000.0,
+			"id": "ext_sweep_study",
+			"round": 51
+		},
+		{
+			"active_seconds": 2630.00000000588,
+			"cost": 480000000.0,
+			"id": "ext_sgr_black_hole",
+			"round": 52
+		},
+		{
+			"active_seconds": 2630.00000000588,
+			"cost": 300000000.0,
+			"id": "ext_sge_stream",
+			"round": 52
+		},
+		{
+			"active_seconds": 2690.00000000664,
+			"cost": 360000000.0,
+			"id": "ext_tri_catalogue",
+			"round": 53
+		},
+		{
+			"active_seconds": 2690.00000000664,
+			"cost": 150000000.0,
+			"id": "ext_equ_mount",
+			"round": 53
+		},
+		{
+			"active_seconds": 2690.00000000664,
+			"cost": 120000000.0,
+			"id": "ext_vul_rhythm",
+			"round": 53
+		},
+		{
+			"active_seconds": 2750.0000000074,
+			"cost": 360000000.0,
+			"id": "ext_sgr_tracking",
+			"round": 54
+		},
+		{
+			"active_seconds": 2750.0000000074,
+			"cost": 300000000.0,
+			"id": "ext_equ_array",
+			"round": 54
+		},
+		{
+			"active_seconds": 2750.0000000074,
+			"cost": 180000000.0,
+			"id": "ext_vul_arc",
+			"round": 54
+		},
+		{
+			"active_seconds": 2810.00000000817,
+			"cost": 480000000.0,
+			"id": "ext_sgr_yield",
+			"round": 55
+		},
+		{
+			"active_seconds": 2810.00000000817,
+			"cost": 300000000.0,
+			"id": "ext_cnc_arrivals",
+			"round": 55
+		},
+		{
+			"active_seconds": 2870.00000000893,
+			"cost": 480000000.0,
+			"id": "ext_cnc_yield",
+			"round": 56
+		},
+		{
+			"active_seconds": 2870.00000000893,
+			"cost": 180000000.0,
+			"id": "precision",
+			"round": 56
+		},
+		{
+			"active_seconds": 2870.00000000893,
+			"cost": 120000000.0,
+			"id": "wide",
+			"round": 56
+		},
+		{
+			"active_seconds": 2930.0000000097,
+			"cost": 600000000.0,
+			"id": "ext_cnc_survey",
+			"round": 57
+		},
+		{
+			"active_seconds": 2930.0000000097,
+			"cost": 240000000.0,
+			"id": "slot_3",
+			"round": 57
+		},
+		{
+			"active_seconds": 2990.00000001046,
+			"cost": 360000000.0,
+			"id": "slot_4",
+			"round": 58
+		},
+		{
+			"active_seconds": 2990.00000001046,
+			"cost": 480000000.0,
+			"id": "slot_5",
+			"round": 58
+		},
+		{
+			"active_seconds": 2990.00000001046,
+			"cost": 0.0,
+			"id": "ext_record_complete",
+			"round": 58
+		},
+		{
+			"active_seconds": 3050.00000001122,
+			"cost": 600000000.0,
+			"id": "ext_sgr_arrivals",
+			"round": 59
+		},
+		{
+			"active_seconds": 3050.00000001122,
+			"cost": 180000000.0,
+			"id": "ext_cyg_lock",
+			"round": 59
+		},
+		{
+			"active_seconds": 3110.00000001199,
+			"cost": 300000000.0,
+			"id": "ext_cyg_aperture",
+			"round": 60
+		},
+		{
+			"active_seconds": 3110.00000001199,
+			"cost": 360000000.0,
+			"id": "ext_sgr_reach",
+			"round": 60
+		},
+		{
+			"active_seconds": 3110.00000001199,
+			"cost": 240000000.0,
+			"id": "ext_vul_cadence",
+			"round": 60
+		},
+		{
+			"active_seconds": 3170.00000001275,
+			"cost": 480000000.0,
+			"id": "ext_sgr_hold",
+			"round": 61
+		},
+		{
+			"active_seconds": 3170.00000001275,
+			"cost": 180000000.0,
+			"id": "ext_aql_pair",
+			"round": 61
+		},
+		{
+			"active_seconds": 3170.00000001275,
+			"cost": 180000000.0,
+			"id": "ext_aql_stride",
+			"round": 61
+		},
+		{
+			"active_seconds": 3230.00000001352,
+			"cost": 600000000.0,
+			"id": "ext_sgr_wide",
+			"round": 62
+		},
+		{
+			"active_seconds": 3290.00000001428,
+			"cost": 720000000.0,
+			"id": "ext_sgr_linger",
+			"round": 63
+		},
+		{
+			"active_seconds": 3350.00000001504,
+			"cost": 300000000.0,
+			"id": "ext_aql_stream",
+			"round": 64
+		},
+		{
+			"active_seconds": 3350.00000001504,
+			"cost": 300000000.0,
+			"id": "ext_vul_flow",
+			"round": 64
+		},
+		{
+			"active_seconds": 3350.00000001504,
+			"cost": 360000000.0,
+			"id": "ext_equ_link",
+			"round": 64
+		}
+	],
+	"rounds": [
+		{
+			"active_seconds": 20.0000000000001,
+			"affordable_at_end": 2,
+			"automatic_completions": 0,
+			"bank_after_purchases": 24.0,
+			"bank_before_purchases": 84.0,
+			"duration": 20.0000000000001,
+			"income": 84.0,
+			"manual_completions": 6,
+			"partial": false,
+			"purchases": [
+				"edge_detection",
+				"better_lens"
+			],
+			"round": 1,
+			"samples": 0
+		},
+		{
+			"active_seconds": 39.999999999999,
+			"affordable_at_end": 5,
+			"automatic_completions": 0,
+			"bank_after_purchases": 12.0,
+			"bank_before_purchases": 132.0,
+			"duration": 19.9999999999989,
+			"income": 108.0,
+			"manual_completions": 7,
+			"partial": false,
+			"purchases": [
+				"observation_streak"
+			],
+			"round": 2,
+			"samples": 0
+		},
+		{
+			"active_seconds": 59.9999999999979,
+			"affordable_at_end": 4,
+			"automatic_completions": 0,
+			"bank_after_purchases": 3.0,
+			"bank_before_purchases": 163.0,
+			"duration": 19.9999999999989,
+			"income": 151.0,
+			"manual_completions": 8,
+			"partial": false,
+			"purchases": [
+				"array_planning",
+				"long_exposure"
+			],
+			"round": 3,
+			"samples": 0
+		},
+		{
+			"active_seconds": 79.9999999999967,
+			"affordable_at_end": 2,
+			"automatic_completions": 0,
+			"bank_after_purchases": 127.0,
+			"bank_before_purchases": 127.0,
+			"duration": 19.9999999999989,
+			"income": 124.0,
+			"manual_completions": 7,
+			"partial": false,
+			"purchases": [],
+			"round": 4,
+			"samples": 0
+		},
+		{
+			"active_seconds": 99.9999999999956,
+			"affordable_at_end": 5,
+			"automatic_completions": 0,
+			"bank_after_purchases": 28.0,
+			"bank_before_purchases": 328.0,
+			"duration": 19.9999999999989,
+			"income": 201.0,
+			"manual_completions": 12,
+			"partial": false,
+			"purchases": [
+				"precision_multiplier"
+			],
+			"round": 5,
+			"samples": 0
+		},
+		{
+			"active_seconds": 119.999999999994,
+			"affordable_at_end": 2,
+			"automatic_completions": 0,
+			"bank_after_purchases": 142.0,
+			"bank_before_purchases": 142.0,
+			"duration": 19.9999999999989,
+			"income": 114.0,
+			"manual_completions": 5,
+			"partial": false,
+			"purchases": [],
+			"round": 6,
+			"samples": 0
+		},
+		{
+			"active_seconds": 140.000000000004,
+			"affordable_at_end": 4,
+			"automatic_completions": 0,
+			"bank_after_purchases": 92.0,
+			"bank_before_purchases": 242.0,
+			"duration": 20.0000000000091,
+			"income": 100.0,
+			"manual_completions": 5,
+			"partial": false,
+			"purchases": [
+				"observation_scheduling"
+			],
+			"round": 7,
+			"samples": 0
+		},
+		{
+			"active_seconds": 170.000000000027,
+			"affordable_at_end": 3,
+			"automatic_completions": 0,
+			"bank_after_purchases": 57.0,
+			"bank_before_purchases": 337.0,
+			"duration": 30.0000000000239,
+			"income": 245.0,
+			"manual_completions": 11,
+			"partial": false,
+			"purchases": [
+				"wide_field",
+				"contact_ledger"
+			],
+			"round": 8,
+			"samples": 0
+		},
+		{
+			"active_seconds": 200.000000000051,
+			"affordable_at_end": 3,
+			"automatic_completions": 0,
+			"bank_after_purchases": 172.0,
+			"bank_before_purchases": 512.0,
+			"duration": 30.0000000000239,
+			"income": 455.0,
+			"manual_completions": 18,
+			"partial": false,
+			"purchases": [
+				"trajectory",
+				"polar_survey"
+			],
+			"round": 9,
+			"samples": 0
+		},
+		{
+			"active_seconds": 230.000000000075,
+			"affordable_at_end": 3,
+			"automatic_completions": 0,
+			"bank_after_purchases": 119.0,
+			"bank_before_purchases": 569.0,
+			"duration": 30.0000000000239,
+			"income": 397.0,
+			"manual_completions": 17,
+			"partial": false,
+			"purchases": [
+				"rare_detection"
+			],
+			"round": 10,
+			"samples": 0
+		},
+		{
+			"active_seconds": 260.000000000092,
+			"affordable_at_end": 2,
+			"automatic_completions": 0,
+			"bank_after_purchases": 4.0,
+			"bank_before_purchases": 454.0,
+			"duration": 30.000000000017,
+			"income": 335.0,
+			"manual_completions": 14,
+			"partial": false,
+			"purchases": [
+				"thermal_management"
+			],
+			"round": 11,
+			"samples": 0
+		},
+		{
+			"active_seconds": 300.000000000056,
+			"affordable_at_end": 1,
+			"automatic_completions": 0,
+			"bank_after_purchases": 334.0,
+			"bank_before_purchases": 334.0,
+			"duration": 39.9999999999636,
+			"income": 330.0,
+			"manual_completions": 14,
+			"partial": false,
+			"purchases": [],
+			"round": 12,
+			"samples": 0
+		},
+		{
+			"active_seconds": 340.000000000019,
+			"affordable_at_end": 4,
+			"automatic_completions": 0,
+			"bank_after_purchases": 64.0,
+			"bank_before_purchases": 864.0,
+			"duration": 39.9999999999636,
+			"income": 530.0,
+			"manual_completions": 18,
+			"partial": false,
+			"purchases": [
+				"perfect_observation"
+			],
+			"round": 13,
+			"samples": 0
+		},
+		{
+			"active_seconds": 379.999999999983,
+			"affordable_at_end": 2,
+			"automatic_completions": 0,
+			"bank_after_purchases": 78.0,
+			"bank_before_purchases": 678.0,
+			"duration": 39.9999999999636,
+			"income": 614.0,
+			"manual_completions": 12,
+			"partial": false,
+			"purchases": [
+				"secondary_camera"
+			],
+			"round": 14,
+			"samples": 0
+		},
+		{
+			"active_seconds": 419.999999999947,
+			"affordable_at_end": 4,
+			"automatic_completions": 2,
+			"bank_after_purchases": 106.0,
+			"bank_before_purchases": 1706.0,
+			"duration": 39.9999999999636,
+			"income": 1628.0,
+			"manual_completions": 19,
+			"partial": false,
+			"purchases": [
+				"fragment_analysis",
+				"extended_watch_protocol"
+			],
+			"round": 15,
+			"samples": 0
+		},
+		{
+			"active_seconds": 469.999999999901,
+			"affordable_at_end": 6,
+			"automatic_completions": 4,
+			"bank_after_purchases": 1181.0,
+			"bank_before_purchases": 5781.0,
+			"duration": 49.9999999999545,
+			"income": 5675.0,
+			"manual_completions": 61,
+			"partial": false,
+			"purchases": [
+				"shower_detector",
+				"companion_resolution",
+				"continuous_watch_rotation",
+				"predictive_dish_control"
+			],
+			"round": 16,
+			"samples": 0
+		},
+		{
+			"active_seconds": 529.999999999847,
+			"affordable_at_end": 7,
+			"automatic_completions": 5,
+			"bank_after_purchases": 6037.0,
+			"bank_before_purchases": 17617.0,
+			"duration": 59.9999999999454,
+			"income": 16436.0,
+			"manual_completions": 87,
+			"partial": false,
+			"purchases": [
+				"echo_correlation_10",
+				"multi_target_analysis",
+				"automated_tracking",
+				"sweep_gain"
+			],
+			"round": 17,
+			"samples": 0
+		},
+		{
+			"active_seconds": 589.999999999792,
+			"affordable_at_end": 9,
+			"automatic_completions": 19,
+			"bank_after_purchases": 4120.0,
+			"bank_before_purchases": 19020.0,
+			"duration": 59.9999999999454,
+			"income": 12983.0,
+			"manual_completions": 71,
+			"partial": false,
+			"purchases": [
+				"echo_correlation_20",
+				"observatory_network",
+				"faint_recovery"
+			],
+			"round": 18,
+			"samples": 0
+		},
+		{
+			"active_seconds": 649.999999999737,
+			"affordable_at_end": 8,
+			"automatic_completions": 27,
+			"bank_after_purchases": 4420.0,
+			"bank_before_purchases": 19220.0,
+			"duration": 59.9999999999454,
+			"income": 15100.0,
+			"manual_completions": 84,
+			"partial": false,
+			"purchases": [
+				"echo_signature_lock",
+				"sustained_sweep"
+			],
+			"round": 19,
+			"samples": 0
+		},
+		{
+			"active_seconds": 709.999999999683,
+			"affordable_at_end": 8,
+			"automatic_completions": 26,
+			"bank_after_purchases": 5686.0,
+			"bank_before_purchases": 19186.0,
+			"duration": 59.9999999999454,
+			"income": 14766.0,
+			"manual_completions": 77,
+			"partial": false,
+			"purchases": [
+				"single_echo_channel",
+				"deep_exposure"
+			],
+			"round": 20,
+			"samples": 0
+		},
+		{
+			"active_seconds": 769.999999999628,
+			"affordable_at_end": 8,
+			"automatic_completions": 24,
+			"bank_after_purchases": 4180.0,
+			"bank_before_purchases": 22680.0,
+			"duration": 59.9999999999454,
+			"income": 16994.0,
+			"manual_completions": 89,
+			"partial": false,
+			"purchases": [
+				"leonid_radiant",
+				"rapid_scan"
+			],
+			"round": 21,
+			"samples": 0
+		},
+		{
+			"active_seconds": 829.999999999574,
+			"affordable_at_end": 9,
+			"automatic_completions": 28,
+			"bank_after_purchases": 3780.0,
+			"bank_before_purchases": 29780.0,
+			"duration": 59.9999999999454,
+			"income": 25600.0,
+			"manual_completions": 129,
+			"partial": false,
+			"purchases": [
+				"dual_echo_channel",
+				"filter_wheel"
+			],
+			"round": 22,
+			"samples": 0
+		},
+		{
+			"active_seconds": 889.999999999519,
+			"affordable_at_end": 10,
+			"automatic_completions": 49,
+			"bank_after_purchases": 1084.0,
+			"bank_before_purchases": 37084.0,
+			"duration": 59.9999999999454,
+			"income": 33304.0,
+			"manual_completions": 152,
+			"partial": false,
+			"purchases": [
+				"double_star_resolution",
+				"triple_echo_array",
+				"polar_cascade"
+			],
+			"round": 23,
+			"samples": 0
+		},
+		{
+			"active_seconds": 949.999999999465,
+			"affordable_at_end": 7,
+			"automatic_completions": 33,
+			"bank_after_purchases": 7045.0,
+			"bank_before_purchases": 69045.0,
+			"duration": 59.9999999999454,
+			"income": 67961.0,
+			"manual_completions": 168,
+			"partial": false,
+			"purchases": [
+				"radiant_plotting",
+				"compressed_cadence",
+				"blue_band",
+				"ephemeris_marks"
+			],
+			"round": 24,
+			"samples": 0
+		},
+		{
+			"active_seconds": 1009.99999999941,
+			"affordable_at_end": 7,
+			"automatic_completions": 48,
+			"bank_after_purchases": 5974.0,
+			"bank_before_purchases": 100974.0,
+			"duration": 59.9999999999454,
+			"income": 93929.0,
+			"manual_completions": 223,
+			"partial": false,
+			"purchases": [
+				"dense_stream",
+				"amber_band",
+				"satellite_catalog",
+				"crowd_forecast",
+				"mirror_echo_solution"
+			],
+			"round": 25,
+			"samples": 0
+		},
+		{
+			"active_seconds": 1069.99999999936,
+			"affordable_at_end": 7,
+			"automatic_completions": 28,
+			"bank_after_purchases": 16404.0,
+			"bank_before_purchases": 64404.0,
+			"duration": 59.9999999999455,
+			"income": 58430.0,
+			"manual_completions": 162,
+			"partial": false,
+			"purchases": [
+				"echo_delay_line",
+				"violet_band"
+			],
+			"round": 26,
+			"samples": 0
+		},
+		{
+			"active_seconds": 1129.9999999993,
+			"affordable_at_end": 5,
+			"automatic_completions": 34,
+			"bank_after_purchases": 2084.0,
+			"bank_before_purchases": 134084.0,
+			"duration": 59.9999999999454,
+			"income": 117680.0,
+			"manual_completions": 133,
+			"partial": false,
+			"purchases": [
+				"burst_windowing",
+				"rapid_reacquisition",
+				"change_detection",
+				"momentum_acquisition",
+				"split_radiant_model",
+				"fragment_front"
+			],
+			"round": 27,
+			"samples": 0
+		},
+		{
+			"active_seconds": 1189.99999999925,
+			"affordable_at_end": 7,
+			"automatic_completions": 63,
+			"bank_after_purchases": 9248.0,
+			"bank_before_purchases": 213248.0,
+			"duration": 59.9999999999454,
+			"income": 211164.0,
+			"manual_completions": 221,
+			"partial": false,
+			"purchases": [
+				"fireball_tail",
+				"storm_front",
+				"debris_correlation",
+				"comet_solutions",
+				"cadence_memory",
+				"adaptive_exposure_grid",
+				"andromeda_deep_survey"
+			],
+			"round": 28,
+			"samples": 0
+		},
+		{
+			"active_seconds": 1249.99999999919,
+			"affordable_at_end": 11,
+			"automatic_completions": 67,
+			"bank_after_purchases": 47287.0,
+			"bank_before_purchases": 512287.0,
+			"duration": 59.9999999999454,
+			"income": 503039.0,
+			"manual_completions": 225,
+			"partial": false,
+			"purchases": [
+				"galaxy_imaging",
+				"leonid_storm",
+				"perseid_survey",
+				"expanded_sweep"
+			],
+			"round": 29,
+			"samples": 0
+		},
+		{
+			"active_seconds": 1309.99999999914,
+			"affordable_at_end": 12,
+			"automatic_completions": 65,
+			"bank_after_purchases": 99003.0,
+			"bank_before_purchases": 1229003.0,
+			"duration": 59.9999999999454,
+			"income": 1181716.0,
+			"manual_completions": 247,
+			"partial": false,
+			"purchases": [
+				"perseid_outburst",
+				"canis_opening",
+				"lyrid_spectrograph",
+				"cascade_sampling",
+				"accelerated_analysis",
+				"sustained_charge"
+			],
+			"round": 30,
+			"samples": 0
+		},
+		{
+			"active_seconds": 1369.99999999908,
+			"affordable_at_end": 9,
+			"automatic_completions": 44,
+			"bank_after_purchases": 164935.0,
+			"bank_before_purchases": 1784935.0,
+			"duration": 59.9999999999454,
+			"income": 1685932.0,
+			"manual_completions": 160,
+			"partial": false,
+			"purchases": [
+				"taurus_full_gallop",
+				"canis_cadence_i",
+				"echo_deconfliction",
+				"echo_beacon"
+			],
+			"round": 31,
+			"samples": 0
+		},
+		{
+			"active_seconds": 1429.99999999903,
+			"affordable_at_end": 5,
+			"automatic_completions": 69,
+			"bank_after_purchases": 397411.0,
+			"bank_before_purchases": 6697411.0,
+			"duration": 59.9999999999454,
+			"income": 6532476.0,
+			"manual_completions": 250,
+			"partial": false,
+			"purchases": [
+				"canis_capacity_i",
+				"canis_capacity_ii",
+				"variable_watchlist",
+				"wide_pursuit",
+				"rapid_focus",
+				"canis_cadence_ii",
+				"canis_cadence_iii"
+			],
+			"round": 32,
+			"samples": 0
+		},
+		{
+			"active_seconds": 1489.99999999897,
+			"affordable_at_end": 1,
+			"automatic_completions": 74,
+			"bank_after_purchases": 4675782.0,
+			"bank_before_purchases": 6775782.0,
+			"duration": 59.9999999999454,
+			"income": 6378371.0,
+			"manual_completions": 297,
+			"partial": false,
+			"purchases": [
+				"canis_capacity_iii"
+			],
+			"round": 33,
+			"samples": 0
+		},
+		{
+			"active_seconds": 1549.99999999892,
+			"affordable_at_end": 1,
+			"automatic_completions": 72,
+			"bank_after_purchases": 70980.0,
+			"bank_before_purchases": 10070980.0,
+			"duration": 59.9999999999454,
+			"income": 5395198.0,
+			"manual_completions": 247,
+			"partial": false,
+			"purchases": [
+				"sirius_fireball"
+			],
+			"round": 34,
+			"samples": 0
+		},
+		{
+			"active_seconds": 1609.99999999886,
+			"affordable_at_end": 1,
+			"automatic_completions": 86,
+			"bank_after_purchases": 5065713.0,
+			"bank_before_purchases": 7065713.0,
+			"duration": 59.9999999999454,
+			"income": 6994733.0,
+			"manual_completions": 241,
+			"partial": false,
+			"purchases": [
+				"draco_synthesis"
+			],
+			"round": 35,
+			"samples": 0
+		},
+		{
+			"active_seconds": 1669.99999999881,
+			"affordable_at_end": 1,
+			"automatic_completions": 71,
+			"bank_after_purchases": 21753240.0,
+			"bank_before_purchases": 29753240.0,
+			"duration": 59.9999999999454,
+			"income": 24687527.0,
+			"manual_completions": 279,
+			"partial": false,
+			"purchases": [
+				"draco_cadence"
+			],
+			"round": 36,
+			"samples": 0
+		},
+		{
+			"active_seconds": 1729.99999999876,
+			"affordable_at_end": 1,
+			"automatic_completions": 78,
+			"bank_after_purchases": 19558064.0,
+			"bank_before_purchases": 49558064.0,
+			"duration": 59.9999999999454,
+			"income": 27804824.0,
+			"manual_completions": 280,
+			"partial": false,
+			"purchases": [
+				"draco_capacity"
+			],
+			"round": 37,
+			"samples": 0
+		},
+		{
+			"active_seconds": 1789.9999999987,
+			"affordable_at_end": 1,
+			"automatic_completions": 87,
+			"bank_after_purchases": 15528629.0,
+			"bank_before_purchases": 55528629.0,
+			"duration": 59.9999999999454,
+			"income": 35970565.0,
+			"manual_completions": 369,
+			"partial": false,
+			"purchases": [
+				"draco_sweep"
+			],
+			"round": 38,
+			"samples": 0
+		},
+		{
+			"active_seconds": 1849.99999999865,
+			"affordable_at_end": 0,
+			"automatic_completions": 95,
+			"bank_after_purchases": 52198049.0,
+			"bank_before_purchases": 52198049.0,
+			"duration": 59.9999999999454,
+			"income": 36669420.0,
+			"manual_completions": 399,
+			"partial": false,
+			"purchases": [],
+			"round": 39,
+			"samples": 0
+		},
+		{
+			"active_seconds": 1909.99999999859,
+			"affordable_at_end": 1,
+			"automatic_completions": 81,
+			"bank_after_purchases": 24241452.0,
+			"bank_before_purchases": 79241452.0,
+			"duration": 59.9999999999454,
+			"income": 27043403.0,
+			"manual_completions": 237,
+			"partial": false,
+			"purchases": [
+				"draco_echo"
+			],
+			"round": 40,
+			"samples": 0
+		},
+		{
+			"active_seconds": 1969.99999999854,
+			"affordable_at_end": 1,
+			"automatic_completions": 138,
+			"bank_after_purchases": 4345856.0,
+			"bank_before_purchases": 74345856.0,
+			"duration": 59.9999999999454,
+			"income": 50104404.0,
+			"manual_completions": 476,
+			"partial": false,
+			"purchases": [
+				"draco_storm"
+			],
+			"round": 41,
+			"samples": 0
+		},
+		{
+			"active_seconds": 2029.99999999848,
+			"affordable_at_end": 0,
+			"automatic_completions": 180,
+			"bank_after_purchases": 64975176.0,
+			"bank_before_purchases": 64975176.0,
+			"duration": 59.9999999999454,
+			"income": 60629320.0,
+			"manual_completions": 754,
+			"partial": false,
+			"purchases": [],
+			"round": 42,
+			"samples": 0
+		},
+		{
+			"active_seconds": 2089.999999999,
+			"affordable_at_end": 1,
+			"automatic_completions": 168,
+			"bank_after_purchases": 52697527.0,
+			"bank_before_purchases": 122697527.0,
+			"duration": 60.0000000005184,
+			"income": 57722351.0,
+			"manual_completions": 600,
+			"partial": false,
+			"purchases": [
+				"draco_array"
+			],
+			"round": 43,
+			"samples": 0
+		},
+		{
+			"active_seconds": 2149.99999999976,
+			"affordable_at_end": 1,
+			"automatic_completions": 192,
+			"bank_after_purchases": 34513762.0,
+			"bank_before_purchases": 119513762.0,
+			"duration": 60.000000000764,
+			"income": 66816235.0,
+			"manual_completions": 796,
+			"partial": false,
+			"purchases": [
+				"draco_apotheosis"
+			],
+			"round": 44,
+			"samples": 0
+		},
+		{
+			"active_seconds": 2210.00000000053,
+			"affordable_at_end": 1,
+			"automatic_completions": 186,
+			"bank_after_purchases": 10455422.0,
+			"bank_before_purchases": 530455422.0,
+			"duration": 60.000000000764,
+			"income": 495941660.0,
+			"manual_completions": 684,
+			"partial": false,
+			"purchases": [
+				"galactic_reference_frame",
+				"ext_del_signal",
+				"ext_sge_cadence"
+			],
+			"round": 45,
+			"samples": 0
+		},
+		{
+			"active_seconds": 2270.00000000129,
+			"affordable_at_end": 13,
+			"automatic_completions": 197,
+			"bank_after_purchases": 15507734.0,
+			"bank_before_purchases": 465507734.0,
+			"duration": 60.000000000764,
+			"income": 455052312.0,
+			"manual_completions": 682,
+			"partial": false,
+			"purchases": [
+				"ext_sweep_advanced",
+				"ext_del_companion",
+				"ext_tri_photometry",
+				"ext_equ_focus"
+			],
+			"round": 46,
+			"samples": 0
+		},
+		{
+			"active_seconds": 2330.00000000206,
+			"affordable_at_end": 11,
+			"automatic_completions": 226,
+			"bank_after_purchases": 4099481.0,
+			"bank_before_purchases": 544099481.0,
+			"duration": 60.000000000764,
+			"income": 528591747.0,
+			"manual_completions": 707,
+			"partial": false,
+			"purchases": [
+				"ext_del_debris",
+				"ext_sge_forecast",
+				"ext_trace_advanced",
+				"ext_vul_memory"
+			],
+			"round": 47,
+			"samples": 0
+		},
+		{
+			"active_seconds": 2390.00000000282,
+			"affordable_at_end": 11,
+			"automatic_completions": 190,
+			"bank_after_purchases": 8514232.0,
+			"bank_before_purchases": 668514232.0,
+			"duration": 60.000000000764,
+			"income": 664414751.0,
+			"manual_completions": 781,
+			"partial": false,
+			"purchases": [
+				"ext_link_advanced",
+				"ext_sge_solution",
+				"ext_del_resonance",
+				"ext_trace_study"
+			],
+			"round": 48,
+			"samples": 2
+		},
+		{
+			"active_seconds": 2450.00000000358,
+			"affordable_at_end": 11,
+			"automatic_completions": 197,
+			"bank_after_purchases": 26767746.0,
+			"bank_before_purchases": 626767746.0,
+			"duration": 60.000000000764,
+			"income": 618253514.0,
+			"manual_completions": 711,
+			"partial": false,
+			"purchases": [
+				"ext_synthesis",
+				"ext_cnc_planet",
+				"focus"
+			],
+			"round": 49,
+			"samples": 0
+		},
+		{
+			"active_seconds": 2510.00000000435,
+			"affordable_at_end": 13,
+			"automatic_completions": 213,
+			"bank_after_purchases": 9372154.0,
+			"bank_before_purchases": 669372154.0,
+			"duration": 60.000000000764,
+			"income": 642604408.0,
+			"manual_completions": 748,
+			"partial": false,
+			"purchases": [
+				"ext_combined_watch",
+				"ext_del_school"
+			],
+			"round": 50,
+			"samples": 0
+		},
+		{
+			"active_seconds": 2570.00000000511,
+			"affordable_at_end": 11,
+			"automatic_completions": 189,
+			"bank_after_purchases": 50477416.0,
+			"bank_before_purchases": 830477416.0,
+			"duration": 60.000000000764,
+			"income": 821105262.0,
+			"manual_completions": 925,
+			"partial": false,
+			"purchases": [
+				"ext_cnc_tracking",
+				"ext_tri_analysis",
+				"ext_sge_window",
+				"ext_sweep_study"
+			],
+			"round": 51,
+			"samples": 3
+		},
+		{
+			"active_seconds": 2630.00000000588,
+			"affordable_at_end": 12,
+			"automatic_completions": 183,
+			"bank_after_purchases": 8842002.0,
+			"bank_before_purchases": 788842002.0,
+			"duration": 60.000000000764,
+			"income": 738364586.0,
+			"manual_completions": 831,
+			"partial": false,
+			"purchases": [
+				"ext_sgr_black_hole",
+				"ext_sge_stream"
+			],
+			"round": 52,
+			"samples": 6
+		},
+		{
+			"active_seconds": 2690.00000000664,
+			"affordable_at_end": 12,
+			"automatic_completions": 191,
+			"bank_after_purchases": 13629477.0,
+			"bank_before_purchases": 643629477.0,
+			"duration": 60.000000000764,
+			"income": 634787475.0,
+			"manual_completions": 736,
+			"partial": false,
+			"purchases": [
+				"ext_tri_catalogue",
+				"ext_equ_mount",
+				"ext_vul_rhythm"
+			],
+			"round": 53,
+			"samples": 0
+		},
+		{
+			"active_seconds": 2750.0000000074,
+			"affordable_at_end": 10,
+			"automatic_completions": 222,
+			"bank_after_purchases": 21124659.0,
+			"bank_before_purchases": 861124659.0,
+			"duration": 60.000000000764,
+			"income": 847495182.0,
+			"manual_completions": 854,
+			"partial": false,
+			"purchases": [
+				"ext_sgr_tracking",
+				"ext_equ_array",
+				"ext_vul_arc"
+			],
+			"round": 54,
+			"samples": 3
+		},
+		{
+			"active_seconds": 2810.00000000817,
+			"affordable_at_end": 10,
+			"automatic_completions": 206,
+			"bank_after_purchases": 28855584.0,
+			"bank_before_purchases": 808855584.0,
+			"duration": 60.000000000764,
+			"income": 787730925.0,
+			"manual_completions": 768,
+			"partial": false,
+			"purchases": [
+				"ext_sgr_yield",
+				"ext_cnc_arrivals"
+			],
+			"round": 55,
+			"samples": 0
+		},
+		{
+			"active_seconds": 2870.00000000893,
+			"affordable_at_end": 9,
+			"automatic_completions": 192,
+			"bank_after_purchases": 58738463.0,
+			"bank_before_purchases": 838738463.0,
+			"duration": 60.000000000764,
+			"income": 809882879.0,
+			"manual_completions": 827,
+			"partial": false,
+			"purchases": [
+				"ext_cnc_yield",
+				"precision",
+				"wide"
+			],
+			"round": 56,
+			"samples": 3
+		},
+		{
+			"active_seconds": 2930.0000000097,
+			"affordable_at_end": 9,
+			"automatic_completions": 215,
+			"bank_after_purchases": 79880036.0,
+			"bank_before_purchases": 919880036.0,
+			"duration": 60.000000000764,
+			"income": 861141573.0,
+			"manual_completions": 868,
+			"partial": false,
+			"purchases": [
+				"ext_cnc_survey",
+				"slot_3"
+			],
+			"round": 57,
+			"samples": 3
+		},
+		{
+			"active_seconds": 2990.00000001046,
+			"affordable_at_end": 8,
+			"automatic_completions": 168,
+			"bank_after_purchases": 30480502.0,
+			"bank_before_purchases": 870480502.0,
+			"duration": 60.000000000764,
+			"income": 790600466.0,
+			"manual_completions": 762,
+			"partial": false,
+			"purchases": [
+				"slot_4",
+				"slot_5",
+				"ext_record_complete"
+			],
+			"round": 58,
+			"samples": 3
+		},
+		{
+			"active_seconds": 3050.00000001122,
+			"affordable_at_end": 7,
+			"automatic_completions": 184,
+			"bank_after_purchases": 21980247.0,
+			"bank_before_purchases": 801980247.0,
+			"duration": 60.000000000764,
+			"income": 771499745.0,
+			"manual_completions": 680,
+			"partial": false,
+			"purchases": [
+				"ext_sgr_arrivals",
+				"ext_cyg_lock"
+			],
+			"round": 59,
+			"samples": 9
+		},
+		{
+			"active_seconds": 3110.00000001199,
+			"affordable_at_end": 6,
+			"automatic_completions": 185,
+			"bank_after_purchases": 26850149.0,
+			"bank_before_purchases": 926850149.0,
+			"duration": 60.000000000764,
+			"income": 904869902.0,
+			"manual_completions": 835,
+			"partial": false,
+			"purchases": [
+				"ext_cyg_aperture",
+				"ext_sgr_reach",
+				"ext_vul_cadence"
+			],
+			"round": 60,
+			"samples": 6
+		},
+		{
+			"active_seconds": 3170.00000001275,
+			"affordable_at_end": 5,
+			"automatic_completions": 192,
+			"bank_after_purchases": 17950610.0,
+			"bank_before_purchases": 857950610.0,
+			"duration": 60.000000000764,
+			"income": 831100461.0,
+			"manual_completions": 798,
+			"partial": false,
+			"purchases": [
+				"ext_sgr_hold",
+				"ext_aql_pair",
+				"ext_aql_stride"
+			],
+			"round": 61,
+			"samples": 6
+		},
+		{
+			"active_seconds": 3230.00000001352,
+			"affordable_at_end": 4,
+			"automatic_completions": 197,
+			"bank_after_purchases": 104438202.0,
+			"bank_before_purchases": 704438202.0,
+			"duration": 60.000000000764,
+			"income": 686487592.0,
+			"manual_completions": 741,
+			"partial": false,
+			"purchases": [
+				"ext_sgr_wide"
+			],
+			"round": 62,
+			"samples": 0
+		},
+		{
+			"active_seconds": 3290.00000001428,
+			"affordable_at_end": 4,
+			"automatic_completions": 199,
+			"bank_after_purchases": 160846812.0,
+			"bank_before_purchases": 880846812.0,
+			"duration": 60.000000000764,
+			"income": 776408610.0,
+			"manual_completions": 704,
+			"partial": false,
+			"purchases": [
+				"ext_sgr_linger"
+			],
+			"round": 63,
+			"samples": 3
+		},
+		{
+			"active_seconds": 3350.00000001504,
+			"affordable_at_end": 3,
+			"automatic_completions": 238,
+			"bank_after_purchases": 46720111.0,
+			"bank_before_purchases": 1006720111.0,
+			"duration": 60.000000000764,
+			"income": 845873299.0,
+			"manual_completions": 773,
+			"partial": false,
+			"purchases": [
+				"ext_aql_stream",
+				"ext_vul_flow",
+				"ext_equ_link"
+			],
+			"round": 64,
+			"samples": 3
+		}
+	],
+	"spent": 14882301190.0,
+	"stop_reason": "all_research_complete",
+	"targets_seen": {
+		"anomaly_rare": 23,
+		"binary_star": 45,
+		"black_hole": 13,
+		"comet": 100,
+		"common": 12857,
+		"fast": 5100,
+		"fireball": 1182,
+		"fragment": 2537,
+		"fragment_piece": 7581,
+		"galaxy": 21,
+		"major": 28,
+		"satellite": 153,
+		"variable_star": 57
+	},
+	"targets_selected": {
+		"anomaly_rare": 16,
+		"binary_star": 28,
+		"black_hole": 7,
+		"comet": 71,
+		"common": 9011,
+		"fast": 3612,
+		"fireball": 811,
+		"fragment": 1781,
+		"fragment_piece": 7581,
+		"galaxy": 17,
+		"major": 23,
+		"satellite": 103,
+		"variable_star": 41
+	}
+}
