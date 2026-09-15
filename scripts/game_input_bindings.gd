@@ -24,6 +24,8 @@ const ACTION_ORDER := [
 ]
 
 const RESERVED_DEBUG_KEYS := [
+	KEY_W,
+	KEY_E,
 	KEY_T,
 	KEY_D,
 	KEY_N,

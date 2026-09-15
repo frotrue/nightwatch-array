@@ -10,7 +10,7 @@ no GUT/gdUnit installation is needed.
 .\tools\validate.ps1 -GodotPath $godot -Build
 ```
 
-This runs the 29 fast gates below, then exports Windows. Add `-FullEconomy` for
+This runs the 30 fast gates below, then exports Windows. Add `-FullEconomy` for
 changes to progression, rewards, spawning or target logic. Omit `-Build` to test only.
 The economy run inherits its seed/strategy environment; it does not force three strategies.
 
@@ -56,6 +56,13 @@ shared late-slot preservation, lens removal/reuse, repeated gravity capture and
 overlapping supernova rewards. The headless cases passed on Linux with Godot
 4.7.2; actual renderer reviews remain pending. See
 [the validation record](history/three-celestial-slots-2026-09-15.md).
+
+`white_hole_test.gd` checks the debug-only visual layer: shortcut routing, bounded
+admission, save/RNG isolation, pause, accessibility and cleanup. Run
+`white_hole_review.gd` with a real renderer on both backends to compare wave/jet
+effects, verify their pixel footprint, reduced motion and residual-free removal.
+Add `-- --animate` for a four-second comparison sequence. See
+[the prototype](white-hole-preview.md) and its linked execution record.
 
 The Windows telemetry build also compiles/runs `native/gpu_usage_test.cpp`:
 engine selection (3D, Graphics, Compute, Copy, multiple adapters), PID isolation,
