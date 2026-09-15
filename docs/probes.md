@@ -10,7 +10,7 @@ no GUT/gdUnit installation is needed.
 .\tools\validate.ps1 -GodotPath $godot -Build
 ```
 
-This runs the 30 fast gates below, then exports Windows. Add `-FullEconomy` for
+This runs the 31 fast gates below, then exports Windows. Add `-FullEconomy` for
 changes to progression, rewards, spawning or target logic. Omit `-Build` to test only.
 The economy run inherits its seed/strategy environment; it does not force three strategies.
 
@@ -57,9 +57,15 @@ overlapping supernova rewards. The headless cases passed on Linux with Godot
 4.7.2; actual renderer reviews remain pending. See
 [the validation record](history/three-celestial-slots-2026-09-15.md).
 
+`neutron_star_test.gd` checks Scutum-gated remnant formation, RNG isolation and restoration,
+0.9-second delayed birth, shared stellar capacity, pulse-dependent manual/automatic work,
+progress retention, departure and cancellation on load/round end.
+`neutron_star_review.gd` captures a 16-second, 30fps production observation sequence on
+both renderers: stellar tracking, gaseous supernova, remnant birth, signal tracking and departure.
+
 `white_hole_test.gd` checks both the isolated optical fixture and the debug-spawned
 observable target: shortcut routing, straight travel, manual/dish completion,
-six timed waves of 24/36/48 mixed meteors, delayed rewards, two-pole distribution,
+a one-second animation followed by a single burst of 24/36/48 mixed meteors, delayed rewards, two-pole distribution,
 capacity, expiry/round/load cleanup, pause, accessibility and worker-motion parity.
 It also buys the real Phoenix path, admits natural forecasts, checks late-round
 release time and old-save RNG compatibility, and verifies ejecta-only value upgrades. Run

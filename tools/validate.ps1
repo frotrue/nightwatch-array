@@ -178,6 +178,7 @@ $gates = @(
     @('fixed_tick_test', 'FIXED_TICK_PASS'),
     @('black_hole_test', 'BLACK_HOLE_PASS'),
     @('stellar_test', 'STELLAR_PASS'),
+    @('neutron_star_test', 'NEUTRON_STAR_PASS'),
     @('white_hole_test', 'WHITE_HOLE_PASS'),
     @('threaded_simulation_test', 'THREADED_SIMULATION_PASS'),
     @('research_contract_test', 'RESEARCH_CONTRACT_PASS'),

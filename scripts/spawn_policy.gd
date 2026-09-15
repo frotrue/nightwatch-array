@@ -2,6 +2,7 @@ extends RefCounted
 
 const Clock = preload("res://scripts/simulation_clock.gd")
 const ORDER := ["common", "fast", "fragment", "fireball", "satellite", "variable_star", "comet", "binary_star", "galaxy", "black_hole", "stellar", "white_hole"]
+const STELLAR_FAMILY := ["stellar", "neutron_star"]
 const LATE_TYPES := ["satellite", "variable_star", "comet", "binary_star", "galaxy", "black_hole", "stellar", "white_hole"]
 const BASE_PROBABILITIES := {
 	"common": 0.5 / 60.0, "fast": 0.125 / 60.0,
@@ -58,6 +59,7 @@ static func mean_interval(low: float, high: float, floor_value: float) -> float:
 	return (floor_value * (floor_value - low) + (high * high - floor_value * floor_value) * 0.5) / (high - low)
 
 func probability(kind: String, progression: Node) -> float:
+	if kind == "neutron_star": return 0.0 # Only born from a completed supernova.
 	if not unlocked(kind, progression): return 0.0
 	return _scaled_probability(kind, progression.get_spawn_probability_multiplier() * progression.get_celestial_multiplier(kind, "spawn"))
 
