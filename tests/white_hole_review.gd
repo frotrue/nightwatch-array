@@ -2,6 +2,51 @@ extends "res://tests/deep_sky_preview.gd"
 
 const UITheme = preload("res://scripts/ui_theme.gd")
 
+# Synthetic optical controls: a star grid behind the lens and an opaque
+# instrument/target stand-in in front, both used only by this diagnostic.
+class SkyGrid:
+	extends Node2D
+	func _draw() -> void:
+		for y in range(-120, 121, 20):
+			for x in range(-120, 121, 20):
+				draw_circle(Vector2(x, y), 0.85, Color(0.7, 0.8, 1.0))
+
+class ForegroundMarker:
+	extends Node2D
+	func _draw() -> void:
+		draw_rect(Rect2(-60, 28, 120, 4), Color("05ff41"))
+
+func _review_sky_lens(game: Node, body: Node2D, centre: Vector2) -> void:
+	var grid := SkyGrid.new()
+	grid.position = centre
+	grid.z_index = -19
+	game.add_child(grid)
+	var marker := ForegroundMarker.new()
+	marker.position = centre
+	marker.z_index = 10
+	game.add_child(marker)
+	body.set_process(false)
+	body.emission.hide()
+	body.lensed_sky.hide()
+	body.background_copy.copy_mode = BackBufferCopy.COPY_MODE_DISABLED
+	await _capture(game, "lens_reference_off")
+	var original := root.get_texture().get_image()
+	body.present()
+	await _capture(game, "lens_reference_on")
+	var warped := root.get_texture().get_image()
+	var changed := 0
+	for y in 648:
+		for x in 1152:
+			if original.get_pixel(x, y) != warped.get_pixel(x, y): changed += 1
+	if changed < 100: failures.append("sky reference did not refract")
+	var front_rect := Rect2i(516, 352, 120, 4)
+	if original.get_region(front_rect).get_data() != warped.get_region(front_rect).get_data():
+		failures.append("sky refraction displaced foreground content")
+	grid.free()
+	marker.free()
+	body.emission.show()
+	body.set_process(true)
+
 func _run() -> void:
 	if DisplayServer.get_name() == "headless":
 		push_error("White hole review requires a real renderer")
@@ -33,7 +78,7 @@ func _run() -> void:
 	await _capture(game, "00_background")
 	var background := root.get_texture().get_image()
 	body.show()
-	await _capture(game, "01_waves")
+	await _capture(game, "01_turbulent_disc")
 	var waves := root.get_texture().get_image()
 	var outside := 0
 	var changed := 0
@@ -43,6 +88,7 @@ func _run() -> void:
 				changed += 1
 				if Vector2(x, y).distance_to(Vector2(576, 324)) > 152.0: outside += 1
 	if changed < 500 or outside > 0: failures.append("emission footprint changed=%d outside=%d" % [changed, outside])
+	await _review_sky_lens(game, body, centre)
 	layer.cycle_effect()
 	await _capture(game, "02_jets")
 	if waves.get_data() == root.get_texture().get_image().get_data(): failures.append("effect modes render identically")
@@ -65,7 +111,7 @@ func _run() -> void:
 	var captions := CanvasLayer.new()
 	captions.layer = 70
 	game.add_child(captions)
-	for item in [["파동형", 260], ["양극 제트형", 592]]:
+	for item in [["난류 원반형", 260], ["양극 제트형", 592]]:
 		var label := Label.new()
 		label.text = item[0]
 		label.position = Vector2(item[1], 140)

@@ -59,8 +59,8 @@ overlapping supernova rewards. The headless cases passed on Linux with Godot
 
 `white_hole_test.gd` checks the debug-only visual layer: shortcut routing, bounded
 admission, save/RNG isolation, pause, accessibility and cleanup. Run
-`white_hole_review.gd` with a real renderer on both backends to compare wave/jet
-effects, verify their pixel footprint, reduced motion and residual-free removal.
+`white_hole_review.gd` with a real renderer on both backends to compare emission-disc/jet
+effects, verify their pixel footprint, sky-only refraction, reduced motion and residual-free removal.
 Add `-- --animate` for a four-second comparison sequence. See
 [the prototype](white-hole-preview.md) and its linked execution record.
 

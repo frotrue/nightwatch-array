@@ -772,5 +772,5 @@ MODULE_INTRO_PREVIEW_HINT,DEBUG PREVIEW · Changes are not saved. Esc / Ctrl+Shi
 METEOR_STELLAR,STAR,항성
 DEBUG_WHITE_HOLE_SPAWNED,White hole preview · Ctrl+Shift+E: switch effect,화이트홀 미리보기 · Ctrl+Shift+E: 효과 전환
 DEBUG_WHITE_HOLE_LIMIT,White hole preview · Maximum 3 · Clears at round end,화이트홀 미리보기 · 최대 3개 · 회차 종료 시 정리
-DEBUG_WHITE_HOLE_WAVES,White hole · Expanding waves · Ctrl+Shift+W: spawn,화이트홀 · 방출 파동형 · Ctrl+Shift+W: 소환
+DEBUG_WHITE_HOLE_WAVES,White hole · Turbulent emission disc · Ctrl+Shift+W: spawn,화이트홀 · 난류 원반형 · Ctrl+Shift+W: 소환
 DEBUG_WHITE_HOLE_JETS,White hole · Polar jets · Ctrl+Shift+W: spawn,화이트홀 · 양극 제트형 · Ctrl+Shift+W: 소환
