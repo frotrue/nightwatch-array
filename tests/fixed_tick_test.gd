@@ -210,7 +210,11 @@ func _test_policy() -> void:
 	check(game.spawner.spawn_meteor("common") == null, "atmospheric hard capacity is bounded")
 	for kind in Policy.LATE_TYPES:
 		check(game.spawner.spawn_meteor(kind) != null, "late type has reserved space: " + kind)
-	check(game.spawner.spawn_meteor("galaxy") != null, "one shared late extra slot")
+	for kind in Policy.DEDICATED_LATE_TYPES:
+		for i in 2:
+			check(game.spawner.spawn_meteor(kind) != null, "second and third dedicated slot survive a full atmosphere: " + kind)
+		check(game.spawner.spawn_meteor(kind) == null, "fourth dedicated target is rejected: " + kind)
+	check(game.spawner.spawn_meteor("galaxy") != null, "three stars and holes preserve the ordinary shared late extra slot")
 	check(game.spawner.spawn_meteor("comet") == null, "late extra cannot evict another type's reservation")
 	check(game.spawner.spawn_major_fireball() != null, "major target retains a reserved slot")
 	game.spawner._announce_regular_spawn(null, "common")
