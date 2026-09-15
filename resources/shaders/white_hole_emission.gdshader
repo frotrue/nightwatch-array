@@ -8,6 +8,11 @@ uniform float visual_time = 0.0;
 uniform float motion = 1.0;
 uniform float pulses = 1.0;
 uniform int effect_mode = 0;
+uniform float base_angle = 0.19;
+uniform float axis_wobble = 0.24;
+uniform float pose_time = -1.0;
+uniform float observation_progress = 0.0;
+uniform float completion = 0.0;
 
 float hash3(vec3 p) {
 	p = fract(p * 0.1031);
@@ -66,9 +71,16 @@ void fragment() {
 	float aa = max(fwidth(r),0.002);
 	// A small precession and changing pitch expose different layers. Use only the
 	// accumulated visual clock so pausing/reducing motion holds the current pose.
-	float axis_angle = 0.19 + sin(visual_time * 0.36) * 0.24;
-	float inclination = 0.24 + sin(visual_time * 0.31 + 0.6) * 0.07;
+	float pose_clock = pose_time < 0.0 ? visual_time : pose_time;
+	float axis_angle = base_angle + sin(pose_clock * 0.36) * axis_wobble;
+	float inclination = 0.24 + sin(pose_clock * 0.31 + 0.6) * 0.07;
 	vec2 p = mat2(vec2(cos(axis_angle),sin(axis_angle)),vec2(-sin(axis_angle),cos(axis_angle))) * local;
+	vec2 jet_p = p;
+	float frame_r = r;
+	float outflow = smoothstep(0.0,0.10,completion) * (1.0 - smoothstep(0.72,1.0,completion));
+	float contraction = mix(1.0,0.06,smoothstep(0.04,0.86,completion) * motion);
+	p /= contraction;
+	r = length(p);
 	vec2 direction = p / max(r,0.001);
 	float cloud = turbulence(vec3(direction * 4.0, r * 9.5 - t * 0.43));
 	float filament = turbulence(vec3(direction * 14.0, r * 30.0 - t * 1.03 + cloud * 2.0));
@@ -98,17 +110,19 @@ void fragment() {
 	// Scattered inner light spills into the gas, with no perfectly traced rim.
 	float spill = exp(-r * r / 0.032) * (0.025 + cloud * 0.045);
 	light.rgb = mix(light.rgb,vec3(1.0,0.98,0.91),spill);
-	if (effect_mode == 1) {
-		float along = abs(p.y);
+	float preparation = smoothstep(0.70,1.0,observation_progress) * 0.28;
+	if (effect_mode == 1 || preparation > 0.0 || completion > 0.0) {
+		float along = abs(jet_p.y);
 		float width = 0.012 + along * 0.050;
 		float wander = (noise3(vec3(along * 5.0 - t * 0.5,3.7,11.2)) - 0.5) * along * 0.042;
-		float jet_profile = exp(-pow((p.x - wander) / width,2.0));
-		float structure = turbulence(vec3(p.x * 64.0,along * 21.0 - t * 2.3,4.8));
-		float jets = jet_profile * smoothstep(0.13,0.23,along) * (1.0 - smoothstep(0.38,0.65,along));
-		jets *= (0.2 + structure * 0.8) * (p.y < 0.0 ? 0.33 : 0.20) * motion;
+		float jet_profile = exp(-pow((jet_p.x - wander) / width,2.0));
+		float structure = turbulence(vec3(jet_p.x * 64.0,along * 21.0 - t * (2.3 + outflow * 3.0),4.8));
+		float jets = jet_profile * smoothstep(0.06,0.18,along) * (1.0 - smoothstep(mix(0.38,0.76,outflow),mix(0.65,0.99,outflow),along));
+		jets *= (0.2 + structure * 0.8) * (jet_p.y < 0.0 ? 0.33 : 0.20) * motion;
+		jets *= max(effect_mode == 1 ? 1.0 : preparation, outflow * 3.5);
 		light = over(vec4(mix(vec3(0.38,0.44,0.53),vec3(0.70,0.74,0.79),structure),jets),light);
 	}
 	float breath = 1.0 + sin(t * 0.8) * 0.005 * pulses * motion;
-	light.a *= (1.0 - smoothstep(0.94,1.0,r));
+	light.a *= (1.0 - smoothstep(0.94,1.0,frame_r));
 	COLOR = vec4(clamp(light.rgb * breath,vec3(0.0),vec3(1.0)) * tint.rgb,clamp(light.a,0.0,1.0) * tint.a);
 }

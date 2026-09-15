@@ -57,14 +57,22 @@ overlapping supernova rewards. The headless cases passed on Linux with Godot
 4.7.2; actual renderer reviews remain pending. See
 [the validation record](history/three-celestial-slots-2026-09-15.md).
 
-`white_hole_test.gd` checks the debug-only visual layer: shortcut routing, bounded
-admission, save/RNG isolation, pause, accessibility and cleanup. Run
+`white_hole_test.gd` checks both the isolated optical fixture and the debug-spawned
+observable target: shortcut routing, straight travel, manual/dish completion,
+six timed waves of 24 mixed meteors, delayed rewards, two-pole distribution,
+capacity, expiry/round/load cleanup, pause, accessibility and worker-motion parity.
+Natural arrival RNG and research unlocks remain unchanged. Run
 `white_hole_review.gd` with a real renderer on both backends to compare emission-disc/jet
 effects, verify their pixel footprint, sky-only refraction, reduced motion and residual-free removal.
 The review also checks that advancing optical time animates the disc within its
 footprint, and holding that clock freezes its pose and gas flow.
 Add `-- --animate` for an eight-second, 24 fps comparison sequence. See
 [the prototype](white-hole-preview.md) and its linked execution record.
+Add `-- --observe` for an eight-second, 30 fps lifecycle capture using the real
+buffered manual-input path and fixed-tick game loop. It verifies observation,
+24 released meteors and source removal; the normal fragment split can raise the
+visible count after ejection. This fixture disables user input and follows the
+observer's current time epoch so desktop focus resets cannot stall its driver.
 
 The Windows telemetry build also compiles/runs `native/gpu_usage_test.cpp`:
 engine selection (3D, Graphics, Compute, Copy, multiple adapters), PID isolation,

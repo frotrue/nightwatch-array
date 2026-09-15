@@ -598,6 +598,7 @@ METEOR_COMET,LONG-ARC COMET,장주기 혜성
 METEOR_BINARY_STAR,ICE ASTEROID,얼음 소행성
 METEOR_GALAXY,PLANET,행성
 METEOR_BLACK_HOLE,BLACK HOLE,블랙홀
+METEOR_WHITE_HOLE,WHITE HOLE,화이트홀
 METEOR_EXOPLANET_TRANSIT,EXOPLANET TRANSIT,외계행성 통과
 METEOR_EXOPLANET_CANDIDATE,HOST CANDIDATE,호스트 후보
 METEOR_COMPARISON_STAR,COMPARISON STAR,비교별
@@ -770,7 +771,7 @@ MODULE_INTRO_HINT,Click the highlighted control or press Enter / Space.  %s: set
 MODULE_INTRO_DONE,Module installed. Your loadout is now yours to explore.,모듈 장착 완료. 이제 자유롭게 편성해 보세요.
 MODULE_INTRO_PREVIEW_HINT,DEBUG PREVIEW · Changes are not saved. Esc / Ctrl+Shift+T: exit,디버그 미리보기 · 변경 사항은 저장되지 않습니다. Esc / Ctrl+Shift+T: 종료
 METEOR_STELLAR,STAR,항성
-DEBUG_WHITE_HOLE_SPAWNED,White hole preview · Ctrl+Shift+E: switch effect,화이트홀 미리보기 · Ctrl+Shift+E: 효과 전환
+DEBUG_WHITE_HOLE_SPAWNED,White hole · Observe to release meteors,화이트홀 · 관측하면 유성을 방출합니다
 DEBUG_WHITE_HOLE_LIMIT,White hole preview · Maximum 3 · Clears at round end,화이트홀 미리보기 · 최대 3개 · 회차 종료 시 정리
 DEBUG_WHITE_HOLE_WAVES,White hole · Turbulent emission disc · Ctrl+Shift+W: spawn,화이트홀 · 난류 원반형 · Ctrl+Shift+W: 소환
 DEBUG_WHITE_HOLE_JETS,White hole · Polar jets · Ctrl+Shift+W: spawn,화이트홀 · 양극 제트형 · Ctrl+Shift+W: 소환

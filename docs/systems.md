@@ -139,6 +139,21 @@ Position integration, expiry order and packet delivery signals are unchanged.
 
 ## Setup calls
 
+### Debug white-hole target
+
+`debug_celestial_layer.gd` routes the W shortcut through `meteor_spawner.gd` into
+the normal meteor layer. `white_hole_meteor.gd` extends Meteor and owns optical
+time, a birth heading, a held completion pose, and six timed release waves.
+Its scene-owned `white_hole_preview.tscn` supplies the surface and sky lens.
+The old standalone optical fixture remains available for material comparisons.
+
+Release signals are resolved after observation, so newborn bodies receive no
+work on their birth tick. The spawner uses ordinary specifications, accounting
+and the atmospheric safety budget; no new occurrence RNG or natural unlock is
+introduced. White holes count against the same budget and are independently
+capped at three. The actor cancels its release when removed at a round/load/reset
+boundary. The worker motion path also advances the actor's optical clock.
+
 `Game` injects progression and the observation view into consumers; consumers
 query progression for effective upgrades rather than duplicating balance logic.
 HUD/chart bind settings and progression; tutorial also binds to chart events.
