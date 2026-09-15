@@ -100,8 +100,9 @@ func _run() -> void:
 	_check(skipped_heads > 0 and retained_heads > 0, "both sides of the first-sample threshold ran")
 	meteor.free()
 	_test_alternating_weights()
+	_test_asteroid_fractures()
 	if failures.is_empty():
-		print("METEOR_RENDER_CACHE_PASS: 539 exact ribbon/draw cases, 264 getter mutations, 11 types and fragment sparks")
+		print("METEOR_RENDER_CACHE_PASS: 539 exact ribbon/draw cases, 264 getter mutations, 11 types, fragment sparks and closed asteroid fractures")
 		quit(0)
 	else:
 		print("METEOR_RENDER_CACHE_FAIL: %d failure(s)" % failures.size())
@@ -169,6 +170,41 @@ func _test_alternating_weights() -> void:
 	target._ensure_trail_station_weights(29)
 	_check(target.trail_weight_build_count == 3 and target.trail_station_weights.to_byte_array() == second, "shrink preserves the most recent other entry")
 	target.free()
+
+
+func _test_asteroid_fractures() -> void:
+	var target := Meteor.new()
+	# An asymmetric crust independent of the production outline formula.
+	var contour := PackedVector2Array([Vector2(-0.8, -0.4), Vector2(-0.3, -0.9), Vector2(0.6, -0.7), Vector2(0.9, 0.0), Vector2(0.5, 0.8), Vector2(-0.2, 0.6), Vector2(-0.7, 0.8)])
+	for radius in [18.0, 75.0]:
+		for angle in [-1.3, 0.0, 2.2]:
+			target.wobble_phase = angle + 0.7
+			var outline := PackedVector2Array()
+			for point in contour: outline.append(point.rotated(angle) * radius)
+			var area := _polygon_area(outline)
+			for count in [7, 9]:
+				var cells := target._asteroid_fracture_cells(outline, radius, angle, count)
+				var total := 0.0
+				_check(cells.size() == count, "fracture retains every requested chunk")
+				for index in cells.size():
+					var cell := cells[index]
+					for point in cell: _check(point.is_finite(), "fracture vertices remain finite")
+					_check(not Geometry2D.triangulate_polygon(cell).is_empty(), "fracture chunk is drawable")
+					var cell_area := _polygon_area(cell)
+					_check(cell_area > 0.001, "fracture chunk has positive area")
+					total += cell_area
+					for other in range(index):
+						for overlap in Geometry2D.intersect_polygons(cell, cells[other]):
+							_check(_polygon_area(overlap) <= area * 0.0001, "fracture chunks do not overlap")
+				_check(absf(total - area) <= area * 0.0001, "fracture chunks cover the original crust without holes")
+	target.free()
+
+
+func _polygon_area(polygon: PackedVector2Array) -> float:
+	var area := 0.0
+	for index in polygon.size():
+		area += polygon[index].cross(polygon[(index + 1) % polygon.size()])
+	return absf(area) * 0.5
 
 
 func _build_cases() -> Array[Dictionary]:
