@@ -53,8 +53,9 @@ The review also captures three simultaneous lenses, overlapping lens/contact
 agreement, three stars together with three holes, and reduced motion. The
 headless gates cover independent three-slot admission under atmospheric pressure,
 shared late-slot preservation, lens removal/reuse, repeated gravity capture and
-overlapping supernova rewards. These added cases still require execution; see
-[the current validation handoff](history/three-celestial-slots-2026-09-15.md).
+overlapping supernova rewards. The headless cases passed on Linux with Godot
+4.7.2; actual renderer reviews remain pending. See
+[the validation record](history/three-celestial-slots-2026-09-15.md).
 
 The Windows telemetry build also compiles/runs `native/gpu_usage_test.cpp`:
 engine selection (3D, Graphics, Compute, Copy, multiple adapters), PID isolation,

@@ -922,11 +922,14 @@ func _run() -> void:
 	_check(game.upgrade_tree.tooltip_panel.visible and not game.upgrade_tree.selected_node_id.is_empty(), "research chart opens with the reference-style fixed inspector selection")
 	_check(game.upgrade_tree.constellation_ledger.visible and game.upgrade_tree.constellation_ledger_counts.size() == 24, "research chart includes the original twelve and twelve outer constellation rows")
 	_check(game.upgrade_tree.tree_canvas.find_children("*", "Label", true, false).is_empty(), "constellation chart keeps node-name text out of the central playfield")
+	var inspector_locale: String = game.settings.locale
+	game.settings.set_language("ko", false)
 	game.upgrade_tree._on_node_hovered("edge_detection")
 	_check(game.upgrade_tree.tooltip_panel.visible and game.upgrade_tree.hovered_node_id == "edge_detection" and game.upgrade_tree.selected_node_id == "edge_detection", "hovering a node updates the fixed constellation inspector")
 	_check("북두칠성" in game.upgrade_tree.tooltip_branch.text, "research inspector localizes the selected constellation")
 	_check("북두칠성" in game.upgrade_tree.completion_detail_label.text, "research header follows the fixed inspector's selected constellation")
 	_check("β UMa" in game.upgrade_tree.tooltip_star.text, "research inspector identifies the real star and Bayer designation")
+	game.settings.set_language(inspector_locale, false)
 	_check(game.upgrade_tree.tooltip_panel.mouse_filter == Control.MOUSE_FILTER_IGNORE, "research inspector never intercepts the star hit target")
 	var tooltip_refreshes_before_motion: int = game.upgrade_tree.tooltip_content_refreshes
 	var tooltip_style_id: int = game.upgrade_tree.tooltip_panel.get_theme_stylebox("panel").get_instance_id()

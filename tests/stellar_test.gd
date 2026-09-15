@@ -179,6 +179,7 @@ func _test_overlapping_blasts() -> void:
 		var star = game.spawner.spawn_meteor("stellar", centre + Vector2(i * 20, 0), Vector2.RIGHT, 30.0)
 		stars.append(star)
 		expected += maxf(1.0, round(star.base_value * 0.68))
+		star.base_automatic_rate = 1.0
 		star.observation_progress = 1.0
 	var target = game.spawner.spawn_meteor("common", centre, Vector2.RIGHT, 30.0)
 	expected += maxf(1.0, round(target.base_value * 0.68))
