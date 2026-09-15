@@ -143,7 +143,9 @@ Position integration, expiry order and packet delivery signals are unchanged.
 
 `debug_celestial_layer.gd` routes the W shortcut through `meteor_spawner.gd` into
 the normal meteor layer. `white_hole_meteor.gd` extends Meteor and owns optical
-time, a birth heading, a held completion pose, and six timed release waves.
+time, a birth heading, a held completion pose, and a single burst after a
+one-second completion animation. Successful sources defer deletion until resolve
+so the final motion tick cannot discard the pending burst.
 Its scene-owned `white_hole_preview.tscn` supplies the surface and sky lens.
 The old standalone optical fixture remains available for material comparisons.
 
