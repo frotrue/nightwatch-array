@@ -26,7 +26,7 @@ func _run() -> void:
 	for manual in [false, true]:
 		var game = _game()
 		var source = game.spawner.spawn_meteor("black_hole", Vector2(550, 300), Vector2(30, 0), 30.0)
-		check(source != null and game.spawner.spawn_meteor("black_hole") == null, "one reserved black hole")
+		check(source != null, "black hole uses reserved capacity")
 		var near = game.spawner.spawn_meteor("common", Vector2(750, 300), Vector2(20, 0), 20.0)
 		var far = game.spawner.spawn_meteor("fast", Vector2(800, 300), Vector2(20, 0), 20.0)
 		var boundary = game.spawner.spawn_meteor("binary_star", Vector2(550, 540), Vector2(20, 0), 20.0)
@@ -71,6 +71,7 @@ func _run() -> void:
 	_test_policy()
 	_test_outer_research()
 	_test_lensed_contacts()
+	_test_three_lenses()
 	await _test_worker_parity()
 	if failures.is_empty(): print("BLACK_HOLE_PASS: unlock, reserved spawn, completion, radius, capture/release, save cleanup and worker parity")
 	quit(0 if failures.is_empty() else 1)
@@ -217,3 +218,68 @@ func _test_worker_parity() -> void:
 			check(left.position.distance_to(right.position) < 0.0001 and is_equal_approx(left.age, right.age), "threaded and serial capture/release match")
 	for game in games: game.free()
 	await process_frame
+
+func _test_three_lenses() -> void:
+	var game = _game()
+	var optics = game.black_hole_lens
+	var holes: Array = []
+	var samples: Array = []
+	for i in 3:
+		var centre := Vector2(200 + i * 360, 300)
+		var hole = game.spawner.spawn_meteor("black_hole", centre, Vector2.RIGHT, 30.0)
+		hole.age = 4.0
+		holes.append(hole)
+		samples.append(game.spawner.spawn_meteor("common", centre + Vector2(40, 0), Vector2.RIGHT, 30.0))
+	check(game.spawner.spawn_meteor("black_hole") == null, "fourth black hole is rejected")
+	optics._process(0.0)
+	for i in 3:
+		check(optics.targets[i] == holes[i] and optics.lenses[i].visible, "every black hole retains its own visible lens")
+		check(optics.background_copies[i].copy_mode == BackBufferCopy.COPY_MODE_VIEWPORT, "each active pass refreshes the previous lens image")
+		check(samples[i].get_observation_position(1.0).distance_to(samples[i].global_position) > 8.0, "each lens shifts its nearby manual contact")
+	check(optics.lenses[0].material != optics.lenses[1].material and optics.lenses[1].material != optics.lenses[2].material, "lens parameters are independent")
+	# Two lenses overlap. Reverse the shader sampling analytically to recover
+	# the physical point from the composed primary image.
+	holes[1].position = Vector2(260, 300)
+	holes[1].previous_simulation_position = holes[1].position
+	var physical := Vector2(310, 300)
+	var projected: Vector2 = optics.project_position(physical, 1.0)
+	var recovered := projected
+	for i in range(2, -1, -1):
+		var hole = holes[i]
+		var extent: float = hole.body_radius * hole._head_scale() * hole._current_visual_scale() * optics.EXTENT_RADII
+		var offset: Vector2 = recovered - hole.global_position
+		var radius := offset.length() / extent
+		if radius < 1.0 and radius > 0.001:
+			var bend: float = optics.EINSTEIN_RADIUS * optics.EINSTEIN_RADIUS / maxf(radius, 0.12) * (1.0 - smoothstep(optics.TAPER_START, 1.0, radius))
+			recovered -= offset.normalized() * bend * extent * hole.get_burn_visibility()
+	check(recovered.distance_to(physical) < 0.1, "overlapping manual projection matches the shader pass order")
+	optics.motion_scale = 0.0
+	optics._process(0.0)
+	check(optics.project_position(physical, 1.0) == physical, "reduced motion disables all lens contact offsets")
+	for copy in optics.background_copies:
+		check(copy.copy_mode == BackBufferCopy.COPY_MODE_DISABLED, "reduced motion disables every screen copy")
+	optics.motion_scale = 1.0
+	optics._process(0.0)
+	holes[1].free()
+	check(not optics.lenses[1].visible and optics.background_copies[1].copy_mode == 0, "deleting the middle source disables only its pass")
+	check(optics.lenses[0].visible and optics.lenses[2].visible, "other lens passes survive middle-source removal")
+	var replacement = game.spawner.spawn_meteor("black_hole", Vector2(560, 300), Vector2.RIGHT, 30.0)
+	check(replacement != null and optics.targets[1] == replacement, "a new hole reuses the released lens slot")
+	# Two real completion callbacks recapture a shared target without duplicating
+	# its reward or leaving a reference to a freed source.
+	var common = game.spawner.spawn_meteor("common", Vector2(380, 300), Vector2.RIGHT, 30.0)
+	holes[0].observation_progress = 1.0
+	holes[0].tick_resolve()
+	var first_capture = common.gravity_capture
+	check(first_capture != null, "first black hole captures the shared target")
+	replacement.observation_progress = 1.0
+	replacement.tick_resolve()
+	check(common.gravity_capture != null and common.gravity_capture != first_capture and common.alive, "second black hole safely rebases the same live target")
+	check(game.spawner.spawn_meteor("black_hole") == null, "completion remnants continue occupying black hole slots")
+	holes[0].free()
+	replacement.free()
+	holes[2].free()
+	for copy in optics.background_copies:
+		check(copy.copy_mode == BackBufferCopy.COPY_MODE_DISABLED, "all screen copies stop after the last source exits")
+	check(not optics.is_processing() and optics.project_position(physical, 1.0) == physical, "last-source removal stops processing and restores contacts")
+	game.free()

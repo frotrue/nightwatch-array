@@ -120,6 +120,7 @@ func _run() -> void:
 	game.black_hole_lens.motion_scale = 1.0
 	game.black_hole_lens._process(0.0)
 	await _capture(game, "09_trail_lens_on")
+	await _review_multiple(game)
 	game.free()
 	paused = false
 	_finish("BLACK_HOLE_REVIEW", "%d captures at " % records.size() + ProjectSettings.globalize_path(output))
@@ -134,3 +135,62 @@ func _green_centroid(frame: Image, region := Rect2i(580, 270, 106, 61)) -> Vecto
 			total += weight
 			centre += Vector2(x, y) * weight
 	return centre / total if total > 0.01 else Vector2.INF
+
+func _review_multiple(game: Node2D) -> void:
+	_clear_sky(game)
+	await process_frame
+	game.effects.reset()
+	var holes: Array = []
+	var samples: Array = []
+	for index in 3:
+		var centre: Vector2 = game.observation_view.screen_to_world(Vector2(230 + index * 345, 210))
+		var hole = game.spawner.spawn_meteor("black_hole", centre, Vector2.RIGHT, 30.0)
+		hole.age = 5.0
+		holes.append(hole)
+		var sample = game.spawner.spawn_meteor("common", centre + Vector2(40, 0), Vector2.RIGHT, 30.0)
+		sample.age = 3.0
+		sample.primary_color = Color(0.2, 1.0, 0.2)
+		sample.glow_color = sample.primary_color
+		sample.base_automatic_rate = 0.0
+		samples.append(sample)
+	_freeze(game)
+	game.black_hole_lens._process(0.0)
+	await _capture(game, "10_three_lenses")
+	_check_multiple_centres(game, samples)
+	# Overlap two lens passes and verify their composed primary image.
+	holes[1].position = holes[0].position + Vector2(60, 0)
+	samples[0].position = holes[0].position + Vector2(110, 0)
+	samples[1].hide()
+	for body in [holes[1], samples[0]]:
+		body.previous_simulation_position = body.position
+		body.reset_physics_interpolation()
+	game.black_hole_lens._process(0.0)
+	await _capture(game, "11_overlapping_lenses")
+	_check_multiple_centres(game, [samples[0], samples[2]])
+	# Full supported scene for manual visual/performance review: three stars
+	# with independent heat materials plus all three black hole passes.
+	for index in 3:
+		var centre: Vector2 = game.observation_view.screen_to_world(Vector2(230 + index * 345, 430))
+		var star = game.spawner.spawn_meteor("stellar", centre, Vector2.RIGHT, 30.0)
+		star.age = 5.0
+		star.observation_progress = 0.2 + index * 0.3
+	_freeze(game)
+	game.black_hole_lens._process(0.0)
+	await _capture(game, "12_three_stars_and_holes")
+	game.black_hole_lens.motion_scale = 0.0
+	game.black_hole_lens._process(0.0)
+	for body in game.meteor_layer.get_children():
+		body.completion_motion_scale = 0.0
+		body.queue_redraw()
+	await _capture(game, "13_six_bodies_reduced_motion")
+
+func _check_multiple_centres(game: Node2D, samples: Array) -> void:
+	var frame := root.get_texture().get_image()
+	for sample in samples:
+		var predicted: Vector2 = game.observation_view.world_to_screen(sample.get_observation_position(1.0))
+		var region := Rect2i(Vector2i(predicted) - Vector2i(25, 25), Vector2i(51, 51))
+		region = region.intersection(Rect2i(Vector2i.ZERO, frame.get_size()))
+		var actual := _green_centroid(frame, region)
+		if actual == Vector2.INF or actual.distance_to(predicted) > 6.0:
+			failures.append("multiple-lens selection mismatch: rendered=%s selection=%s" % [actual, predicted])
+		print("MULTIPLE_LENS_CENTRE rendered=", actual, " selection=", predicted)

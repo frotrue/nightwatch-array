@@ -30,6 +30,7 @@ func _run() -> void:
 		for scale in [1.0, 0.6]:
 			_test_blast(manual, scale)
 	_test_fragments_and_samples()
+	_test_overlapping_blasts()
 	if failures.is_empty(): print("STELLAR_PASS: early unlock, upgrades, save/RNG compatibility, manual/auto supernova, scaled boundaries, exclusions, samples and fragment isolation")
 	quit(0 if failures.is_empty() else 1)
 
@@ -53,7 +54,7 @@ func _test_unlock_and_save() -> void:
 	check(is_equal_approx(Meteor.SUPERNOVA_RADIUS * p.extension_effect("supernova_radius"), 300.0), "range progresses to 300")
 	check(is_equal_approx(p.get_celestial_multiplier("galaxy", "value"), 1.0), "stellar studies do not boost planets")
 	var star = game.spawner.spawn_meteor("stellar", Vector2(500, 300), Vector2.RIGHT, 30.0)
-	check(star != null and game.spawner.spawn_meteor("stellar") == null, "one reserved star including its linger")
+	check(star != null, "star uses its reserved capacity")
 	var planet = game.spawner.spawn_meteor("galaxy", Vector2(850, 300), Vector2.RIGHT, 30.0)
 	check(star.get_observation_body_radius() > planet.get_observation_body_radius(), "stellar body is visibly larger than a planet")
 	planet.free()
@@ -94,10 +95,7 @@ func _test_blast(manual: bool, view_scale: float) -> void:
 	var edge = game.spawner.spawn_meteor("common", centre + Vector2.RIGHT * radius, Vector2.RIGHT, 30.0)
 	var far = game.spawner.spawn_meteor("fast", centre + Vector2.RIGHT * (radius + 1.0), Vector2.RIGHT, 30.0)
 	var hole = game.spawner.spawn_meteor("black_hole", centre, Vector2.RIGHT, 30.0)
-	var other = Meteor.new() # Deliberate fixture bypasses the one-star reservation.
-	other.configure(Balance.meteor_spec("stellar"), "stellar", centre, Vector2.RIGHT, 1.0, {})
-	game.meteor_layer.add_child(other)
-	game._on_meteor_spawned(other)
+	var other = game.spawner.spawn_meteor("stellar", centre, Vector2.RIGHT, 30.0)
 	var expired = game.spawner.spawn_meteor("fast", centre, Vector2.RIGHT, 30.0)
 	expired.alive = false
 	star.manual_touched = manual
@@ -168,5 +166,29 @@ func _test_fragments_and_samples() -> void:
 	var paid_samples: int = game.deep_sky.state.samples
 	for target in rare_targets: target.complete_from_supernova()
 	check(game.deep_sky.state.samples == paid_samples, "special samples paid once")
+	game.free()
+	paused = false
+
+func _test_overlapping_blasts() -> void:
+	var game = _game()
+	game.observation_phase_active = true
+	var centre: Vector2 = game.observation_view.screen_to_world(Vector2(550, 300))
+	var stars: Array = []
+	var expected := 0.0
+	for i in 3:
+		var star = game.spawner.spawn_meteor("stellar", centre + Vector2(i * 20, 0), Vector2.RIGHT, 30.0)
+		stars.append(star)
+		expected += maxf(1.0, round(star.base_value * 0.68))
+		star.observation_progress = 1.0
+	var target = game.spawner.spawn_meteor("common", centre, Vector2.RIGHT, 30.0)
+	expected += maxf(1.0, round(target.base_value * 0.68))
+	var earned: float = game.progression.total_data_earned
+	stars[0].tick_resolve()
+	check(stars[1].alive and stars[2].alive, "first supernova leaves the other two stars for their own completion")
+	for star in stars: star.tick_resolve()
+	check(game.progression.total_data_earned - earned == expected, "overlapping supernovae pay each star and their shared target once")
+	check(game.spawner.spawn_meteor("stellar") == null, "three completed star remnants still occupy the slots")
+	stars[1].free()
+	check(game.spawner.spawn_meteor("stellar") != null, "star slot reopens after a remnant is removed")
 	game.free()
 	paused = false

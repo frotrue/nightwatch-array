@@ -49,6 +49,12 @@ refilled buffers. These GPU comparisons are separate from the headless gates.
 serial/worker parity. Run `black_hole_review.gd` with the same real-renderer flags
 on both backends for lens off/on pixel boundaries, completion pose captures,
 and agreement between the rendered meteor image and its manual observation centre.
+The review also captures three simultaneous lenses, overlapping lens/contact
+agreement, three stars together with three holes, and reduced motion. The
+headless gates cover independent three-slot admission under atmospheric pressure,
+shared late-slot preservation, lens removal/reuse, repeated gravity capture and
+overlapping supernova rewards. These added cases still require execution; see
+[the current validation handoff](history/three-celestial-slots-2026-09-15.md).
 
 The Windows telemetry build also compiles/runs `native/gpu_usage_test.cpp`:
 engine selection (3D, Graphics, Compute, Copy, multiple adapters), PID isolation,

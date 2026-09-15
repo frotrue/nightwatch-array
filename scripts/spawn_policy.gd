@@ -20,7 +20,10 @@ const OUTER_UNLOCKS := {"variable_star": "ext_sge_cadence", "binary_star": "ext_
 # Emergency ceiling only. The research active-target limit gates new natural
 # arrivals, while proc children can use headroom without taking late reservations.
 const ATMOSPHERIC_SAFETY_SLOTS := 54
-const LATE_SLOTS := 8
+const DEDICATED_LATE_TYPES := ["black_hole", "stellar"]
+const DEDICATED_TYPE_SLOTS := 3
+# Five ordinary late types, one shared extra, and three slots per special type.
+const LATE_SLOTS := 6 + 2 * DEDICATED_TYPE_SLOTS
 const LATE_TYPE_SLOTS := 2
 const MAX_PENDING_PER_TYPE := 32
 const DEFER_SECONDS := 2.0

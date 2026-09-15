@@ -1,7 +1,7 @@
 shader_type canvas_item;
 render_mode unshaded;
 
-// Copy the sky and ordinary meteors once, before the black hole and HUD.
+// Each active lens copies the previous pass, before black hole bodies and HUD.
 uniform sampler2D background : hint_screen_texture, repeat_disable, filter_linear;
 uniform vec2 screen_extent = vec2(0.08, 0.14);
 uniform float visibility : hint_range(0.0, 1.0) = 1.0;

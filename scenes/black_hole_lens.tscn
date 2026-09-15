@@ -1,9 +1,17 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/black_hole_lens.gd" id="1_script"]
 [ext_resource type="Shader" path="res://resources/shaders/black_hole_lens.gdshader" id="2_shader"]
 
 [sub_resource type="ShaderMaterial" id="Material_lens"]
+resource_local_to_scene = true
+shader = ExtResource("2_shader")
+
+[sub_resource type="ShaderMaterial" id="Material_lens2"]
+resource_local_to_scene = true
+shader = ExtResource("2_shader")
+
+[sub_resource type="ShaderMaterial" id="Material_lens3"]
 resource_local_to_scene = true
 shader = ExtResource("2_shader")
 
@@ -26,4 +34,20 @@ copy_mode = 0
 [node name="Lens" type="Sprite2D" parent="."]
 visible = false
 material = SubResource("Material_lens")
+texture = SubResource("Texture_quad")
+
+[node name="BackgroundCopy2" type="BackBufferCopy" parent="."]
+copy_mode = 0
+
+[node name="Lens2" type="Sprite2D" parent="."]
+visible = false
+material = SubResource("Material_lens2")
+texture = SubResource("Texture_quad")
+
+[node name="BackgroundCopy3" type="BackBufferCopy" parent="."]
+copy_mode = 0
+
+[node name="Lens3" type="Sprite2D" parent="."]
+visible = false
+material = SubResource("Material_lens3")
 texture = SubResource("Texture_quad")
