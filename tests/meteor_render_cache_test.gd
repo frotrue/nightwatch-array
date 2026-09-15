@@ -1,11 +1,14 @@
 extends SceneTree
 
 # Solid-body cases expect no tails after the 2026-09-11 presentation replacement.
-# Remaining arithmetic regression oracle frozen from scripts/meteor.gd at 347dcf0.
+# Geometry and unchanged palette oracle frozen from scripts/meteor.gd at 347dcf0.
+# Common/fast light was redesigned on 2026-09-16; its bounds and material response
+# are checked separately while all of its ribbon coordinates remain exact.
 # No main scene, settings, saves, output files, or performance claims. Native
 # drawing is invoked only inside Recorder._draw; this also works headlessly.
 # The reference math deliberately does not call production geometry helpers or
-# inspect any optimized weights/cache. Packed outputs must match bit for bit.
+# inspect any optimized weights/cache. Geometry and unchanged palettes must
+# match bit for bit; the redesigned wake colors retain their opacity contract.
 const Meteor = preload("res://scripts/meteor.gd")
 const TYPES := ["common", "fast", "fragment", "fragment_piece", "fireball", "major", "satellite", "variable_star", "comet", "binary_star", "galaxy"]
 const STYLES := ["ember", "snap", "split", "spark", "flare", "major", "satellite", "rock", "comet", "ice", "planet"]
@@ -102,7 +105,7 @@ func _run() -> void:
 	_test_alternating_weights()
 	_test_asteroid_fractures()
 	if failures.is_empty():
-		print("METEOR_RENDER_CACHE_PASS: 539 exact ribbon/draw cases, 264 getter mutations, 11 types, fragment sparks and closed asteroid fractures")
+		print("METEOR_RENDER_CACHE_PASS: 539 ribbon/draw cases with exact geometry, 264 getter mutations, 11 types, fragment sparks and closed asteroid fractures")
 		quit(0)
 	else:
 		print("METEOR_RENDER_CACHE_FAIL: %d failure(s)" % failures.size())
@@ -121,8 +124,11 @@ func _run_cases_in_draw(meteor: Recorder) -> void:
 		meteor.render_once()
 		_check(_same_bytes(meteor.trail_glow_ribbon, reference.glow), label + ": exact glow coordinates")
 		_check(_same_bytes(meteor.trail_core_ribbon, reference.core), label + ": exact core coordinates")
-		_check(_same_bytes(meteor.trail_glow_ribbon_colors, reference.glow_colors), label + ": exact glow colors")
-		_check(_same_bytes(meteor.trail_core_ribbon_colors, reference.core_colors), label + ": exact core colors")
+		if meteor.type_id in ["common", "fast"]:
+			_check_train_light(meteor, label)
+		else:
+			_check(_same_bytes(meteor.trail_glow_ribbon_colors, reference.glow_colors), label + ": exact glow colors")
+			_check(_same_bytes(meteor.trail_core_ribbon_colors, reference.core_colors), label + ": exact core colors")
 		if not reference.glow.is_empty():
 			nonempty_trails += 1
 			_check(_same_bytes(meteor.trail_strip_indices, reference.indices), label + ": exact triangle indices")
@@ -170,6 +176,24 @@ func _test_alternating_weights() -> void:
 	target._ensure_trail_station_weights(29)
 	_check(target.trail_weight_build_count == 3 and target.trail_station_weights.to_byte_array() == second, "shrink preserves the most recent other entry")
 	target.free()
+
+
+func _check_train_light(meteor: Recorder, label: String) -> void:
+	var glow := meteor.trail_glow_ribbon_colors
+	var core := meteor.trail_core_ribbon_colors
+	_check(glow.size() == meteor.trail_glow_ribbon.size() and core.size() == meteor.trail_core_ribbon.size(), label + ": one color per vertex")
+	var visibility := _trail_visibility(meteor)
+	for index in core.size():
+		for color in [glow[index], core[index]]:
+			_check(is_finite(color.r) and is_finite(color.g) and is_finite(color.b) and is_finite(color.a), label + ": finite wake light")
+			_check(color.a >= 0.0 and color.a <= visibility, label + ": wake follows burn and linger opacity")
+		if index % 3 != 1:
+			_check(glow[index].a == 0.0 and core[index].a <= core[index - index % 3 + 1].a, label + ": light softens across ribbon edges")
+	if core.size() >= 6:
+		_check(core[1].a > 0.0 if visibility > 0.0 else core[1].a == 0.0, label + ": visible head join survives")
+		_check(core[core.size() - 2].a == 0.0, label + ": far end fades out")
+		if visibility > 0.0:
+			_check(glow[1].a < core[1].a, label + ": wake halo stays below its leading core")
 
 
 func _test_asteroid_fractures() -> void:

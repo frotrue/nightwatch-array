@@ -1,6 +1,6 @@
 extends SceneTree
 
-# Bake the existing procedural head into independent additive contribution masks:
+# Bake the procedural head into independent additive contribution masks:
 # R = optical skirt/glow, G = warm core, B = moving hotspot. No palette is baked.
 const Meteor = preload("res://scripts/meteor.gd")
 const CELL := 128
@@ -17,13 +17,10 @@ class Baker:
 		fan = 0
 		var profile := _head_profile()
 		_draw_directional_head(16.0, 1.0, profile[0], profile[1], profile[2], profile[3], profile[4], profile[5])
-		# The last sixteen vertices are the original moving hotspot polygon.
-		for index in range(triangle_batch.colors.size() - 16, triangle_batch.colors.size()):
-			triangle_batch.colors[index] = Color(0, 0, 1, triangle_batch.colors[index].a)
 		triangle_batch.deferred = false
 		triangle_batch.flush(get_canvas_item())
 	func _draw_graded_polygon(points: PackedVector2Array, bright_point: Vector2, centre_color: Color, rim_color: Color) -> void:
-		var channel := Color.RED if fan < 2 else Color.GREEN
+		var channel := Color.RED if fan < 2 else (Color.GREEN if fan == 2 else Color.BLUE)
 		fan += 1
 		super._draw_graded_polygon(points, bright_point, Color(channel, centre_color.a), Color(channel, rim_color.a))
 

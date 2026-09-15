@@ -162,6 +162,7 @@ the existing 95-node economy acceptance remains independent.
 | Main game and palette reference corpus | `capture_reference.gd` / [visual guide](visual-validation.md#reference-corpus) |
 | Batched meteor rendering and lifecycle | `meteor_batch_render_test.gd` with the real Windows/OpenGL renderer; `METEOR_BATCH_RENDER_PASS` |
 | Common/fast atlas appearance and palette lifecycle | `meteor_head_texture_test.gd` with Vulkan and OpenGL; `METEOR_HEAD_TEXTURE_PASS` |
+| Common/fast material study | `meteor_art_review.gd` with a real renderer; `-- --animate` records 30 FPS detail, normal and 24-target density sequences under `build/meteor_art_review/after/<renderer>/`. `--before` selects the baseline output directory; source identity and stable frames are recorded. Synthetic art poses, not natural spawn density. |
 | Isolated 1,000-head CPU/render cost | `meteor_head_performance_probe.gd`; `NIGHTWATCH_HEAD_TEXTURES=0` selects procedural, `1` selects atlas |
 | Instanced completion particles | `effect_instances_render_test.gd` with the real Windows/OpenGL renderer; `EFFECT_INSTANCES_RENDER_PASS` |
 | Sky/chart/module states | `deep_sky_preview.gd` / [targeted previews](visual-validation.md#targeted-previews) |

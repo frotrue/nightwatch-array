@@ -660,6 +660,8 @@ func _draw_tapered_trail(visibility: float, tail_scale: float, visual_scale: flo
 	_ensure_trail_station_weights(station_count)
 	var turbulence_profile := _trail_turbulence_profile()
 	var turbulence_phase := wobble_phase + age * turbulence_profile.y
+	var atmospheric := type_id in ["common", "fast"]
+	var wake_phase := age * 2.2 * clampf(completion_motion_scale, 0.0, 1.0) + wobble_phase
 	trail_glow_ribbon.clear()
 	trail_glow_ribbon_colors.clear()
 	trail_core_ribbon.clear()
@@ -685,6 +687,15 @@ func _draw_tapered_trail(visibility: float, tail_scale: float, visual_scale: flo
 		var glow_edge := Color(glow_color, 0.0)
 		var core_centre := Color(primary_color, alpha * 0.86)
 		var core_edge := Color(primary_color, alpha * 0.10)
+		if atmospheric:
+			# A cooling wake has uneven, soft light along its sampled path. Keep
+			# geometry intact so lenses and the head-to-trail join remain exact.
+			var grain := 0.76 + 0.16 * sin(t * 19.0 - wake_phase) + 0.08 * sin(t * 43.0 - wake_phase * 0.5 + 1.8)
+			var cooling := smoothstep(0.02, 0.75, t)
+			var tint := primary_color.lerp(glow_color, cooling * 0.72)
+			glow_centre = Color(glow_color, alpha * 0.30 * grain)
+			core_centre = Color(tint, alpha * 0.72 * grain * lerpf(1.0, 0.52, cooling))
+			core_edge = Color(tint, alpha * 0.045 * grain)
 		trail_glow_ribbon.append(local_point + normal * maxf(MIN_RIBBON_HALF_WIDTH, glow_width * (1.0 + turbulence)))
 		trail_glow_ribbon.append(local_point)
 		trail_glow_ribbon.append(local_point - normal * maxf(MIN_RIBBON_HALF_WIDTH, glow_width * (1.0 - turbulence * 0.68)))
@@ -713,6 +724,9 @@ func _draw_exposure_filament(visibility: float, visual_scale: float) -> void:
 	var count := trail_core_ribbon.size() / 3
 	if count < 2 or visibility <= 0.0:
 		return
+	if type_id in ["common", "fast"]:
+		_draw_diffuse_train(visibility, visual_scale, count)
+		return
 	var points := PackedVector2Array()
 	var colors := PackedColorArray()
 	var light := primary_color.lerp(Color.WHITE, 0.34)
@@ -721,6 +735,32 @@ func _draw_exposure_filament(visibility: float, visual_scale: float) -> void:
 		var t := float(index) / float(count - 1)
 		colors.append(Color(light, pow(1.0 - t, 1.6) * visibility * 0.52))
 	draw_polyline_colors(points, colors, 0.7 * visual_scale, true)
+
+
+func _draw_diffuse_train(visibility: float, visual_scale: float, count: int) -> void:
+	# Thin native strands stay attached to the real sampled path. Their slow
+	# lateral drift describes cooling light, without extra particles or targets.
+	var motion := clampf(completion_motion_scale, 0.0, 1.0)
+	var fast := type_id == "fast"
+	var phase := age * (2.5 if fast else 1.8) * motion + wobble_phase
+	var light := primary_color.lerp(Color.WHITE, 0.28)
+	for strand in 2:
+		var points := PackedVector2Array()
+		var colors := PackedColorArray()
+		for index in range(count):
+			var t := float(index) / float(count - 1)
+			var center := trail_core_ribbon[index * 3 + 1]
+			var normal := (trail_core_ribbon[index * 3] - center).normalized()
+			var eddy := sin(t * 10.0 - phase) * 0.65 + sin(t * 21.0 - phase * 0.5 + 1.4) * 0.35
+			var loosen := smoothstep(0.12, 0.85, t)
+			var spread := (0.42 if fast else 0.75) * visual_scale * loosen
+			var offset := eddy * spread if strand == 0 else (eddy + 1.7) * spread
+			points.append(center + normal * offset)
+			var falloff := pow(1.0 - t, 1.7 if strand == 0 else 1.1)
+			var opacity := 0.36 if strand == 0 else 0.20 * sin(t * PI)
+			var variation := 0.88 + 0.12 * sin(t * 16.0 - phase * 0.7)
+			colors.append(Color(light if strand == 0 else glow_color, falloff * visibility * opacity * variation))
+		draw_polyline_colors(points, colors, (0.65 if strand == 0 else 1.1) * visual_scale, true)
 
 
 func _ensure_trail_station_weights(point_count: int) -> void:
@@ -892,7 +932,7 @@ func _trail_half_widths() -> Vector2:
 func _draw_type_silhouette(radius: float, visibility: float, visual_scale: float) -> void:
 	if textured_head_enabled and type_id in ["common", "fast"]:
 		if head_texture == null: head_texture = HeadTexture.new(get_canvas_item())
-		var phase := age * (12.5 if type_id == "fast" else 7.4) + wobble_phase
+		var phase := age * clampf(completion_motion_scale, 0.0, 1.0) * (12.5 if type_id == "fast" else 7.4) + wobble_phase
 		head_texture.draw(type_id, radius, _safe_travel_direction(), primary_color, glow_color, visibility, phase, self_modulate)
 		return
 	match type_id:
@@ -943,7 +983,9 @@ func _draw_directional_head(
 	var direction := _safe_travel_direction()
 	var normal := Vector2(-direction.y, direction.x)
 	var optical_profile := _head_optical_profile()
-	var phase := age * optical_profile.y + wobble_phase
+	var atmospheric := type_id in ["common", "fast"]
+	var visual_age := age * clampf(completion_motion_scale, 0.0, 1.0) if atmospheric else age
+	var phase := visual_age * optical_profile.y + wobble_phase
 	var deformation := optical_profile.x
 	var bloom_points := _organic_head_points(
 		direction,
@@ -956,17 +998,17 @@ func _draw_directional_head(
 	)
 	var sheath_shift := (
 		-direction * radius * 0.05
-		+ normal * radius * deformation * 0.24 * sin(phase * 0.91 + 1.7)
+		+ normal * radius * deformation * 0.24 * sin(phase * (1.0 if atmospheric else 0.91) + 1.7)
 	)
 	for index in range(bloom_points.size()):
 		bloom_points[index] += sheath_shift
-	var optical_flicker := 0.94 + 0.06 * sin(phase * 1.71 + 0.8)
+	var optical_flicker := 0.94 + 0.06 * sin(phase * (1.75 if atmospheric else 1.71) + 0.8)
 	var bright_point := direction * radius * 0.12
 	# A soft asymmetric optical skirt gives small heads a visible footprint.
 	# Its transparent edge stays subordinate to the compact overexposed core.
 	var optical_skirt := PackedVector2Array()
 	for point in bloom_points:
-		optical_skirt.append(point * 2.0)
+		optical_skirt.append(point * (1.7 if atmospheric else 2.0))
 	_draw_graded_polygon(
 		optical_skirt,
 		bright_point + sheath_shift,
@@ -1000,24 +1042,28 @@ func _draw_directional_head(
 	# A small overexposed patch wanders inside the leading half. It supplies life
 	# without turning the whole meteor into a white shaft or a concentric orb.
 	var hotspot_profile := _head_hotspot_profile()
-	var hotspot_axis := direction.rotated(sin(phase * 0.83) * deformation * 0.32)
+	var hotspot_axis := direction.rotated(sin(phase * (0.75 if atmospheric else 0.83)) * deformation * 0.32)
 	var hotspot_center := (
-		direction * radius * (0.22 + 0.07 * sin(phase * 1.13 + 0.4))
-		+ normal * radius * deformation * 0.72 * sin(phase * 1.47 + 1.1)
+		direction * radius * (0.22 + 0.07 * sin(phase * (1.0 if atmospheric else 1.13) + 0.4))
+		+ normal * radius * deformation * 0.72 * sin(phase * (1.5 if atmospheric else 1.47) + 1.1)
 	)
 	var hotspot_points := _ellipse_points(
 		hotspot_axis,
-		radius * hotspot_profile.x * (0.92 + 0.08 * sin(phase * 1.31)),
-		radius * hotspot_profile.y * (0.90 + 0.10 * sin(phase * 1.67 + 0.5)),
+		radius * hotspot_profile.x * (0.92 + 0.08 * sin(phase * (1.25 if atmospheric else 1.31))),
+		radius * hotspot_profile.y * (0.90 + 0.10 * sin(phase * (1.75 if atmospheric else 1.67) + 0.5)),
 		hotspot_center,
 		deformation * 0.22
 	)
 	triangle_batch.flush(get_canvas_item())
 	var hotspot_color := Color(
 			primary_color.lerp(Color.WHITE, 0.76),
-			clampf((0.66 + 0.10 * sin(phase * 1.89)) * visibility, 0.0, 1.0)
+			clampf((0.66 + 0.10 * sin(phase * (2.0 if atmospheric else 1.89))) * visibility, 0.0, 1.0)
 		)
-	if triangle_batch.deferred:
+	if atmospheric:
+		# A graded hot centre loses the hard white patch of the old small heads.
+		_draw_graded_polygon(hotspot_points, hotspot_center, hotspot_color, Color(hotspot_color, 0.0))
+		triangle_batch.flush(get_canvas_item())
+	elif triangle_batch.deferred:
 		var hotspot_colors := PackedColorArray()
 		hotspot_colors.resize(hotspot_points.size())
 		hotspot_colors.fill(hotspot_color)
@@ -1065,6 +1111,21 @@ func _organic_head_points(
 	deformation: float,
 	phase: float
 ) -> PackedVector2Array:
+	if type_id in ["common", "fast"]:
+		# Compact leading cap, uneven shoulder and a narrow wake. The deformation
+		# travels through the outline and is baked into the shared 64-frame atlas.
+		var points := PackedVector2Array()
+		for index in 32:
+			var angle := TAU * float(index) / 32.0
+			var along := cos(angle)
+			var side := sin(angle)
+			var rear := 1.0 - smoothstep(-0.8, 0.35, along)
+			var ripple := sin(angle * 5.0 - phase) * 0.65 + sin(angle * 9.0 + phase * 0.5) * 0.35
+			var width := half_width * (0.68 + 0.16 * along) * (1.0 + ripple * (0.07 + rear * 0.18))
+			var length := forward_length if along > 0.0 else rear_length * 1.20
+			var sway := rear * half_width * 0.12 * sin(phase * 0.5 + angle * 2.0)
+			points.append(direction * along * length + normal * (side * width + sway))
+		return points
 	var upper := 1.0 + deformation * sin(phase)
 	var lower := 1.0 + deformation * 0.82 * sin(phase + 2.18)
 	var front := 1.0 + deformation * 0.30 * sin(phase * 1.27 + 0.5)

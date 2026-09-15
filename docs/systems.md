@@ -84,6 +84,12 @@ other body types retain their existing paths. The procedural switch remains for
 independent comparisons and atlas baking. Type changes hide stale head items;
 owner destruction frees their RIDs. Palette caches retain at most 16 materials.
 
+The 2026-09-16 art study rebakes their irregular 32-point leading cap and graded
+hotspot. Native trail geometry still follows the sampled path; its common/fast
+colors cool and soften toward the rear, with two faint antialiased strands.
+The new surface/wake animation uses simulation age and the accessibility motion
+scale. It creates no nodes, gameplay particles or extra observation targets.
+
 `scenes/planet_surface.tscn` owns a scene-local cloud shader and a single sprite
 quad. `planet_surface.gd` binds simulation age, radius, palette, observation progress,
 completion and accessibility settings; material changes do not rebuild the quad.
