@@ -118,6 +118,8 @@ var planet_surface: Node2D
 var scan_arcs: RefCounted
 var drawn_age := -1.0
 var drawn_linger := -1.0
+var asteroid_completion_cells: Array[PackedVector2Array] = []
+var asteroid_completion_key := Vector3.INF
 
 
 func configure(spec: Dictionary, meteor_type: String, start_position: Vector2, move_velocity: Vector2, lifetime_scale: float, features: Dictionary, planned_burnout := Vector2.INF, view: Camera2D = null) -> void:
@@ -1201,7 +1203,7 @@ func _draw_irregular_debris(radius: float, visibility: float, count: int) -> voi
 # body makes the two asteroid materials readable without new overlay markers.
 func _draw_asteroid_head(radius: float, visibility: float, icy: bool) -> void:
 	var visual_age := age * clampf(completion_motion_scale, 0.0, 1.0)
-	var rotation_phase := visual_age * (0.11 if icy else 0.085) + wobble_phase
+	var rotation_phase := visual_age * (0.20 if icy else 0.16) + wobble_phase
 	rotation_phase += sin(visual_age * 0.37 + wobble_phase) * 0.055
 	material.set_shader_parameter("radius", radius)
 	material.set_shader_parameter("rotation_phase", rotation_phase)
@@ -1220,79 +1222,86 @@ func _draw_asteroid_head(radius: float, visibility: float, icy: bool) -> void:
 	if observed_successfully and not alive and completion_motion_scale > 0.0:
 		_draw_asteroid_completion(points, radius, visibility, icy, rotation_phase)
 		return
-	draw_colored_polygon(points, Color(primary_color.darkened(0.58), visibility))
-	var core := Vector2(-0.14, -0.12).rotated(rotation_phase) * radius
-	for index in range(count):
-		var next := (index + 1) % count
-		var midpoint := (points[index] + points[next]) * 0.5
-		var light := clampf(0.53 - midpoint.normalized().dot(Vector2(0.6, 0.8)) * 0.31, 0.18, 0.88)
-		var face_color := primary_color.darkened(1.0 - light)
-		if icy and index % 3 == 0:
-			face_color = primary_color.lerp(Color.WHITE, 0.16)
-		draw_colored_polygon(PackedVector2Array([core, points[index], points[next]]), Color(face_color, visibility))
+	# Rounded relief and mineral/crystal details belong to the material; the
+	# angular outline still distinguishes the two bodies at observation scale.
+	draw_colored_polygon(points, Color(primary_color, visibility))
 	var outline := points.duplicate()
 	outline.append(points[0])
-	draw_polyline(outline, Color(primary_color, visibility * 0.6), 0.9, true)
-	if icy:
-		var crack := PackedVector2Array([
-			Vector2(-0.62, -0.32), Vector2(-0.23, -0.12), Vector2(-0.09, 0.16),
-			Vector2(0.20, 0.32), Vector2(0.38, 0.63)])
-		for index in range(crack.size()): crack[index] = (crack[index] * radius).rotated(rotation_phase)
-		draw_polyline(crack, Color("417f99", visibility * 0.75), maxf(1.6, radius * 0.07), true)
-		draw_polyline(crack, Color("d9f6ff", visibility * (0.55 + observation_progress * 0.35)), maxf(0.8, radius * 0.025), true)
-		draw_line(crack[2], Vector2(0.50, -0.16).rotated(rotation_phase) * radius, Color(glow_color, visibility * 0.7), maxf(0.7, radius * 0.02), true)
-	else:
-		for crater in [Vector3(-0.32, -0.19, 0.16), Vector3(0.30, 0.10, 0.21), Vector3(-0.13, 0.40, 0.10)]:
-			var centre := Vector2(crater.x, crater.y).rotated(rotation_phase) * radius
-			draw_circle(centre, radius * crater.z * 1.15, Color(primary_color.darkened(0.43), visibility), true, -1.0, true)
-			draw_circle(centre + Vector2(0.02, 0.02) * radius, radius * crater.z, Color("35302a", visibility), true, -1.0, true)
-			draw_circle(centre + Vector2(0.025, 0.025) * radius, radius * crater.z * 0.66, Color("292623", visibility), true, -1.0, true)
-			draw_arc(centre, radius * crater.z * 1.06, PI * 0.95, PI * 1.75, 16, Color(primary_color, visibility * (0.54 + observation_progress * 0.18)), maxf(0.8, radius * 0.028), true)
-		for index in 7:
-			var angle := float(index) * 2.4 + wobble_phase
-			var pit := Vector2.from_angle(angle) * radius * (0.42 + 0.17 * sin(index * 3.7))
-			draw_circle(pit.rotated(rotation_phase), radius * (0.024 + 0.012 * sin(index * 2.1)), Color("39352f", visibility * 0.7), true, -1.0, true)
+	draw_polyline(outline, Color(primary_color, visibility * 0.28), 0.65, true)
 
 
 func _draw_asteroid_completion(points: PackedVector2Array, radius: float, visibility: float, icy: bool, rotation_phase: float) -> void:
-	# Reuse the body's faces during its existing linger; these are never targets.
+	# Irregular clipped cells keep a continuous crust before separating. Cache
+	# topology for the linger and preserve source UVs while each chunk drifts.
 	var elapsed := 1.0 - visibility
 	var release := clampf((elapsed - 0.12) / 0.88, 0.0, 1.0)
-	var core := Vector2(-0.14, -0.12).rotated(rotation_phase) * radius
-	var stride := 1 if icy else 2
-	for index in range(0, points.size(), stride):
-		var face := PackedVector2Array([core])
-		for corner in range(mini(stride, points.size() - index) + 1):
-			face.append(points[(index + corner) % points.size()])
+	var key := Vector3(radius, rotation_phase, 1.0 if icy else 0.0)
+	if not asteroid_completion_key.is_equal_approx(key):
+		asteroid_completion_key = key
+		asteroid_completion_cells = _asteroid_fracture_cells(points, radius, rotation_phase, 9 if icy else 7)
+	for index in asteroid_completion_cells.size():
+		var face := asteroid_completion_cells[index].duplicate()
+		var uvs := PackedVector2Array()
+		for point in face: uvs.append(point / (radius * 2.0) + Vector2.ONE * 0.5)
 		var centre := Vector2.ZERO
 		for point in face: centre += point
 		centre /= float(face.size())
-		var drift := centre.normalized() * (1.05 if icy else 0.65) + _safe_travel_direction() * 0.28
+		var drift := centre.normalized() * (0.82 if icy else 0.54) + _safe_travel_direction() * 0.22
 		var offset := drift * radius * release * completion_motion_scale
-		var spin := sin(float(index) * 2.4 + wobble_phase) * release * (0.65 if icy else 0.35) * completion_motion_scale
+		var spin := sin(float(index) * 2.4 + wobble_phase) * release * (0.42 if icy else 0.24) * completion_motion_scale
 		for corner in range(face.size()):
 			face[corner] = (face[corner] - centre).rotated(spin) + centre + offset
-		var light := clampf(0.42 - centre.normalized().dot(Vector2(0.6, 0.8)) * 0.25, 0.13, 0.75)
-		var tint := primary_color.darkened(1.0 - light)
-		if icy and index % 3 == 0: tint = primary_color.lerp(Color.WHITE, 0.23)
+		var tint := primary_color
 		if completion_glint_enabled:
 			var glint := sin(clampf(elapsed / 0.32, 0.0, 1.0) * PI)
-			tint = tint.lerp(glow_color, glint * (0.55 if icy else 0.28))
+			tint = tint.lerp(glow_color, glint * (0.28 if icy else 0.12))
 		tint = tint.darkened(release * (0.12 if icy else 0.38))
-		draw_colored_polygon(face, Color(tint, visibility))
-		face.append(face[0])
-		draw_polyline(face, Color(glow_color if icy else primary_color, visibility * (0.45 if icy else 0.25)), 0.8, true)
+		draw_polygon(face, PackedColorArray([Color(tint, visibility)]), uvs)
 	# Local dust/frost accents share the existing linger and never spawn targets.
 	for index in 12:
 		var angle := float(index) * 2.399 + wobble_phase
 		var outward := Vector2.from_angle(angle)
-		var distance := radius * (0.62 + release * (1.35 if icy else 0.90)) * completion_motion_scale
+		var spread := 0.72 + 0.28 * sin(index * 4.7 + wobble_phase)
+		var distance := radius * (0.35 + spread * 0.45 + release * spread * (1.1 if icy else 0.75)) * completion_motion_scale
 		var point := outward * distance + _safe_travel_direction() * radius * release * 0.18
 		var opacity := sin(elapsed * PI) * visibility * (0.65 if icy else 0.48)
 		var tint := primary_color
 		if icy and completion_glint_enabled: tint = tint.lerp(Color.WHITE, 0.5)
 		var speck := maxf(0.7, radius * (0.018 + 0.009 * sin(index * 3.1)))
 		draw_circle(point, speck, Color(tint, opacity), true, -1.0, true)
+
+
+func _asteroid_fracture_cells(points: PackedVector2Array, radius: float, angle: float, count: int) -> Array[PackedVector2Array]:
+	var seeds := PackedVector2Array([Vector2(-0.08, -0.06).rotated(angle) * radius])
+	for index in count - 1:
+		var direction := TAU * float(index) / float(count - 1) + angle + 0.18
+		seeds.append(Vector2.from_angle(direction) * radius * (0.48 + 0.08 * sin(index * 2.4 + wobble_phase)))
+	var cells: Array[PackedVector2Array] = []
+	for index in seeds.size():
+		var cell := points.duplicate()
+		for other in seeds.size():
+			if index == other: continue
+			var normal := seeds[other] - seeds[index]
+			var cut := normal.dot((seeds[index] + seeds[other]) * 0.5)
+			cell = _clip_asteroid_cell(cell, normal, cut)
+			if cell.size() < 3: break
+		if cell.size() >= 3: cells.append(cell)
+	return cells
+
+
+func _clip_asteroid_cell(polygon: PackedVector2Array, normal: Vector2, cut: float) -> PackedVector2Array:
+	var result := PackedVector2Array()
+	if polygon.is_empty(): return result
+	var previous := polygon[polygon.size() - 1]
+	var before := normal.dot(previous) - cut
+	for current in polygon:
+		var after := normal.dot(current) - cut
+		if (before <= 0.0) != (after <= 0.0):
+			result.append(previous.lerp(current, before / (before - after)))
+		if after <= 0.0: result.append(current)
+		previous = current
+		before = after
+	return result
 
 
 func _draw_black_hole_head(radius: float, visibility: float) -> void:
