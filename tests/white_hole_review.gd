@@ -200,7 +200,7 @@ func _run_observable() -> void:
 	var unit: float = game.observation_view.screen_length_to_world(1.0)
 	var origin: Vector2 = game.observation_view.screen_to_world(Vector2(455, 310))
 	var source = game.spawner.spawn_meteor("white_hole", origin, Vector2(24, -5) * unit)
-	var stats := {"released": 0, "completion_tick": -1, "peak": 0}
+	var stats := {"released": 0, "completion_tick": -1, "first_release_tick": -1, "peak": 0}
 	source.ejecta_requested.connect(func(_body, _index): stats.released += 1)
 	game.observer.tick_input.reset(origin)
 	game.observer.input_time = 0.0
@@ -226,8 +226,10 @@ func _run_observable() -> void:
 		game.effects._process(1.0 / 60.0)
 		if is_instance_valid(source) and source.observed_successfully and stats.completion_tick < 0:
 			stats.completion_tick = tick
+		if stats.released > 0 and stats.first_release_tick < 0:
+			stats.first_release_tick = tick
 		stats.peak = maxi(stats.peak, game.meteor_layer.get_child_count())
-		caption.text = "스폰 방향으로 이동" if tick < 90 else ("관측 중 · 에너지 응집" if stats.completion_tick < 0 else "양극 제트 방출 · 유성 %d개" % stats.released)
+		caption.text = "스폰 방향으로 이동" if tick < 90 else ("관측 중 · 에너지 응집" if stats.completion_tick < 0 else ("관측 완료 · 1초간 제트와 수축" if stats.released == 0 else "애니메이션 종료 · 유성 %d개 방출" % stats.released))
 		if tick % 2 == 1:
 			for body in game.meteor_layer.get_children():
 				body.previous_simulation_position = body.position
@@ -241,6 +243,7 @@ func _run_observable() -> void:
 		failures.append("buffered manual tracking did not complete the moving white hole")
 		print("WHITE_HOLE_INPUT_DIAGNOSTIC ", {"progress": source.get_progress(), "cursor": game.observer.cursor_position, "position": source.position, "input_time": game.observer.input_time, "held": game.observer.simulation_holding, "manual": source.manual_contribution})
 	if stats.released != (48 if researched else 24): failures.append("lifecycle did not emit the researched meteor count")
+	if stats.first_release_tick - stats.completion_tick != 60: failures.append("burst did not follow the full one-second animation")
 	if is_instance_valid(source): failures.append("source survived its completion animation")
 	var manifest := FileAccess.open(output.path_join("manifest.json"), FileAccess.WRITE)
 	manifest.store_string(JSON.stringify({"status": "passed" if failures.is_empty() else "failed", "renderer": RenderingServer.get_current_rendering_method(), "stats": stats, "frames": 240, "fps": 30, "failures": failures}, "\t"))

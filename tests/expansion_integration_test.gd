@@ -275,7 +275,7 @@ func _check_research_loop() -> void:
 			if research.can_purchase(id):
 				_check(research.purchase(id), "research purchase succeeds: " + id)
 				advanced = true
-	_check(research.state.research_ids.size() == 66, "all sixty-six nodes reached using only Data and predecessor research")
+	_check(research.state.research_ids.size() == 67, "all sixty-seven nodes reached using only Data and predecessor research")
 	_check(research.modules.unlocked_slots == 5 and research.state.draw_cost() == 6, "all five slots and final efficiency reachable")
 	_check(research.modules.purchased.is_empty(), "all research completed without owning a single module")
 	_check_permanent_growth()
@@ -361,7 +361,7 @@ func _check_permanent_growth() -> void:
 	_check(is_equal_approx(current.manual / growth_baseline.manual, 1.15 * 1.10), "empty loadout gains actual manual work from Cygnus and Triangulum")
 	_check(is_equal_approx(current.radius / growth_baseline.radius, 1.12 * 1.18), "Cygnus grows the actual cursor radius without modules")
 	_check(is_equal_approx(current.dish / growth_baseline.dish, 1.15 * 1.20) and current.dishes == growth_baseline.dishes + 1, "Equuleus improves real dish rate and creates a fifth dish")
-	_check(current.sweep_count == growth_baseline.sweep_count + 1 and current.sweep_distance < growth_baseline.sweep_distance and current.sweep_cooldown < growth_baseline.sweep_cooldown, "Aquila changes the production sweep inputs")
+	_check(current.sweep_count == growth_baseline.sweep_count + 2 and current.sweep_distance < growth_baseline.sweep_distance and current.sweep_cooldown < growth_baseline.sweep_cooldown, "Aquila changes the production sweep inputs")
 	_check(is_equal_approx(current.echo_chance - growth_baseline.echo_chance, 0.1) and current.echo_count == growth_baseline.echo_count + 2, "Delphinus increases the production echo opportunity and burst")
 	_check(is_equal_approx(game.progression.get_celestial_multiplier("variable_star", "spawn"), 1.35) and is_equal_approx(game.progression.get_celestial_multiplier("binary_star", "speed"), 1.3) and is_equal_approx(game.progression.get_celestial_multiplier("variable_star", "value"), 1.5), "Sagitta improves both asteroid types through production multipliers")
 	_check(is_equal_approx(current.data / growth_baseline.data, 1.10 * 1.15), "Triangulum improves real observation reward calculation")

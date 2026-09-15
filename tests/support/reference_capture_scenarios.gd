@@ -234,7 +234,7 @@ func inspect(game: Node, id: String) -> Dictionary:
 	if id == "deep_sky_chart":
 		var chart: Node = game.upgrade_tree
 		_check(state.chart_mode == chart.GALACTIC_MODE_FINAL and state.chart_selection == "ext_trace_study" and chart.content_clip.is_visible_in_tree(), id, "extended constellation chart not active")
-		_check(chart.chart_constellations.size() == 25 and chart.extension_definitions.size() == 66, id, "thirteen outer figures and sixty-six research stars must be present")
+		_check(chart.chart_constellations.size() == 25 and chart.extension_definitions.size() == 67, id, "thirteen outer figures and sixty-seven research stars must be present")
 		for research in chart.extension_definitions:
 			_check(chart.node_buttons[research.id].get_parent() == chart.tree_canvas, id, "extension research must share the original star canvas")
 	return state

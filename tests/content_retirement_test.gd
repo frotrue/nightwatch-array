@@ -29,7 +29,7 @@ func _run():
 	for node in game.deep_sky.get_children():
 		check(node.get_script().resource_path != "res://scripts/andromeda_target.gd", "no M31 target")
 	check(Data.SAMPLE_MODULES.size() == 8 and Modules.DEFINITIONS.size() == 8, "eight supported modules")
-	check(Data.RESEARCH.size() == 66, "66 active studies include outer celestial research without restoring retired M31 studies")
+	check(Data.RESEARCH.size() == 67, "67 active studies include outer celestial research without restoring retired M31 studies")
 	var saved: Dictionary = game._build_save_data()
 	saved.progression.purchased_nodes.append_array(["lmc_transit_watch", "wlm_einstein_ring", "phoenix_lensed_meteors", "aquarius_local_group_record"])
 	saved["host_stars"] = {"running":true}

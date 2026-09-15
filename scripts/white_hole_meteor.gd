@@ -2,7 +2,7 @@ extends "res://scripts/meteor.gd"
 
 # Uses the normal target pipeline; only its appearance and timed ejection differ.
 const Surface = preload("res://scenes/white_hole_preview.tscn")
-const RELEASE_DURATION := 1.4
+const RELEASE_DURATION := 1.0
 const EJECTA_COUNT := 24
 const POSE_WOBBLE := 0.055
 signal ejecta_requested(source, index)
@@ -21,6 +21,13 @@ func _ready() -> void:
 
 func tick_motion(delta: float, tick_id: int) -> void:
 	visual_time += delta * completion_motion_scale
+	if observed_successfully:
+		# Keep the source until resolve: emitting in motion would give newborns
+		# observation work on their birth tick; base motion would delete it first.
+		simulation_tick = tick_id
+		previous_simulation_position = global_position
+		linger_time = maxf(0.0, linger_time - delta)
+		return
 	super.tick_motion(delta, tick_id)
 
 func tick_resolve() -> void:
@@ -44,13 +51,14 @@ func _finish_observation(auto_rate: float, force_automatic: bool = false) -> voi
 
 func _release_due_ejecta() -> void:
 	if not observed_successfully or is_queued_for_deletion(): return
-	var elapsed := RELEASE_DURATION - linger_time
-	# Research adds complete pairs to six waves without extending the beam.
-	var wave_size := ejecta_count / 6
-	while emitted_count < ejecta_count and elapsed + 0.00001 >= 0.10 + float(emitted_count / wave_size) * 0.18:
+	if linger_time > 0.00001: return
+	# Finish the one-second visual before releasing the entire bipolar burst.
+	hide()
+	while emitted_count < ejecta_count:
 		var index := emitted_count
 		emitted_count += 1
 		ejecta_requested.emit(self, index)
+	queue_free()
 
 func _draw_type_silhouette(_radius: float, alpha: float, visual_scale: float) -> void:
 	if not is_instance_valid(surface): return

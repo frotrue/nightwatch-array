@@ -45,7 +45,7 @@ func _run() -> void:
 	_test_tutorial_copy()
 	game.free()
 	if failures.is_empty():
-		print("RESEARCH_VISUAL_PASS: 95 base and 66 extension bindings, state-ink hierarchy, star/cluster/galaxy draw routing and bilingual tutorial truth")
+		print("RESEARCH_VISUAL_PASS: 95 base and 67 extension bindings, state-ink hierarchy, star/cluster/galaxy draw routing and bilingual tutorial truth")
 		quit(0)
 	else:
 		print("RESEARCH_VISUAL_FAIL: %d failure(s)" % failures.size())
@@ -63,7 +63,7 @@ func _test_live_binding(game) -> void:
 	var chart = game.upgrade_tree
 	var branches := {}
 	var kinds := {}
-	_check(Balance.UPGRADE_NODES.size() == 95 and chart.node_hold_bars.size() == 161, "binding gate covers 95 base and 66 extension research markers")
+	_check(Balance.UPGRADE_NODES.size() == 95 and chart.node_hold_bars.size() == 162, "binding gate covers 95 base and 67 extension research markers")
 	_check(Balance.BRANCHES.size() == 12, "current research has twelve branch families")
 	for definition in Balance.UPGRADE_NODES:
 		game.progression.purchased_nodes[String(definition.id)] = true

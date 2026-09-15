@@ -145,7 +145,7 @@ func _test_observable_release(manual: bool, motion: float) -> void:
 			source.tick_resolve()
 			if not source.alive: break
 	check(source.observed_successfully and not source.can_be_tracked(), "manual/dish observation completes and releases the target")
-	check(_ejecta(game).is_empty(), "completion prepares a beam before the first wave")
+	check(_ejecta(game).is_empty(), "completion prepares the animation without emitting meteors")
 	var data_after_source: float = game.progression.observation_data
 	source._finish_observation(1.0)
 	check(game.progression.observation_data == data_after_source, "repeat completion cannot repay the source")
@@ -154,12 +154,15 @@ func _test_observable_release(manual: bool, motion: float) -> void:
 	game.simulate_tick()
 	check(source.visual_time == held_time and _ejecta(game).is_empty(), "pause freezes completion and ejection")
 	paused = false
-	for tick in 72:
+	for tick in 60:
 		source.tick_motion(1.0 / 60.0, tick + 2)
 		source.tick_resolve()
-		if tick == 10: check(_ejecta(game).size() == 4, "first wave releases four instead of the whole burst")
+		if tick < 59: check(_ejecta(game).is_empty(), "no ejecta before the full one-second animation")
 	var children := _ejecta(game)
-	check(children.size() == 24 and source.emitted_count == 24, "one completion emits exactly 24 bodies in six waves")
+	check(children.size() == 24 and source.emitted_count == 24, "the 60th tick emits all 24 bodies together")
+	check(source.is_queued_for_deletion() and not source.visible, "animation source disappears on the burst tick")
+	source.tick_resolve()
+	check(_ejecta(game).size() == 24, "repeated resolve cannot duplicate the burst")
 	check(game.progression.observation_data == data_after_source, "emission itself grants no meteor rewards")
 	var kinds := {}
 	var sides := [0, 0]
@@ -285,12 +288,13 @@ func _test_researched_ejecta() -> void:
 		source.observation_progress = 1.0
 		source.tick_resolve()
 		var paid: float = game.progression.observation_data
-		for tick in 72:
+		for tick in 60:
 			source.tick_motion(1.0 / 60.0, tick + 1)
 			source.tick_resolve()
+			if tick < 59: check(_ejecta(game).is_empty(), "research retains the full one-second delay")
 		var children := _ejecta(game)
 		var expected := 48 if upgraded else 36
-		check(children.size() == expected and source.emitted_count == expected, "research changes the full six-wave burst")
+		check(children.size() == expected and source.emitted_count == expected, "research changes the single delayed burst")
 		check(game.progression.observation_data == paid, "larger emission is not an immediate data grant")
 		var sides := [0, 0]
 		for body in children:
