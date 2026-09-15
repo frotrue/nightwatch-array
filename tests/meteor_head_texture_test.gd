@@ -81,6 +81,24 @@ func _run() -> void:
 		var a := _light(views[0].get_texture().get_image(), region)
 		var b := _light(views[1].get_texture().get_image(), region)
 		_check(b / a > 0.8 and b / a < 1.2, "Inherited canvas tint/alpha drift at %s: %s" % [i, b / a])
+	# The added surface motion uses simulation age and respects zero motion.
+	# Fixed radius/opacity isolate the material from ordinary movement/burnout.
+	for row in targets:
+		for meteor in row:
+			meteor.completion_motion_scale = 0.0
+			meteor.age = 0.2
+			meteor.queue_redraw()
+	await _settle()
+	var still := [views[0].get_texture().get_image().get_data(), views[1].get_texture().get_image().get_data()]
+	for row in targets:
+		for meteor in row:
+			meteor.age = 2.7
+			meteor.queue_redraw()
+	await _settle()
+	for variant in 2:
+		_check(still[variant] == views[variant].get_texture().get_image().get_data(), "Zero-motion head surface changed")
+	for row in targets:
+		for meteor in row: meteor.completion_motion_scale = 1.0
 	# Palette, radius and type mutation must take effect immediately; leaving
 	# the atlas-supported types must hide the retained native item.
 	var head: Head = targets[1][0]
