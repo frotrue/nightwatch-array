@@ -1,8 +1,8 @@
 extends RefCounted
 
 const Clock = preload("res://scripts/simulation_clock.gd")
-const ORDER := ["common", "fast", "fragment", "fireball", "satellite", "variable_star", "comet", "binary_star", "galaxy", "black_hole", "stellar"]
-const LATE_TYPES := ["satellite", "variable_star", "comet", "binary_star", "galaxy", "black_hole", "stellar"]
+const ORDER := ["common", "fast", "fragment", "fireball", "satellite", "variable_star", "comet", "binary_star", "galaxy", "black_hole", "stellar", "white_hole"]
+const LATE_TYPES := ["satellite", "variable_star", "comet", "binary_star", "galaxy", "black_hole", "stellar", "white_hole"]
 const BASE_PROBABILITIES := {
 	"common": 0.5 / 60.0, "fast": 0.125 / 60.0,
 	"fragment": 0.0875 / 60.0, "fireball": 0.0375 / 60.0,
@@ -11,19 +11,20 @@ const BASE_PROBABILITIES := {
 	"galaxy": 0.01 / 60.0,
 	"black_hole": 0.008 / 60.0,
 	"stellar": 0.025 / 60.0,
+	"white_hole": 0.005 / 60.0,
 }
 const UNLOCKS := {
 	"fast": "edge_detection", "fragment": "fragment_analysis", "fireball": "rare_detection",
 	"satellite": "satellite_catalog", "comet": "comet_solutions",
 }
-const OUTER_UNLOCKS := {"variable_star": "ext_sge_cadence", "binary_star": "ext_sge_solution", "galaxy": "ext_cnc_planet", "black_hole": "ext_sgr_black_hole", "stellar": "ext_sct_stellar"}
+const OUTER_UNLOCKS := {"variable_star": "ext_sge_cadence", "binary_star": "ext_sge_solution", "galaxy": "ext_cnc_planet", "black_hole": "ext_sgr_black_hole", "stellar": "ext_sct_stellar", "white_hole": "ext_phe_white_hole"}
 # Emergency ceiling only. The research active-target limit gates new natural
 # arrivals, while proc children can use headroom without taking late reservations.
-const ATMOSPHERIC_SAFETY_SLOTS := 54
-const DEDICATED_LATE_TYPES := ["black_hole", "stellar"]
+const ATMOSPHERIC_SAFETY_SLOTS := 51
+const DEDICATED_LATE_TYPES := ["black_hole", "stellar", "white_hole"]
 const DEDICATED_TYPE_SLOTS := 3
 # Five ordinary late types, one shared extra, and three slots per special type.
-const LATE_SLOTS := 6 + 2 * DEDICATED_TYPE_SLOTS
+const LATE_SLOTS := 6 + 3 * DEDICATED_TYPE_SLOTS
 const LATE_TYPE_SLOTS := 2
 const MAX_PENDING_PER_TYPE := 32
 const DEFER_SECONDS := 2.0

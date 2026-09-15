@@ -171,6 +171,7 @@ func _run() -> void:
 	quit(0 if failures.is_empty() else 1)
 
 func _run_observable() -> void:
+	var researched := "--researched" in OS.get_cmdline_user_args()
 	create_timer(120.0, true, false, true).timeout.connect(func(): push_error("White hole lifecycle review timeout"); quit(1))
 	root.size = Vector2i(1152, 648)
 	root.gui_disable_input = true
@@ -189,7 +190,12 @@ func _run_observable() -> void:
 	for tween in get_processed_tweens(): tween.kill()
 	game.hud.hide()
 	game.observer.hide()
-	output = "res://build/white_hole/" + RenderingServer.get_current_rendering_method() + "/observable"
+	if researched:
+		# Isolate Phoenix's presentation from the unrelated late-game auto array.
+		# Real prerequisite purchases and saved ownership are tested separately.
+		game.progression.purchased_nodes["galactic_reference_frame"] = true
+		game.deep_sky.state.research_ids.assign(["ext_protocol", "ext_phe_white_hole", "ext_phe_ejecta", "ext_phe_tracking", "ext_phe_arrivals", "ext_phe_yield", "ext_phe_outflow"])
+	output = "res://build/white_hole/" + RenderingServer.get_current_rendering_method() + ("/researched" if researched else "/observable")
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(output))
 	var unit: float = game.observation_view.screen_length_to_world(1.0)
 	var origin: Vector2 = game.observation_view.screen_to_world(Vector2(455, 310))
@@ -234,7 +240,7 @@ func _run_observable() -> void:
 	if stats.completion_tick < 90:
 		failures.append("buffered manual tracking did not complete the moving white hole")
 		print("WHITE_HOLE_INPUT_DIAGNOSTIC ", {"progress": source.get_progress(), "cursor": game.observer.cursor_position, "position": source.position, "input_time": game.observer.input_time, "held": game.observer.simulation_holding, "manual": source.manual_contribution})
-	if stats.released != 24: failures.append("lifecycle did not emit 24 meteors")
+	if stats.released != (48 if researched else 24): failures.append("lifecycle did not emit the researched meteor count")
 	if is_instance_valid(source): failures.append("source survived its completion animation")
 	var manifest := FileAccess.open(output.path_join("manifest.json"), FileAccess.WRITE)
 	manifest.store_string(JSON.stringify({"status": "passed" if failures.is_empty() else "failed", "renderer": RenderingServer.get_current_rendering_method(), "stats": stats, "frames": 240, "fps": 30, "failures": failures}, "\t"))

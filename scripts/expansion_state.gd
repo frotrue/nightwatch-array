@@ -13,7 +13,7 @@ var last_draw := ""
 enum Intro { UNCLAIMED, DRAW, EQUIP, COMPLETE }
 var module_intro_stage := Intro.UNCLAIMED
 var module_intro_id := ""
-const ADDITIVE_EFFECTS := ["tracking_grace", "survey_count", "combo_window", "combo_speed", "combo_radius", "combo_cap", "echo_probability", "echo_count", "forecast_lead", "dish_count", "gravity_slow_seconds"]
+const ADDITIVE_EFFECTS := ["tracking_grace", "survey_count", "combo_window", "combo_speed", "combo_radius", "combo_cap", "echo_probability", "echo_count", "forecast_lead", "dish_count", "gravity_slow_seconds", "white_hole_ejecta_count"]
 var _cached_research_ids: Array[String] = []
 var _cached_effects: Dictionary = {}
 

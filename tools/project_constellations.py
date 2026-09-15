@@ -64,7 +64,7 @@ def main():
             changed.append(str(path.relative_to(ROOT)))
             if not args.check:path.write_text(updated,encoding='utf-8')
     if args.check and changed:raise SystemExit('Stale chart geometry: '+', '.join(changed))
-    print('CONSTELLATION_PROJECTION_PASS: 24 figures, 163 catalogue markers')
+    print('CONSTELLATION_PROJECTION_PASS: 25 figures, 169 catalogue markers')
 
 
 if __name__=='__main__':main()

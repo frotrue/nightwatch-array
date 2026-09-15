@@ -275,7 +275,7 @@ func _check_research_loop() -> void:
 			if research.can_purchase(id):
 				_check(research.purchase(id), "research purchase succeeds: " + id)
 				advanced = true
-	_check(research.state.research_ids.size() == 60, "all sixty nodes reached using only Data and predecessor research")
+	_check(research.state.research_ids.size() == 66, "all sixty-six nodes reached using only Data and predecessor research")
 	_check(research.modules.unlocked_slots == 5 and research.state.draw_cost() == 6, "all five slots and final efficiency reachable")
 	_check(research.modules.purchased.is_empty(), "all research completed without owning a single module")
 	_check_permanent_growth()

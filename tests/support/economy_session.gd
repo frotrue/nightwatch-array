@@ -6,7 +6,7 @@ const Balance = preload("res://scripts/game_balance.gd")
 const Expansion = preload("res://scripts/expansion_data.gd")
 const Checkpoint = preload("res://tests/support/economy_checkpoint.gd")
 const TARGET_TYPES := ["common", "fast", "fragment", "fragment_piece", "fireball", "major",
-	"satellite", "variable_star", "binary_star", "comet", "galaxy", "black_hole", "stellar", "anomaly_rare"]
+	"satellite", "variable_star", "binary_star", "comet", "galaxy", "black_hole", "stellar", "white_hole", "anomaly_rare"]
 const DEFAULTS := {
 	"seed": 42, "observation_chance": 0.7, "fragment_chance": 1.0,
 	"type_chances": {}, "quality": 0.75, "completion_source": "manual",

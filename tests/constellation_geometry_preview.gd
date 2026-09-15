@@ -56,7 +56,7 @@ func _run() -> void:
 	if "--outer-celestial" in OS.get_cmdline_user_args():
 		for locale in ["ko", "en"]:
 			_set_locale(game, locale)
-			for cid in ["sagitta", "cancer", "sagittarius"]:
+			for cid in ["sagitta", "cancer", "sagittarius", "phoenix"]:
 				tree.focus_constellation(cid)
 				await _capture(game, locale + "_focus_" + cid)
 	if "--node-spacing" in OS.get_cmdline_user_args():

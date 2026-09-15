@@ -1,13 +1,13 @@
 extends RefCounted
 
-const CATALOGUE_VERSION := 6
+const CATALOGUE_VERSION := 7
 const RETIRED_RESEARCH_IDS := ["ext_link_study", "record", "revisit", "ext_cep_core", "ext_cep_depth"]
 const DRAW_COST := 8
 const SAMPLE_MODULES := ["focus", "wide", "precision", "sweep_optics", "wide_correlation", "linear_observation", "capture_hold", "overcharge"]
 const MODULE_BRANCHES := ["pegasus", "lacerta"]
 const LEGACY_PURCHASE_IDS := ["focus", "wide", "precision", "record", "revisit"]
 const LEGACY_GRANTS := {"ext_sweep_study": "sweep_optics"}
-const RESEARCH_ORDER := ["ext_sct_stellar", "ext_sct_reach", "ext_sct_tracking", "ext_sct_arrivals", "ext_sct_supernova", "ext_protocol", "slot_3", "slot_4", "slot_5", "ext_record_complete", "ext_trace_advanced", "ext_sweep_advanced", "ext_link_advanced", "ext_synthesis", "ext_combined_watch", "ext_trace_study", "focus", "precision", "ext_cyg_lock", "ext_cyg_aperture", "ext_sweep_study", "wide", "ext_aql_pair", "ext_aql_stride", "ext_aql_stream", "ext_vul_memory", "ext_vul_rhythm", "ext_vul_arc", "ext_vul_cadence", "ext_vul_flow", "ext_del_signal", "ext_del_companion", "ext_del_debris", "ext_del_resonance", "ext_del_school", "ext_sge_cadence", "ext_sge_forecast", "ext_sge_solution", "ext_sge_window", "ext_sge_stream", "ext_equ_focus", "ext_equ_mount", "ext_equ_array", "ext_equ_link", "ext_tri_photometry", "ext_tri_analysis", "ext_tri_catalogue", "ext_cnc_planet", "ext_cnc_arrivals", "ext_cnc_tracking", "ext_cnc_yield", "ext_cnc_survey", "ext_sgr_black_hole", "ext_sgr_reach", "ext_sgr_hold", "ext_sgr_tracking", "ext_sgr_yield", "ext_sgr_arrivals", "ext_sgr_wide", "ext_sgr_linger"]
+const RESEARCH_ORDER := ["ext_sct_stellar", "ext_sct_reach", "ext_sct_tracking", "ext_sct_arrivals", "ext_sct_supernova", "ext_protocol", "slot_3", "slot_4", "slot_5", "ext_record_complete", "ext_trace_advanced", "ext_sweep_advanced", "ext_link_advanced", "ext_synthesis", "ext_combined_watch", "ext_trace_study", "focus", "precision", "ext_cyg_lock", "ext_cyg_aperture", "ext_sweep_study", "wide", "ext_aql_pair", "ext_aql_stride", "ext_aql_stream", "ext_vul_memory", "ext_vul_rhythm", "ext_vul_arc", "ext_vul_cadence", "ext_vul_flow", "ext_del_signal", "ext_del_companion", "ext_del_debris", "ext_del_resonance", "ext_del_school", "ext_sge_cadence", "ext_sge_forecast", "ext_sge_solution", "ext_sge_window", "ext_sge_stream", "ext_equ_focus", "ext_equ_mount", "ext_equ_array", "ext_equ_link", "ext_tri_photometry", "ext_tri_analysis", "ext_tri_catalogue", "ext_cnc_planet", "ext_cnc_arrivals", "ext_cnc_tracking", "ext_cnc_yield", "ext_cnc_survey", "ext_sgr_black_hole", "ext_sgr_reach", "ext_sgr_hold", "ext_sgr_tracking", "ext_sgr_yield", "ext_sgr_arrivals", "ext_sgr_wide", "ext_sgr_linger", "ext_phe_white_hole", "ext_phe_ejecta", "ext_phe_tracking", "ext_phe_arrivals", "ext_phe_yield", "ext_phe_outflow"]
 const RESEARCH := {
 	"ext_sct_stellar": {"cost": 15000000.0, "requires": ["ext_protocol"], "branch": "scutum", "effects": {}},
 	"ext_sct_reach": {"cost": 25000000.0, "requires": ["ext_sct_stellar"], "branch": "scutum", "effects": {"supernova_radius": 1.3333333333333333}},
@@ -69,6 +69,12 @@ const RESEARCH := {
 	"ext_sgr_arrivals": {"cost": 100000000.0, "requires": ["ext_sgr_yield"], "branch": "sagittarius", "effects": {"black_hole_spawn": 1.35}},
 	"ext_sgr_wide": {"cost": 100000000.0, "requires": ["ext_sgr_hold"], "branch": "sagittarius", "effects": {"gravity_radius": 1.2}},
 	"ext_sgr_linger": {"cost": 120000000.0, "requires": ["ext_sgr_wide", "ext_sgr_arrivals"], "branch": "sagittarius", "effects": {"gravity_slow_seconds": 1.0}},
+	"ext_phe_white_hole": {"cost": 120000000.0, "requires": ["ext_sgr_yield"], "branch": "phoenix", "effects": {}},
+	"ext_phe_ejecta": {"cost": 100000000.0, "requires": ["ext_phe_white_hole"], "branch": "phoenix", "effects": {"white_hole_ejecta_count": 12}},
+	"ext_phe_tracking": {"cost": 80000000.0, "requires": ["ext_phe_white_hole"], "branch": "phoenix", "effects": {"white_hole_speed": 1.5}},
+	"ext_phe_arrivals": {"cost": 100000000.0, "requires": ["ext_phe_tracking"], "branch": "phoenix", "effects": {"white_hole_spawn": 1.5}},
+	"ext_phe_yield": {"cost": 100000000.0, "requires": ["ext_phe_ejecta"], "branch": "phoenix", "effects": {"white_hole_ejecta_value": 1.5}},
+	"ext_phe_outflow": {"cost": 120000000.0, "requires": ["ext_phe_arrivals", "ext_phe_yield"], "branch": "phoenix", "effects": {"white_hole_ejecta_count": 12}},
 }
 
 static func number(value, maximum: float, fallback: float = 0.0) -> float:

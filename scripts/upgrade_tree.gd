@@ -854,7 +854,8 @@ func _layout_constellation_overlays() -> void:
 		leader.size = Vector2(maxf(1.0, note_label.position.x - leader.position.x - UITheme.px(10.0)), 1.0)
 		constellation_ledger_hits[index].position = Vector2(0, row_y)
 		constellation_ledger_hits[index].size = Vector2(constellation_ledger.size.x, 20)
-		row_y += maxf(name_label.get_combined_minimum_size().y, count_label.get_combined_minimum_size().y) + UITheme.px(10.0)
+		var row_gap := UITheme.px(6.0 if galactic_unlocked else 10.0)
+		row_y += maxf(20.0, maxf(name_label.get_combined_minimum_size().y, count_label.get_combined_minimum_size().y) + row_gap)
 	tooltip_panel.position = Vector2(frame.x - UITheme.px(40.0) - UITheme.px(292.0), UITheme.px(196.0))
 	tooltip_panel.size = Vector2(UITheme.px(292.0), maxf(1.0, frame.y - UITheme.px(196.0) - UITheme.px(70.0)))
 
@@ -1663,6 +1664,7 @@ func _build_interface() -> void:
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerCounts21"),
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerCounts22"),
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerCounts23"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerCounts24"),
 	]
 	constellation_ledger_hits = [
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits0"),
@@ -1689,6 +1691,7 @@ func _build_interface() -> void:
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits21"),
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits22"),
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits23"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerHits24"),
 	]
 	constellation_ledger_leaders = [
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders0"),
@@ -1715,6 +1718,7 @@ func _build_interface() -> void:
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders21"),
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders22"),
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders23"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerLeaders24"),
 	]
 	constellation_ledger_names = [
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames0"),
@@ -1741,6 +1745,7 @@ func _build_interface() -> void:
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames21"),
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames22"),
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames23"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNames24"),
 	]
 	constellation_ledger_notes = [
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes0"),
@@ -1767,6 +1772,7 @@ func _build_interface() -> void:
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes21"),
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes22"),
 		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes23"),
+		view.get_node("%ConstellationInstallLedger").get_node("%ConstellationLedgerNotes24"),
 	]
 	content_clip = view.get_node("%TreeViewport")
 	controls_label = view.get_node("%ConstellationInspector").get_node("%ControlsLabel")
