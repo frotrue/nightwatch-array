@@ -88,6 +88,22 @@ func _run() -> void:
 				changed += 1
 				if Vector2(x, y).distance_to(Vector2(576, 324)) > 152.0: outside += 1
 	if changed < 500 or outside > 0: failures.append("emission footprint changed=%d outside=%d" % [changed, outside])
+	# Advance optical time without the lifetime envelope: a changing image must
+	# come from the material, and a held clock must stop both flow and pose.
+	body.visual_time = 9.0
+	body.present()
+	await _capture(game, "01_disc_later")
+	var later := root.get_texture().get_image()
+	if waves.get_data() == later.get_data(): failures.append("normal-motion disc does not animate")
+	for y in 648:
+		for x in 1152:
+			if background.get_pixel(x, y) != later.get_pixel(x, y) and Vector2(x, y).distance_to(Vector2(576, 324)) > 152.0:
+				outside += 1
+	if outside > 0: failures.append("rotated disc exceeds the emission footprint")
+	await _capture(game, "01_disc_held")
+	if later.get_data() != root.get_texture().get_image().get_data(): failures.append("held optical time still changes the disc")
+	body.visual_time = 3.0
+	body.present()
 	await _review_sky_lens(game, body, centre)
 	layer.cycle_effect()
 	await _capture(game, "02_jets")
@@ -125,10 +141,10 @@ func _run() -> void:
 	if "--animate" in OS.get_cmdline_user_args():
 		var frames := output.path_join("animation")
 		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(frames))
-		for index in 72:
+		for index in 192:
 			for preview in [body, jets]:
 				preview.age = 3.0
-				preview.visual_time = 3.0 + float(index) / 18.0
+				preview.visual_time = 3.0 + float(index) / 24.0
 				preview.present()
 			await process_frame
 			await RenderingServer.frame_post_draw

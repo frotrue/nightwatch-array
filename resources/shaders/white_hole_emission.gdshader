@@ -61,11 +61,14 @@ void fragment() {
 	vec4 tint = COLOR;
 	vec2 local = (UV - 0.5) * 2.0;
 	float r = length(local);
-	// Slow coherent motion reads as depth without a constantly erupting silhouette.
-	float t = visual_time * 0.38;
+	// Gas circulation is distinct from the slower drift of the whole disc axis.
+	float t = visual_time * 0.62;
 	float aa = max(fwidth(r),0.002);
-	// One persistent, slightly inclined axis; no camera-facing concentric rings.
-	vec2 p = mat2(vec2(0.982,0.189),vec2(-0.189,0.982)) * local;
+	// A small precession and changing pitch expose different layers. Use only the
+	// accumulated visual clock so pausing/reducing motion holds the current pose.
+	float axis_angle = 0.19 + sin(visual_time * 0.36) * 0.24;
+	float inclination = 0.24 + sin(visual_time * 0.31 + 0.6) * 0.07;
+	vec2 p = mat2(vec2(cos(axis_angle),sin(axis_angle)),vec2(-sin(axis_angle),cos(axis_angle))) * local;
 	vec2 direction = p / max(r,0.001);
 	float cloud = turbulence(vec3(direction * 4.0, r * 9.5 - t * 0.43));
 	float filament = turbulence(vec3(direction * 14.0, r * 30.0 - t * 1.03 + cloud * 2.0));
@@ -73,11 +76,11 @@ void fragment() {
 	float wind = pow(smoothstep(0.33,0.75,filament),2.0) * exp(-max(r - 0.22,0.0) * 5.2);
 	wind *= smoothstep(0.16,0.28,r) * (1.0 - smoothstep(0.48,0.78,r)) * motion;
 	vec4 light = vec4(vec3(0.38,0.43,0.51),clamp(corona + wind * 0.045,0.0,0.3));
-	float glow_radius = length(vec2(p.x,p.y / 0.34));
+	float glow_radius = length(vec2(p.x,p.y / (inclination + 0.10)));
 	float disc_glow = exp(-pow((glow_radius - 0.34) / 0.32,2.0)) * smoothstep(0.13,0.23,glow_radius) * (1.0 - smoothstep(0.55,0.94,glow_radius));
 	light = over(vec4(vec3(0.55,0.59,0.65),disc_glow * 0.035),light);
 	// A dim secondary folded image below, and the bright far side above the mouth.
-	float folded_y = (abs(p.y) - 0.045) / 0.48;
+	float folded_y = (abs(p.y) - 0.045) / (0.34 + inclination * 0.60);
 	vec2 folded = vec2(p.x * 1.9,folded_y);
 	vec4 far_side = disc_light(folded,t - 0.45,1.0,1.0);
 	far_side.a *= smoothstep(0.025,0.14,abs(p.y)) * (p.y < 0.0 ? 0.64 : 0.12);
@@ -89,7 +92,7 @@ void fragment() {
 	vec3 core_tint = mix(vec3(0.63,0.69,0.77),vec3(0.98,0.97,0.93),exp(-r * r / 0.009));
 	light = over(vec4(core_tint,clamp(mouth + blaze,0.0,1.0)),light);
 	// The near half crosses in front of the lower limb; the far half is occluded.
-	vec4 direct = disc_light(p,t,0.23,0.0);
+	vec4 direct = disc_light(p,t,inclination,0.0);
 	direct.a *= p.y > 0.0 ? 1.0 : (1.0 - mouth);
 	light = over(direct,light);
 	// Scattered inner light spills into the gas, with no perfectly traced rim.

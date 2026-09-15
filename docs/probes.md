@@ -61,7 +61,9 @@ overlapping supernova rewards. The headless cases passed on Linux with Godot
 admission, save/RNG isolation, pause, accessibility and cleanup. Run
 `white_hole_review.gd` with a real renderer on both backends to compare emission-disc/jet
 effects, verify their pixel footprint, sky-only refraction, reduced motion and residual-free removal.
-Add `-- --animate` for a four-second comparison sequence. See
+The review also checks that advancing optical time animates the disc within its
+footprint, and holding that clock freezes its pose and gas flow.
+Add `-- --animate` for an eight-second, 24 fps comparison sequence. See
 [the prototype](white-hole-preview.md) and its linked execution record.
 
 The Windows telemetry build also compiles/runs `native/gpu_usage_test.cpp`:
