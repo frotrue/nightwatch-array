@@ -70,6 +70,23 @@ func _run() -> void:
 		tree._on_node_hovered("galaxy_imaging")
 		tree.node_hold_bars.galaxy_imaging.set_fill_progress(0.5, 0.0)
 		await _capture(game, "andromeda_research_hold")
+	if "--aquila-research" in OS.get_cmdline_user_args():
+		for locale in ["ko", "en"]:
+			_set_locale(game, locale)
+			for installed in [false, true]:
+				game.deep_sky.state.research_ids.erase("ext_aql_abundance")
+				if installed: game.deep_sky.state.research_ids.append("ext_aql_abundance")
+				tree._refresh()
+				tree.select_extension("ext_aql_abundance")
+				var centre := Vector2.ZERO
+				for star in tree.chart_constellations.aquila.stars:
+					centre += tree.star_positions["aquila/" + star.id]
+				centre /= tree.chart_constellations.aquila.stars.size()
+				tree.zoom = 1.5
+				tree.pan_position = Vector2(560, 330) - centre * tree.zoom
+				tree._layout_chart()
+				tree._apply_transform()
+				await _capture(game, locale + "_aquila_" + ("installed" if installed else "available"))
 	var manifest := FileAccess.open(output.path_join("manifest.json"), FileAccess.WRITE)
 	manifest.store_string(JSON.stringify({"positions": positions, "frames": records, "failures": failures, "synthetic": true}, "\t"))
 	manifest.close()

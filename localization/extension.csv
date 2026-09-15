@@ -200,3 +200,5 @@ EXT_RESEARCH_PHE_YIELD_NAME,Ejecta Analysis,분출물 분석
 EXT_RESEARCH_PHE_YIELD_DESC,Data from meteors directly emitted by white holes +50%.,화이트홀이 직접 방출한 유성의 데이터 +50%.
 EXT_RESEARCH_PHE_OUTFLOW_NAME,Abundant Outflow,풍부한 분출
 EXT_RESEARCH_PHE_OUTFLOW_DESC,White hole ejecta increase from 36 to 48 meteors.,화이트홀이 방출하는 유성 36 → 48개.
+EXT_RESEARCH_AQL_ABUNDANCE_NAME,Abundant sweep,풍부한 훑기
+EXT_RESEARCH_AQL_ABUNDANCE_DESC,Each successful Sky Sweep summons 1 more meteor. Stacks with Companion sweep.,하늘 훑기로 나타나는 유성 +1개. 동반 훑기와 함께 적용됩니다.

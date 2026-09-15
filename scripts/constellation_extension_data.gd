@@ -61,7 +61,7 @@ const CONSTELLATIONS := {
 			{"id": "alshain", "name_key": "ATLAS_ALSHAIN", "bayer": "β Aql", "local_position": Vector2(-0.2877060, 0.0564261), "node_id": "ext_aql_pair", "kind": "star", "magnitude": 3.0},
 			{"id": "delta_aql", "name_key": "ATLAS_DELTA_AQL", "bayer": "δ Aql", "local_position": Vector2(0.3875304, 0.3551713), "node_id": "ext_aql_stride", "kind": "star", "magnitude": 3.0},
 			{"id": "theta_aql", "name_key": "ATLAS_THETA_AQL", "bayer": "θ Aql", "local_position": Vector2(-0.6563580, 0.7126522), "node_id": "ext_aql_stream", "kind": "star", "magnitude": 3.0},
-			{"id": "zeta_aql", "name_key": "", "bayer": "ζ Aql", "local_position": Vector2(0.8235023, -0.6327153), "node_id": "", "kind": "star", "magnitude": 3.0},
+			{"id": "zeta_aql", "name_key": "ATLAS_ZETA_AQL", "bayer": "ζ Aql", "local_position": Vector2(0.8235023, -0.6327153), "node_id": "ext_aql_abundance", "kind": "star", "magnitude": 3.0},
 		],
 		"segments": [["tarazed", "altair"], ["altair", "alshain"], ["altair", "delta_aql"], ["delta_aql", "theta_aql"], ["delta_aql", "zeta_aql"]],
 	},

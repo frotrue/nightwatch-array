@@ -39,7 +39,7 @@ func _run() -> void:
 	tree.focus_outer_constellations()
 	game.progression.observation_data = 2000000000.0
 	tree._refresh()
-	_check(tree.chart_constellations.size() == 25 and tree.extension_definitions.size() == 66, "thirteen figures and sixty-six research stars extend the original chart")
+	_check(tree.chart_constellations.size() == 25 and tree.extension_definitions.size() == 67, "thirteen figures and sixty-seven research stars extend the original chart")
 	_check(original_geometry == tree.base_star_positions, "unlock preserves the original positions")
 	_check(tree.base_star_positions["pegasus/alpheratz"] == tree.base_star_positions["andromeda/alpheratz"], "Pegasus shares the original Alpheratz corner")
 	_check(tree.constellation_ledger_hits.size() == tree._constellation_order().size(), "ledger has exactly one hit target per active constellation")
@@ -68,7 +68,7 @@ func _run() -> void:
 		tree.constellation_ledger_hits[row].pressed.emit()
 		_check(tree.node_star_records[tree.selected_node_id].constellation_id == constellation, "ledger click focuses its displayed constellation: " + constellation)
 		_check(tree.constellation_ledger_hits[row].get_global_rect().end.y < tree.atlas_navigation.get_global_rect().position.y, "ledger row is not covered by navigation: " + constellation)
-		if constellation in ["scutum", "cancer", "sagittarius", "phoenix"]:
+		if constellation in ["scutum", "cancer", "sagittarius", "phoenix", "aquila"]:
 			for star in Extension.CONSTELLATIONS[constellation].stars:
 				if String(star.node_id).is_empty(): continue
 				var screen: Vector2 = tree.tree_canvas.get_global_transform() * tree.node_positions[star.node_id]
@@ -117,13 +117,28 @@ func _run() -> void:
 	tree._process(tree.HOLD_PURCHASE_SECONDS)
 	tree.node_buttons.focus.button_up.emit()
 	_check(research.research_owned("focus") and research.modules.purchased.is_empty(), "retained research IDs install growth without module ownership")
+	_check(not research.can_purchase("ext_aql_abundance"), "Zeta research requires Long sweep")
+	for id in ["ext_sweep_study", "wide", "ext_aql_stride", "ext_aql_pair"]:
+		_check(research.purchase(id), "Aquila prerequisite purchase: " + id)
+	var sweep_before: int = game.progression.get_survey_spawn_count()
+	tree.select_extension("ext_aql_abundance")
+	var zeta_data_before: float = game.progression.observation_data
+	tree.node_buttons.ext_aql_abundance.button_down.emit()
+	tree._process(tree.HOLD_PURCHASE_SECONDS)
+	tree.node_buttons.ext_aql_abundance.button_up.emit()
+	_check(research.research_owned("ext_aql_abundance") and tree.node_hold_bars.ext_aql_abundance.visual_state == "purchased", "holding Zeta purchases and fills its star")
+	_check(game.progression.observation_data == zeta_data_before - 50000000.0, "Zeta debits its readable 50M price once")
+	_check(game.survey._spawn_from_cursor(Vector2(576, 300)) == sweep_before + 1, "Zeta adds an actual meteor to the sweep and stacks with Companion sweep")
 	var save: Dictionary = JSON.parse_string(JSON.stringify(game._build_save_data()))
 	game._apply_save_data(save)
 	tree.open_tree()
 	await process_frame
 	_check(research.research_owned("focus") and research.research_owned("ext_trace_study") and research.modules.purchased.is_empty(), "new saves preserve permanent research independently from equipment")
+	_check(research.research_owned("ext_aql_abundance") and game.progression.get_survey_spawn_count() == sweep_before + 1, "Zeta ownership and additional sweep meteor survive JSON save/load")
 	for locale in ["en", "ko"]:
 		game.settings.set_language(locale, false)
+		tree.select_extension("ext_aql_abundance")
+		_check(tree.tooltip_star.text.contains("ζ Aql") and tree.tooltip_name.text == tr("EXT_RESEARCH_AQL_ABUNDANCE_NAME") and tree.tooltip_name.text != "EXT_RESEARCH_AQL_ABUNDANCE_NAME", "Zeta identity and research name are localized: " + locale)
 		tree.focus_constellation("cygnus")
 		_check(tree.tooltip_branch.text.begins_with(tr("ATLAS_CYGNUS")) and tree.tooltip_branch.text.contains(tr("ATLAS_ROLE_CYGNUS")), "localized constellation role and navigation: " + locale)
 		var previous: Vector2 = tree.node_positions.ext_trace_study
