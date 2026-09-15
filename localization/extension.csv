@@ -188,3 +188,15 @@ EXT_RESEARCH_SCT_ARRIVALS_NAME,Stellar Survey,항성 탐색
 EXT_RESEARCH_SCT_ARRIVALS_DESC,Star arrival chance +35%.,항성 출현 확률 +35%.
 EXT_RESEARCH_SCT_SUPERNOVA_NAME,Wide Supernova,광역 초신성
 EXT_RESEARCH_SCT_SUPERNOVA_DESC,Supernova radius: 240 → 300. Star data +25%.,초신성 반경: 240 → 300. 항성 데이터 +25%.
+EXT_RESEARCH_PHE_WHITE_HOLE_NAME,White Hole Observation,화이트홀 관측
+EXT_RESEARCH_PHE_WHITE_HOLE_DESC,Unlocks white holes. Observation releases 24 meteors along twin jets.,화이트홀이 나타납니다. 관측하면 양극 제트로 유성 24개를 방출합니다.
+EXT_RESEARCH_PHE_EJECTA_NAME,Dense Outflow,밀도 높은 분출
+EXT_RESEARCH_PHE_EJECTA_DESC,White hole ejecta increase from 24 to 36 meteors.,화이트홀이 방출하는 유성 24 → 36개.
+EXT_RESEARCH_PHE_TRACKING_NAME,White Hole Tracking,화이트홀 추적
+EXT_RESEARCH_PHE_TRACKING_DESC,White hole observation speed +50%.,화이트홀 관측 속도 +50%.
+EXT_RESEARCH_PHE_ARRIVALS_NAME,White Hole Search,화이트홀 탐색
+EXT_RESEARCH_PHE_ARRIVALS_DESC,White hole spawn chance +50%.,화이트홀 출현 확률 +50%.
+EXT_RESEARCH_PHE_YIELD_NAME,Ejecta Analysis,분출물 분석
+EXT_RESEARCH_PHE_YIELD_DESC,Data from meteors directly emitted by white holes +50%.,화이트홀이 직접 방출한 유성의 데이터 +50%.
+EXT_RESEARCH_PHE_OUTFLOW_NAME,Abundant Outflow,풍부한 분출
+EXT_RESEARCH_PHE_OUTFLOW_DESC,White hole ejecta increase from 36 to 48 meteors.,화이트홀이 방출하는 유성 36 → 48개.

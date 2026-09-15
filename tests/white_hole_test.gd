@@ -2,6 +2,8 @@ extends SceneTree
 
 const Fixtures = preload("res://tests/support/game_fixture.gd")
 const Bindings = preload("res://scripts/game_input_bindings.gd")
+const Policy = preload("res://scripts/spawn_policy.gd")
+const Balance = preload("res://scripts/game_balance.gd")
 var failures: Array[String] = []
 
 func _initialize() -> void: _run.call_deferred()
@@ -99,7 +101,9 @@ func _run() -> void:
 		for motion in [0.0, 1.0]: _test_observable_release(manual, motion)
 	_test_capacity_and_cleanup()
 	_test_worker_parity()
-	if failures.is_empty(): print("WHITE_HOLE_PASS: debug routing, bounded previews, save isolation, pause, accessibility and cleanup")
+	await _test_research_and_natural_arrivals()
+	_test_researched_ejecta()
+	if failures.is_empty(): print("WHITE_HOLE_PASS: Phoenix research, natural arrivals, save/RNG compatibility, upgraded ejecta, debug routing, pause and cleanup")
 	quit(0 if failures.is_empty() else 1)
 
 func _game():
@@ -124,7 +128,7 @@ func _test_observable_release(manual: bool, motion: float) -> void:
 	game.effects.screen_flashes_enabled = false
 	var natural_rng := JSON.stringify(game.spawner.spawn_policy.save_state())
 	var source = game.spawner.spawn_meteor("white_hole", Vector2(576, 300), Vector2(20, -4))
-	check(not game.spawner.spawn_policy.ORDER.has("white_hole"), "white holes never enter natural occurrence streams")
+	check(game.spawner.spawn_policy.probability("white_hole", game.progression) == 0.0, "debug target does not unlock natural white holes")
 	var start: Vector2 = source.position
 	source.tick_motion(0.5, 1)
 	check(source.position.is_equal_approx(start + Vector2(10, -2)), "spawn heading produces straight constant-speed travel")
@@ -179,12 +183,12 @@ func _test_capacity_and_cleanup() -> void:
 	game.debug_celestials.spawn_observable_white_hole(Vector2(450, 250), 1.0)
 	game.debug_celestials.spawn_observable_white_hole(Vector2(650, 250), 1.0)
 	check(game.debug_celestials.spawn_observable_white_hole(Vector2.ZERO, 1.0) == null, "observable white holes retain a three-body cap")
-	for index in 51: game.spawner.spawn_meteor("common", Vector2(30, 100), Vector2.RIGHT)
+	for index in Policy.ATMOSPHERIC_SAFETY_SLOTS: game.spawner.spawn_meteor("common", Vector2(30, 100), Vector2.RIGHT)
 	source.observation_progress = 1.0
 	source.tick_resolve()
 	source.tick_motion(1.1, 1)
 	source.tick_resolve()
-	check(_ejecta(game).is_empty() and game.meteor_layer.get_child_count() == 54, "burst respects the shared atmospheric safety budget")
+	check(_ejecta(game).is_empty() and game.meteor_layer.get_child_count() == Policy.ATMOSPHERIC_SAFETY_SLOTS + 3, "reserved sources cannot overflow the atmospheric ejecta budget")
 	game._end_observation_phase()
 	check(not game.meteor_layer.get_children().any(func(body): return body.type_id == "white_hole"), "round end removes sources and cancels pending release")
 	game._begin_observation_phase()
@@ -206,3 +210,96 @@ func _test_worker_parity() -> void:
 		worker.apply_motion_result(result, 1.0 / 60.0, tick)
 	check(serial.position.is_equal_approx(worker.position) and is_equal_approx(serial.visual_time, worker.visual_time), "worker and serial paths advance both trajectory and optical time identically")
 	game.free()
+
+func _test_research_and_natural_arrivals() -> void:
+	var game = _game()
+	var p = game.progression
+	var policy := Policy.new(317)
+	check(policy.probability("white_hole", p) == 0.0, "new save cannot spawn white holes")
+	p.debug_purchase_all()
+	game.upgrade_tree.open_tree()
+	p.observation_data = 3000000000.0
+	check(not game.deep_sky.can_purchase("ext_phe_white_hole"), "expansion alone does not unlock Phoenix")
+	for id in ["ext_sge_cadence", "ext_sge_forecast", "ext_sge_solution", "ext_cnc_planet", "ext_cnc_tracking", "ext_sgr_black_hole"]:
+		check(game.deep_sky.purchase(id), "normal precursor purchase: " + id)
+	check(policy.probability("black_hole", p) > 0.0 and policy.probability("white_hole", p) == 0.0, "black holes precede white holes")
+	check(not game.deep_sky.can_purchase("ext_phe_white_hole"), "black hole tracking and analysis separate the unlocks")
+	for id in ["ext_sgr_tracking", "ext_sgr_yield", "ext_phe_white_hole"]:
+		check(game.deep_sky.purchase(id), "Phoenix is reachable without completing Sagittarius: " + id)
+	var before: float = policy.probability("white_hole", p)
+	var black_before: float = policy.probability("black_hole", p)
+	check(before > 0.0 and not game.deep_sky.research_owned("ext_sgr_linger"), "white hole is a successor branch without a full-constellation gate")
+	for id in ["ext_phe_ejecta", "ext_phe_tracking", "ext_phe_arrivals", "ext_phe_yield", "ext_phe_outflow"]:
+		check(game.deep_sky.purchase(id), "real Phoenix transaction: " + id)
+	check(is_equal_approx(policy.probability("white_hole", p) / before, 1.5), "search research changes the independent white-hole probability")
+	check(is_equal_approx(policy.probability("black_hole", p), black_before), "Phoenix does not retune black-hole occurrence")
+	var source = game.spawner.spawn_meteor("white_hole", Vector2(500, 300), Vector2.RIGHT)
+	source.base_automatic_rate = 1.0
+	source.tick_observation(0.1)
+	check(is_equal_approx(source.observation_progress, 0.15), "Phoenix tracking speeds up actual automatic observation")
+	check(source.ejecta_count == 48, "two burst researches accumulate on a real source")
+	var saved: Dictionary = JSON.parse_string(JSON.stringify(game._build_save_data()))
+	game._apply_save_data(saved)
+	check(game.deep_sky.research_owned("ext_phe_outflow"), "new research survives JSON save/load")
+	check(JSON.parse_string(JSON.stringify(game.spawner.spawn_policy.save_state())) == saved.simulation.spawner.rng, "all new and existing streams resume exactly")
+	await process_frame
+	check(game.meteor_layer.get_child_count() == 0, "load does not replay natural sources or ejecta")
+	game.spawner.set_phase_time_remaining(60.0)
+	game.spawner._announce_regular_spawn(game.spawner.spawn_policy.entries.white_hole, "white_hole")
+	check(game.spawner.pending_contacts.size() == 1, "unlocked white holes use the natural forecast queue")
+	var contact: Dictionary = game.spawner.pending_contacts.back()
+	contact.countdown = 0.0
+	game.spawner._update_pending_contacts(1.0 / 60.0)
+	check(game.spawner.spawn_policy.counters.white_hole.admitted == 1, "natural admission reaches the playable subclass")
+	source = game.meteor_layer.get_child(0)
+	check(source.type_id == "white_hole" and source.can_be_tracked() and source.ejecta_count == 48, "natural arrivals carry researched mechanics")
+	var start: Vector2 = source.position
+	source.tick_motion(0.2, 1)
+	check(source.position.is_equal_approx(start + source.initial_velocity * 0.2), "natural entry keeps its chosen heading")
+	game.spawner.phase_time_remaining = game.spawner._minimum_payable_time("white_hole") - 0.01
+	game.spawner._announce_regular_spawn(game.spawner.spawn_policy.entries.white_hole, "white_hole")
+	check(game.spawner.pending_contacts.is_empty(), "late-round announcements leave time for the beam and ejecta")
+	# A v6 save keeps its old streams and ownership; only the new stream is seeded.
+	saved.deep_sky.extension.catalogue_version = 6
+	saved.deep_sky.extension.research_ids = saved.deep_sky.extension.research_ids.filter(func(id): return not String(id).begins_with("ext_phe_"))
+	saved.simulation.spawner.rng.occurrence.erase("white_hole")
+	saved.simulation.spawner.rng.entries.erase("white_hole")
+	game._apply_save_data(saved)
+	check(p.has_extension_research("ext_sgr_yield") and not p.has_extension_research("ext_phe_white_hole"), "old saves keep black-hole research without a free Phoenix unlock")
+	var restored: Dictionary = game.spawner.spawn_policy.save_state()
+	for stream in ["occurrence", "entries"]:
+		for kind in saved.simulation.spawner.rng[stream]:
+			check(restored[stream][kind] == saved.simulation.spawner.rng[stream][kind], "legacy RNG preserved: " + stream + "/" + kind)
+		check(restored[stream].has("white_hole"), "missing white-hole stream receives a seeded fallback")
+	check(game.spawner.MAX_TOTAL_METEORS == 70, "new reservation preserves the overall safety ceiling")
+	game.free()
+	paused = false
+
+func _test_researched_ejecta() -> void:
+	for upgraded in [false, true]:
+		var game = _game()
+		game.progression.purchased_nodes["galactic_reference_frame"] = true
+		game.deep_sky.state.research_ids.assign(["ext_protocol", "ext_phe_white_hole", "ext_phe_ejecta", "ext_phe_yield"])
+		if upgraded: game.deep_sky.state.research_ids.append("ext_phe_outflow")
+		var source = game.spawner.spawn_meteor("white_hole", Vector2(576, 300), Vector2(20, -4))
+		source.observation_progress = 1.0
+		source.tick_resolve()
+		var paid: float = game.progression.observation_data
+		for tick in 72:
+			source.tick_motion(1.0 / 60.0, tick + 1)
+			source.tick_resolve()
+		var children := _ejecta(game)
+		var expected := 48 if upgraded else 36
+		check(children.size() == expected and source.emitted_count == expected, "research changes the full six-wave burst")
+		check(game.progression.observation_data == paid, "larger emission is not an immediate data grant")
+		var sides := [0, 0]
+		for body in children:
+			sides[0 if body.initial_velocity.dot(source.release_axis) > 0.0 else 1] += 1
+			check(is_equal_approx(body.base_value, float(Balance.meteor_spec(body.type_id).value) * 1.5), "ejecta analysis reaches each emitted body")
+		check(sides[0] == expected / 2 and sides[1] == expected / 2, "upgrades retain balanced bipolar emission")
+		var ordinary = game.spawner.spawn_meteor("common", Vector2(100, 200), Vector2.RIGHT)
+		check(is_equal_approx(ordinary.base_value, Balance.meteor_spec("common").value), "ejecta analysis leaves ordinary meteor data unchanged")
+		children[0].observation_progress = 1.0
+		children[0].tick_resolve()
+		check(game.progression.observation_data > paid, "enhanced ejecta pay through the normal observation callback")
+		game.free()

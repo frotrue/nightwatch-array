@@ -11,6 +11,7 @@ var visual_time := 0.0
 var completion_pose_time := 0.0
 var release_axis := Vector2.RIGHT
 var emitted_count := 0
+var ejecta_count := EJECTA_COUNT
 var preview_mode := 0
 
 func _ready() -> void:
@@ -44,8 +45,9 @@ func _finish_observation(auto_rate: float, force_automatic: bool = false) -> voi
 func _release_due_ejecta() -> void:
 	if not observed_successfully or is_queued_for_deletion(): return
 	var elapsed := RELEASE_DURATION - linger_time
-	# Six waves, four bodies per wave: both poles remain legible during the beam.
-	while emitted_count < EJECTA_COUNT and elapsed + 0.00001 >= 0.10 + float(emitted_count / 4) * 0.18:
+	# Research adds complete pairs to six waves without extending the beam.
+	var wave_size := ejecta_count / 6
+	while emitted_count < ejecta_count and elapsed + 0.00001 >= 0.10 + float(emitted_count / wave_size) * 0.18:
 		var index := emitted_count
 		emitted_count += 1
 		ejecta_requested.emit(self, index)

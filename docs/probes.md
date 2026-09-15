@@ -59,15 +59,16 @@ overlapping supernova rewards. The headless cases passed on Linux with Godot
 
 `white_hole_test.gd` checks both the isolated optical fixture and the debug-spawned
 observable target: shortcut routing, straight travel, manual/dish completion,
-six timed waves of 24 mixed meteors, delayed rewards, two-pole distribution,
+six timed waves of 24/36/48 mixed meteors, delayed rewards, two-pole distribution,
 capacity, expiry/round/load cleanup, pause, accessibility and worker-motion parity.
-Natural arrival RNG and research unlocks remain unchanged. Run
+It also buys the real Phoenix path, admits natural forecasts, checks late-round
+release time and old-save RNG compatibility, and verifies ejecta-only value upgrades. Run
 `white_hole_review.gd` with a real renderer on both backends to compare emission-disc/jet
 effects, verify their pixel footprint, sky-only refraction, reduced motion and residual-free removal.
 The review also checks that advancing optical time animates the disc within its
 footprint, and holding that clock freezes its pose and gas flow.
 Add `-- --animate` for an eight-second, 24 fps comparison sequence. See
-[the prototype](white-hole-preview.md) and its linked execution record.
+[the white-hole contract](white-hole-preview.md) and its linked execution record.
 Add `-- --observe` for an eight-second, 30 fps lifecycle capture using the real
 buffered manual-input path and fixed-tick game loop. It verifies observation,
 24 released meteors and source removal; the normal fragment split can raise the
@@ -304,3 +305,6 @@ and [Godot non-blocking pipes](https://docs.godotengine.org/en/stable/classes/cl
 `stellar_test.gd` checks Scutum unlock and research, star spawn reservations, scaled supernova
 completion boundaries, exclusions, rewards/samples, fragment isolation and save/RNG migration.
 `stellar_review.gd` captures bilingual Scutum and the actual star/supernova on Vulkan and OpenGL.
+
+`white_hole_review.gd -- --observe --researched` isolates Phoenix research in the
+same manual-input capture and verifies the upgraded 48-body release.

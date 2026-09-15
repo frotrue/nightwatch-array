@@ -4,9 +4,10 @@ extends RefCounted
 # Run tools/project_constellations.py to update positions. Chart anchors remain
 # compositional; membership/Bayer labels follow the linked IAU charts.
 # Alpheratz is the SAME existing Andromeda star at the shared Pegasus corner.
-const ORDER := ["scutum", "pegasus", "lacerta", "cygnus", "aquila", "vulpecula", "delphinus", "sagitta", "equuleus", "triangulum", "cancer", "sagittarius"]
+const ORDER := ["scutum", "pegasus", "lacerta", "cygnus", "aquila", "vulpecula", "delphinus", "sagitta", "equuleus", "triangulum", "cancer", "sagittarius", "phoenix"]
 const COLORS := {
 	"scutum": Color("E6AD78"),
+	"phoenix": Color("CCDCE3"),
 	"cancer": Color("A6BCC9"), "sagittarius": Color("B1A6C6"),
 	"aquila": Color("C7A6C5"),
 	"pegasus": Color("D4DAE5"), "cygnus": Color("8BB8D5"),
@@ -158,8 +159,21 @@ const CONSTELLATIONS := {
 		],
 		"segments": [["gamma_sgr", "delta_sgr"], ["gamma_sgr", "epsilon_sgr"], ["delta_sgr", "epsilon_sgr"], ["epsilon_sgr", "zeta_sgr"], ["zeta_sgr", "phi_sgr"], ["phi_sgr", "delta_sgr"], ["phi_sgr", "lambda_sgr"], ["lambda_sgr", "delta_sgr"], ["phi_sgr", "sigma_sgr"], ["sigma_sgr", "tau_sgr"], ["tau_sgr", "zeta_sgr"], ["lambda_sgr", "mu_sgr"], ["epsilon_sgr", "eta_sgr"], ["rho_sgr", "pi_sgr"], ["pi_sgr", "omicron_sgr"], ["omicron_sgr", "xi_sgr"]],
 	},
+	"phoenix": {
+		"label_key": "ATLAS_PHOENIX", "branch": "phoenix",
+		"stars": [
+			{"id": "alpha_phe", "name_key": "ATLAS_ALPHA_PHE", "bayer": "α Phe", "local_position": Vector2(0.7881152, -0.6467138), "node_id": "ext_phe_white_hole", "kind": "star", "magnitude": 2.39},
+			{"id": "beta_phe", "name_key": "ATLAS_BETA_PHE", "bayer": "β Phe", "local_position": Vector2(-0.2001233, -0.0801036), "node_id": "ext_phe_ejecta", "kind": "star", "magnitude": 3.31},
+			{"id": "gamma_phe", "name_key": "ATLAS_GAMMA_PHE", "bayer": "γ Phe", "local_position": Vector2(-0.7651102, -0.5099045), "node_id": "ext_phe_tracking", "kind": "star", "magnitude": 3.41},
+			{"id": "delta_phe", "name_key": "ATLAS_DELTA_PHE", "bayer": "δ Phe", "local_position": Vector2(-0.7523869, 0.2793812), "node_id": "ext_phe_arrivals", "kind": "star", "magnitude": 3.95},
+			{"id": "epsilon_phe", "name_key": "ATLAS_EPSILON_PHE", "bayer": "ε Phe", "local_position": Vector2(1.1417084, -0.1278122), "node_id": "ext_phe_yield", "kind": "star", "magnitude": 3.88},
+			{"id": "zeta_phe", "name_key": "ATLAS_ZETA_PHE", "bayer": "ζ Phe", "local_position": Vector2(-0.2122032, 1.0851531), "node_id": "ext_phe_outflow", "kind": "star", "magnitude": 3.92},
+		],
+		"segments": [["alpha_phe", "beta_phe"], ["beta_phe", "gamma_phe"], ["alpha_phe", "epsilon_phe"], ["epsilon_phe", "beta_phe"], ["beta_phe", "zeta_phe"], ["zeta_phe", "delta_phe"], ["delta_phe", "gamma_phe"]],
+	},
 }
 const PLACEMENTS := {
+	"phoenix": {"anchor_angle": -1.5, "anchor_radius": 1310.0, "scale": 130.0, "tilt": 0.0},
 	"scutum": {"anchor_angle": -2.65, "anchor_radius": 760.0, "scale": 110.0, "tilt": 0.0},
 	"cancer": {"anchor_angle": -0.42, "anchor_radius": 1240.0, "scale": 120.0, "tilt": 0.0},
 	"sagittarius": {"anchor_angle": -1.1, "anchor_radius": 1280.0, "scale": 155.0, "tilt": 0.0},

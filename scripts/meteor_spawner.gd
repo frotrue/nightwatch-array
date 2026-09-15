@@ -165,9 +165,6 @@ func _slot_count(kinds: Array) -> int:
 
 func _has_spawn_space(kind: String, count: int = 1, natural: bool = false) -> bool:
 	if meteor_layer == null: return false
-	var white_count := _slot_count(["white_hole"])
-	if kind == "white_hole":
-		return not natural and white_count + count <= 3 and _slot_count(REGULAR_ACTIVE_TYPES) + white_count + count <= SpawnPolicy.ATMOSPHERIC_SAFETY_SLOTS
 	if kind == "major": return _slot_count(["major"]) + count <= 1
 	if kind in SpawnPolicy.DEDICATED_LATE_TYPES:
 		return _slot_count([kind]) + count <= SpawnPolicy.DEDICATED_TYPE_SLOTS
@@ -179,7 +176,7 @@ func _has_spawn_space(kind: String, count: int = 1, natural: bool = false) -> bo
 			if other not in SpawnPolicy.DEDICATED_LATE_TYPES:
 				extras += maxi(0, _slot_count([other]) - 1)
 		return own + count <= 1 or extras + count <= 1
-	if _slot_count(REGULAR_ACTIVE_TYPES) + white_count + count > SpawnPolicy.ATMOSPHERIC_SAFETY_SLOTS: return false
+	if _slot_count(REGULAR_ACTIVE_TYPES) + count > SpawnPolicy.ATMOSPHERIC_SAFETY_SLOTS: return false
 	return not natural or _regular_active_count() + count <= progression.get_max_active()
 
 func get_simulation_save() -> Dictionary:
@@ -240,7 +237,9 @@ func spawn_meteor(type_id: String = "common", custom_start := Vector2.INF, custo
 	if is_perseid_outburst:
 		meteor.set_meta("perseid_outburst", true)
 	meteor.fragment_requested.connect(_on_fragment_requested)
-	if type_id == "white_hole": meteor.ejecta_requested.connect(_on_white_hole_ejecta)
+	if type_id == "white_hole":
+		meteor.ejecta_count += int(progression.extension_effect("white_hole_ejecta_count", 0.0))
+		meteor.ejecta_requested.connect(_on_white_hole_ejecta)
 	meteor.simulation_id = next_simulation_id
 	next_simulation_id += 1
 	if get_parent().has_method("allocate_simulation_id"): meteor.simulation_id = get_parent().allocate_simulation_id()
@@ -255,7 +254,7 @@ func spawn_meteor(type_id: String = "common", custom_start := Vector2.INF, custo
 
 func _on_white_hole_ejecta(source, index: int) -> void:
 	if phase_time_remaining <= 0.0 or source.is_queued_for_deletion(): return
-	if not source.observed_successfully or index < 0 or index >= source.EJECTA_COUNT: return
+	if not source.observed_successfully or index < 0 or index >= source.ejecta_count: return
 	# Local deterministic geometry leaves all natural arrival RNG streams alone.
 	var kinds := ["common", "fast", "fragment", "fireball", "common", "fragment_piece"]
 	var kind: String = kinds[(index / 2) % kinds.size()]
@@ -265,7 +264,9 @@ func _on_white_hole_ejecta(source, index: int) -> void:
 	var unit: float = source._interaction_scale()
 	var speed := (125.0 + float((index * 17) % 70)) * unit
 	var piece = spawn_meteor(kind, source.global_position + direction * 24.0 * unit, direction * speed)
-	if piece != null: piece.set_meta("white_hole_ejecta", true)
+	if piece != null:
+		piece.set_meta("white_hole_ejecta", true)
+		piece.base_value *= progression.extension_effect("white_hole_ejecta_value")
 
 
 func try_spawn_module_fragments(parent, chance: float) -> int:
@@ -880,6 +881,14 @@ func set_phase_time_remaining(seconds: float) -> void:
 	phase_time_remaining = maxf(0.0, seconds)
 
 
+func _minimum_payable_time(type_id: String) -> float:
+	var spec := Balance.meteor_spec(type_id)
+	var seconds := maxf(MINIMUM_PAYABLE_TRACK_TIME, float(spec.track_time) / 1.42)
+	# A white-hole arrival must leave time to finish the beam and observe ejecta.
+	if type_id == "white_hole": seconds += WhiteHoleMeteor.RELEASE_DURATION + 1.0
+	return seconds
+
+
 # A forecast names where the object will be before it exists, and names it
 # wrong: the estimate carries an error that only resolves as the object closes.
 func _announce_regular_spawn(source_rng: RandomNumberGenerator = null, type_id: String = "common") -> void:
@@ -895,11 +904,7 @@ func _announce_regular_spawn(source_rng: RandomNumberGenerator = null, type_id: 
 	# object needs both its full warning and enough centered manual time for its
 	# own catalog entry. Long Andromeda targets therefore stop announcing earlier
 	# than an ordinary meteor, but still complete within the current round.
-	var spec := Balance.meteor_spec(type_id)
-	var payable_track_time := maxf(
-		MINIMUM_PAYABLE_TRACK_TIME,
-		float(spec.track_time) / 1.42
-	)
+	var payable_track_time := _minimum_payable_time(type_id)
 	if phase_time_remaining < lead_time + payable_track_time:
 		return
 	var entry := _plan_entry_with_rng(type_id, planning_rng)
@@ -945,8 +950,7 @@ func _update_pending_contacts(delta: float) -> void:
 		if float(contact.countdown) > 0.000001: continue
 		var kind := String(contact.type_id)
 		var natural := bool(contact.get("natural", false))
-		var spec := Balance.meteor_spec(kind)
-		var payable := maxf(MINIMUM_PAYABLE_TRACK_TIME, float(spec.track_time) / 1.42)
+		var payable := _minimum_payable_time(kind)
 		var blocked := not _has_spawn_space(kind, 1, natural) or (natural and pause_regular_spawns and kind not in SpawnPolicy.LATE_TYPES)
 		if phase_time_remaining < payable or (blocked and float(contact.get("deferred", 0.0)) >= SpawnPolicy.DEFER_SECONDS):
 			pending_contacts.erase(contact)
