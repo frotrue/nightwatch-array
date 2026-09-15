@@ -86,6 +86,7 @@ var manual_contribution: float = 0.0
 var automatic_contribution: float = 0.0
 var observation_controller: Node
 var alive: bool = true
+var pulsar_assist_rate := 0.0
 var observed_successfully: bool = false
 var completion_motion_scale := 1.0
 var completion_glint_enabled := true
@@ -417,7 +418,7 @@ func set_lane_assist_rate(value: float) -> void:
 
 
 func get_automatic_rate() -> float:
-	return (base_automatic_rate + dish_assist_rate + lane_assist_rate) * celestial_speed_multiplier
+	return (base_automatic_rate + dish_assist_rate + lane_assist_rate) * celestial_speed_multiplier + pulsar_assist_rate
 
 
 func allows_automatic_assist() -> bool:

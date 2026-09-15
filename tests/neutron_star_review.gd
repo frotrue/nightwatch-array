@@ -48,7 +48,7 @@ func _run() -> void:
 	output = "res://build/neutron_star/" + RenderingServer.get_current_rendering_method()
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(output))
 	var remnant: Node2D
-	var stats := {"supernova_tick": -1, "birth_tick": -1, "completed_tick": -1}
+	var stats := {"supernova_tick": -1, "birth_tick": -1, "completed_tick": -1, "beam_completions": 0}
 	var departure_luma: Array[float] = []
 	for tick in 960:
 		var target = star if is_instance_valid(star) and star.alive else remnant
@@ -61,10 +61,19 @@ func _run() -> void:
 			stats.supernova_tick = tick
 		if not is_instance_valid(remnant):
 			for body in game.meteor_layer.get_children():
-				if body.type_id == "neutron_star": remnant = body; stats.birth_tick = tick
+				if body.type_id == "neutron_star":
+					remnant = body
+					stats.birth_tick = tick
+					# Controlled arrivals after the supernova expose the live beam effect.
+					for entry in [["common", Vector2(-90, -60)], ["fast", Vector2(100, 60)],
+						["fireball", Vector2(70, -95)], ["variable_star", Vector2(-105, 95)],
+						["binary_star", Vector2(125, -90)], ["galaxy", Vector2(190, 105)]]:
+						var arrival = game.spawner.spawn_meteor(entry[0], remnant.position + entry[1] * unit,
+							Vector2(-8, -2) * unit, 15.0)
+						arrival.observed.connect(func(_body, _reward, _multiplier, _manual, _grade): stats.beam_completions += 1)
 		if is_instance_valid(remnant) and remnant.observed_successfully and stats.completed_tick < 0:
 			stats.completed_tick = tick
-		caption.text = "항성 관측" if stats.supernova_tick < 0 else ("초신성 · 가스와 잔해 확산" if stats.birth_tick < 0 else ("중성자별 · 회전 신호를 모아 관측" if stats.completed_tick < 0 else "주기 관측 완료 · 이동하며 퇴장"))
+		caption.text = "항성 관측" if stats.supernova_tick < 0 else ("초신성 · 가스와 잔해 확산" if stats.birth_tick < 0 else ("중성자별 · 회전 신호를 모아 관측" if stats.completed_tick < 0 else "관측 완료 · 회전 빔으로 주변 관측"))
 		if tick % 2 == 1:
 			for body in game.meteor_layer.get_children():
 				body.previous_simulation_position = body.position
@@ -80,12 +89,35 @@ func _run() -> void:
 	if stats.birth_tick - stats.supernova_tick != 54: failures.append("remnant did not follow the complete 0.9-second explosion")
 	if stats.completed_tick <= stats.birth_tick + 60: failures.append("remnant did not accumulate multiple signal windows")
 	if is_instance_valid(remnant): failures.append("completed remnant did not depart")
+	if stats.beam_completions < 2: failures.append("release beams did not complete nearby targets")
 	if departure_luma.size() != 2 or departure_luma[1] >= departure_luma[0] * 0.5:
 		failures.append("completed remnant did not visibly fade before removal")
+	# Static accessibility and bilingual research poses supplement the lifecycle.
+	for body in game.meteor_layer.get_children(): body.hide()
+	game.effects.reset()
+	caption.hide()
+	var quiet = game.spawner.spawn_meteor("neutron_star", origin, Vector2.RIGHT)
+	quiet.age = 2.0
+	quiet.completion_motion_scale = 0.0
+	quiet.completion_glint_enabled = false
+	quiet.queue_redraw()
+	await process_frame
+	await RenderingServer.frame_post_draw
+	root.get_texture().get_image().save_png(output.path_join("reduced_motion.png"))
+	quiet.hide()
+	game.upgrade_tree.configure_galactic_state(true, true)
+	game.upgrade_tree.open_tree()
+	game.upgrade_tree.focus_constellation("scutum")
+	game.upgrade_tree._on_node_hovered("ext_sct_supernova")
+	for locale in ["ko", "en"]:
+		game.settings.set_language(locale, false)
+		await process_frame
+		await RenderingServer.frame_post_draw
+		root.get_texture().get_image().save_png(output.path_join(locale + "_research.png"))
 	var manifest := FileAccess.open(output.path_join("manifest.json"), FileAccess.WRITE)
 	manifest.store_string(JSON.stringify({"status": "passed" if failures.is_empty() else "failed", "stats": stats, "departure_luma": departure_luma, "frames": 480, "fps": 30, "failures": failures}, "\t"))
 	game.free()
 	paused = false
-	if failures.is_empty(): print("NEUTRON_STAR_REVIEW_PASS: real manual observation, supernova, delayed birth, pulse tracking and departure")
+	if failures.is_empty(): print("NEUTRON_STAR_REVIEW_PASS: real tracking, birth, beam-assisted completions, fade, accessibility and bilingual research")
 	else: push_error(str(failures))
 	quit(0 if failures.is_empty() else 1)

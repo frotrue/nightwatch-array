@@ -3,8 +3,10 @@ extends "res://tests/stellar_test.gd"
 func _run() -> void:
 	await _test_remnant()
 	_test_signal()
+	_test_beam_geometry()
+	await _test_beam_lifecycle()
 	await _test_cancel()
-	if failures.is_empty(): print("NEUTRON_STAR_PASS: remnant unlock, deterministic formation, delay, shared capacity, pulse observation, retention, departure and cleanup")
+	if failures.is_empty(): print("NEUTRON_STAR_PASS: remnant formation, pulse observation, beam geometry, automatic completion, expiry, worker parity and cleanup")
 	quit(0 if failures.is_empty() else 1)
 
 func _unlock(game) -> void:
@@ -116,3 +118,116 @@ func _test_cancel() -> void:
 		await process_frame
 		check(game.meteor_layer.get_child_count() == 0, "cleanup cancels the pending remnant: " + action)
 		game.free()
+
+func _stationary(game, kind: String, at: Vector2):
+	var body = game.spawner.spawn_meteor(kind, at, Vector2.RIGHT, 30.0)
+	check(body != null, "beam fixture admits " + kind)
+	if body == null: return null
+	body.initial_velocity = Vector2.ZERO
+	body.velocity = Vector2.ZERO
+	body.burnout_position = at
+	return body
+
+func _test_beam_geometry() -> void:
+	var game = _game()
+	var unit: float = game.observation_view.screen_length_to_world(1.0)
+	var origin: Vector2 = game.observation_view.screen_to_world(Vector2(560, 330))
+	var direction := Vector2(0.82, 0.48).normalized()
+	var source = _stationary(game, "neutron_star", origin)
+	source.age = 0.0
+	source.wobble_phase = 0.0
+	var forward = _stationary(game, "common", origin + direction * 50.0 * unit)
+	var backward = _stationary(game, "fast", origin - direction * 50.0 * unit)
+	var side = _stationary(game, "common", origin + direction.orthogonal() * 100.0 * unit)
+	var distant = _stationary(game, "common", origin + direction * 300.0 * unit)
+	var excluded: Array = []
+	for kind in ["stellar", "black_hole", "white_hole", "neutron_star"]:
+		excluded.append(_stationary(game, kind, forward.position))
+	var bounds: Rect2 = game.observation_view.atmospheric_rect()
+	var targets: Array = game.meteor_layer.get_children()
+	source.illuminate_targets(targets, bounds)
+	check(forward.pulsar_assist_rate == 0.0, "unobserved pulsar cannot illuminate targets")
+	source.observation_progress = 1.0
+	source.tick_resolve()
+	source.illuminate_targets(targets, bounds)
+	check(forward.pulsar_assist_rate > 0.0 and backward.pulsar_assist_rate > 0.0, "both magnetic poles provide work")
+	check(side.pulsar_assist_rate == 0.0 and distant.pulsar_assist_rate == 0.0, "side and out-of-range targets receive no work")
+	for body in excluded: check(body.pulsar_assist_rate == 0.0, "special celestial excluded: " + body.type_id)
+	forward.tick_observation(0.01)
+	check(forward.observation_progress > 0.0 and forward.observation_progress < 1.0, "beam accumulates work instead of instant completion")
+	forward.pulsar_assist_rate = 0.0
+	source.age = source.ROTATION_PERIOD / 4.0
+	source.illuminate_targets([forward], bounds)
+	check(forward.pulsar_assist_rate == 0.0, "rotating away stops illumination")
+	source.age = 0.0
+	source.illuminate_targets([forward], Rect2(origin - Vector2.ONE, Vector2.ONE * 2.0))
+	check(forward.pulsar_assist_rate == 0.0, "off-screen target cannot receive work")
+	source.linger_time = 0.0
+	source.illuminate_targets([forward], bounds)
+	check(forward.pulsar_assist_rate == 0.0, "expired release cannot leave active beams")
+	# At a wider view, the actual surface is smaller than a screen-compensated budget.
+	game.observation_view.observation_span = 1.5
+	source.linger_time = 3.0
+	var visual_scale: float = game.observation_view.meteor_visual_scale()
+	source._draw_type_silhouette(12.0, 1.0, visual_scale)
+	var beam_length: float = source.surface.emission.material.get_shader_parameter("beam_length")
+	var axis: Vector3 = source.surface.emission.material.get_shader_parameter("magnetic_axis")
+	var tip: Vector2 = source.surface.to_global(Vector2(axis.x, axis.y) * beam_length)
+	forward.position = tip + direction * forward.body_radius * visual_scale * 2.0
+	source.illuminate_targets([forward], game.observation_view.atmospheric_rect())
+	check(forward.pulsar_assist_rate == 0.0, "camera pullback cannot extend contact beyond the rendered pole")
+	source.age = 0.37
+	source.completion_motion_scale = 0.4
+	source._draw_type_silhouette(12.0, 1.0, visual_scale)
+	axis = source.surface.emission.material.get_shader_parameter("magnetic_axis")
+	forward.position = source.surface.to_global(Vector2(axis.x, axis.y) * 70.0)
+	source.illuminate_targets([forward], game.observation_view.atmospheric_rect())
+	check(forward.pulsar_assist_rate > 0.0, "dimmed moving beam stays aligned with actual contact")
+	game.free()
+
+func _test_beam_lifecycle() -> void:
+	var results: Array = []
+	for parallel in [false, true]:
+		var game = _game()
+		game.parallel_motion_enabled = parallel
+		game.observation_phase_remaining = 30.0
+		var unit: float = game.observation_view.screen_length_to_world(1.0)
+		var origin: Vector2 = game.observation_view.screen_to_world(Vector2(560, 330))
+		var source = _stationary(game, "neutron_star", origin)
+		source.wobble_phase = 0.0
+		source.age = 0.0
+		source.completion_motion_scale = 0.0
+		source.completion_glint_enabled = false
+		source.observation_progress = 1.0
+		source.tick_resolve()
+		var targets: Array = []
+		for kind in ["common", "variable_star", "binary_star", "galaxy"]:
+			var target = _stationary(game, kind, origin + Vector2(30, 28) * unit)
+			targets.append(target)
+		# Exercise production worker motion above its threshold without affecting the beam.
+		for i in game.PARALLEL_MOTION_THRESHOLD:
+			var filler = Meteor.new()
+			var at := origin + Vector2(450, 200) * unit
+			filler.configure(Balance.meteor_spec("common"), "common", at, Vector2.ZERO, 20.0, {}, at, game.observation_view)
+			filler.simulation_id = game.allocate_simulation_id()
+			game.meteor_layer.add_child(filler)
+			game._on_meteor_spawned(filler)
+		var before: int = game.progression.success_count
+		var trace: Array = []
+		for tick in 180:
+			game.simulate_tick()
+			trace.append(targets.map(func(body): return body.observation_progress))
+		for target in targets:
+			check(target.observed_successfully and target.get_automatic_contribution() > 0.99, "beam completes real target through automatic lane: " + target.type_id)
+		check(game.progression.success_count == before + targets.size(), "beam targets pay exactly once")
+		results.append({"trace": trace, "data": game.progression.observation_data})
+		var survivor = game.meteor_layer.get_child(game.meteor_layer.get_child_count() - 1)
+		survivor.position = origin + Vector2(30, 28) * unit
+		survivor.entry_position = survivor.position
+		survivor.burnout_position = survivor.position
+		survivor.pulsar_assist_rate = 4.0
+		game.simulate_tick()
+		check(survivor.pulsar_assist_rate == 0.0 and survivor.get_progress() == 0.0, "game clears stale assistance after the source departs")
+		await process_frame
+		game.free()
+	check(results[0] == results[1], "serial and worker beam histories and rewards agree")

@@ -59,9 +59,11 @@ overlapping supernova rewards. The headless cases passed on Linux with Godot
 
 `neutron_star_test.gd` checks Scutum-gated remnant formation, RNG isolation and restoration,
 0.9-second delayed birth, shared stellar capacity, pulse-dependent manual/automatic work,
-progress retention, departure and cancellation on load/round end.
+progress retention, departure and cancellation on load/round end. Beam coverage includes
+both poles, rotation/range/exclusions, automatic completion, source expiry and worker parity.
 `neutron_star_review.gd` captures a 16-second, 30fps production observation sequence on
-both renderers: stellar tracking, gaseous supernova, remnant birth, signal tracking and departure.
+both renderers: stellar tracking, gaseous supernova, remnant birth, signal tracking,
+beam-assisted completions and departure. It also captures reduced motion and bilingual research copy.
 
 `white_hole_test.gd` checks both the isolated optical fixture and the debug-spawned
 observable target: shortcut routing, straight travel, manual/dish completion,

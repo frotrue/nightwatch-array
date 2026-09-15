@@ -21,4 +21,4 @@ script = ExtResource("1")
 [node name="Emission" type="Sprite2D" parent="."]
 material = SubResource("Material")
 texture = SubResource("Quad")
-scale = Vector2(100, 100)
+scale = Vector2(240, 240)

@@ -301,6 +301,13 @@ func simulate_tick() -> void:
 	_tick_target_motion(targets, motion_delta)
 	sky_contacts.simulate_tick(motion_delta)
 	spawner._refresh_secondary_camera()
+	# Rebuild transient beam work from this tick's snapshot before observation/resolve.
+	# This also clears assistance when a source departs; newborns wait until next tick.
+	for target in targets:
+		if target.type_id != "anomaly_rare": target.pulsar_assist_rate = 0.0
+	var beam_bounds: Rect2 = observation_view.atmospheric_rect()
+	for source in targets:
+		if source.type_id == "neutron_star": source.illuminate_targets(targets, beam_bounds)
 	observer.simulate_tick(motion_delta)
 	for target in targets:
 		if not target.is_queued_for_deletion():

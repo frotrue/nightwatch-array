@@ -187,7 +187,7 @@ EXT_RESEARCH_SCT_TRACKING_DESC,Manual and automatic star observation speed +30%.
 EXT_RESEARCH_SCT_ARRIVALS_NAME,Stellar Survey,항성 탐색
 EXT_RESEARCH_SCT_ARRIVALS_DESC,Star arrival chance +35%.,항성 출현 확률 +35%.
 EXT_RESEARCH_SCT_SUPERNOVA_NAME,Wide Supernova,광역 초신성
-EXT_RESEARCH_SCT_SUPERNOVA_DESC,Supernova radius: 240 → 300. Star data +25%. Completed supernovae have a 35% chance to leave a neutron star.,초신성 반경: 240 → 300. 항성 데이터 +25%. 초신성이 끝나면 35% 확률로 중성자별이 남습니다.
+EXT_RESEARCH_SCT_SUPERNOVA_DESC,Supernova radius: 240 → 300. Star data +25%. 35% chance to leave a neutron star. Observing it grants 3 seconds of rotating beams that observe nearby bodies.,초신성 반경: 240 → 300. 항성 데이터 +25%. 35% 확률로 중성자별이 남습니다. 중성자별을 관측하면 3초간 회전 빔이 주변 천체의 관측을 돕습니다.
 EXT_RESEARCH_PHE_WHITE_HOLE_NAME,White Hole Observation,화이트홀 관측
 EXT_RESEARCH_PHE_WHITE_HOLE_DESC,Unlocks white holes. Observation releases 24 meteors along twin jets.,화이트홀이 나타납니다. 관측하면 양극 제트로 유성 24개를 방출합니다.
 EXT_RESEARCH_PHE_EJECTA_NAME,Dense Outflow,밀도 높은 분출

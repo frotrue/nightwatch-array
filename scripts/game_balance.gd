@@ -887,7 +887,7 @@ static func meteor_spec(type_id: String) -> Dictionary:
 		"neutron_star":
 			return {
 				"name": "NEUTRON STAR", "speed": 24.0, "lifetime": 18.0,
-				"radius": 12.0, "trail": 0, "value": 240.0, "track_time": 3.2,
+				"radius": 12.0, "trail": 0, "value": 600.0, "track_time": 3.2,
 				"color": Color("dbeaf4"), "glow": Color("8faccc"),
 				"spectral_band": "blue", "burn_terminal_ratio": 1.0,
 				"burn_fade_start": 0.92, "burn_style": "neutron_star", "burnout_linger": 0.4,
