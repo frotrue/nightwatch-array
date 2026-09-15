@@ -70,6 +70,10 @@ func _run() -> void:
 	# yielded BURST. Legacy grant() omits quantity until a save is normalized.
 	game.deep_sky.modules.grant_copy("overcharge")
 	game.deep_sky.modules.equip("overcharge", 0)
+	# Direct fixture equipment bypasses the normal tutorial synchronization.
+	# If the first draw was BURST, normalize its completed intro before testing
+	# rollback; load_save_data() legitimately synchronizes it on restoration.
+	game.deep_sky._sync_protocol()
 	game.deep_sky.modules.restore_round_state({"burst_remaining": 3.5})
 	var debug_before: Dictionary = game.deep_sky.get_save_data()
 	game.active_save_slot = 1
