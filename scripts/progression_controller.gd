@@ -571,7 +571,7 @@ func forecast_classifies(type_id: String = "") -> bool:
 
 
 func is_deep_target(type_id: String) -> bool:
-	return type_id in ["satellite", "variable_star", "comet", "binary_star", "galaxy", "black_hole", "stellar", "white_hole"]
+	return type_id in ["satellite", "variable_star", "comet", "binary_star", "galaxy", "black_hole", "stellar", "white_hole", "neutron_star"]
 
 
 func is_andromeda_target(type_id: String) -> bool:
@@ -628,6 +628,7 @@ func get_celestial_multiplier(type_id: String, effect: String) -> float:
 		"black_hole": family = "black_hole"
 		"stellar": family = "stellar"
 		"white_hole": family = "white_hole"
+		"neutron_star": family = "neutron_star"
 	return extension_effect(family + "_" + effect) if not family.is_empty() else 1.0
 
 

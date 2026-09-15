@@ -139,6 +139,19 @@ Position integration, expiry order and packet delivery signals are unchanged.
 
 ## Setup calls
 
+### Stellar remnants and neutron stars
+
+Stellar sources now instantiate `stellar_meteor.gd`, which schedules an optional
+neutron-star remnant after the 0.9-second completion visual. The spawner checks
+the Scutum unlock and available observation time, derives a local formation roll
+without advancing saved RNG streams, and replaces the parent in the shared three-slot
+stellar reservation. `neutron_star_meteor.gd` owns pulse-modulated manual/automatic
+work, retained progress and a three-second release that assists targets touched by its
+rotating poles. Game rebuilds transient `pulsar_assist_rate` values from the current
+target snapshot before observation, and Meteor applies them through its existing
+automatic contribution/completion path. The two authored surface scenes
+`supernova.tscn` and `neutron_star_surface.tscn` keep shader materials per instance.
+
 ### White-hole target and Phoenix research
 
 `debug_celestial_layer.gd` routes the W shortcut through `meteor_spawner.gd` into

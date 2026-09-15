@@ -775,3 +775,4 @@ DEBUG_WHITE_HOLE_SPAWNED,White hole · Observe to release meteors,화이트홀 �
 DEBUG_WHITE_HOLE_LIMIT,White hole · Maximum 3 · Clears at round end,화이트홀 · 최대 3개 · 회차 종료 시 정리
 DEBUG_WHITE_HOLE_WAVES,White hole · Turbulent emission disc · Ctrl+Shift+W: spawn,화이트홀 · 난류 원반형 · Ctrl+Shift+W: 소환
 DEBUG_WHITE_HOLE_JETS,White hole · Polar jets · Ctrl+Shift+W: spawn,화이트홀 · 양극 제트형 · Ctrl+Shift+W: 소환
+METEOR_NEUTRON_STAR,NEUTRON STAR,중성자별

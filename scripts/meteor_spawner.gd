@@ -8,6 +8,8 @@ signal contact_resolved(contact, meteor)
 const SpawnPolicy = preload("res://scripts/spawn_policy.gd")
 const Balance = preload("res://scripts/game_balance.gd")
 const MeteorScript = preload("res://scripts/meteor.gd")
+const StellarMeteor = preload("res://scripts/stellar_meteor.gd")
+const NeutronStarMeteor = preload("res://scripts/neutron_star_meteor.gd")
 const WhiteHoleMeteor = preload("res://scripts/white_hole_meteor.gd")
 const MAX_TOTAL_METEORS := SpawnPolicy.ATMOSPHERIC_SAFETY_SLOTS + SpawnPolicy.LATE_SLOTS + 3 + 1
 const FORECAST_INTERCEPT_DISTANCE := 190.0
@@ -165,6 +167,7 @@ func _slot_count(kinds: Array) -> int:
 
 func _has_spawn_space(kind: String, count: int = 1, natural: bool = false) -> bool:
 	if meteor_layer == null: return false
+	if kind in SpawnPolicy.STELLAR_FAMILY: return _slot_count(SpawnPolicy.STELLAR_FAMILY) + count <= SpawnPolicy.DEDICATED_TYPE_SLOTS
 	if kind == "major": return _slot_count(["major"]) + count <= 1
 	if kind in SpawnPolicy.DEDICATED_LATE_TYPES:
 		return _slot_count([kind]) + count <= SpawnPolicy.DEDICATED_TYPE_SLOTS
@@ -227,7 +230,7 @@ func spawn_meteor(type_id: String = "common", custom_start := Vector2.INF, custo
 	var lifetime_scale: float = progression.get_lifetime_multiplier()
 	if lifetime_override > 0.0:
 		lifetime_scale = lifetime_override / float(spec.lifetime)
-	var meteor = WhiteHoleMeteor.new() if type_id == "white_hole" else MeteorScript.new()
+	var meteor = WhiteHoleMeteor.new() if type_id == "white_hole" else (StellarMeteor.new() if type_id == "stellar" else (NeutronStarMeteor.new() if type_id == "neutron_star" else MeteorScript.new()))
 	var features := _current_features(type_id)
 	meteor.configure(spec, type_id, start, move_velocity, lifetime_scale, features, burnout, observation_view)
 	if is_observation_echo:
@@ -240,6 +243,7 @@ func spawn_meteor(type_id: String = "common", custom_start := Vector2.INF, custo
 	if type_id == "white_hole":
 		meteor.ejecta_count += int(progression.extension_effect("white_hole_ejecta_count", 0.0))
 		meteor.ejecta_requested.connect(_on_white_hole_ejecta)
+	if type_id == "stellar": meteor.remnant_requested.connect(_on_stellar_remnant)
 	meteor.simulation_id = next_simulation_id
 	next_simulation_id += 1
 	if get_parent().has_method("allocate_simulation_id"): meteor.simulation_id = get_parent().allocate_simulation_id()
@@ -251,6 +255,23 @@ func spawn_meteor(type_id: String = "common", custom_start := Vector2.INF, custo
 		rare_spawned.emit(type_id)
 	return meteor
 
+
+func prepare_stellar_remnant(source) -> void:
+	if not progression.has_extension_research("ext_sct_supernova"): return
+	if phase_time_remaining < 0.9 + _minimum_payable_time("neutron_star"): return
+	# A local draw keyed by saved stellar RNG state and the source's birth seed preserves every
+	# natural/proc RNG stream; the transient sky itself is intentionally unsaved.
+	var remnant_rng := RandomNumberGenerator.new()
+	remnant_rng.seed = spawn_policy.occurrence.stellar.state ^ (source.rng.seed * 104729)
+	source.remnant_pending = remnant_rng.randf() < 0.35
+
+func _on_stellar_remnant(source) -> void:
+	if phase_time_remaining < _minimum_payable_time("neutron_star"): return
+	var unit: float = source._interaction_scale()
+	var heading: Vector2 = source.initial_velocity.normalized()
+	if heading.is_zero_approx(): heading = Vector2.UP
+	var remnant = spawn_meteor("neutron_star", source.global_position, heading * 24.0 * unit)
+	if remnant != null: remnant.set_meta("stellar_remnant", true)
 
 func _on_white_hole_ejecta(source, index: int) -> void:
 	if phase_time_remaining <= 0.0 or source.is_queued_for_deletion(): return
@@ -882,6 +903,7 @@ func set_phase_time_remaining(seconds: float) -> void:
 
 
 func _minimum_payable_time(type_id: String) -> float:
+	if type_id == "neutron_star": return 6.0 # Allow several pulse windows.
 	var spec := Balance.meteor_spec(type_id)
 	var seconds := maxf(MINIMUM_PAYABLE_TRACK_TIME, float(spec.track_time) / 1.42)
 	# A white-hole arrival must leave time to finish the beam and observe ejecta.

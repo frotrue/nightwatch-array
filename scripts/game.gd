@@ -301,6 +301,13 @@ func simulate_tick() -> void:
 	_tick_target_motion(targets, motion_delta)
 	sky_contacts.simulate_tick(motion_delta)
 	spawner._refresh_secondary_camera()
+	# Rebuild transient beam work from this tick's snapshot before observation/resolve.
+	# This also clears assistance when a source departs; newborns wait until next tick.
+	for target in targets:
+		if target.type_id != "anomaly_rare": target.pulsar_assist_rate = 0.0
+	var beam_bounds: Rect2 = observation_view.atmospheric_rect()
+	for source in targets:
+		if source.type_id == "neutron_star": source.illuminate_targets(targets, beam_bounds)
 	observer.simulate_tick(motion_delta)
 	for target in targets:
 		if not target.is_queued_for_deletion():
@@ -628,7 +635,7 @@ func _complete_supernova(source) -> void:
 	var targets: Array = []
 	var bounds: Rect2 = observation_view.atmospheric_rect()
 	for target in candidates:
-		if not target.alive or target.is_queued_for_deletion() or target.type_id in ["stellar", "black_hole", "white_hole"]: continue
+		if not target.alive or target.is_queued_for_deletion() or target.type_id in ["stellar", "black_hole", "white_hole", "neutron_star"]: continue
 		if target.has_method("can_be_tracked") and not target.can_be_tracked(): continue
 		if not bounds.has_point(target.global_position): continue
 		if target.global_position.distance_squared_to(source.global_position) <= radius * radius:
@@ -642,6 +649,7 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 	meteor.completion_glint_enabled = effects.screen_flashes_enabled
 	if meteor.type_id == "stellar" and observation_phase_active:
 		_complete_supernova(meteor)
+		spawner.prepare_stellar_remnant(meteor)
 	if meteor.type_id == "black_hole" and observation_phase_active:
 		var world_scale: float = observation_view.screen_length_to_world(1.0)
 		var radius: float = meteor.BLACK_HOLE_PULL_RADIUS * world_scale * progression.extension_effect("gravity_radius")
@@ -669,7 +677,7 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 		or bool(meteor.get_meta("polar_summoned", false))
 		or bool(meteor.get_meta("module_fragment", false))
 		or bool(meteor.get_meta("white_hole_ejecta", false))
-		or meteor.type_id == "white_hole"
+		or meteor.type_id in ["white_hole", "neutron_star"]
 	)
 	var leonid_spawn_count := 0
 	if was_manual and not is_proc_meteor and not meteor.is_major():

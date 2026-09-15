@@ -194,6 +194,7 @@ IAU의 [도마뱀자리](https://iauarchive.eso.org/static/public/constellations
 ## 방패자리
 
 항성 관측 15M → 충격파 확장 25M / 항성 추적 30M → 항성 탐색 35M → 광역 초신성 45M.
+광역 초신성은 기존 효과에 더해 초신성 후 35% 확률의 [중성자별 잔해](neutron-star.md)를 해금한다.
 세부 선행·효과와 실제 5별 도형은 [항성과 초신성](stellar-supernova.md)을 따른다.
 
 ## 봉황자리

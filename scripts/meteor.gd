@@ -11,6 +11,8 @@ const GravityCapture = preload("res://scripts/gravity_capture.gd")
 const BLACK_HOLE_PULL_RADIUS := 240.0
 const StellarVisual = preload("res://scripts/stellar_visual.gd")
 const StellarSurfaceScene = preload("res://scenes/stellar_surface.tscn")
+const SupernovaScene = preload("res://scenes/supernova.tscn")
+var supernova_surface: Node2D
 var stellar_surface: Node2D
 const SUPERNOVA_RADIUS := 180.0
 var supernova_radius := 0.0
@@ -84,6 +86,7 @@ var manual_contribution: float = 0.0
 var automatic_contribution: float = 0.0
 var observation_controller: Node
 var alive: bool = true
+var pulsar_assist_rate := 0.0
 var observed_successfully: bool = false
 var completion_motion_scale := 1.0
 var completion_glint_enabled := true
@@ -199,6 +202,8 @@ func _ready() -> void:
 	if type_id == "stellar":
 		stellar_surface = StellarSurfaceScene.instantiate()
 		add_child(stellar_surface)
+		supernova_surface = SupernovaScene.instantiate()
+		add_child(supernova_surface)
 	if get_parent().has_method("submit_target"):
 		render_layer = get_parent()
 		triangle_batch.deferred = true
@@ -413,7 +418,7 @@ func set_lane_assist_rate(value: float) -> void:
 
 
 func get_automatic_rate() -> float:
-	return (base_automatic_rate + dish_assist_rate + lane_assist_rate) * celestial_speed_multiplier
+	return (base_automatic_rate + dish_assist_rate + lane_assist_rate) * celestial_speed_multiplier + pulsar_assist_rate
 
 
 func allows_automatic_assist() -> bool:
@@ -446,7 +451,7 @@ func get_tracking_radius(base_radius: float) -> float:
 
 func is_solid_body() -> bool:
 	# Stable save IDs; the former star/galaxy artwork is no longer rendered.
-	return type_id in ["variable_star", "binary_star", "galaxy", "black_hole", "stellar", "white_hole"]
+	return type_id in ["variable_star", "binary_star", "galaxy", "black_hole", "stellar", "white_hole", "neutron_star"]
 
 
 func get_observation_body_radius() -> float:
@@ -541,7 +546,7 @@ func is_major() -> bool:
 
 
 func complete_from_supernova() -> void:
-	if not alive or is_queued_for_deletion() or type_id in ["stellar", "black_hole", "white_hole"]: return
+	if not alive or is_queued_for_deletion() or type_id in ["stellar", "black_hole", "white_hole", "neutron_star"]: return
 	automatic_contribution += maxf(0.0, 1.0 - observation_progress)
 	observation_progress = 1.0
 	_finish_observation(1.0, true)
