@@ -1,4 +1,4 @@
-[gd_scene load_steps=22 format=3]
+[gd_scene load_steps=23 format=3]
 
 [ext_resource type="Script" path="res://scripts/game.gd" id="1_game"]
 [ext_resource type="Script" path="res://scripts/starfield.gd" id="2_starfield"]
@@ -20,6 +20,7 @@
 [ext_resource type="PackedScene" path="res://scenes/black_hole_lens.tscn" id="18_lens"]
 
 [ext_resource type="PackedScene" path="res://scenes/ui/module_tutorial.tscn" id="19_module_tutorial"]
+[ext_resource type="Script" path="res://scripts/debug_celestial_layer.gd" id="20_debug_celestial"]
 
 [node name="Game" type="Node2D"]
 script = ExtResource("1_game")
@@ -43,6 +44,10 @@ z_index = 10
 script = ExtResource("17_meteor_render")
 
 [node name="BlackHoleLens" parent="." instance=ExtResource("18_lens")]
+
+[node name="DebugCelestialLayer" type="Node2D" parent="."]
+z_index = 13
+script = ExtResource("20_debug_celestial")
 
 [node name="EffectsLayer" type="Node2D" parent="."]
 physics_interpolation_mode = 2

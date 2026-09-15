@@ -1,0 +1,44 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/white_hole_preview.gd" id="1_script"]
+[ext_resource type="Shader" path="res://resources/shaders/white_hole_emission.gdshader" id="2_shader"]
+[ext_resource type="Shader" path="res://resources/shaders/black_hole_lens.gdshader" id="3_lens"]
+
+[sub_resource type="ShaderMaterial" id="Material_emission"]
+resource_local_to_scene = true
+shader = ExtResource("2_shader")
+
+[sub_resource type="ShaderMaterial" id="Material_lens"]
+resource_local_to_scene = true
+shader = ExtResource("3_lens")
+shader_parameter/einstein_radius = 0.29
+shader_parameter/taper_start = 0.52
+
+[sub_resource type="Gradient" id="Gradient_white"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="Texture_quad"]
+gradient = SubResource("Gradient_white")
+width = 2
+height = 2
+
+[node name="WhiteHolePreview" type="Node2D"]
+physics_interpolation_mode = 2
+script = ExtResource("1_script")
+
+[node name="BackgroundCopy" type="BackBufferCopy" parent="."]
+z_index = -18
+z_as_relative = false
+copy_mode = 0
+
+[node name="LensedSky" type="Sprite2D" parent="."]
+z_index = -18
+z_as_relative = false
+scale = Vector2(150, 150)
+texture = SubResource("Texture_quad")
+material = SubResource("Material_lens")
+
+[node name="Emission" type="Sprite2D" parent="."]
+scale = Vector2(150, 150)
+texture = SubResource("Texture_quad")
+material = SubResource("Material_emission")

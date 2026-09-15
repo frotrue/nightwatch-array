@@ -37,7 +37,7 @@ Compatibility/OpenGL로 전환한다. 특정 드라이버에서 문제가 있으
 .\tools\validate.ps1 -GodotPath $godot -Build
 ```
 
-빠른 게이트 29개를 통과하면 Windows 실행 파일을 갱신한다.
+빠른 게이트 30개를 통과하면 Windows 실행 파일을 갱신한다.
 생성·보상·진행·표적 로직에 영향이 있으면 `-FullEconomy`도 추가한다.
 `-Build`를 빼면 검사만 한다. 시드·전략 설정과 추가 검증은 [probes.md](docs/probes.md)를 본다.
 
@@ -91,8 +91,13 @@ Windows 기본 위치는 `%APPDATA%\Godot\app_userdata\Nightwatch Array\`다.
 | G | 표본 소모·연출 없이 모듈 1개 즉시 획득 (자동 장착 없음) |
 | M / R / S | 일반 유성 / 발광 유성 / 유성우 생성 |
 | B | 블랙홀 생성 |
+| W / E | 커서에 화이트홀 연출 미리보기 생성 / 난류 원반형·제트형 전환 |
 | F | Sirius 연구 설치 후 해당 회차의 큰개자리 거대 유성 경고 |
 | Backspace | 런 리셋 |
+
+화이트홀은 디버그 연출 시제품이다. 동시에 최대 3개, 관측 시간 16초 동안 표시되며
+회차 종료·리셋·불러오기 때 정리한다. 일반 출현·관측·보상·저장에는 참여하지 않는다.
+[연출 의도와 비교 방법](docs/white-hole-preview.md)을 참고한다.
 
 ## 개발 문서
 

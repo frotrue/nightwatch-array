@@ -31,6 +31,7 @@ const SHAKE_TRAUMA_CEILING := 0.88
 @onready var twinkle_stars: Node2D = $TwinkleStars
 @onready var meteor_layer: Node2D = $MeteorLayer
 @onready var black_hole_lens: Node2D = $BlackHoleLens
+@onready var debug_celestials: Node2D = $DebugCelestialLayer
 @onready var effects: Node2D = $EffectsLayer
 @onready var observer: Node2D = $ObservationController
 @onready var sky_contacts: Node2D = $SkyContacts
@@ -202,6 +203,7 @@ func _preferred_startup_slot() -> int:
 
 
 func start_run() -> void:
+	debug_celestials.reset()
 	module_tutorial.cancel()
 	module_popup.close()
 	deep_sky.reset()
@@ -283,6 +285,7 @@ func simulate_tick() -> void:
 	_in_simulation_tick = true
 	var scale: float = simulation_clock.begin_tick()
 	var motion_delta := SimulationClock.STEP * scale
+	debug_celestials.simulate_tick(motion_delta)
 	hitstop_active = simulation_clock.hitstop_ticks > 0
 	spawner.set_phase_time_remaining(observation_phase_remaining)
 	# Existing timers expire before this tick's completions can start new effects.
@@ -372,6 +375,7 @@ func _begin_observation_phase(advance_round: bool = false, remaining_override: f
 func _end_observation_phase() -> void:
 	if completed or not observation_phase_active:
 		return
+	debug_celestials.reset()
 	deep_sky.end_round()
 	progression.reset_manual_combo()
 	deep_sky.modules.reset_round()
@@ -576,6 +580,14 @@ func handle_debug_key_input(event: InputEvent) -> void:
 			spawner.spawn_meteor("common")
 		KEY_B:
 			spawner.spawn_meteor("black_hole")
+		KEY_W:
+			var preview = debug_celestials.spawn_white_hole(get_global_mouse_position(), observation_view.screen_length_to_world(1.0))
+			var key := "DEBUG_WHITE_HOLE_SPAWNED" if preview != null else "DEBUG_WHITE_HOLE_LIMIT"
+			hud.show_banner(tr(key), UITheme.INK_MID, 2.0)
+		KEY_E:
+			debug_celestials.cycle_effect()
+			var key := "DEBUG_WHITE_HOLE_WAVES" if debug_celestials.effect_mode == 0 else "DEBUG_WHITE_HOLE_JETS"
+			hud.show_banner(tr(key), UITheme.INK_MID, 2.0)
 		KEY_R:
 			spawner.spawn_meteor("fireball")
 		KEY_S:
@@ -867,6 +879,7 @@ func _apply_accessibility_settings() -> void:
 		flashes_enabled = bool(settings.are_screen_flashes_enabled())
 	effects.set_accessibility_effects(motion_scale, flashes_enabled)
 	if black_hole_lens != null: black_hole_lens.motion_scale = motion_scale
+	if debug_celestials != null: debug_celestials.set_accessibility(motion_scale, flashes_enabled)
 	if meteor_layer != null:
 		for meteor in meteor_layer.get_children():
 			meteor.completion_motion_scale = motion_scale
@@ -1058,6 +1071,7 @@ func _apply_save_data(data: Dictionary) -> void:
 		hud.show_banner(tr("EXT_SAVE_NEWER_VERSION"), UITheme.ALERT, 5.0)
 		return
 	_loading_save = true
+	debug_celestials.reset()
 	module_tutorial.cancel()
 	module_popup.close()
 	sound.reset_streak_audio()
