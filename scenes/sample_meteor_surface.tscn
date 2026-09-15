@@ -1,0 +1,27 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/sample_meteor_surface.gd" id="1"]
+[ext_resource type="Shader" path="res://resources/shaders/sample_meteor_surface.gdshader" id="2"]
+
+[sub_resource type="ShaderMaterial" id="Material_mineral"]
+resource_local_to_scene = true
+shader = ExtResource("2")
+
+[sub_resource type="Gradient" id="Gradient_white"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="Texture_quad"]
+gradient = SubResource("Gradient_white")
+width = 2
+height = 2
+
+[node name="SampleMeteorSurface" type="Node2D"]
+visible = false
+z_index = -1
+script = ExtResource("1")
+
+[node name="Mineral" type="Sprite2D" parent="."]
+position = Vector2(-34, 0)
+scale = Vector2(52, 18)
+material = SubResource("Material_mineral")
+texture = SubResource("Texture_quad")
