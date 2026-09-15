@@ -8,6 +8,7 @@ signal contact_resolved(contact, meteor)
 const SpawnPolicy = preload("res://scripts/spawn_policy.gd")
 const Balance = preload("res://scripts/game_balance.gd")
 const MeteorScript = preload("res://scripts/meteor.gd")
+const WhiteHoleMeteor = preload("res://scripts/white_hole_meteor.gd")
 const MAX_TOTAL_METEORS := SpawnPolicy.ATMOSPHERIC_SAFETY_SLOTS + SpawnPolicy.LATE_SLOTS + 3 + 1
 const FORECAST_INTERCEPT_DISTANCE := 190.0
 const MINIMUM_PAYABLE_TRACK_TIME := 0.95
@@ -164,6 +165,9 @@ func _slot_count(kinds: Array) -> int:
 
 func _has_spawn_space(kind: String, count: int = 1, natural: bool = false) -> bool:
 	if meteor_layer == null: return false
+	var white_count := _slot_count(["white_hole"])
+	if kind == "white_hole":
+		return not natural and white_count + count <= 3 and _slot_count(REGULAR_ACTIVE_TYPES) + white_count + count <= SpawnPolicy.ATMOSPHERIC_SAFETY_SLOTS
 	if kind == "major": return _slot_count(["major"]) + count <= 1
 	if kind in SpawnPolicy.DEDICATED_LATE_TYPES:
 		return _slot_count([kind]) + count <= SpawnPolicy.DEDICATED_TYPE_SLOTS
@@ -175,7 +179,7 @@ func _has_spawn_space(kind: String, count: int = 1, natural: bool = false) -> bo
 			if other not in SpawnPolicy.DEDICATED_LATE_TYPES:
 				extras += maxi(0, _slot_count([other]) - 1)
 		return own + count <= 1 or extras + count <= 1
-	if _slot_count(REGULAR_ACTIVE_TYPES) + count > SpawnPolicy.ATMOSPHERIC_SAFETY_SLOTS: return false
+	if _slot_count(REGULAR_ACTIVE_TYPES) + white_count + count > SpawnPolicy.ATMOSPHERIC_SAFETY_SLOTS: return false
 	return not natural or _regular_active_count() + count <= progression.get_max_active()
 
 func get_simulation_save() -> Dictionary:
@@ -226,7 +230,7 @@ func spawn_meteor(type_id: String = "common", custom_start := Vector2.INF, custo
 	var lifetime_scale: float = progression.get_lifetime_multiplier()
 	if lifetime_override > 0.0:
 		lifetime_scale = lifetime_override / float(spec.lifetime)
-	var meteor = MeteorScript.new()
+	var meteor = WhiteHoleMeteor.new() if type_id == "white_hole" else MeteorScript.new()
 	var features := _current_features(type_id)
 	meteor.configure(spec, type_id, start, move_velocity, lifetime_scale, features, burnout, observation_view)
 	if is_observation_echo:
@@ -236,6 +240,7 @@ func spawn_meteor(type_id: String = "common", custom_start := Vector2.INF, custo
 	if is_perseid_outburst:
 		meteor.set_meta("perseid_outburst", true)
 	meteor.fragment_requested.connect(_on_fragment_requested)
+	if type_id == "white_hole": meteor.ejecta_requested.connect(_on_white_hole_ejecta)
 	meteor.simulation_id = next_simulation_id
 	next_simulation_id += 1
 	if get_parent().has_method("allocate_simulation_id"): meteor.simulation_id = get_parent().allocate_simulation_id()
@@ -246,6 +251,21 @@ func spawn_meteor(type_id: String = "common", custom_start := Vector2.INF, custo
 	if type_id == "fireball" or type_id == "major":
 		rare_spawned.emit(type_id)
 	return meteor
+
+
+func _on_white_hole_ejecta(source, index: int) -> void:
+	if phase_time_remaining <= 0.0 or source.is_queued_for_deletion(): return
+	if not source.observed_successfully or index < 0 or index >= source.EJECTA_COUNT: return
+	# Local deterministic geometry leaves all natural arrival RNG streams alone.
+	var kinds := ["common", "fast", "fragment", "fireball", "common", "fragment_piece"]
+	var kind: String = kinds[(index / 2) % kinds.size()]
+	var polarity := 1.0 if index % 2 == 0 else -1.0
+	var spread := (fmod(float(index / 2) * 0.618034, 1.0) - 0.5) * 0.72
+	var direction: Vector2 = (source.release_axis * polarity).rotated(spread)
+	var unit: float = source._interaction_scale()
+	var speed := (125.0 + float((index * 17) % 70)) * unit
+	var piece = spawn_meteor(kind, source.global_position + direction * 24.0 * unit, direction * speed)
+	if piece != null: piece.set_meta("white_hole_ejecta", true)
 
 
 func try_spawn_module_fragments(parent, chance: float) -> int:

@@ -35,6 +35,22 @@ func _process(_delta: float) -> void:
 	# Camera/viewport changes are presentation work; optical time stays on ticks.
 	_refresh_lens()
 
+func present_target(alpha: float, clock: float, axis: float, pose_clock: float, wobble: float,
+	progress: float, completion: float, motion: float, flashes: bool, mode: int) -> void:
+	modulate.a = alpha
+	visible = alpha > 0.001
+	motion_scale = motion
+	emission.material.set_shader_parameter("visual_time", clock)
+	emission.material.set_shader_parameter("base_angle", axis)
+	emission.material.set_shader_parameter("pose_time", pose_clock)
+	emission.material.set_shader_parameter("axis_wobble", wobble)
+	emission.material.set_shader_parameter("observation_progress", progress)
+	emission.material.set_shader_parameter("completion", completion)
+	emission.material.set_shader_parameter("motion", motion)
+	emission.material.set_shader_parameter("pulses", 1.0 if flashes else 0.0)
+	emission.material.set_shader_parameter("effect_mode", mode)
+	_refresh_lens()
+
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_VISIBILITY_CHANGED and is_node_ready(): _refresh_lens()
 

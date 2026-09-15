@@ -446,7 +446,7 @@ func get_tracking_radius(base_radius: float) -> float:
 
 func is_solid_body() -> bool:
 	# Stable save IDs; the former star/galaxy artwork is no longer rendered.
-	return type_id in ["variable_star", "binary_star", "galaxy", "black_hole", "stellar"]
+	return type_id in ["variable_star", "binary_star", "galaxy", "black_hole", "stellar", "white_hole"]
 
 
 func get_observation_body_radius() -> float:
@@ -541,7 +541,7 @@ func is_major() -> bool:
 
 
 func complete_from_supernova() -> void:
-	if not alive or is_queued_for_deletion() or type_id in ["stellar", "black_hole"]: return
+	if not alive or is_queued_for_deletion() or type_id in ["stellar", "black_hole", "white_hole"]: return
 	automatic_contribution += maxf(0.0, 1.0 - observation_progress)
 	observation_progress = 1.0
 	_finish_observation(1.0, true)

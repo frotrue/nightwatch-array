@@ -581,7 +581,7 @@ func handle_debug_key_input(event: InputEvent) -> void:
 		KEY_B:
 			spawner.spawn_meteor("black_hole")
 		KEY_W:
-			var preview = debug_celestials.spawn_white_hole(get_global_mouse_position(), observation_view.screen_length_to_world(1.0))
+			var preview = debug_celestials.spawn_observable_white_hole(get_global_mouse_position(), observation_view.screen_length_to_world(1.0))
 			var key := "DEBUG_WHITE_HOLE_SPAWNED" if preview != null else "DEBUG_WHITE_HOLE_LIMIT"
 			hud.show_banner(tr(key), UITheme.INK_MID, 2.0)
 		KEY_E:
@@ -628,7 +628,7 @@ func _complete_supernova(source) -> void:
 	var targets: Array = []
 	var bounds: Rect2 = observation_view.atmospheric_rect()
 	for target in candidates:
-		if not target.alive or target.is_queued_for_deletion() or target.type_id in ["stellar", "black_hole"]: continue
+		if not target.alive or target.is_queued_for_deletion() or target.type_id in ["stellar", "black_hole", "white_hole"]: continue
 		if target.has_method("can_be_tracked") and not target.can_be_tracked(): continue
 		if not bounds.has_point(target.global_position): continue
 		if target.global_position.distance_squared_to(source.global_position) <= radius * radius:
@@ -662,12 +662,14 @@ func _on_meteor_observed(meteor, reward: float, multiplier: float, was_manual: b
 	)
 	reward = round(reward * research_multiplier)
 	var final_reward: float = progression.add_observation(reward, was_manual, intrinsic_multiplier)
-	var is_proc_meteor := (
+	var is_proc_meteor: bool = (
 		bool(meteor.get_meta("gemini_echo", false))
 		or bool(meteor.get_meta("leonid_storm", false))
 		or bool(meteor.get_meta("perseid_outburst", false))
 		or bool(meteor.get_meta("polar_summoned", false))
 		or bool(meteor.get_meta("module_fragment", false))
+		or bool(meteor.get_meta("white_hole_ejecta", false))
+		or meteor.type_id == "white_hole"
 	)
 	var leonid_spawn_count := 0
 	if was_manual and not is_proc_meteor and not meteor.is_major():
