@@ -3,6 +3,7 @@ extends Node2D
 const UITheme = preload("res://scripts/ui_theme.gd")
 const ArrivalVisual = preload("res://scripts/arrival_visual.gd")
 const Data = preload("res://scripts/expansion_data.gd")
+const SampleSurface = preload("res://scenes/sample_meteor_surface.tscn")
 var research: Node
 var kind := "rare"
 var type_id := "anomaly_rare"
@@ -33,6 +34,11 @@ var body_position := Vector2.ZERO
 var velocity := Vector2.ZERO
 var base_value := 56.0
 var _linger := 0.0
+var _surface: Node2D
+
+func _ready() -> void:
+	_surface = SampleSurface.instantiate()
+	add_child(_surface)
 
 func configure(controller: Node, description: Dictionary) -> void:
 	research = controller
@@ -177,22 +183,16 @@ func _draw() -> void:
 	var color := get_visual_color()
 	if not alive:
 		color.a = clampf(_linger / 0.45, 0.0, 1.0)
+	var rect: Rect2 = research.game.observation_view.atmospheric_rect()
+	var direction := ((end_uv - start_uv) * rect.size).normalized()
+	_surface.present(self, scale_factor, direction, color.a)
 	var label_origin := Vector2.ZERO
 	if age < warning_time:
 		color = UITheme.ACCENT_LINE
-		var rect: Rect2 = research.game.observation_view.atmospheric_rect()
-		var direction := ((end_uv - start_uv) * rect.size).normalized()
 		var view_rect: Rect2 = research.game.observation_view.visible_world_rect()
 		var marker := to_local(ArrivalVisual.edge_point(global_position, view_rect, scale_factor))
 		label_origin = marker / scale_factor
 		ArrivalVisual.draw_direction(self, marker, direction, scale_factor, UITheme.ACCENT_LINE, lerpf(0.55, 1.0, clampf(age / maxf(warning_time, 0.001), 0.0, 1.0)))
-	else:
-		var head := body_position - global_position
-		var direction := (end_uv - start_uv).normalized()
-		draw_line(head - direction * 74.0 * scale_factor, head, Color(color, 0.22), 3.0 * scale_factor, true)
-		draw_circle(head, 3.5 * scale_factor, color)
-		draw_colored_polygon(PackedVector2Array([Vector2(0, -6) * scale_factor, Vector2(4, 0) * scale_factor, Vector2(0, 6) * scale_factor, Vector2(-4, 0) * scale_factor]), color)
-		draw_circle(Vector2.ZERO, 9.0 * scale_factor, Color(color, 0.12))
 	if alive and get_progress() > 0.0:
 		draw_arc(Vector2.ZERO, 15.0 * scale_factor, -PI / 2, -PI / 2 + TAU * get_progress(), 40, Color.WHITE, scale_factor, true)
 	var key := "EXT_TARGET_RARE"
@@ -204,7 +204,7 @@ func _draw() -> void:
 	if age < warning_time:
 		var bounds: Rect2 = research.game.observation_view.visible_world_rect().grow(-16.0 * scale_factor)
 		label_position.x = clampf(label_position.x, (bounds.position.x - global_position.x) / scale_factor, (bounds.end.x - global_position.x) / scale_factor - width)
-	draw_string(font, label_position, text, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(color, 0.85))
+	draw_string(font, label_position, text, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(color, color.a * 0.85))
 	draw_set_transform(Vector2.ZERO)
 
 func get_save_data() -> Dictionary:
