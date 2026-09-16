@@ -60,6 +60,7 @@ func _run() -> void:
 	game._release_hitstop()
 	game.free()
 	await _test_round_dawn()
+	await _test_expanded_sky()
 	if failures.is_empty():
 		print("EFFECT_FEEDBACK_PASS: routine/accent routing, directional cones, event/cap preservation, paused HUD/chart installation rules and round dawn lifecycle")
 		quit(0)
@@ -134,6 +135,56 @@ func _test_round_dawn() -> void:
 	game.settings.motion_intensity = 0.0
 	game._end_observation_phase()
 	_check(is_equal_approx(game.starfield.sunrise, 1.0) and game.starfield.sunrise_tween == null and is_equal_approx(game.hud.phase_summary_overlay.modulate.a, 1.0), "zero motion displays dawn and summary without a delay")
+	paused = false
+	game.free()
+
+
+func _test_expanded_sky() -> void:
+	var game = MainScene.instantiate()
+	Fixtures.configure_before_ready(game)
+	root.add_child(game)
+	game.set_process(false)
+	game.set_physics_process(false)
+	game.spawner.running = false
+	game.events.running = false
+	game.settings.motion_intensity = 0.0
+	var early: Dictionary = game._build_save_data()
+	_check(not game.starfield.galactic_mode, "a new save starts in the terrestrial sky")
+	_check(game.starfield.deep_space_texture != null, "the main scene owns the expanded background texture")
+	game.progression.debug_purchase_all()
+	game._close_upgrade_tree_without_transition()
+	paused = false
+	_check(game.starfield.galactic_mode, "the actual reference-frame purchase enables deep space")
+	_check(is_zero_approx(game.twinkle_stars.modulate.a), "expansion immediately hides terrestrial twinkle stars")
+	game.starfield.set_watch_progress(0.95)
+	_check(is_zero_approx(game.starfield.dawn_amount()), "the expanded observation does not brighten into daylight")
+	for viewport in [Vector2(1152, 648), Vector2(1440, 900), Vector2(2560, 1080)]:
+		for span in [1.0, 1.5]:
+			var frame := Rect2(Vector2(-80, -40), viewport * span)
+			var painted: Rect2 = game.starfield._deep_space_rect(frame)
+			_check(painted.encloses(frame.grow(8.0 * span)), "deep space covers resize and pullback with camera-shake margin")
+			var texture_size: Vector2 = game.starfield.deep_space_texture.get_size()
+			_check(is_equal_approx(painted.size.x / painted.size.y, texture_size.x / texture_size.y), "deep space preserves the texture aspect ratio")
+	var expanded: Dictionary = game._build_save_data()
+	game._apply_save_data(early)
+	_check(not game.starfield.galactic_mode and game.twinkle_stars.modulate.a > 0.9, "loading an early slot restores the terrestrial sky and stars")
+	game._apply_save_data(expanded)
+	_check(game.starfield.galactic_mode and is_zero_approx(game.starfield.sunrise), "loading an active expanded slot restores its undimmed sky")
+	var elapsed: float = game.elapsed_time
+	var earned: float = game.progression.total_data_earned
+	game._end_observation_phase()
+	_check(game.hud.is_phase_summary_open() and is_equal_approx(game.starfield.sunrise, 1.0), "reduced-motion expanded intermission immediately presents its settled fade and summary")
+	_check(is_zero_approx(game.starfield.dawn_amount()) and game.elapsed_time == elapsed and game.progression.total_data_earned == earned, "expanded intermission adds neither daylight, observation time nor rewards")
+	var intermission: Dictionary = game._build_save_data()
+	game._apply_save_data(intermission)
+	_check(game.starfield.galactic_mode and is_equal_approx(game.starfield.sunrise, 1.0), "loading an expanded intermission retains the completed fade")
+	# Allow the deferred intermission restoration to run before subsequent checks.
+	await process_frame
+	game._close_upgrade_tree_without_transition()
+	game._begin_observation_phase(true)
+	_check(is_zero_approx(game.starfield.sunrise) and game.starfield.galactic_mode, "the next expanded round clears only the dimming")
+	game.reset_run()
+	_check(not game.starfield.galactic_mode and game.twinkle_stars.modulate.a > 0.9, "a run reset restores the opening sky")
 	paused = false
 	game.free()
 

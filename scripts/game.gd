@@ -1171,7 +1171,10 @@ func _apply_save_data(data: Dictionary) -> void:
 		call_deferred("_resume_upgrade_intermission")
 	_loading_save = false
 	spawner.set_phase_time_remaining(observation_phase_remaining)
-	starfield.set_watch_progress(1.0 - observation_phase_remaining / observation_phase_duration)
+	# Intermission already restored the completed presentation above. Resetting
+	# its clock here would erase either the dawn or the expanded-sky dimming.
+	if observation_phase_active:
+		starfield.set_watch_progress(1.0 - observation_phase_remaining / observation_phase_duration)
 	if observation_phase_active and observation_phase_remaining <= 0.0: _end_observation_phase()
 	hud._refresh_extension()
 

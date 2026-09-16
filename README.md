@@ -7,6 +7,8 @@
 모듈 지원은 페가수스·도마뱀자리 2개에 모으고, 나머지 11개는 천체 해금과 수동 추적·훑기·공명·접시 등
 관측 능력을 영구 강화한다. [별자리별 연구와 효과](docs/outer-constellations.md)를 참고한다.
 은하 기준 좌표계 연구로 후속 연구와 특수 유성·모듈이 열린다.
+이 연구로 별자리가 확장되면 관측 화면도 은하수·먼지층이 있는 어두운 우주 배경으로 바뀐다.
+확장 전에는 기존 산·관측소와 새벽 연출을 사용하고, 확장 후 정산에서는 우주 배경이 은은하게 어두워진다.
 확장 초반 방패자리에서 항성을 해금한다. 관측 완료 시 초신성이 주변 천체를 즉시 관측한다.
 다른 항성·블랙홀·화이트홀·중성자별은 제외한다. 광역 초신성 연구 후에는 35% 확률로
 초신성 잔해에 중성자별이 남는다. 항성과 중성자별은 합쳐 최대 3개, 블랙홀은 별도로 최대 3개다. [항성과 초신성](docs/stellar-supernova.md)을 참고한다.
@@ -47,7 +49,8 @@ Compatibility/OpenGL로 전환한다. 특정 드라이버에서 문제가 있으
 첫 실패나 시간 초과에서 멈춘다. 로그와 `summary.json`은 `build/validation/<실행 ID>/`에 남는다.
 
 - 실행 파일: `C:\Users\user\Documents\ChatGPT\star\build\windows\NightwatchArray.exe`
-- `build/`는 Git 제외 디렉터리다. 빌드 산출물은 커밋하지 않는다.
+- `build/`의 산출물은 Git에서 제외하며 커밋하지 않는다. Godot의 산출물 임포트를 막는
+  `build/.gdignore`만 버전 관리한다.
 - Windows 배포 시 같은 폴더의 `NightwatchMetrics.exe`도 함께 포함한다.
   성능 모니터의 CPU·GPU 측정기이며, 검증 명령이 MSVC C++ Build Tools로 자동 빌드한다.
 - 개별 검사: `& $godot --headless --path . --script res://tests/smoke_test.gd`

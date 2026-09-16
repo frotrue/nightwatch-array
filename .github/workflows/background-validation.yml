@@ -1,0 +1,76 @@
+name: Temporary deep-space background validation
+on:
+  push:
+    branches: [codex/expanded-deep-space-background]
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download official Godot 4.7.2 and templates
+        shell: pwsh
+        run: |
+          $base = 'https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable'
+          New-Item -ItemType Directory -Force build/toolchain | Out-Null
+          Invoke-WebRequest "$base/Godot_v4.7.2-stable_win64.exe.zip" -OutFile build/toolchain/editor.zip
+          if ((Get-FileHash build/toolchain/editor.zip -Algorithm SHA256).Hash.ToLower() -ne '731980f9608d61333e5baf54a2ef17210acc7a538446c0cb9969f002aca1e953') { throw 'Editor hash mismatch' }
+          Expand-Archive build/toolchain/editor.zip build/toolchain/editor
+          Invoke-WebRequest "$base/Godot_v4.7.2-stable_export_templates.tpz" -OutFile build/toolchain/templates.zip
+          if ((Get-FileHash build/toolchain/templates.zip -Algorithm SHA256).Hash.ToLower() -ne 'f298490b8d44d934be425a5a65a51bf15f422428b229a06a6e11d9ffea248011') { throw 'Template hash mismatch' }
+          Expand-Archive build/toolchain/templates.zip build/toolchain/export
+          $target = Join-Path $env:APPDATA 'Godot/export_templates/4.7.2.stable'
+          New-Item -ItemType Directory -Force $target | Out-Null
+          Copy-Item build/toolchain/export/templates/windows_* $target
+          $godot = Join-Path $PWD 'build/toolchain/editor/Godot_v4.7.2-stable_win64_console.exe'
+          & $godot --version
+          & $godot --headless --path . --editor --import
+          if ($LASTEXITCODE -ne 0) { throw 'Godot import failed' }
+      - name: Required correctness gates and Windows export
+        shell: pwsh
+        run: |
+          ./tools/validate.ps1 -GodotPath (Join-Path $PWD 'build/toolchain/editor/Godot_v4.7.2-stable_win64_console.exe') -Build
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-build-and-validation
+          path: |
+            build/windows/
+            build/validation/
+          retention-days: 5
+  visuals:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download official Godot 4.7.2
+        run: |
+          mkdir -p build/toolchain
+          curl -fL --retry 2 https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip -o build/toolchain/godot-linux.zip
+          echo 'cadd3204e728a35d3f13adb7fd0d7902636b79f6b95c40c265eb73b6c35329e4  build/toolchain/godot-linux.zip' | sha256sum -c
+          unzip -q build/toolchain/godot-linux.zip -d build/toolchain
+          chmod +x build/toolchain/Godot_v4.7.2-stable_linux.x86_64
+          sudo apt-get update -qq
+          sudo apt-get install -y xvfb mesa-vulkan-drivers
+          build/toolchain/Godot_v4.7.2-stable_linux.x86_64 --headless --path . --editor --import
+      - name: Capture both renderers and check retained layers
+        run: |
+          set -euo pipefail
+          mkdir -p build/deep_space_review/logs
+          for backend in mobile gl_compatibility; do
+            for probe in deep_space_background_review background_batch_render_test meteor_batch_render_test effect_instances_render_test; do
+              timeout 180 xvfb-run -a build/toolchain/Godot_v4.7.2-stable_linux.x86_64 --path . --audio-driver Dummy --rendering-method "$backend" --script "res://tests/$probe.gd" 2>&1 | tee "build/deep_space_review/logs/${backend}_${probe}.log"
+              grep -q '_PASS' "build/deep_space_review/logs/${backend}_${probe}.log"
+              if grep -Eq 'SCRIPT ERROR:|ERROR:|Parse Error' "build/deep_space_review/logs/${backend}_${probe}.log"; then exit 1; fi
+            done
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: background-captures-and-godot-linux
+          path: |
+            build/deep_space_review/
+            build/toolchain/godot-linux.zip
+          retention-days: 5

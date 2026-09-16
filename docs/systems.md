@@ -217,6 +217,15 @@ Ordinary Data changes use progression's existing signal, not duplicate deep-sky 
 
 ## Round lifecycle
 
+After `galactic_reference_frame`, Starfield uses the scene-bound
+`resources/textures/deep_space.png` as a single retained textured quad. Aspect-cover
+mapping and 4% overscan handle resize, pullback and camera shake. The old terrain
+and static star drawing are skipped, and the background visibility signal hides
+TwinkleStars immediately on mode changes. The observation clock does not rebuild
+this static quad. Round-end `sunrise` remains the shared presentation clock, but
+in deep space it dims the image instead of drawing dawn. Loading an intermission
+must retain its completed presentation rather than resetting that clock.
+
 ```text
 _begin_observation_phase
   → live observation, spawning, events and accounting
