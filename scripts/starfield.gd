@@ -7,6 +7,9 @@ const CircleInstances = preload("res://scripts/circle_instances.gd")
 const SUNRISE_SECONDS := 1.1
 var star_instances: RefCounted
 
+@export var deep_space_texture: Texture2D
+@export_range(0.0, 1.0) var deep_space_brightness := 0.82
+
 # Keep an overscan reserve for camera motion and diagnostic zoom so the
 # painted background continues beyond the normal observation field.
 const BACKGROUND_COVERAGE_SPAN := 1.5 * 1.02
@@ -63,7 +66,10 @@ func set_watch_progress(value: float) -> void:
 	if is_equal_approx(next, watch_progress) and is_zero_approx(sunrise):
 		return
 	watch_progress = next
-	_set_sunrise(0.0)
+	# The expanded backdrop is static during observation. Only leaving the
+	# intermission fade needs to invalidate it; the round clock stays authoritative.
+	if not galactic_mode or not is_zero_approx(sunrise):
+		_set_sunrise(0.0)
 
 
 func finish_watch(animate: bool = true) -> float:
@@ -92,11 +98,17 @@ func _set_sunrise(value: float) -> void:
 
 
 func dawn_amount() -> float:
+	if galactic_mode:
+		return 0.0
 	# Preserve most of the night; the last quarter carries the clear time cue.
 	return 0.12 * smoothstep(0.0, 0.75, watch_progress) + 0.88 * smoothstep(0.72, 1.0, watch_progress)
 
 
 func background_star_alpha() -> float:
+	# The authored expanded sky includes its own distant stars. Hide both legacy
+	# star layers instead of doubling their density over the texture.
+	if galactic_mode:
+		return 0.0
 	return (1.0 - dawn_amount() * 0.55) * (1.0 - sunrise * 0.90)
 
 
@@ -131,6 +143,7 @@ func set_galactic_mode(enabled: bool) -> void:
 		return
 	galactic_mode = enabled
 	_rebuild_stars()
+	background_visibility_changed.emit(background_star_alpha())
 
 
 func _rebuild_stars() -> void:
@@ -162,6 +175,9 @@ func _draw() -> void:
 	# the shipped frame. It prevents later pull-back steps from exposing an
 	# unpainted border without changing today's sky.
 	draw_rect(_background_coverage_rect(), Color("04070D"), true)
+	if galactic_mode and deep_space_texture != null:
+		_draw_deep_space(sky_frame)
+		return
 	# A low-contrast blue-black gradient gives the sky optical depth while staying
 	# flat and graphic. It follows the visible world, never the fixed atmosphere.
 	var bands := 120
@@ -191,6 +207,22 @@ func _draw() -> void:
 	_draw_distant_ridges(sky_frame)
 	draw_colored_polygon(_horizon_ridge(sky_frame), Color("03070C"))
 	_draw_observatory_silhouette(sky_frame)
+
+
+func _deep_space_rect(frame: Rect2) -> Rect2:
+	var texture_size := deep_space_texture.get_size()
+	# Cover without stretching the dust band at other aspect ratios. Overscan
+	# hides the boundary during camera shake, including the final 1.5x pullback.
+	var cover_scale := maxf(frame.size.x / texture_size.x, frame.size.y / texture_size.y) * 1.04
+	var size := texture_size * cover_scale
+	return Rect2(frame.get_center() - size * 0.5, size)
+
+
+func _draw_deep_space(frame: Rect2) -> void:
+	# One retained textured quad replaces the terrestrial sky. Reuse the existing
+	# presentation-only round-end clock for a quiet dimming, with no simulated time.
+	var brightness := deep_space_brightness * lerpf(1.0, 0.60, sunrise)
+	draw_texture_rect(deep_space_texture, _deep_space_rect(frame), false, Color(brightness, brightness, brightness, 1.0))
 
 
 func _draw_stars(atmospheric: Rect2) -> void:
