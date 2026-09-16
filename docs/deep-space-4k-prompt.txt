@@ -1,0 +1,6 @@
+Use case: precise-object-edit.
+Asset type: background-only texture for a quiet astronomy observation game.
+Input image 1 is the exact edit target. Restore it at 3840 x 2160 pixels with conservatively reconstructed fine detail.
+Preserve the same framing, diagonal Milky Way band from bottom left to top right, dark dust-lane silhouette, relative star positions and sparse black negative spaces. Preserve the muted navy, charcoal and faint gray-violet colors and original luminance. Do not add bright stars or increase star density, bloom, saturation or contrast. The game separately applies 0.50 brightness, so do not bake an additional exposure reduction into the asset.
+Improve clean subtle fine dust detail and small restrained pinpoint stars. Preserve the quiet appearance; the user specifically dislikes an overly showy galaxy background.
+No planets, foreground meteors, individual galaxy icons, lens flare, UI, text, horizon, sharpening halos or new objects. Resolution restoration only, not a redesign. Output a single full-frame opaque PNG background.
