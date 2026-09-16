@@ -79,19 +79,68 @@ func _run() -> void:
 	star.tick_resolve()
 	game.effects.reset()
 	_freeze(game)
-	for stage in [0.15, 0.45, 0.85]:
+	# Frozen completion poses change child scale between captures. Disable native
+	# interpolation here so adjacent frames compare the same authored pose.
+	star.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
+	var previous_surface_scale := INF
+	for stage in [0.0, 0.12, 0.23, 0.25, 0.45, 0.85]:
 		star.linger_time = star.linger_duration * (1.0 - stage)
 		for target in game.meteor_layer.get_children():
 			if not target.alive and target != star: target.linger_time = target.linger_duration * (1.0 - stage)
 		await _capture(game, "supernova_%02d" % int(stage * 100))
-		if star.stellar_surface.visible: failures.append("photosphere remained visible after the supernova")
+		if stage < 0.24:
+			if not star.stellar_surface.visible or star.supernova_surface.visible:
+				failures.append("collapse must show the photosphere before the burst")
+			var surface_scale: float = star.stellar_surface.photosphere.scale.x
+			if surface_scale >= previous_surface_scale: failures.append("photosphere did not contract")
+			previous_surface_scale = surface_scale
+		else:
+			if star.stellar_surface.visible or not star.supernova_surface.visible:
+				failures.append("burst did not replace the collapsed photosphere")
 		if star.stellar_surface.background_copy.copy_mode != BackBufferCopy.COPY_MODE_DISABLED: failures.append("completed star still copied the screen")
+	star.completion_motion_scale = 0.0
+	star.completion_glint_enabled = false
+	star.linger_time = star.linger_duration * 0.88
+	await _capture(game, "supernova_reduced_motion")
+	if star.stellar_surface.visible or not star.supernova_surface.visible:
+		failures.append("zero motion did not skip contraction")
+	if star.supernova_surface.ejecta.material.get_shader_parameter("flashes") != 0.0:
+		failures.append("supernova ignored disabled flashes")
+	if "--collapse-animation" in OS.get_cmdline_user_args():
+		await _capture_collapse_animation(game, star)
 	var manifest := FileAccess.open(output.path_join("manifest.json"), FileAccess.WRITE)
 	manifest.store_string(JSON.stringify({"frames": records, "failures": failures, "synthetic": true}, "\t"))
 	manifest.close()
 	game.free()
 	paused = false
 	_finish("STELLAR_REVIEW", "%d frames at " % records.size() + ProjectSettings.globalize_path(output))
+
+func _capture_collapse_animation(game: Node, star: Node2D) -> void:
+	var directory := output.path_join("collapse-animation")
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(directory))
+	game.hud.hide()
+	game.observer.hide()
+	game.sky_contacts.hide()
+	game.starfield.set_galactic_mode(true)
+	game.starfield.set_watch_progress(0.0)
+	for target in game.meteor_layer.get_children():
+		if target != star: target.hide()
+	game.black_hole_lens.hide()
+	star.completion_motion_scale = 1.0
+	star.completion_glint_enabled = true
+	for frame in 60:
+		# 0.5 s hold, the actual 0.9 s completion, then the empty sky.
+		var elapsed := float(frame) / 30.0 - 0.5
+		star.alive = elapsed < 0.0
+		star.observed_successfully = elapsed >= 0.0
+		star.linger_time = star.linger_duration - maxf(0.0, elapsed)
+		star.visible = elapsed < star.linger_duration
+		_redraw_capture_items(game)
+		await process_frame
+		await RenderingServer.frame_post_draw
+		var capture := root.get_texture().get_image().get_region(Rect2i(260, 0, 580, 580))
+		if capture.save_png(directory.path_join("%03d.png" % frame)) != OK:
+			failures.append("collapse animation frame write failed")
 
 func _review_animation(game: Node, star: Node2D, centre: Vector2, unit: float) -> void:
 	game.black_hole_lens._process(0.0)

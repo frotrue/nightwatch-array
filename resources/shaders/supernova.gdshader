@@ -39,7 +39,8 @@ void fragment() {
 	float interior = exp(-r * r / max(0.001, radius * radius * 0.48)) * cloud * 0.35;
 	float fade = 1.0 - smoothstep(0.4, 1.0, t);
 	float gas = (shell * 0.58 + interior) * fade * motion;
-	float core_radius = max(0.025, initial_radius * (1.0 - smoothstep(0.0, 0.48, t)));
+	float rebound = mix(initial_radius, max(initial_radius, 0.22), smoothstep(0.0, 0.12, t) * motion);
+	float core_radius = max(0.025, rebound * (1.0 - smoothstep(0.12, 0.55, t)));
 	float core = exp(-pow(r / core_radius, 2.8)) * (1.0 - smoothstep(0.1, 0.55, t));
 	vec3 gas_color = mix(vec3(0.54, 0.24, 0.13), vec3(0.95, 0.65, 0.37), cloud);
 	vec3 core_color = mix(vec3(0.88, 0.57, 0.30), vec3(1.0, 0.88, 0.68), flashes);
