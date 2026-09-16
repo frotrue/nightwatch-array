@@ -67,7 +67,7 @@ overlapping supernova rewards. The headless cases passed on Linux with Godot
 [the validation record](history/three-celestial-slots-2026-09-15.md).
 
 `neutron_star_test.gd` checks Scutum-gated remnant formation, RNG isolation and restoration,
-0.9-second delayed birth, shared stellar capacity, pulse-dependent manual/automatic work,
+2-second delayed birth, shared stellar capacity, pulse-dependent manual/automatic work,
 progress retention, departure and cancellation on load/round end. Beam coverage includes
 both poles, rotation/range/exclusions, automatic completion, source expiry and worker parity.
 `neutron_star_review.gd` captures a 16-second, 30fps production observation sequence on

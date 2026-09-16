@@ -15,6 +15,7 @@ const SupernovaScene = preload("res://scenes/supernova.tscn")
 var supernova_surface: Node2D
 var stellar_surface: Node2D
 const SUPERNOVA_RADIUS := 180.0
+const STELLAR_COMPLETION_DURATION := 2.0
 var supernova_radius := 0.0
 var gravity_capture: RefCounted
 var optical_lens: Node2D
@@ -564,7 +565,7 @@ func _finish_observation(auto_rate: float, force_automatic: bool = false) -> voi
 	observed_successfully = true
 	linger_duration = 0.62 if type_id != "major" else 1.1
 	if type_id == "black_hole": linger_duration = 1.05
-	if type_id == "stellar": linger_duration = 0.9
+	if type_id == "stellar": linger_duration = STELLAR_COMPLETION_DURATION
 	linger_time = linger_duration
 	var was_manual := manual_touched and not force_automatic
 	var multiplier := get_predicted_multiplier()

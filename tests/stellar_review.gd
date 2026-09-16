@@ -128,8 +128,8 @@ func _capture_collapse_animation(game: Node, star: Node2D) -> void:
 	game.black_hole_lens.hide()
 	star.completion_motion_scale = 1.0
 	star.completion_glint_enabled = true
-	for frame in 60:
-		# 0.5 s hold, the actual 0.9 s completion, then the empty sky.
+	for frame in 105:
+		# 0.5 s hold, the actual 2 s completion, then the empty sky.
 		var elapsed := float(frame) / 30.0 - 0.5
 		star.alive = elapsed < 0.0
 		star.observed_successfully = elapsed >= 0.0
