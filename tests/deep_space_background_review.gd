@@ -69,7 +69,7 @@ func _run() -> void:
 	game.hud.hide()
 	game.meteor_layer.hide()
 	game.black_hole_lens.hide()
-	for size in [Vector2i(1440, 900), Vector2i(2560, 1080)]:
+	for size in [Vector2i(1440, 900), Vector2i(2560, 1080), Vector2i(3840, 2160)]:
 		root.size = size
 		game.observation_view.set_observation_span(1.5)
 		game.starfield.queue_redraw()

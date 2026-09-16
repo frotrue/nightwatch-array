@@ -8,7 +8,7 @@ const SUNRISE_SECONDS := 1.1
 var star_instances: RefCounted
 
 @export var deep_space_texture: Texture2D
-@export_range(0.0, 1.0) var deep_space_brightness := 0.82
+@export_range(0.0, 1.0) var deep_space_brightness := 0.50
 
 # Keep an overscan reserve for camera motion and diagnostic zoom so the
 # painted background continues beyond the normal observation field.
