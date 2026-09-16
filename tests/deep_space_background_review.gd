@@ -56,11 +56,16 @@ func _run() -> void:
 		for step in 20: body.simulate_tick(1.0 / 60.0)
 	_freeze(game)
 	game.hud.show()
+	var gameplay: Image
 	for locale in ["ko", "en"]:
 		_set_locale(game, locale)
 		game.hud.banner_root.hide()
 		game.hud.data_gain_label.hide()
-		await _sky_frame("06_gameplay_" + locale)
+		var localized := await _sky_frame("06_gameplay_" + locale)
+		var actors := localized.get_region(Rect2i(100, 100, 950, 450))
+		if gameplay != null and gameplay.get_data() != actors.get_data():
+			failures.append("locale change altered frozen gameplay actors")
+		gameplay = actors
 	game.hud.hide()
 	game.meteor_layer.hide()
 	game.black_hole_lens.hide()
@@ -91,8 +96,12 @@ func _sky_frame(label: String) -> Image:
 	for frame in 3:
 		await process_frame
 		await RenderingServer.frame_post_draw
+	# Match the parent preview's frozen-canvas refresh after locale/font changes.
+	_redraw_capture_items(root)
+	await process_frame
+	await RenderingServer.frame_post_draw
 	var picture := root.get_texture().get_image()
 	var path := output.path_join(label + ".png")
 	if picture.save_png(path) != OK: failures.append("capture failed: " + label)
-	records.append({"file": path, "size": str(picture.get_size())})
+	records.append({"file": path, "size": str(picture.get_size()), "window_size": str(root.size)})
 	return picture

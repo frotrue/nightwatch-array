@@ -61,7 +61,7 @@ jobs:
           mkdir -p build/deep_space_review/logs
           for backend in mobile gl_compatibility; do
             for probe in deep_space_background_review background_batch_render_test meteor_batch_render_test effect_instances_render_test; do
-              timeout 180 xvfb-run -a build/toolchain/Godot_v4.7.2-stable_linux.x86_64 --path . --rendering-method "$backend" --script "res://tests/$probe.gd" 2>&1 | tee "build/deep_space_review/logs/${backend}_${probe}.log"
+              timeout 180 xvfb-run -a build/toolchain/Godot_v4.7.2-stable_linux.x86_64 --path . --audio-driver Dummy --rendering-method "$backend" --script "res://tests/$probe.gd" 2>&1 | tee "build/deep_space_review/logs/${backend}_${probe}.log"
               grep -q '_PASS' "build/deep_space_review/logs/${backend}_${probe}.log"
               if grep -Eq 'SCRIPT ERROR:|ERROR:|Parse Error' "build/deep_space_review/logs/${backend}_${probe}.log"; then exit 1; fi
             done

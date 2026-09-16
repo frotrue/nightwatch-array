@@ -49,7 +49,8 @@ Compatibility/OpenGL로 전환한다. 특정 드라이버에서 문제가 있으
 첫 실패나 시간 초과에서 멈춘다. 로그와 `summary.json`은 `build/validation/<실행 ID>/`에 남는다.
 
 - 실행 파일: `C:\Users\user\Documents\ChatGPT\star\build\windows\NightwatchArray.exe`
-- `build/`는 Git 제외 디렉터리다. 빌드 산출물은 커밋하지 않는다.
+- `build/`의 산출물은 Git에서 제외하며 커밋하지 않는다. Godot의 산출물 임포트를 막는
+  `build/.gdignore`만 버전 관리한다.
 - Windows 배포 시 같은 폴더의 `NightwatchMetrics.exe`도 함께 포함한다.
   성능 모니터의 CPU·GPU 측정기이며, 검증 명령이 MSVC C++ Build Tools로 자동 빌드한다.
 - 개별 검사: `& $godot --headless --path . --script res://tests/smoke_test.gd`

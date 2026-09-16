@@ -31,9 +31,29 @@
 
 ## 검증 상태
 
-- 변경 파일과 원본 이미지 연결, Git 공백 검사를 확인했다.
-- `effect_feedback_test.gd`에 실제 해금·슬롯 전환·정산 복원·리셋·종횡비 검사를 추가했다.
-- `deep_space_background_review.gd`는 실제 게임 씬의 확장 전후·천체 대비·크기 변경 캡처를 만든다.
-- Godot 4.7.2 실행 검사, Vulkan/OpenGL 화면 검토와 Windows 내보내기는 아직 완료하지 않았다.
-  이 작업 환경에 Godot 실행기가 없고 공식 다운로드가 프록시 연결 시간 초과로 실패했다.
-  이 기록은 실행 통과나 Windows 배포 완료를 의미하지 않는다.
+2026-09-16 메인 Windows 데스크탑에서 PR #22의 `981c849`와 아래 검증 보완을 확인했다.
+Godot 4.7.2, NVIDIA RTX 3060을 사용했다.
+
+- `tools/validate.ps1 -Build`: 기능 검사 31개와 Windows 내보내기 통과.
+  실제 해금·슬롯 전환·정산 복원·다음 관측·리셋·종횡비 검사를 포함한다.
+  기록: `build/validation/20260916T085647834Z_517c19c7/summary.json`.
+- Vulkan/Mobile 및 OpenGL/Compatibility 각각 `deep_space_background_review`,
+  `background_batch_render_test`, `meteor_batch_render_test`, `effect_instances_render_test` 통과.
+  종료 코드 0, 각 PASS 표식과 예상 밖 엔진/스크립트 오류 없음을 확인했다.
+- 두 렌더러의 확장 전후·정산·한영 천체/UI·크기 변경 캡처를 육안 확인했다.
+  은하수 위의 실제 천체와 UI를 구분할 수 있고 배경 내부 경계나 늘어짐은 발견하지 못했다.
+  관측 중 배경 유지, 정산 어두워짐과 리셋 복원은 픽셀 비교도 통과했다.
+  캡처와 manifest는 `build/deep_space_review/<renderer>/`, 로그는 `local-logs/`에 있다.
+- 창 1440×900과 2560×1080에서는 기존 16:9 유지 설정 때문에 실제 게임 캡처가
+  각각 1440×810과 1920×1080이다. manifest에 창과 렌더 크기를 별도로 기록한다.
+  1.5배 카메라 후퇴를 확인했으며 다른 종횡비의 배경 사각형은 기능 검사에서 별도로 검증했다.
+- 영문 전환 후 정지된 천체 본체가 캡처에서 사라지는 검사 도구 문제를 수정했다.
+  기존 미리보기의 캔버스 갱신 방식을 재사용하고, 한영 캡처의 천체 영역이 같은지 검사한다.
+- 최종 Windows 실행 파일을 다시 내보내고 두 렌더러에서 각각 30프레임 실행 후 정상 종료했다.
+  임시 APPDATA를 사용해 플레이어 저장과 설정을 격리했다. 최종 실행 파일 SHA-256:
+  `40a3733bb8ec99b6ec22865aaf3f86f1707dfdc3ebfccf11d86c1c2fbc197082`.
+
+초기 원격 CI 실패는 오디오 장치 부재와 `build/native/*.obj`의 잘못된 Godot 임포트였다.
+화면 검사에 Dummy 오디오를 지정하고 `build/.gdignore`를 버전 관리에 포함했다.
+수정한 원격 CI 자체는 이번 로컬 검증에서 재실행하지 않았다.
+캡처는 합성 진행 상태이며 사람의 장시간 플레이 검증을 의미하지 않는다.
