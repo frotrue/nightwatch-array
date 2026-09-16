@@ -23,7 +23,12 @@ func _run() -> void:
 	game.starfield.set_watch_progress(0.0)
 	var early := await _sky_frame("01_before_expansion")
 	game.starfield.set_watch_progress(0.95)
-	await _sky_frame("02_before_expansion_dawn")
+	var dawn := await _sky_frame("02_before_expansion_dawn")
+	game.starfield.finish_watch(false)
+	var morning := await _sky_frame("02_before_expansion_morning")
+	if early.get_data() == dawn.get_data() or dawn.get_data() == morning.get_data():
+		failures.append("painted terrestrial sky did not progress through dawn and morning")
+	await _review_early_gameplay(game)
 	game.progression.debug_purchase_all()
 	game.galactic_pullback_seen = true
 	game.upgrade_tree.configure_galactic_state(true, true)
@@ -90,6 +95,39 @@ func _run() -> void:
 	for failure in failures: push_error(failure)
 	print("DEEP_SPACE_BACKGROUND_REVIEW_PASS" if failures.is_empty() else "DEEP_SPACE_BACKGROUND_REVIEW_FAIL")
 	quit(0 if failures.is_empty() else 1)
+
+
+func _review_early_gameplay(game: Node2D) -> void:
+	game.starfield.set_watch_progress(0.0)
+	var specs := [["common", Vector2(220, 170)], ["fast", Vector2(670, 250)],
+		["common", Vector2(390, 410)], ["fast", Vector2(890, 390)]]
+	for spec in specs:
+		var origin: Vector2 = game.observation_view.screen_to_world(spec[1])
+		var body = game.spawner.spawn_meteor(spec[0], origin, Vector2(90, 32))
+		for step in 20: body.simulate_tick(1.0 / 60.0)
+	_freeze(game)
+	game.hud.show()
+	var previous: Image
+	for locale in ["ko", "en"]:
+		_set_locale(game, locale)
+		game.hud.banner_root.hide()
+		var rendered := await _sky_frame("02_early_gameplay_" + locale)
+		var playfield := rendered.get_region(Rect2i(100, 100, 950, 450))
+		if previous != null and previous.get_data() != playfield.get_data():
+			failures.append("locale switch changed the frozen terrestrial playfield")
+		previous = playfield
+	game.hud.hide()
+	game.spawner.reset()
+	game.effects.reset()
+	await process_frame
+	for size in [Vector2i(1440, 900), Vector2i(2560, 1080), Vector2i(3840, 2160)]:
+		root.size = size
+		game.observation_view.set_observation_span(1.5)
+		game.starfield.queue_redraw()
+		await _sky_frame("02_early_resize_%dx%d" % [size.x, size.y])
+	root.size = Vector2i(1152, 648)
+	game.observation_view.set_observation_span(1.0)
+	game.starfield.queue_redraw()
 
 
 func _sky_frame(label: String) -> Image:

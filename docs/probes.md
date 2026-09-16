@@ -49,10 +49,12 @@ The existing `effect_feedback_test.gd` also checks the expanded-background unloc
 early/expanded save switching, intermission restoration, reset and aspect-cover
 geometry. Run `deep_space_background_review.gd` on both renderers for production
 scene captures before/after expansion, unchanged deep space near round end,
-intermission dimming, Korean/English gameplay, resized views and reset. Captures
+intermission dimming, Korean/English gameplay, resized views and reset. The early
+sky also has night/dawn/morning, real meteor, locale and 4K/1.5x span captures.
+Both textures suppress the procedural star layers. Captures
 go to `build/deep_space_review/<renderer>/`. These are synthetic fixtures; inspect
 the gameplay images for actual target readability. Current status is recorded in
-[the background note](deep-space-background.md).
+[the deep-space note](deep-space-background.md) and [terrestrial note](terrestrial-background.md).
 
 `black_hole_test.gd` is a headless gate for spawn/unlock, capture lifecycle and
 serial/worker parity. Run `black_hole_review.gd` with the same real-renderer flags

@@ -1,0 +1,13 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Texture2D" path="res://resources/textures/terrestrial_sky.png" id="1"]
+[ext_resource type="Shader" path="res://resources/shaders/terrestrial_sky.gdshader" id="2"]
+
+[sub_resource type="ShaderMaterial" id="SkyMaterial"]
+resource_local_to_scene = true
+shader = ExtResource("2")
+
+[node name="TerrestrialBackground" type="Sprite2D"]
+texture_filter = 4
+material = SubResource("SkyMaterial")
+texture = ExtResource("1")

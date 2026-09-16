@@ -89,6 +89,7 @@ var galactic_pullback_seen: bool = false
 func _ready() -> void:
 	print("NIGHTWATCH_ENGINE_VERSION: ", Engine.get_version_info())
 	starfield.background_visibility_changed.connect(func(alpha: float): twinkle_stars.modulate.a = alpha)
+	twinkle_stars.modulate.a = starfield.background_star_alpha()
 	sound = SoundSynth.new()
 	sound.name = "SoundSynth"
 	add_child(sound)
