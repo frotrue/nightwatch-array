@@ -121,9 +121,45 @@ func _run() -> void:
 	game.black_hole_lens._process(0.0)
 	await _capture(game, "09_trail_lens_on")
 	await _review_multiple(game)
+	await _review_light_strands(game)
 	game.free()
 	paused = false
 	_finish("BLACK_HOLE_REVIEW", "%d captures at " % records.size() + ProjectSettings.globalize_path(output))
+
+func _review_light_strands(game: Node2D) -> void:
+	_clear_sky(game)
+	await process_frame
+	game.effects.reset()
+	game.starfield.set_galactic_mode(true)
+	game.starfield.set_watch_progress(0.0)
+	var centre: Vector2 = game.observation_view.screen_to_world(Vector2(576, 300))
+	var hole = game.spawner.spawn_meteor("black_hole", centre, Vector2.RIGHT, 30.0)
+	hole.age = 5.0
+	hole.wobble_phase = 0.6
+	_freeze(game)
+	game.black_hole_lens.motion_scale = 1.0
+	game.black_hole_lens._process(0.0)
+	await _capture(game, "14_light_strands_deep_space")
+	var region := Rect2i(530, 254, 92, 92)
+	var moving := root.get_texture().get_image().get_region(region)
+	hole.age = 9.0
+	await _capture(game, "15_light_strands_flow")
+	if moving.get_data() == root.get_texture().get_image().get_region(region).get_data():
+		failures.append("light strands did not flow with simulation age")
+	hole.completion_motion_scale = 0.0
+	await _capture(game, "16_light_strands_motion_zero")
+	var still := root.get_texture().get_image().get_region(region)
+	hole.age = 13.0
+	await _capture(game, "17_light_strands_motion_zero_later")
+	if still.get_data() != root.get_texture().get_image().get_region(region).get_data():
+		failures.append("light strands moved at zero motion strength")
+	if still.get_pixel(46, 46).get_luminance() > 0.03:
+		failures.append("black hole centre lost its dark silhouette")
+	# Enlarged production geometry for inspecting strand falloff, not game scale.
+	hole.body_radius *= 3.0
+	hole.completion_motion_scale = 1.0
+	game.black_hole_lens._process(0.0)
+	await _capture(game, "18_light_strands_detail_3x")
 
 func _green_centroid(frame: Image, region := Rect2i(580, 270, 106, 61)) -> Vector2:
 	var total := 0.0
