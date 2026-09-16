@@ -127,7 +127,7 @@ func _test_round_dawn() -> void:
 	game.starfield.set_watch_progress(game.starfield.watch_progress)
 	_check(not same_clock_tween.is_valid(), "restoring an identical clock cancels a not-yet-started sunrise")
 	game._begin_observation_phase(true)
-	_check(is_zero_approx(game.starfield.sunrise) and is_zero_approx(game.starfield.watch_progress) and is_equal_approx(game.twinkle_stars.modulate.a, 1.0), "next round restores both night star layers")
+	_check(is_zero_approx(game.starfield.sunrise) and is_zero_approx(game.starfield.watch_progress) and is_zero_approx(game.twinkle_stars.modulate.a), "next round restores the painted night without duplicate stars")
 	game._end_observation_phase()
 	var interrupted: Tween = game.starfield.sunrise_tween
 	game._apply_save_data(saved)
@@ -151,6 +151,7 @@ func _test_expanded_sky() -> void:
 	var early: Dictionary = game._build_save_data()
 	_check(not game.starfield.galactic_mode, "a new save starts in the terrestrial sky")
 	_check(game.starfield.deep_space_texture != null, "the main scene owns the expanded background texture")
+	_check(game.starfield.terrestrial_background.texture != null and is_zero_approx(game.twinkle_stars.modulate.a), "the terrestrial scene owns its painted sky without duplicate stars")
 	game.progression.debug_purchase_all()
 	game._close_upgrade_tree_without_transition()
 	paused = false
@@ -165,9 +166,13 @@ func _test_expanded_sky() -> void:
 			_check(painted.encloses(frame.grow(8.0 * span)), "deep space covers resize and pullback with camera-shake margin")
 			var texture_size: Vector2 = game.starfield.deep_space_texture.get_size()
 			_check(is_equal_approx(painted.size.x / painted.size.y, texture_size.x / texture_size.y), "deep space preserves the texture aspect ratio")
+			var early_texture: Texture2D = game.starfield.terrestrial_background.texture
+			var early_rect: Rect2 = game.starfield._texture_cover_rect(frame, early_texture)
+			_check(early_rect.encloses(frame.grow(8.0 * span)), "terrestrial sky covers resize and pullback with camera-shake margin")
+			_check(is_equal_approx(early_rect.size.x / early_rect.size.y, early_texture.get_size().x / early_texture.get_size().y), "terrestrial sky preserves aspect ratio")
 	var expanded: Dictionary = game._build_save_data()
 	game._apply_save_data(early)
-	_check(not game.starfield.galactic_mode and game.twinkle_stars.modulate.a > 0.9, "loading an early slot restores the terrestrial sky and stars")
+	_check(not game.starfield.galactic_mode and game.starfield.terrestrial_background.visible and is_zero_approx(game.twinkle_stars.modulate.a), "loading an early slot restores the painted terrestrial sky")
 	game._apply_save_data(expanded)
 	_check(game.starfield.galactic_mode and is_zero_approx(game.starfield.sunrise), "loading an active expanded slot restores its undimmed sky")
 	var elapsed: float = game.elapsed_time
@@ -184,7 +189,7 @@ func _test_expanded_sky() -> void:
 	game._begin_observation_phase(true)
 	_check(is_zero_approx(game.starfield.sunrise) and game.starfield.galactic_mode, "the next expanded round clears only the dimming")
 	game.reset_run()
-	_check(not game.starfield.galactic_mode and game.twinkle_stars.modulate.a > 0.9, "a run reset restores the opening sky")
+	_check(not game.starfield.galactic_mode and game.starfield.terrestrial_background.visible and is_zero_approx(game.twinkle_stars.modulate.a), "a run reset restores the painted opening sky")
 	paused = false
 	game.free()
 

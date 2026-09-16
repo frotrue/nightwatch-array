@@ -9,6 +9,7 @@ var star_instances: RefCounted
 
 @export var deep_space_texture: Texture2D
 @export_range(0.0, 1.0) var deep_space_brightness := 0.50
+@onready var terrestrial_background: Sprite2D = get_node_or_null("TerrestrialBackground")
 
 # Keep an overscan reserve for camera motion and diagnostic zoom so the
 # painted background continues beyond the normal observation field.
@@ -105,9 +106,9 @@ func dawn_amount() -> float:
 
 
 func background_star_alpha() -> float:
-	# The authored expanded sky includes its own distant stars. Hide both legacy
-	# star layers instead of doubling their density over the texture.
-	if galactic_mode:
+	# Both painted backgrounds include their stars. The standalone procedural
+	# sky remains available to the native/batched renderer comparison fixture.
+	if galactic_mode or has_node("TerrestrialBackground"):
 		return 0.0
 	return (1.0 - dawn_amount() * 0.55) * (1.0 - sunrise * 0.90)
 
@@ -142,6 +143,8 @@ func set_galactic_mode(enabled: bool) -> void:
 	if galactic_mode == enabled:
 		return
 	galactic_mode = enabled
+	if terrestrial_background != null:
+		terrestrial_background.visible = not enabled
 	_rebuild_stars()
 	background_visibility_changed.emit(background_star_alpha())
 
@@ -175,6 +178,11 @@ func _draw() -> void:
 	# the shipped frame. It prevents later pull-back steps from exposing an
 	# unpainted border without changing today's sky.
 	draw_rect(_background_coverage_rect(), Color("04070D"), true)
+	if terrestrial_background != null:
+		terrestrial_background.visible = not galactic_mode
+		if not galactic_mode:
+			_draw_terrestrial(sky_frame)
+			return
 	if galactic_mode and deep_space_texture != null:
 		_draw_deep_space(sky_frame)
 		return
@@ -210,12 +218,24 @@ func _draw() -> void:
 
 
 func _deep_space_rect(frame: Rect2) -> Rect2:
-	var texture_size := deep_space_texture.get_size()
+	return _texture_cover_rect(frame, deep_space_texture)
+
+
+func _texture_cover_rect(frame: Rect2, texture: Texture2D) -> Rect2:
+	var texture_size := texture.get_size()
 	# Cover without stretching the dust band at other aspect ratios. Overscan
 	# hides the boundary during camera shake, including the final 1.5x pullback.
 	var cover_scale := maxf(frame.size.x / texture_size.x, frame.size.y / texture_size.y) * 1.04
 	var size := texture_size * cover_scale
 	return Rect2(frame.get_center() - size * 0.5, size)
+
+
+func _draw_terrestrial(frame: Rect2) -> void:
+	var painted := _texture_cover_rect(frame, terrestrial_background.texture)
+	terrestrial_background.position = painted.get_center()
+	terrestrial_background.scale = painted.size / terrestrial_background.texture.get_size()
+	terrestrial_background.material.set_shader_parameter("dawn", dawn_amount())
+	terrestrial_background.material.set_shader_parameter("sunrise", sunrise)
 
 
 func _draw_deep_space(frame: Rect2) -> void:
