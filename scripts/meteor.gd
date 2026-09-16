@@ -1370,10 +1370,10 @@ func _draw_black_hole_head(radius: float, visibility: float) -> void:
 	# Real background lensing remains separate from this restrained reflection.
 	var completion := observed_successfully and not alive
 	var pulse := sin((1.0 - visibility) * PI) if completion and completion_glint_enabled else 0.0
-	var ink := Color("b2bac4").lerp(Color("e7e6f4"), pulse * 0.45)
+	var ink := Color("d0d5dc").lerp(Color("e7e6f4"), pulse * 0.45)
 	# Layered narrow arcs soften the limb without a large emissive halo.
 	for layer in range(4, 0, -1):
-		draw_arc(Vector2.ZERO, radius * (1.0 + float(layer) * 0.018), 0.0, TAU, 64, Color(ink, visibility * (0.018 + pulse * 0.012)), radius * 0.075, true)
+		draw_arc(Vector2.ZERO, radius * (1.0 + float(layer) * 0.018), 0.0, TAU, 64, Color(ink, visibility * (0.045 + pulse * 0.012)), radius * 0.075, true)
 	draw_circle(Vector2.ZERO, radius, Color("010103", visibility), true, -1.0, true)
 	var flow := age * 0.16 * clampf(completion_motion_scale, 0.0, 1.0)
 	for strand in 7:
@@ -1391,10 +1391,10 @@ func _draw_black_hole_head(radius: float, visibility: float) -> void:
 			var left := pow(maxf(0.0, cos(angle - PI * 0.94)), 6.0)
 			var right := pow(maxf(0.0, cos(angle + 0.12)), 10.0)
 			var thread := pow(0.5 + 0.5 * sin(drift * 3.0 + phase), 2.0)
-			var feather := 1.0 - sequence / 8.0
-			var alpha := (0.055 + left * 0.30 + right * 0.12) * (0.28 + thread * 0.72) * feather
+			var feather := 1.0 - sequence / 10.0
+			var alpha := (0.16 + left * 0.52 + right * 0.28) * (0.48 + thread * 0.52) * feather
 			colors.append(Color(ink, alpha * visibility * (1.0 + pulse * 0.5)))
-		draw_polyline_colors(points, colors, maxf(0.48, radius * 0.016), true)
+		draw_polyline_colors(points, colors, maxf(0.85, radius * 0.026), true)
 	if completion and completion_motion_scale > 0.0:
 		var ripple := radius * lerpf(1.75, 1.0, 1.0 - visibility)
 		draw_arc(Vector2.ZERO, ripple, 0.0, TAU, 48, Color(ink, sin(visibility * PI) * 0.12), 0.8, true)
