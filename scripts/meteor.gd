@@ -1366,21 +1366,35 @@ func _clip_asteroid_cell(polygon: PackedVector2Array, normal: Vector2, cut: floa
 
 
 func _draw_black_hole_head(radius: float, visibility: float) -> void:
-	# Reference direction: a dark spherical silhouette with a faint cool rim.
-	# The background supplies the lensed light; there is no equatorial disc.
+	# Procedural sky art: narrow, uneven strands follow the spherical limb.
+	# Real background lensing remains separate from this restrained reflection.
 	var completion := observed_successfully and not alive
 	var pulse := sin((1.0 - visibility) * PI) if completion and completion_glint_enabled else 0.0
-	var ink := Color("a9a9c6").lerp(Color("e7e6f4"), pulse * 0.45)
+	var ink := Color("d0d5dc").lerp(Color("e7e6f4"), pulse * 0.45)
 	# Layered narrow arcs soften the limb without a large emissive halo.
 	for layer in range(4, 0, -1):
-		draw_arc(Vector2.ZERO, radius * (1.0 + float(layer) * 0.018), 0.0, TAU, 64, Color(ink, visibility * (0.018 + pulse * 0.012)), radius * 0.075, true)
-	draw_circle(Vector2.ZERO, radius, Color("030309", visibility), true, -1.0, true)
-	# A barely visible violet reflection keeps the interior dark at game scale.
-	for layer in 5:
-		var fraction := float(layer) / 5.0
-		draw_circle(Vector2(-0.12, 0.12) * radius, radius * (0.84 - fraction * 0.10), Color("393047", visibility * 0.022), true, -1.0, true)
-	draw_arc(Vector2.ZERO, radius * 1.014, 0.0, TAU, 64, Color(ink, visibility * (0.23 + pulse * 0.23)), maxf(0.65, radius * 0.022), true)
-	draw_arc(Vector2.ZERO, radius * 1.026, PI * 0.92, PI * 1.72, 36, Color(ink, visibility * (0.22 + pulse * 0.10)), maxf(0.65, radius * 0.026), true)
+		draw_arc(Vector2.ZERO, radius * (1.0 + float(layer) * 0.018), 0.0, TAU, 64, Color(ink, visibility * (0.045 + pulse * 0.012)), radius * 0.075, true)
+	draw_circle(Vector2.ZERO, radius, Color("010103", visibility), true, -1.0, true)
+	var flow := age * 0.16 * clampf(completion_motion_scale, 0.0, 1.0)
+	for strand in 7:
+		var sequence := float(strand)
+		var phase := wobble_phase + sequence * 2.399
+		var points := PackedVector2Array()
+		var colors := PackedColorArray()
+		for step in 97:
+			var angle := TAU * float(step) / 96.0
+			var drift := angle - flow
+			var ripple := sin(drift * 3.0 + phase) * 0.009 + sin(drift * 7.0 - phase) * 0.004
+			var distance := radius * (1.016 + sequence * 0.025 + ripple)
+			points.append(Vector2.from_angle(angle) * distance)
+			# A fixed broad left glint anchors the shape while fine light drifts.
+			var left := pow(maxf(0.0, cos(angle - PI * 0.94)), 6.0)
+			var right := pow(maxf(0.0, cos(angle + 0.12)), 10.0)
+			var thread := pow(0.5 + 0.5 * sin(drift * 3.0 + phase), 2.0)
+			var feather := 1.0 - sequence / 10.0
+			var alpha := (0.16 + left * 0.52 + right * 0.28) * (0.48 + thread * 0.52) * feather
+			colors.append(Color(ink, alpha * visibility * (1.0 + pulse * 0.5)))
+		draw_polyline_colors(points, colors, maxf(0.85, radius * 0.026), true)
 	if completion and completion_motion_scale > 0.0:
 		var ripple := radius * lerpf(1.75, 1.0, 1.0 - visibility)
 		draw_arc(Vector2.ZERO, ripple, 0.0, TAU, 48, Color(ink, sin(visibility * PI) * 0.12), 0.8, true)
