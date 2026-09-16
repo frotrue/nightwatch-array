@@ -258,7 +258,7 @@ func spawn_meteor(type_id: String = "common", custom_start := Vector2.INF, custo
 
 func prepare_stellar_remnant(source) -> void:
 	if not progression.has_extension_research("ext_sct_supernova"): return
-	if phase_time_remaining < 0.9 + _minimum_payable_time("neutron_star"): return
+	if phase_time_remaining < MeteorScript.STELLAR_COMPLETION_DURATION + _minimum_payable_time("neutron_star"): return
 	# A local draw keyed by saved stellar RNG state and the source's birth seed preserves every
 	# natural/proc RNG stream; the transient sky itself is intentionally unsaved.
 	var remnant_rng := RandomNumberGenerator.new()

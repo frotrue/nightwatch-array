@@ -8,6 +8,7 @@ uniform float phase = 0.0;
 uniform float charge = 0.0;
 uniform float motion = 1.0;
 uniform float pulses = 1.0;
+uniform float collapse = 0.0;
 
 float hash3(vec3 p) {
 	p = fract(p * 0.1031);
@@ -97,5 +98,7 @@ void fragment() {
 		light = (light * opacity + outer_light * outer_alpha) / max(total, 0.0001);
 		opacity = total;
 	}
+	// Compression heats the small core without a full-screen flash.
+	light = mix(light, vec3(1.0, 0.83, 0.52), collapse * 0.72 * pulses);
 	COLOR = vec4(light * tint.rgb, opacity * tint.a);
 }

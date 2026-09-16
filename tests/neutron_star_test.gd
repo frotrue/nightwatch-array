@@ -42,6 +42,12 @@ func _test_remnant() -> void:
 	source.remnant_pending = false
 	game.spawner.prepare_stellar_remnant(source)
 	check(not source.remnant_pending, "late completion leaves no unobservable remnant")
+	game.spawner.phase_time_remaining = game.spawner._minimum_payable_time("neutron_star") + 1.9
+	game.spawner.prepare_stellar_remnant(source)
+	check(not source.remnant_pending, "reservation includes the longer collapse and blast")
+	game.spawner.phase_time_remaining += 0.2
+	game.spawner.prepare_stellar_remnant(source)
+	check(source.remnant_pending, "reservation resumes with time for the full explosion and tracking")
 	game.spawner.phase_time_remaining = 50.0
 	game.spawner.spawn_meteor("stellar", Vector2(800, 200), Vector2.RIGHT)
 	game.spawner.spawn_meteor("stellar", Vector2(800, 400), Vector2.RIGHT)
@@ -49,10 +55,10 @@ func _test_remnant() -> void:
 	source.observation_progress = 1.0
 	source.tick_resolve()
 	check(source.remnant_pending, "real observed callback schedules the selected remnant")
-	for tick in 54:
+	for tick in 120:
 		source.tick_motion(1.0 / 60.0, tick)
 		source.tick_resolve()
-		if tick < 53: check(game.meteor_layer.get_children().all(func(body): return body.type_id != "neutron_star"), "remnant waits for the explosion to finish")
+		if tick < 119: check(game.meteor_layer.get_children().all(func(body): return body.type_id != "neutron_star"), "remnant waits for the explosion to finish")
 	var child = game.meteor_layer.get_children().filter(func(body): return body.type_id == "neutron_star")[0]
 	check(child.global_position == source.global_position and child.initial_velocity.normalized().is_equal_approx(source.initial_velocity.normalized()), "remnant inherits completion position and direction")
 	check(child.get_progress() == 0.0 and child.can_be_tracked(), "remnant is a new unobserved target")

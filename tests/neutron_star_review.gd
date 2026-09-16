@@ -86,7 +86,7 @@ func _run() -> void:
 			if is_instance_valid(remnant) and stats.completed_tick >= 0 and tick - stats.completed_tick in [132, 174]:
 				var centre: Vector2i = Vector2i(game.observation_view.world_to_screen(remnant.global_position))
 				departure_luma.append(frame.get_pixelv(centre).get_luminance())
-	if stats.birth_tick - stats.supernova_tick != 54: failures.append("remnant did not follow the complete 0.9-second explosion")
+	if stats.birth_tick - stats.supernova_tick != 120: failures.append("remnant did not follow the complete 2-second explosion")
 	if stats.completed_tick <= stats.birth_tick + 60: failures.append("remnant did not accumulate multiple signal windows")
 	if is_instance_valid(remnant): failures.append("completed remnant did not depart")
 	if stats.beam_completions < 2: failures.append("release beams did not complete nearby targets")
