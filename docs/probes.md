@@ -64,6 +64,10 @@ reduced motion/flashes, Korean/English records and return to the chart. Add
 `--write-movie build/ending_review/last-observation.avi --fixed-fps 30` before
 `--script`, and `-- --record` after the script for a full-speed deterministic film.
 The fixture supplies held observation input; it never loads player saves/settings.
+The same test also checks fixed targeting during observation, continuous camera
+approach, horizon coverage, zero-motion projection and preservation of the gameplay
+camera. Use `--output=res://build/ending_camera_review` after `--` to keep the
+new captures separate; the review samples approach at 12, 19, 24 and 27.5 seconds.
 
 `black_hole_test.gd` is a headless gate for spawn/unlock, capture lifecycle and
 serial/worker parity. Run `black_hole_review.gd` with the same real-renderer flags

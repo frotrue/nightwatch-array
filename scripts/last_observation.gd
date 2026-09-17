@@ -186,7 +186,20 @@ func visual_state() -> Dictionary:
 	elif phase > Phase.COLLAPSE: fall = 1.0
 	if phase == Phase.BLACKOUT: dark = smoothstep(0.0, 0.72, part)
 	elif phase == Phase.RECORD: dark = 1.0
-	return {"presence": presence, "charge": charge, "collapse": fall, "blackout": dark}
+	# Dolly toward the horizon only after direct observation has finished. This
+	# presentation transform never touches the gameplay camera or targeting space.
+	var approach := 0.0
+	if phase == Phase.LIMIT: approach = smoothstep(0.0, 1.0, part) * 0.04
+	elif phase == Phase.COLLAPSE: approach = 0.04 + 0.96 * pow(part, 2.2)
+	elif phase > Phase.COLLAPSE: approach = 1.0
+	var dive := approach * motion_scale
+	return {
+		"presence": presence, "charge": charge, "collapse": fall, "blackout": dark,
+		"horizon_radius": lerpf(0.005, 0.168 + charge * 0.035, presence) * (1.0 + fall * 0.65),
+		"camera_dive": dive, "camera_zoom": 1.0 / (1.0 - 0.82 * dive),
+		"camera_roll": pow(dive, 1.25) * 0.14,
+		"camera_offset": Vector2(sin(dive * PI) * 0.035, -sin(dive * PI * 0.5) * 0.025),
+	}
 
 func _present() -> void:
 	if not active: return

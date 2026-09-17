@@ -38,6 +38,7 @@ func _run() -> void:
 	game.active_save_slot = 1
 	var before: Dictionary = game._build_save_data()
 	var positions: Dictionary = game.upgrade_tree.expanded_star_positions.duplicate()
+	var gameplay_camera: Transform2D = game.observation_view.transform
 	check(game.ending.start(), "complete run can start final observation")
 	check(not game.ending.start(), "duplicate starts are rejected")
 	check(not game.hud.visible and game.ending.film.mouse_filter == Control.MOUSE_FILTER_STOP, "film prevents pointer and focus access to the underlying HUD")
@@ -58,6 +59,7 @@ func _run() -> void:
 	while ending.phase < ending.Phase.OBSERVE: ending.advance(0.1, false, Vector2.ZERO)
 	for i in 1500: ending.advance(0.1, false, Vector2.ZERO)
 	check(ending.phase == ending.Phase.OBSERVE and is_equal_approx(ending.observation_progress, 0.85), "equipment cannot finish without the player's last observation")
+	check_camera(ending)
 	var progress: float = ending.observation_progress
 	ending.advance(1.0, true, Vector2.ZERO)
 	check(ending.observation_progress == progress, "holding away from the horizon does not finish the target")
@@ -85,6 +87,7 @@ func _run() -> void:
 	check(game.save_games.writes == 1, "holding on the record cannot repeat the completion transaction")
 	check(game.progression.get_save_data() == before.progression, "ending grants no currency or research and destroys no progress")
 	check(positions == game.upgrade_tree.expanded_star_positions, "cinematic leaves catalogue coordinates unchanged")
+	check(game.observation_view.transform == gameplay_camera, "cinematic camera leaves the saved gameplay view unchanged")
 	check(ending.lines.chart_points.size() == positions.size(), "cinematic uses the existing chart's stars")
 	ending.return_to_chart()
 	check(not ending.active and game.upgrade_tree.is_open(), "record returns to the chart")
@@ -129,3 +132,33 @@ func press_action(action: StringName) -> void:
 	event.pressed = false
 	root.push_input(event)
 	await process_frame
+
+func check_camera(ending: Node) -> void:
+	var original_phase: int = ending.phase
+	var original_time: float = ending.phase_elapsed
+	var original_motion: float = ending.motion_scale
+	ending.motion_scale = 1.0
+	var observing: Dictionary = ending.visual_state()
+	check(observing.camera_zoom == 1.0 and observing.camera_offset == Vector2.ZERO and observing.camera_roll == 0.0, "direct observation keeps the reticle and horizon aligned")
+	ending.phase = ending.Phase.LIMIT
+	ending.phase_elapsed = ending.DURATIONS[ending.Phase.LIMIT]
+	var limit: Dictionary = ending.visual_state()
+	ending.phase = ending.Phase.COLLAPSE
+	ending.phase_elapsed = 0.0
+	var start: Dictionary = ending.visual_state()
+	check(is_equal_approx(limit.camera_zoom, start.camera_zoom) and limit.camera_offset == start.camera_offset, "camera approach is continuous across the observation limit")
+	var previous: float = start.camera_zoom
+	for second in range(1, 29):
+		ending.phase_elapsed = float(second)
+		var frame: Dictionary = ending.visual_state()
+		check(is_finite(frame.camera_zoom) and frame.camera_zoom >= previous and frame.camera_offset.is_finite(), "camera advances monotonically with finite projection")
+		previous = frame.camera_zoom
+	var arrival: Dictionary = ending.visual_state()
+	var corner := Vector2(ending.film.size.x / ending.film.size.y * 0.5, 0.535)
+	check(arrival.horizon_radius * arrival.camera_zoom > corner.length() + arrival.camera_offset.length() * arrival.camera_zoom, "the final horizon overtakes the whole viewport")
+	ending.motion_scale = 0.0
+	var reduced: Dictionary = ending.visual_state()
+	check(reduced.camera_zoom == 1.0 and reduced.camera_roll == 0.0 and reduced.camera_offset == Vector2.ZERO, "zero motion removes camera travel and roll")
+	ending.phase = original_phase
+	ending.phase_elapsed = original_time
+	ending.motion_scale = original_motion

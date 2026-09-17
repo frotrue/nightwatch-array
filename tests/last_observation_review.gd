@@ -15,7 +15,10 @@ func _run() -> void:
 	recording = "--record" in OS.get_cmdline_user_args()
 	root.size = Vector2i(1152, 648)
 	root.gui_disable_input = true
-	output = "res://build/ending_review/" + RenderingServer.get_current_rendering_method()
+	var output_root := "res://build/ending_review"
+	for argument in OS.get_cmdline_user_args():
+		if argument.begins_with("--output="): output_root = argument.trim_prefix("--output=").trim_suffix("/")
+	output = output_root + "/" + RenderingServer.get_current_rendering_method()
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(output))
 	game = load("res://scenes/main.tscn").instantiate()
 	Fixtures.configure_before_ready(game)
@@ -51,14 +54,16 @@ func _run() -> void:
 			game.hud.close_settings()
 			game.hud.layer = 80
 		if stage == 4:
-			for i in 140: _step(0.1)
-			await _capture("04_collapse_peak")
-			game.settings.set_motion_intensity(0.0)
-			game.settings.set_screen_flashes_enabled(false)
-			game.ending.advance(0.0, false, Vector2.ZERO)
-			await _capture("04_reduced_motion_no_flash")
-			game.settings.set_motion_intensity(1.0)
-			game.settings.set_screen_flashes_enabled(true)
+			for moment in [12.0, 19.0, 24.0, 27.5]:
+				while game.ending.phase_elapsed < moment: _step(0.1)
+				await _capture("04_approach_%04.1f" % moment)
+				if moment == 19.0:
+					game.settings.set_motion_intensity(0.0)
+					game.settings.set_screen_flashes_enabled(false)
+					game.ending.advance(0.0, false, Vector2.ZERO)
+					await _capture("04_reduced_motion_no_flash")
+					game.settings.set_motion_intensity(1.0)
+					game.settings.set_screen_flashes_enabled(true)
 	for i in 80: _step(0.1)
 	await _capture("07_final_record_ko")
 	game.settings.set_language("en")
@@ -93,4 +98,5 @@ func _capture(label: String) -> void:
 	var picture := root.get_texture().get_image()
 	var path := output + "/" + label + ".png"
 	if picture.save_png(path) != OK: failures.append(path); push_error("Capture failed: " + path)
-	manifest.append({"name": label, "phase": game.ending.phase, "time": game.ending.elapsed, "dimensions": [picture.get_width(), picture.get_height()]})
+	var view: Dictionary = game.ending.visual_state()
+	manifest.append({"name": label, "phase": game.ending.phase, "time": game.ending.elapsed, "camera_zoom": view.camera_zoom, "camera_dive": view.camera_dive, "dimensions": [picture.get_width(), picture.get_height()]})

@@ -10,6 +10,11 @@ uniform float collapse = 0.0;
 uniform float blackout = 0.0;
 uniform float motion = 1.0;
 uniform float flare = 1.0;
+uniform float horizon_radius = 0.005;
+uniform float camera_dive = 0.0;
+uniform float camera_zoom = 1.0;
+uniform float camera_roll = 0.0;
+uniform vec2 camera_offset = vec2(0.0);
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float noise(vec2 p) {
@@ -30,12 +35,15 @@ vec2 sky_uv(vec2 p) {
 }
 
 void fragment() {
-	vec2 p = (UV - vec2(0.5, 0.465)) * vec2(aspect, 1.0);
+	vec2 screen_p = (UV - vec2(0.5, 0.465)) * vec2(aspect, 1.0);
+	vec2 p = rotate(screen_p, -camera_roll) / camera_zoom + camera_offset;
 	float r = length(p), angle = atan(p.y, p.x);
-	float radius = mix(0.005, 0.168 + charge * 0.035, presence) * (1.0 + collapse * 0.65);
+	float radius = horizon_radius;
 	float gravity = presence * (0.013 + charge * 0.012 + collapse * 0.10) * motion;
 	float pull = gravity / max(r, 0.055) * (1.0 - smoothstep(0.15, 1.25, r));
-	vec2 warped = rotate(p * (1.0 - pull), collapse * 1.7 * motion / (1.0 + r * 4.0));
+	// The distant sky moves more slowly than the horizon and nearby light flecks.
+	vec2 far_p = rotate(screen_p, -camera_roll * 0.72) / mix(1.0, camera_zoom, 0.14) + camera_offset * 0.4;
+	vec2 warped = rotate(far_p * (1.0 - pull), collapse * 1.7 * motion / (1.0 + r * 4.0));
 	vec2 uv = warped / vec2(aspect, 1.0) + vec2(0.5, 0.465);
 	vec3 color = texture(sky, sky_uv(clamp(uv, vec2(0.001), vec2(0.999)))).rgb * 0.5;
 	// Refracted background light travels around the horizon; the core stays opaque.
@@ -71,9 +79,12 @@ void fragment() {
 	color += vec3(0.50, 0.68, 0.97) * jet * jet_growth * 0.75;
 	float eruption = smoothstep(0.36, 0.78, collapse);
 	float glow = exp(-r * mix(4.0, 0.38, eruption));
-	float engulf_core = 1.0 - shadow * (1.0 - smoothstep(0.70, 0.96, collapse));
+	float core_opacity = max(1.0 - smoothstep(0.70, 0.96, collapse), smoothstep(0.12, 0.48, camera_dive));
+	float engulf_core = 1.0 - shadow * core_opacity;
 	color += vec3(0.64, 0.73, 0.89) * eruption * glow * mix(0.10, 1.05, flare) * engulf_core;
-	color *= 1.0 - smoothstep(0.65, 1.0, r) * 0.5;
+	color *= 1.0 - smoothstep(0.65, 1.0, length(screen_p)) * 0.5;
+	// Passing the horizon lets the remaining foreground disc fall out of view.
+	color *= 1.0 - smoothstep(0.82, 1.0, camera_dive);
 	color *= 1.0 - blackout;
 	COLOR = vec4(color, 1.0);
 }
