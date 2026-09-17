@@ -10,7 +10,7 @@ no GUT/gdUnit installation is needed.
 .\tools\validate.ps1 -GodotPath $godot -Build
 ```
 
-This runs the 31 fast gates below, then exports Windows. Add `-FullEconomy` for
+This runs the 32 fast gates below, then exports Windows. Add `-FullEconomy` for
 changes to progression, rewards, spawning or target logic. Omit `-Build` to test only.
 The economy run inherits its seed/strategy environment; it does not force three strategies.
 
@@ -55,6 +55,15 @@ Both textures suppress the procedural star layers. Captures
 go to `build/deep_space_review/<renderer>/`. These are synthetic fixtures; inspect
 the gameplay images for actual target readability. Current status is recorded in
 [the deep-space note](deep-space-background.md) and [terrestrial note](terrestrial-background.md).
+
+`last_observation_test.gd` covers the opt-in ending's full-research unlock,
+manual observation, frozen ordinary clock, Settings pause, non-destructive return,
+completion flag, replay, legacy slots and debug-preview isolation. It is a fast gate.
+Run `last_observation_review.gd` on both real renderers for stage captures, Settings,
+reduced motion/flashes, Korean/English records and return to the chart. Add
+`--write-movie build/ending_review/last-observation.avi --fixed-fps 30` before
+`--script`, and `-- --record` after the script for a full-speed deterministic film.
+The fixture supplies held observation input; it never loads player saves/settings.
 
 `black_hole_test.gd` is a headless gate for spawn/unlock, capture lifecycle and
 serial/worker parity. Run `black_hole_review.gd` with the same real-renderer flags

@@ -46,6 +46,7 @@ const SHAKE_TRAUMA_CEILING := 0.88
 @onready var tutorial: CanvasLayer = $Tutorial
 @onready var module_tutorial: CanvasLayer = $ModuleTutorial
 @onready var observation_view: Camera2D = $ObservationView
+@onready var ending: CanvasLayer = $LastObservation
 
 var sound: Node
 var input_router: Node
@@ -84,6 +85,7 @@ var best_round_rate: float = 0.0
 var suppress_phase_transition: bool = false
 var hitstop_active: bool = false
 var galactic_pullback_seen: bool = false
+var horizon_ending_seen := false
 
 
 func _ready() -> void:
@@ -154,6 +156,8 @@ func _ready() -> void:
 	module_tutorial.setup(self)
 	upgrade_tree.bind_extension(deep_sky)
 	upgrade_tree.observatory_requested.connect(_return_to_observatory)
+	ending.setup(self)
+	ending.record_reached.connect(_on_last_record_reached)
 
 	spawner.meteor_spawned.connect(_on_meteor_spawned)
 	spawner.rare_spawned.connect(_on_rare_spawned)
@@ -204,6 +208,8 @@ func _preferred_startup_slot() -> int:
 
 
 func start_run() -> void:
+	ending.cancel()
+	horizon_ending_seen = false
 	debug_celestials.reset()
 	module_tutorial.cancel()
 	module_popup.close()
@@ -227,6 +233,7 @@ func start_run() -> void:
 
 
 func reset_run() -> void:
+	ending.cancel()
 	module_tutorial.cancel()
 	module_popup.close()
 	completed = false
@@ -529,7 +536,7 @@ func _on_upgrade_tree_closed() -> void:
 func _resume_observation_if_unblocked() -> void:
 	# Loading a live round can remove a summary that originally owned the pause.
 	# Reconcile against visible owners instead of retaining that obsolete pause.
-	if not observation_phase_active or completed or upgrade_tree.is_open() or module_popup.is_open():
+	if not observation_phase_active or completed or ending.active or upgrade_tree.is_open() or module_popup.is_open():
 		return
 	if hud.is_settings_open() or hud.is_controls_open() or hud.is_startup_slots_open() or hud.is_phase_summary_open() or tutorial.is_modal_step():
 		return
@@ -565,6 +572,8 @@ func handle_debug_key_input(event: InputEvent) -> void:
 	if not (event.ctrl_pressed and event.shift_pressed):
 		return
 	match event.keycode:
+		KEY_K:
+			ending.start(true)
 		KEY_T:
 			module_tutorial.start_debug_preview()
 		KEY_D:
@@ -847,6 +856,12 @@ func _on_galactic_pullback_finished() -> void:
 	_autosave_active_slot()
 
 
+func _on_last_record_reached() -> void:
+	if horizon_ending_seen: return
+	horizon_ending_seen = true
+	_autosave_active_slot()
+
+
 func _on_rare_spawned(type_id: String) -> void:
 	if type_id == "major":
 		return
@@ -1032,7 +1047,7 @@ func _autosave_active_slot() -> bool:
 
 
 func _on_tutorial_replay_requested() -> void:
-	if module_popup.is_open() or module_tutorial.active:
+	if ending.active or module_popup.is_open() or module_tutorial.active:
 		return
 	# The round summary already owns the intermission pause. Starting a modal
 	# tutorial on top would leave that pause owner behind when the tutorial moves
@@ -1070,6 +1085,7 @@ func _build_save_data() -> Dictionary:
 		"last_clean_round_result": last_clean_round_result.duplicate(true),
 		"best_round_rate": best_round_rate,
 		"galactic_pullback_seen": galactic_pullback_seen,
+		"horizon_ending_seen": horizon_ending_seen,
 		"progression": progression.get_save_data(),
 		"deep_sky": deep_sky.get_save_data(),
 		"module_runtime": deep_sky.modules.get_round_state(),
@@ -1082,6 +1098,7 @@ func _apply_save_data(data: Dictionary) -> void:
 		hud.show_banner(tr("EXT_SAVE_NEWER_VERSION"), UITheme.ALERT, 5.0)
 		return
 	_loading_save = true
+	ending.cancel()
 	debug_celestials.reset()
 	module_tutorial.cancel()
 	module_popup.close()
@@ -1102,6 +1119,7 @@ func _apply_save_data(data: Dictionary) -> void:
 	var legacy_stage = data.get("andromeda", {})
 	deep_sky.load_save_data(deep_data if deep_data is Dictionary else {}, legacy_stage if legacy_stage is Dictionary else {})
 	galactic_pullback_seen = progression.galaxy_unlocked() and bool(data.get("galactic_pullback_seen", false))
+	horizon_ending_seen = typeof(data.get("horizon_ending_seen", false)) == TYPE_BOOL and data.get("horizon_ending_seen", false)
 	upgrade_tree.configure_galactic_state(progression.galaxy_unlocked(), galactic_pullback_seen)
 	last_clean_round_result = _sanitize_round_result(data.get(
 		"last_clean_round_result",

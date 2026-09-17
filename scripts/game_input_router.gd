@@ -11,6 +11,7 @@ const ACTION_CONTINUE := &"nw_continue"
 const ACTION_FULLSCREEN := &"nw_fullscreen"
 
 const DEBUG_KEYS := [
+	KEY_K,
 	KEY_T,
 	KEY_D,
 	KEY_N,
@@ -61,6 +62,7 @@ func _input(event: InputEvent) -> void:
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
+	if game != null and game.get("ending") != null and game.ending.active: return
 	if not _is_raw_debug_input(event) or _hud_state(&"is_rebind_capture_active"):
 		return
 	if _hud_state(&"is_startup_slots_open") or _tutorial_is_modal():
@@ -85,6 +87,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		if settings != null and settings.has_method("toggle_fullscreen"):
 			settings.call("toggle_fullscreen")
 		_mark_input_handled()
+		return
+	if game != null and game.get("ending") != null and game.ending.active:
+		# Ending owns observation/chart navigation; its Escape opens Settings.
+		# Settings retain their existing menu-back path while above the film.
+		if _hud_state(&"is_settings_open") and _action_pressed(event, ACTION_MENU_BACK):
+			_route_menu_back()
+			_mark_input_handled()
 		return
 	if game != null and game.get("module_popup") != null and game.module_popup.is_open():
 		if _action_pressed(event, ACTION_CHART) or _action_pressed(event, ACTION_MENU_BACK):

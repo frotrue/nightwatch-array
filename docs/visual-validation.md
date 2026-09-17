@@ -65,6 +65,7 @@ Run without `--headless`; the same renderer flags above can be used.
 | `effect_feedback_preview.gd` | Six PNG/JSON pairs in `build/effect_feedback_review/`: routine/accent poses, visible installation-rule start/mid/end, continuation selection | `EFFECT_PREVIEW_PASS` |
 | `research_chart_preview.gd` | `build/research_chart_preview.png`; synthetic 81/95 research, 1,284,000 Data, fifth-round/80s pose | `PREVIEW_SAVED` |
 | `hud_preview.gd` | `build/hud_preview.png` or selected diagnostic pose below | `PREVIEW_SAVED` |
+| `last_observation_review.gd` | `build/ending_review/<renderer>/`: final observation stages, Settings, reduced effects, bilingual record and return. `-- --record` drives the same controller at 30fps for Movie Maker with isolated saves and silent bulk-purchase setup; the ending's original audio remains enabled. | `LAST_OBSERVATION_REVIEW_PASS` / `LAST_OBSERVATION_MOVIE_PASS` |
 
 Deep-sky capture has a 45s watchdog and validates frozen fixtures, source/image hashes
 and stable frames. The effect preview checks real production purchase/completion routes.

@@ -258,6 +258,14 @@ _on_upgrade_tree_closed
 The retired catalogue ending has no runtime entry point. Save migration is
 documented in [legacy contracts](legacy-contracts.md).
 
+The opt-in `LastObservation` scene is separate from that retired catalogue path.
+After all current research, it pauses the existing observation and runs its own
+presentation/input clock in an always-processing CanvasLayer. Settings pause that
+clock and its audio; normal chart/debug input is blocked during the film. Returning
+to the chart restores the same round. The only new slot field is the strictly
+boolean `horizon_ending_seen`, default false. No in-flight cinematic is serialized,
+and a debug preview never sets the flag. See [last observation](last-observation.md).
+
 ## Observation flow
 
 The observer samples once per rendered frame with accumulated input.

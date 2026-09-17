@@ -1,0 +1,201 @@
+[gd_scene load_steps=11 format=3]
+
+[ext_resource type="Script" path="res://scripts/last_observation.gd" id="1"]
+[ext_resource type="Shader" path="res://resources/shaders/last_observation.gdshader" id="2"]
+[ext_resource type="Texture2D" path="res://resources/textures/deep_space.png" id="3"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexSansKR-Regular.ttf" id="4"]
+[ext_resource type="FontFile" path="res://fonts/IBMPlexMono-Regular.ttf" id="5"]
+[ext_resource type="Script" path="res://scripts/ending_sky_lines.gd" id="6"]
+[ext_resource type="AudioStream" path="res://resources/audio/ending_drone.wav" id="7"]
+[ext_resource type="AudioStream" path="res://resources/audio/ending_rupture.wav" id="8"]
+
+[sub_resource type="ShaderMaterial" id="SkyMaterial"]
+resource_local_to_scene = true
+shader = ExtResource("2")
+shader_parameter/sky = ExtResource("3")
+
+[sub_resource type="Theme" id="Theme"]
+default_font = ExtResource("4")
+default_font_size = 14
+Button/colors/font_color = Color(0.96, 0.82, 0.73, 1)
+Button/colors/font_hover_color = Color(1, 0.9, 0.8, 1)
+Button/colors/font_focus_color = Color(1, 0.9, 0.8, 1)
+Label/colors/font_color = Color(0.96, 0.82, 0.73, 1)
+
+[node name="LastObservation" type="CanvasLayer"]
+process_mode = 3
+layer = 90
+script = ExtResource("1")
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+theme = SubResource("Theme")
+
+[node name="Launch" type="Button" parent="Root"]
+visible = false
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -120.0
+offset_top = -94.0
+offset_right = 120.0
+offset_bottom = -53.0
+text = "ENDING_LAUNCH"
+
+[node name="Film" type="Control" parent="Root"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 0
+
+[node name="Sky" type="ColorRect" parent="Root/Film"]
+material = SubResource("SkyMaterial")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="Lines" type="Control" parent="Root/Film"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("6")
+
+[node name="Header" type="Label" parent="Root/Film"]
+layout_mode = 0
+anchor_right = 1.0
+offset_top = 35.0
+offset_bottom = 56.0
+theme_override_colors/font_color = Color(0.61, 0.48, 0.4, 1)
+theme_override_fonts/font = ExtResource("5")
+theme_override_font_sizes/font_size = 10
+text = "N I G H T W A T C H   A R R A Y   /   F I N A L   O B S E R V A T I O N"
+horizontal_alignment = 1
+
+[node name="Status" type="Label" parent="Root/Film"]
+layout_mode = 0
+anchor_right = 1.0
+offset_top = 73.0
+offset_bottom = 103.0
+theme_override_font_sizes/font_size = 19
+horizontal_alignment = 1
+
+[node name="Hint" type="Label" parent="Root/Film"]
+layout_mode = 0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -103.0
+offset_bottom = -77.0
+theme_override_colors/font_color = Color(0.70, 0.61, 0.55, 1)
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+
+[node name="ProgressTrack" type="ColorRect" parent="Root/Film"]
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -140.0
+offset_top = -64.0
+offset_right = 140.0
+offset_bottom = -63.0
+mouse_filter = 2
+color = Color(0.25, 0.22, 0.2, 1)
+
+[node name="Fill" type="ColorRect" parent="Root/Film/ProgressTrack"]
+layout_mode = 0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0.93, 0.94, 0.94, 1)
+
+[node name="Readout" type="Label" parent="Root/Film"]
+layout_mode = 0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -53.0
+offset_bottom = -28.0
+theme_override_font_sizes/font_size = 11
+horizontal_alignment = 1
+
+[node name="Menu" type="Button" parent="Root/Film"]
+layout_mode = 0
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -123.0
+offset_top = 24.0
+offset_right = -24.0
+offset_bottom = 54.0
+theme_override_font_sizes/font_size = 11
+text = "ENDING_MENU"
+flat = true
+
+[node name="Record" type="VBoxContainer" parent="Root/Film"]
+visible = false
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -350.0
+offset_top = -102.0
+offset_right = 350.0
+offset_bottom = 142.0
+mouse_filter = 2
+theme_override_constants/separation = 20
+
+[node name="Caption" type="Label" parent="Root/Film/Record"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.61, 0.48, 0.4, 1)
+theme_override_font_sizes/font_size = 11
+text = "ENDING_RECORD_CAPTION"
+horizontal_alignment = 1
+
+[node name="Title" type="Label" parent="Root/Film/Record"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 33
+text = "ENDING_RECORD_TITLE"
+horizontal_alignment = 1
+
+[node name="Text" type="Label" parent="Root/Film/Record"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.70, 0.61, 0.55, 1)
+theme_override_font_sizes/font_size = 15
+text = "ENDING_RECORD_TEXT"
+horizontal_alignment = 1
+
+[node name="Actions" type="HBoxContainer" parent="Root/Film/Record"]
+layout_mode = 2
+theme_override_constants/separation = 18
+alignment = 1
+
+[node name="Return" type="Button" parent="Root/Film/Record/Actions"]
+custom_minimum_size = Vector2(176, 42)
+layout_mode = 2
+text = "ENDING_RETURN"
+
+[node name="Replay" type="Button" parent="Root/Film/Record/Actions"]
+custom_minimum_size = Vector2(176, 42)
+layout_mode = 2
+text = "ENDING_REPLAY"
+
+[node name="Drone" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("7")
+volume_db = -22.0
+
+[node name="Rupture" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("8")
+volume_db = -12.0
