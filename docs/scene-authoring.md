@@ -64,6 +64,7 @@ another code-built fixed surface alongside these scenes.
 | Repeated module controls | `module_inventory_tile.tscn`, `module_ring_slot.tscn`, `module_action.tscn` | Catalogue/slot data and chart-relative placement |
 | Module draw | `module_draw.tscn` | `module_draw_window.gd` |
 | Tutorial | `tutorial_controller.tscn` | Tutorial step/pause controller |
+| Final observation | `last_observation.tscn` | `last_observation.gd`; shader and copied chart geometry provide procedural sky art |
 | Layer 2 diagnostic | `probe_hud.tscn` | `probe/probe_hud.gd` |
 
 `scripts/ui/` contains the custom ring, inventory tile and tracking control

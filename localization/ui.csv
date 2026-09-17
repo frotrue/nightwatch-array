@@ -776,3 +776,23 @@ DEBUG_WHITE_HOLE_LIMIT,White hole · Maximum 3 · Clears at round end,화이트�
 DEBUG_WHITE_HOLE_WAVES,White hole · Turbulent emission disc · Ctrl+Shift+W: spawn,화이트홀 · 난류 원반형 · Ctrl+Shift+W: 소환
 DEBUG_WHITE_HOLE_JETS,White hole · Polar jets · Ctrl+Shift+W: spawn,화이트홀 · 양극 제트형 · Ctrl+Shift+W: 소환
 METEOR_NEUTRON_STAR,NEUTRON STAR,중성자별
+ENDING_LAUNCH,Begin the last observation,마지막 관측
+ENDING_REPLAY,Watch again,다시 보기
+ENDING_MENU,Settings · Esc,설정 · Esc
+ENDING_QUIET,The sky has fallen silent,하늘이 고요해졌다
+ENDING_QUIET_HINT,One signal remains beyond the completed chart.,완성된 성도 너머에 하나의 신호가 남아 있습니다.
+ENDING_ARRIVAL,An event horizon,사건의 지평선
+ENDING_ARRIVAL_HINT,The array is turning toward the last signal.,모든 관측 장비가 마지막 신호를 향합니다.
+ENDING_OBSERVE,The last observation,마지막 관측
+ENDING_OBSERVE_HINT,Hold the left mouse button over the dark center. Progress is retained.,검은 중심에 마우스 왼쪽 버튼을 누르세요. 놓쳐도 진행은 유지됩니다.
+ENDING_TRACKING,TRACKING,직접 관측
+ENDING_AUTO,ARRAY OBSERVING,자동 관측 중
+ENDING_LIMIT,Observation limit reached,관측 한계에 도달했습니다
+ENDING_LIMIT_HINT,The record is complete. The signal is still growing.,기록은 완성되었습니다. 신호는 계속 커지고 있습니다.
+ENDING_COLLAPSE,The coordinates are coming apart,좌표가 무너지고 있습니다
+ENDING_COLLAPSE_HINT,Every point of light returns to the same place.,모든 빛이 하나의 점으로 돌아갑니다.
+ENDING_RECORD_CAPTION,FINAL RECORD / NIGHTWATCH ARRAY,마지막 기록 / NIGHTWATCH ARRAY
+ENDING_RECORD_TITLE,The edge of observation,관측의 끝
+ENDING_RECORD_TEXT,We recorded the last light.\nWhat followed never reached us.,우리는 마지막 빛을 기록했다.\n그 이후의 신호는 도착하지 않았다.
+ENDING_RETURN,Return to the chart,성도로 돌아가기
+ENDING_TUTORIAL_UNAVAILABLE,Tutorial replay is unavailable during the final observation.,마지막 관측 중에는 튜토리얼을 다시 볼 수 없습니다.

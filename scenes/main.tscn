@@ -1,4 +1,4 @@
-[gd_scene load_steps=25 format=3]
+[gd_scene load_steps=26 format=3]
 
 [ext_resource type="Script" path="res://scripts/game.gd" id="1_game"]
 [ext_resource type="Script" path="res://scripts/starfield.gd" id="2_starfield"]
@@ -23,6 +23,7 @@
 [ext_resource type="Script" path="res://scripts/debug_celestial_layer.gd" id="20_debug_celestial"]
 [ext_resource type="Texture2D" path="res://resources/textures/deep_space.png" id="21_deep_space"]
 [ext_resource type="PackedScene" path="res://scenes/terrestrial_background.tscn" id="22_terrestrial"]
+[ext_resource type="PackedScene" path="res://scenes/ui/last_observation.tscn" id="23_ending"]
 
 [node name="Game" type="Node2D"]
 script = ExtResource("1_game")
@@ -102,3 +103,5 @@ layer = 120
 script = ExtResource("13_tutorial")
 
 [node name="ModuleTutorial" parent="." instance=ExtResource("19_module_tutorial")]
+
+[node name="LastObservation" parent="." instance=ExtResource("23_ending")]

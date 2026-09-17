@@ -93,6 +93,7 @@ var settings_hint: Label
 var language_selector: OptionButton
 var number_notation_selector: OptionButton
 var tutorial_replay_button: Button
+var final_observation_active := false
 var settings_close_button: Button
 var audio_display_button: Button
 var audio_display_container: VBoxContainer
@@ -733,8 +734,8 @@ func open_settings(page: String = "") -> void:
 	_sync_settings_controls()
 	_refresh_save_slots()
 	save_feedback.visible = false
-	tutorial_replay_button.disabled = is_phase_summary_open()
-	tutorial_replay_button.tooltip_text = tr("TUTORIAL_REPLAY_UNAVAILABLE_SUMMARY") if tutorial_replay_button.disabled else ""
+	tutorial_replay_button.disabled = is_phase_summary_open() or final_observation_active
+	tutorial_replay_button.tooltip_text = tr("ENDING_TUTORIAL_UNAVAILABLE" if final_observation_active else "TUTORIAL_REPLAY_UNAVAILABLE_SUMMARY") if tutorial_replay_button.disabled else ""
 	var requested_page := page if page in SETTINGS_PAGE_ORDER else settings_active_page
 	_set_settings_page(requested_page, false)
 	_focus_settings_page.call_deferred(requested_page)
@@ -1463,7 +1464,7 @@ func _apply_locale() -> void:
 		page_label.text = tr(String(localized["key"]))
 	tutorial_replay_button.text = tr("TUTORIAL_REPLAY")
 	if tutorial_replay_button.disabled:
-		tutorial_replay_button.tooltip_text = tr("TUTORIAL_REPLAY_UNAVAILABLE_SUMMARY")
+		tutorial_replay_button.tooltip_text = tr("ENDING_TUTORIAL_UNAVAILABLE" if final_observation_active else "TUTORIAL_REPLAY_UNAVAILABLE_SUMMARY")
 	if controls_reset_button != null:
 		controls_reset_button.text = tr("CONTROLS_RESET")
 	startup_title.text = tr("STARTUP_SAVE_TITLE")
