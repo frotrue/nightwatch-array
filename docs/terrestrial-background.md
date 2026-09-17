@@ -6,10 +6,17 @@
 
 ## 원본과 적용
 
-- 파일: `resources/textures/terrestrial_sky.png`, 1672×941 PNG, 1,473,748바이트.
-- SHA-256: `d69beffa3ea0407888ea8f06e1b108d3b7af1cffbf40ca7e02144be16c39417c`.
-- 대화 내 이미지 생성 도구로 만든 승인 원본을 수정 없이 복사했다. 별도 Image API는
-  호출하지 않았고 4K 재생성이나 후처리 확대도 하지 않았다. 4K 창에서는 원본을 확대해 표시한다.
+- 파일: `resources/textures/terrestrial_sky.png`, 3840×2160 PNG, 6,438,828바이트.
+- SHA-256: `7b2153d93853a958a8bed30a2a383436517c0c2261f73f03d973fda2949ec1cb`.
+- 대화 내 이미지 생성 도구로 만든 승인 원본은 1672×941이며, SHA-256은
+  `d69beffa3ea0407888ea8f06e1b108d3b7af1cffbf40ca7e02144be16c39417c`다.
+  원본은 최초 적용 커밋 `bd001fa`에 보존된다.
+- 2026-09-17 후속 승인으로 [Real-ESRGAN NCNN Vulkan 20220424](https://github.com/xinntao/Real-ESRGAN/releases/tag/v0.2.5.0)의
+  일반 모델 `realesrgan-x4plus`로 4배 확대(6688×3764)한 뒤 Pillow의 Lanczos fit으로
+  3840×2160에 맞췄다. 정확한 16:9 비율을 위해 확대 결과의 상하 약 2픽셀을 합계로 잘랐다.
+  RTX 3060에서 `-s 4 -t 256 -j 1:1:1`로 처리했으며 별도 Image API는 호출하지 않았다.
+  신규 4K 생성물이 아닌 AI 업스케일 결과다. 일반 모델이 일러스트 모델보다 기존 붓 질감을
+  잘 유지해 선택했으며, 구도·색감의 변화보다 확대 시 별과 능선 윤곽 정리가 주된 차이다.
 - 원본 생성 프롬프트는 평면 목업의 낮은 능선 두 겹과 색·형태를 유지하면서 천문대와 빨간
   창을 없애고, 이전 일러스트의 남청색 하늘·별·희미한 대각선 은하수를 조합하도록 지정했다.
   입체적인 산·숲·건물은 가져오지 않고 유성·천체·UI도 배경에서 제외했다.
@@ -40,7 +47,7 @@ Starfield는 현재 화면에 맞게 종횡비를 보존하여 덮고 4% 여유�
 고정 16:9 설정으로 창 크기와 렌더 크기는 다를 수 있으며 manifest에 둘 다 기록한다.
 초기·리셋 배경과 한영 관측 영역은 같은 픽셀이어야 한다.
 
-2026-09-17 검증 결과:
+최초 적용(1672×941)의 2026-09-17 검증 결과:
 
 - `tools/validate.ps1 -Build`: 빠른 검사 31개와 Windows 내보내기 통과.
   기록: `build/validation/20260916T151542603Z_50a6f4ac/summary.json`.
@@ -49,3 +56,12 @@ Starfield는 현재 화면에 맞게 종횡비를 보존하여 덮고 4% 여유�
 - 내보낸 Windows 실행 파일을 두 렌더러에서 각각 30프레임 실행해 오류 없이 종료했다.
 - 캡처: `build/deep_space_review/{mobile,gl_compatibility}/`.
   실행 파일: `build/windows/NightwatchArray.exe`.
+
+4K 업스케일 적용 후 검증(2026-09-17):
+
+- `tools/validate.ps1 -Build`: 검사 31개와 Windows 내보내기 모두 통과.
+  기록: `build/validation/20260917T055422049Z_95848b79/summary.json`.
+- Mobile·Compatibility의 배경 리뷰 및 배경/유성/효과 배치 비교 총 8개 통과.
+  4K 관측 화면, 실제 유성과 UI, 새벽의 능선 경계를 확인했다. 기존 셰이더 값은 유지한다.
+- 새 Windows 실행 파일의 두 렌더러 30프레임 실행도 오류 없이 종료했다.
+  렌더 로그: `build/terrestrial_review/upscale-*.log`.
