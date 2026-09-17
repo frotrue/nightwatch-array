@@ -17,8 +17,17 @@ uniform float camera_roll = 0.0;
 uniform vec2 camera_offset = vec2(0.0);
 uniform float camera_rush = 0.0;
 uniform float camera_crossing = 0.0;
+uniform float disc_rotation = 0.0;
+uniform float disc_tilt = 0.23;
+uniform float disc_flatten = 4.8;
 
-float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float hash(vec2 p) {
+	// Integer mixing avoids large-multiplier sine precision artifacts in Vulkan.
+	uint bits = uint(int(p.x)) * 1664525u + uint(int(p.y)) * 1013904223u;
+	bits = (bits ^ (bits >> 16u)) * 2246822519u;
+	bits = (bits ^ (bits >> 13u)) * 3266489917u;
+	return float((bits ^ (bits >> 16u)) & 16777215u) / 16777216.0;
+}
 float noise(vec2 p) {
 	vec2 i = floor(p), f = fract(p);
 	f = f * f * (3.0 - 2.0 * f);
@@ -63,14 +72,20 @@ void fragment() {
 	float haze = exp(-max(r - radius, 0.0) * 9.0) * smoothstep(radius * 0.9, radius * 1.7, r);
 	color += vec3(0.12, 0.15, 0.23) * haze * presence * (0.4 + charge);
 	// A tilted, textured accretion disc, with a lensed arc above and below.
-	vec2 disc = rotate(p, -0.23);
-	vec2 ellipse = vec2(disc.x, disc.y * 4.8);
+	vec2 disc = rotate(p, -disc_tilt);
+	vec2 ellipse = vec2(disc.x, disc.y * disc_flatten);
 	float er = length(ellipse);
 	float ea = atan(ellipse.y, ellipse.x);
 	float radial = exp(-pow((er - radius * 1.9) / max(radius * 0.70, 0.001), 2.0));
-	float bands = 0.38 + 0.62 * clouds(vec2(er * 130.0 + clouds(ellipse * 18.0) * 5.0, ea * 4.0 - clock * 0.05 * motion));
-	float dust = clouds(vec2(ea * 4.0 + clock * 0.03 * motion, er * 38.0));
-	float disc_light = radial * bands * (0.25 + dust) * presence * (0.20 + charge * 0.8 + collapse * 1.2);
+	// Advect a persistent pattern around the fixed disc plane. Inner lanes turn
+	// faster; Cartesian texture coordinates close the angular seam continuously.
+	float flow_angle = ea - disc_rotation;
+	vec2 flow = vec2(cos(flow_angle), sin(flow_angle)) * er;
+	vec2 inner_flow = rotate(ellipse, -disc_rotation * 1.3);
+	float bands = 0.38 + 0.62 * clouds(vec2(er * 45.0 + clouds(flow * 12.0) * 1.5, sin(flow_angle * 3.0) * 0.9 + cos(flow_angle * 2.0) * 0.6));
+	float dust = mix(clouds(inner_flow * 14.0), clouds(flow * 14.0), smoothstep(radius * 1.3, radius * 2.4, er));
+	float stream = pow(max(0.0, 0.5 + 0.5 * cos(flow_angle * 3.0 + er * 13.0)), 10.0);
+	float disc_light = radial * (bands * (0.25 + dust) + stream * 0.38) * presence * (0.20 + charge * 0.8 + collapse * 1.2);
 	float asymmetric = mix(0.45, 1.3, smoothstep(-radius * 2.2, radius * 2.2, disc.x));
 	vec3 disc_color = mix(vec3(0.38, 0.48, 0.65), vec3(0.95, 0.76, 0.54), dust);
 	float shadow = 1.0 - smoothstep(radius * 0.97, radius * 1.015, r);

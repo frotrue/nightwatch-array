@@ -3,7 +3,7 @@ extends CanvasLayer
 signal record_reached
 const Expansion = preload("res://scripts/expansion_data.gd")
 enum Phase { QUIET, ARRIVAL, OBSERVE, LIMIT, COLLAPSE, BLACKOUT, RECORD }
-const DURATIONS := [12.0, 18.0, 50.0, 10.0, 28.0, 10.0, 12.0]
+const DURATIONS := [6.0, 9.0, 25.0, 5.0, 28.0, 10.0, 12.0]
 const DISTANT_FRAMING := 0.62
 const STATUS_KEYS := ["ENDING_QUIET", "ENDING_ARRIVAL", "ENDING_OBSERVE", "ENDING_LIMIT", "ENDING_COLLAPSE", "", ""]
 const HINT_KEYS := ["ENDING_QUIET_HINT", "ENDING_ARRIVAL_HINT", "ENDING_OBSERVE_HINT", "ENDING_LIMIT_HINT", "ENDING_COLLAPSE_HINT", "", ""]
@@ -176,6 +176,17 @@ func observation_radius() -> float:
 	# The visible reticle and pointer range share the same distant framing.
 	return film.size.y * 0.205 * lerpf(1.0, DISTANT_FRAMING, motion_scale)
 
+func collapse_time() -> float:
+	if phase < Phase.COLLAPSE: return 0.0
+	return phase_elapsed if phase == Phase.COLLAPSE else DURATIONS[Phase.COLLAPSE]
+
+func disc_rotation(sample_collapse_time: float = -1.0) -> float:
+	var age := collapse_time() if sample_collapse_time < 0.0 else sample_collapse_time
+	var clock_time := elapsed
+	if phase == Phase.COLLAPSE and sample_collapse_time >= 0.0:
+		clock_time += age - phase_elapsed
+	return (clock_time * 0.42 + age * age * 0.018) * motion_scale
+
 func visual_state(sample_time: float = -1.0) -> Dictionary:
 	var time := phase_elapsed if sample_time < 0.0 else sample_time
 	var part := clampf(time / DURATIONS[phase], 0.0, 1.0)
@@ -217,6 +228,8 @@ func visual_state(sample_time: float = -1.0) -> Dictionary:
 	var coverage := radius * zoom / (corner.length() + offset.length() * zoom)
 	return {
 		"presence": presence, "charge": charge, "collapse": fall, "blackout": dark,
+		"disc_rotation": disc_rotation(time if phase == Phase.COLLAPSE else -1.0),
+		"disc_tilt": 0.23, "disc_flatten": 4.8,
 		"horizon_radius": radius, "camera_dive": dive, "camera_zoom": zoom,
 		"camera_roll": -dive * 0.04 + pow(dive, 3.0) * 0.33,
 		"camera_offset": offset, "camera_rush": rush,

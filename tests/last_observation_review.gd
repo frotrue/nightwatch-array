@@ -46,7 +46,8 @@ func _run() -> void:
 	await _capture("00_last_signal")
 	for stage in range(1, 7):
 		while game.ending.phase < stage: _step(0.1)
-		for i in 50: _step(0.1)
+		var stage_sample: float = minf(5.0, game.ending.DURATIONS[stage] * 0.5)
+		while game.ending.phase_elapsed < stage_sample - 0.00001: _step(minf(0.05, stage_sample - game.ending.phase_elapsed))
 		await _capture("%02d_stage" % stage)
 		if stage == 2:
 			game.ending.open_settings()
@@ -54,7 +55,7 @@ func _run() -> void:
 			game.hud.close_settings()
 			game.hud.layer = 80
 		if stage == 4:
-			for moment in [12.0, 19.0, 24.0, 26.0, 27.0, 27.4, 27.7]:
+			for moment in [8.0, 12.0, 16.0, 19.0, 24.0, 26.0, 27.0, 27.4, 27.7]:
 				while game.ending.phase_elapsed < moment - 0.00001: _step(minf(0.05, moment - game.ending.phase_elapsed))
 				await _capture("04_approach_%04.1f" % moment)
 				if moment == 19.0:
@@ -106,4 +107,4 @@ func _capture(label: String) -> void:
 	var path := output + "/" + label + ".png"
 	if picture.save_png(path) != OK: failures.append(path); push_error("Capture failed: " + path)
 	var view: Dictionary = game.ending.visual_state()
-	manifest.append({"name": label, "phase": game.ending.phase, "time": game.ending.elapsed, "camera_zoom": view.camera_zoom, "camera_dive": view.camera_dive, "camera_rush": view.camera_rush, "camera_crossing": view.camera_crossing, "dimensions": [picture.get_width(), picture.get_height()]})
+	manifest.append({"name": label, "phase": game.ending.phase, "time": game.ending.elapsed, "camera_zoom": view.camera_zoom, "camera_dive": view.camera_dive, "camera_rush": view.camera_rush, "camera_crossing": view.camera_crossing, "disc_rotation": view.disc_rotation, "chart_stars": game.ending.lines.chart_points.size(), "dimensions": [picture.get_width(), picture.get_height()]})

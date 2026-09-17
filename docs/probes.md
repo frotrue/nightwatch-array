@@ -68,8 +68,11 @@ The same test also checks the distant reticle's pointer boundary, continuous and
 accelerating camera approach, horizon coverage before fading, zero-motion projection,
 Settings during collapse, and preservation of the gameplay camera. The real-renderer
 review checks hidden/restored pointer modes, which headless DisplayServer cannot report.
-Use `--output=res://build/ending_gravity_review` after `--` to keep the new captures
-separate; the review samples approach at 12, 19, 24, 26, 27, 27.4 and 27.7 seconds.
+It also checks the shortened 45-second prelude/95-second completion, separate star
+release times, continuous entry into the disc, inward rotation, removal after accretion,
+and frozen stars/disc at zero motion. Use `--output=res://build/ending_orbit_review`
+after `--` to keep the new captures separate; the review samples collapse at 8, 12,
+16, 19, 24, 26, 27, 27.4 and 27.7 seconds, plus stage and reduced-motion frames.
 
 `black_hole_test.gd` is a headless gate for spawn/unlock, capture lifecycle and
 serial/worker parity. Run `black_hole_review.gd` with the same real-renderer flags

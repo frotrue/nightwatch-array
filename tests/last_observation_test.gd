@@ -60,6 +60,7 @@ func _run() -> void:
 	for i in 1500: ending.advance(0.1, false, Vector2.ZERO)
 	check(ending.phase == ending.Phase.OBSERVE and is_equal_approx(ending.observation_progress, 0.85), "equipment cannot finish without the player's last observation")
 	check_camera(ending)
+	check_star_infall(ending)
 	var progress: float = ending.observation_progress
 	ending.advance(1.0, true, Vector2.ZERO)
 	check(ending.observation_progress == progress, "holding away from the horizon does not finish the target")
@@ -123,9 +124,12 @@ func _run() -> void:
 	check(not game.horizon_ending_seen, "malformed ending flag is not accepted")
 	check(ending.start(true), "debug preview can start")
 	var writes_before_preview: int = game.save_games.writes
-	ending.phase = ending.Phase.RECORD
-	ending.phase_elapsed = 12.0
-	ending.advance(0.1, false, center)
+	for tick in 960:
+		ending.advance(0.1, true, center)
+		if ending.phase == ending.Phase.COLLAPSE and ending.phase_elapsed == 0.0:
+			check(ending.elapsed >= 45.0 and ending.elapsed < 46.0, "continuous observation reaches collapse after the shortened 45-second prelude")
+		if ending.phase == ending.Phase.RECORD and ending.phase_elapsed >= 12.0: break
+	check(ending.phase == ending.Phase.RECORD and ending.phase_elapsed >= 12.0 and ending.elapsed < 96.0, "the shortened complete ending reaches its record in about 95 seconds")
 	check(not game.horizon_ending_seen, "debug preview never marks or saves completion")
 	check(game.save_games.writes == writes_before_preview, "debug preview never writes the player's slot")
 	game.reset_run()
@@ -192,3 +196,41 @@ func check_camera(ending: Node) -> void:
 	ending.phase = original_phase
 	ending.phase_elapsed = original_time
 	ending.motion_scale = original_motion
+
+func check_star_infall(ending: Node) -> void:
+	var original := {"phase": ending.phase, "time": ending.phase_elapsed, "elapsed": ending.elapsed, "motion": ending.motion_scale}
+	ending.phase = ending.Phase.COLLAPSE
+	ending.phase_elapsed = 0.0
+	ending.elapsed = 45.0
+	ending.motion_scale = 1.0
+	var lines: Node = ending.lines
+	var view: Dictionary = ending.visual_state()
+	check(lines.star_tracks.size() == lines.chart_points.size(), "each retained chart star has exactly one infall track")
+	var last_release := -1.0
+	for key: String in lines.star_tracks:
+		var track: Dictionary = lines.star_tracks[key]
+		var origin: Vector2 = lines.chart_points[key]
+		var release: float = track.release
+		var join_time: float = release + track.join
+		check(release > last_release, "stars detach in individual, ordered releases")
+		last_release = release
+		check(lines.star_pose(key, release, view) == Vector3(origin.x, origin.y, 0.0), "a star stays on its chart until its release")
+		var before_join: Vector3 = lines.star_pose(key, join_time - 0.0001, view)
+		var after_join: Vector3 = lines.star_pose(key, join_time + 0.0001, view)
+		check(before_join.distance_to(after_join) < 0.005, "the falling path joins its disc orbit without a position jump")
+		var first: Vector3 = lines.star_pose(key, join_time + 0.15, view)
+		var second: Vector3 = lines.star_pose(key, join_time + 0.25, view)
+		var a := Vector2(first.x, first.y).rotated(-float(view.disc_tilt)) * Vector2(1.0, view.disc_flatten)
+		var b := Vector2(second.x, second.y).rotated(-float(view.disc_tilt)) * Vector2(1.0, view.disc_flatten)
+		check(first.is_finite() and second.is_finite() and a.cross(b) > 0.0 and b.length() < a.length(), "joined stars spiral inward in the disc's rotation direction")
+		check(lines.star_alpha(key, join_time + track.orbit) == 0.0, "accreted stars leave no persistent points")
+	check(ending.disc_rotation(2.0) > ending.disc_rotation(1.0), "the disc advances with the cinematic clock")
+	ending.motion_scale = 0.0
+	check(ending.disc_rotation(12.0) == 0.0, "zero motion freezes the accretion disc")
+	for key: String in lines.chart_points:
+		var point: Vector2 = lines.chart_points[key]
+		check(lines.star_pose(key, 12.0, view) == Vector3(point.x, point.y, 0.0), "zero motion keeps chart stars fixed")
+	ending.phase = original.phase
+	ending.phase_elapsed = original.time
+	ending.elapsed = original.elapsed
+	ending.motion_scale = original.motion
