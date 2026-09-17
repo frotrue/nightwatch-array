@@ -54,8 +54,8 @@ func _run() -> void:
 			game.hud.close_settings()
 			game.hud.layer = 80
 		if stage == 4:
-			for moment in [12.0, 19.0, 24.0, 27.5]:
-				while game.ending.phase_elapsed < moment: _step(0.1)
+			for moment in [12.0, 19.0, 24.0, 26.0, 27.0, 27.4, 27.7]:
+				while game.ending.phase_elapsed < moment - 0.00001: _step(minf(0.05, moment - game.ending.phase_elapsed))
 				await _capture("04_approach_%04.1f" % moment)
 				if moment == 19.0:
 					game.settings.set_motion_intensity(0.0)
@@ -92,6 +92,13 @@ func _record_frame() -> void:
 		quit(0)
 
 func _capture(label: String) -> void:
+	# Headless DisplayServer cannot report a hidden cursor; verify this here.
+	game.ending._process(0.0)
+	if game.ending.active:
+		var cinematic: bool = game.ending.phase >= game.ending.Phase.COLLAPSE and game.ending.phase < game.ending.Phase.RECORD
+		var expected := Input.MOUSE_MODE_HIDDEN if cinematic and not game.hud.is_settings_open() else Input.MOUSE_MODE_VISIBLE
+		if Input.mouse_mode != expected: failures.append(label + " cursor mode"); push_error(label + " cursor mode")
+	_step(0.0)
 	await process_frame
 	await process_frame
 	await RenderingServer.frame_post_draw
@@ -99,4 +106,4 @@ func _capture(label: String) -> void:
 	var path := output + "/" + label + ".png"
 	if picture.save_png(path) != OK: failures.append(path); push_error("Capture failed: " + path)
 	var view: Dictionary = game.ending.visual_state()
-	manifest.append({"name": label, "phase": game.ending.phase, "time": game.ending.elapsed, "camera_zoom": view.camera_zoom, "camera_dive": view.camera_dive, "dimensions": [picture.get_width(), picture.get_height()]})
+	manifest.append({"name": label, "phase": game.ending.phase, "time": game.ending.elapsed, "camera_zoom": view.camera_zoom, "camera_dive": view.camera_dive, "camera_rush": view.camera_rush, "camera_crossing": view.camera_crossing, "dimensions": [picture.get_width(), picture.get_height()]})

@@ -67,19 +67,25 @@ func _draw() -> void:
 	# Different depths leave the viewport at different speeds; no random respawn.
 	if motion > 0.0:
 		var dive: float = view.camera_dive
-		var flight_alpha := smoothstep(0.02, 0.5, dive) * (1.0 - float(view.blackout)) * (1.0 - smoothstep(0.82, 1.0, dive))
+		var flight_alpha := smoothstep(0.015, 0.5, float(view.camera_rush)) * (1.0 - float(view.blackout)) * (1.0 - float(view.camera_crossing))
+		var shutter: Array[Dictionary] = []
+		for j in 7: shutter.append(controller.visual_state(maxf(0.0, controller.phase_elapsed - j * 0.022)))
+		var horizon_center := _project(Vector2.ZERO, view)
+		var horizon_radius := float(view.horizon_radius) * float(view.camera_zoom) * size.y
 		for mote in dust:
 			if mote.z - dive * 0.6 <= 0.14: continue
 			var tail := PackedVector2Array()
 			var colors := PackedColorArray()
 			for j in 7:
-				var earlier := maxf(0.0, dive - j * 0.008 * sqrt(dive))
-				var p := Vector2(mote.x, mote.y) * 0.45 / (mote.z - earlier * 0.6)
-				tail.append(_project(p, view))
-				colors.append(Color(0.68, 0.78, 0.98, flight_alpha * mote.z * 0.72 * (1.0 - j / 6.0) * _horizon_visibility(p, view)))
+				var earlier: Dictionary = shutter[j]
+				var p := Vector2(mote.x, mote.y) * 0.45 / (mote.z - float(earlier.camera_dive) * 0.6)
+				var at := _project(p, earlier)
+				tail.append(at)
+				var visible := smoothstep(horizon_radius * 1.02, horizon_radius * 1.13, at.distance_to(horizon_center))
+				colors.append(Color(0.68, 0.78, 0.98, flight_alpha * mote.z * (1.0 - j / 6.0) * visible))
 			draw_polyline_colors(tail, colors, 0.65 + mote.z, true)
 	if controller.phase == controller.Phase.OBSERVE:
-		var ring_radius := size.y * 0.205
+		var ring_radius: float = controller.observation_radius()
 		var ink := Color(0.88, 0.9, 0.93, 0.58 if controller.tracking else 0.16)
 		draw_arc(center, ring_radius, -PI * 0.5, -PI * 0.5 + TAU * controller.observation_progress, 100, ink, 1.15, true)
 		for i in 5:

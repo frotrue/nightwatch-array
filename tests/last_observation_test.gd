@@ -63,6 +63,11 @@ func _run() -> void:
 	var progress: float = ending.observation_progress
 	ending.advance(1.0, true, Vector2.ZERO)
 	check(ending.observation_progress == progress, "holding away from the horizon does not finish the target")
+	var reticle_radius: float = ending.observation_radius()
+	ending.advance(1.0, true, center + Vector2(reticle_radius * 1.05, 0.0))
+	check(ending.observation_progress == progress, "direct observation rejects input outside the distant reticle")
+	ending.advance(1.0, true, center + Vector2(reticle_radius * 0.95, 0.0))
+	check(ending.observation_progress > progress, "direct observation accepts input inside the distant reticle")
 	await press_action("nw_menu_back")
 	check(game.hud.is_settings_open(), "menu-back opens settings over the ending")
 	check(game.hud.visible, "settings restore HUD visibility over the film")
@@ -75,12 +80,23 @@ func _run() -> void:
 	await press_action("nw_menu_back")
 	check(not game.hud.is_settings_open(), "menu-back closes settings during ending")
 	check(paused, "closing settings must not resume ordinary gameplay during ending")
+	while ending.phase < ending.Phase.COLLAPSE: ending.advance(0.1, true, center)
+	ending._process(0.0)
+	check(not ending.get_node("Root/Film/Menu").visible, "the automatic fall clears the menu from the view")
+	if DisplayServer.get_name() != "headless":
+		check(Input.mouse_mode == Input.MOUSE_MODE_HIDDEN, "the automatic fall hides the pointer")
+	await press_action("nw_menu_back")
+	ending._process(0.0)
+	check(game.hud.is_settings_open() and Input.mouse_mode == Input.MOUSE_MODE_VISIBLE, "Escape still exposes usable settings during the fall")
+	await press_action("nw_menu_back")
 	var guard := 0
 	while ending.phase != ending.Phase.RECORD or ending.phase_elapsed < 12.0:
 		ending.advance(0.1, true, center)
 		guard += 1
 		if guard > 1200: check(false, "ending failed to complete after direct observation"); break
 	check(game.horizon_ending_seen, "last record persists a new completion flag")
+	ending._process(0.0)
+	check(ending.get_node("Root/Film/Menu").visible and Input.mouse_mode == Input.MOUSE_MODE_VISIBLE, "the final record restores menu and pointer")
 	check(game._build_save_data().horizon_ending_seen, "completion is included in slot payload")
 	check(game.save_games.writes == 1 and game.save_games.saved.horizon_ending_seen, "the last record autosaves completion exactly once")
 	ending.advance(1.0, true, center)
@@ -139,7 +155,7 @@ func check_camera(ending: Node) -> void:
 	var original_motion: float = ending.motion_scale
 	ending.motion_scale = 1.0
 	var observing: Dictionary = ending.visual_state()
-	check(observing.camera_zoom == 1.0 and observing.camera_offset == Vector2.ZERO and observing.camera_roll == 0.0, "direct observation keeps the reticle and horizon aligned")
+	check(observing.camera_zoom > 0.0 and observing.camera_zoom < 1.0 and observing.camera_zoom == ending.visual_state(0.0).camera_zoom and observing.camera_offset == Vector2.ZERO and observing.camera_roll == 0.0, "direct observation keeps a stable distant framing without moving the target")
 	ending.phase = ending.Phase.LIMIT
 	ending.phase_elapsed = ending.DURATIONS[ending.Phase.LIMIT]
 	var limit: Dictionary = ending.visual_state()
@@ -153,12 +169,26 @@ func check_camera(ending: Node) -> void:
 		var frame: Dictionary = ending.visual_state()
 		check(is_finite(frame.camera_zoom) and frame.camera_zoom >= previous and frame.camera_offset.is_finite(), "camera advances monotonically with finite projection")
 		previous = frame.camera_zoom
+	var early_travel: float = ending.visual_state(19.0).camera_zoom - ending.visual_state(18.0).camera_zoom
+	var late_travel: float = ending.visual_state(27.0).camera_zoom - ending.visual_state(26.0).camera_zoom
+	check(late_travel > early_travel * 4.0, "the visible final approach accelerates strongly")
 	var arrival: Dictionary = ending.visual_state()
 	var corner := Vector2(ending.film.size.x / ending.film.size.y * 0.5, 0.535)
 	check(arrival.horizon_radius * arrival.camera_zoom > corner.length() + arrival.camera_offset.length() * arrival.camera_zoom, "the final horizon overtakes the whole viewport")
+	for second in [26.0, 27.0, 27.4, 27.7, 28.0]:
+		var frame: Dictionary = ending.visual_state(second)
+		if frame.horizon_radius * frame.camera_zoom < corner.length() + frame.camera_offset.length() * frame.camera_zoom:
+			check(frame.camera_crossing == 0.0, "the crossing fade waits until the horizon covers the viewport")
+	check(arrival.camera_crossing == 1.0, "crossing fully removes foreground light at the end of the fall")
+	ending.motion_scale = 0.5
+	var partial_arrival: Dictionary = ending.visual_state()
+	ending.phase = ending.Phase.BLACKOUT
+	ending.phase_elapsed = 0.0
+	var partial_blackout: Dictionary = ending.visual_state()
+	check(is_equal_approx(partial_arrival.camera_rush, partial_blackout.camera_rush) and is_equal_approx(partial_arrival.camera_zoom, partial_blackout.camera_zoom), "partial motion cannot pop the light or camera on entering blackout")
 	ending.motion_scale = 0.0
 	var reduced: Dictionary = ending.visual_state()
-	check(reduced.camera_zoom == 1.0 and reduced.camera_roll == 0.0 and reduced.camera_offset == Vector2.ZERO, "zero motion removes camera travel and roll")
+	check(reduced.camera_zoom == 1.0 and reduced.camera_roll == 0.0 and reduced.camera_offset == Vector2.ZERO and reduced.camera_rush == 0.0, "zero motion removes camera travel, roll and streaks")
 	ending.phase = original_phase
 	ending.phase_elapsed = original_time
 	ending.motion_scale = original_motion

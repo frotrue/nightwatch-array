@@ -15,6 +15,8 @@ uniform float camera_dive = 0.0;
 uniform float camera_zoom = 1.0;
 uniform float camera_roll = 0.0;
 uniform vec2 camera_offset = vec2(0.0);
+uniform float camera_rush = 0.0;
+uniform float camera_crossing = 0.0;
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float noise(vec2 p) {
@@ -42,10 +44,17 @@ void fragment() {
 	float gravity = presence * (0.013 + charge * 0.012 + collapse * 0.10) * motion;
 	float pull = gravity / max(r, 0.055) * (1.0 - smoothstep(0.15, 1.25, r));
 	// The distant sky moves more slowly than the horizon and nearby light flecks.
-	vec2 far_p = rotate(screen_p, -camera_roll * 0.72) / mix(1.0, camera_zoom, 0.14) + camera_offset * 0.4;
+	vec2 far_p = rotate(screen_p, -camera_roll * 0.72) / mix(1.0, max(1.0, camera_zoom), 0.14) + camera_offset * 0.4;
 	vec2 warped = rotate(far_p * (1.0 - pull), collapse * 1.7 * motion / (1.0 + r * 4.0));
 	vec2 uv = warped / vec2(aspect, 1.0) + vec2(0.5, 0.465);
-	vec3 color = texture(sky, sky_uv(clamp(uv, vec2(0.001), vec2(0.999)))).rgb * 0.5;
+	// Radial exposure trails reveal speed while the view is still outside the
+	// horizon. Nearby retained flecks use actual earlier camera poses as well.
+	vec2 streak = normalize(far_p + vec2(0.0001)) * camera_rush * 0.10 / vec2(aspect, 1.0);
+	vec3 background = texture(sky, sky_uv(clamp(uv, vec2(0.001), vec2(0.999)))).rgb * 0.46;
+	background += texture(sky, sky_uv(clamp(uv + streak * 0.33, vec2(0.001), vec2(0.999)))).rgb * 0.26;
+	background += texture(sky, sky_uv(clamp(uv + streak * 0.67, vec2(0.001), vec2(0.999)))).rgb * 0.17;
+	background += texture(sky, sky_uv(clamp(uv + streak, vec2(0.001), vec2(0.999)))).rgb * 0.11;
+	vec3 color = background * mix(0.5, 0.28, smoothstep(0.0, 0.55, collapse) * motion);
 	// Refracted background light travels around the horizon; the core stays opaque.
 	float critical = exp(-pow((r - radius * 1.11) / max(radius * 0.12, 0.001), 2.0));
 	vec2 echo = vec2(cos(angle + clock * 0.011 * motion), sin(angle + clock * 0.011 * motion));
@@ -77,14 +86,14 @@ void fragment() {
 	jet *= smoothstep(radius * 0.65, radius * 1.4, abs(disc.y));
 	jet *= 0.65 + 0.35 * clouds(vec2(disc.x * 110.0, disc.y * 26.0 - clock * 0.10 * motion));
 	color += vec3(0.50, 0.68, 0.97) * jet * jet_growth * 0.75;
-	float eruption = smoothstep(0.36, 0.78, collapse);
+	float eruption = mix(smoothstep(0.36, 0.78, collapse), smoothstep(0.04, 0.7, camera_rush), motion);
 	float glow = exp(-r * mix(4.0, 0.38, eruption));
 	float core_opacity = max(1.0 - smoothstep(0.70, 0.96, collapse), smoothstep(0.12, 0.48, camera_dive));
 	float engulf_core = 1.0 - shadow * core_opacity;
 	color += vec3(0.64, 0.73, 0.89) * eruption * glow * mix(0.10, 1.05, flare) * engulf_core;
 	color *= 1.0 - smoothstep(0.65, 1.0, length(screen_p)) * 0.5;
 	// Passing the horizon lets the remaining foreground disc fall out of view.
-	color *= 1.0 - smoothstep(0.82, 1.0, camera_dive);
+	color *= 1.0 - camera_crossing;
 	color *= 1.0 - blackout;
 	COLOR = vec4(color, 1.0);
 }

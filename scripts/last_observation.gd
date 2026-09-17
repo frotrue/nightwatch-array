@@ -4,6 +4,7 @@ signal record_reached
 const Expansion = preload("res://scripts/expansion_data.gd")
 enum Phase { QUIET, ARRIVAL, OBSERVE, LIMIT, COLLAPSE, BLACKOUT, RECORD }
 const DURATIONS := [12.0, 18.0, 50.0, 10.0, 28.0, 10.0, 12.0]
+const DISTANT_FRAMING := 0.62
 const STATUS_KEYS := ["ENDING_QUIET", "ENDING_ARRIVAL", "ENDING_OBSERVE", "ENDING_LIMIT", "ENDING_COLLAPSE", "", ""]
 const HINT_KEYS := ["ENDING_QUIET_HINT", "ENDING_ARRIVAL_HINT", "ENDING_OBSERVE_HINT", "ENDING_LIMIT_HINT", "ENDING_COLLAPSE_HINT", "", ""]
 
@@ -135,7 +136,8 @@ func _process(delta: float) -> void:
 		return
 	game.hud.layer = layer + 10 if game.hud.is_settings_open() else _previous_hud_layer
 	game.hud.visible = game.hud.is_settings_open()
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	var cinematic_only := phase >= Phase.COLLAPSE and phase < Phase.RECORD
+	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN if cinematic_only and not game.hud.is_settings_open() else Input.MOUSE_MODE_VISIBLE
 	advance(minf(delta, 0.1), Input.is_action_pressed("nw_observe"), film.get_local_mouse_position())
 
 func advance(delta: float, observing: bool, pointer: Vector2) -> void:
@@ -152,7 +154,7 @@ func advance(delta: float, observing: bool, pointer: Vector2) -> void:
 	phase_elapsed += step
 	tracking = false
 	if phase == Phase.OBSERVE:
-		tracking = observing and pointer.distance_to(film.size * Vector2(0.5, 0.465)) <= film.size.y * 0.205
+		tracking = observing and pointer.distance_to(film.size * Vector2(0.5, 0.465)) <= observation_radius()
 		if tracking: observation_progress = minf(1.0, observation_progress + step / DURATIONS[Phase.OBSERVE])
 		else: observation_progress = maxf(observation_progress, minf(0.85, observation_progress + step * 0.35 / DURATIONS[Phase.OBSERVE]))
 		if observation_progress >= 0.999999 and phase_elapsed >= DURATIONS[Phase.OBSERVE]: _next_phase()
@@ -170,8 +172,13 @@ func _next_phase() -> void:
 	if phase == Phase.COLLAPSE: rupture.play()
 	if phase == Phase.RECORD: drone.stop(); rupture.stop()
 
-func visual_state() -> Dictionary:
-	var part := clampf(phase_elapsed / DURATIONS[phase], 0.0, 1.0)
+func observation_radius() -> float:
+	# The visible reticle and pointer range share the same distant framing.
+	return film.size.y * 0.205 * lerpf(1.0, DISTANT_FRAMING, motion_scale)
+
+func visual_state(sample_time: float = -1.0) -> Dictionary:
+	var time := phase_elapsed if sample_time < 0.0 else sample_time
+	var part := clampf(time / DURATIONS[phase], 0.0, 1.0)
 	var presence := 0.0
 	var charge := 0.0
 	var fall := 0.0
@@ -189,16 +196,31 @@ func visual_state() -> Dictionary:
 	# Dolly toward the horizon only after direct observation has finished. This
 	# presentation transform never touches the gameplay camera or targeting space.
 	var approach := 0.0
-	if phase == Phase.LIMIT: approach = smoothstep(0.0, 1.0, part) * 0.04
-	elif phase == Phase.COLLAPSE: approach = 0.04 + 0.96 * pow(part, 2.2)
-	elif phase > Phase.COLLAPSE: approach = 1.0
+	var approach_speed := 0.0
+	if phase == Phase.LIMIT: approach = smoothstep(0.0, 1.0, part) * 0.02
+	elif phase == Phase.COLLAPSE:
+		approach = 0.02 + 0.98 * pow(part, 6.5)
+		approach_speed = 0.98 * 6.5 * pow(part, 5.5) / DURATIONS[Phase.COLLAPSE]
+	elif phase > Phase.COLLAPSE:
+		approach = 1.0
+		# Keep exposure continuous into blackout, including partial motion settings.
+		approach_speed = 0.98 * 6.5 / DURATIONS[Phase.COLLAPSE]
 	var dive := approach * motion_scale
+	var distance := 1.0 - 0.986 * dive
+	var zoom := lerpf(1.0, DISTANT_FRAMING, motion_scale) / distance
+	var rush := clampf(0.986 * approach_speed * motion_scale / distance / 1.6, 0.0, 1.0)
+	var radius := lerpf(0.005, 0.168 + charge * 0.035, presence) * (1.0 + fall * 0.12)
+	var offset := Vector2(sin(dive * PI) * 0.055, -dive * 0.03)
+	var corner := Vector2(film.size.x / maxf(film.size.y, 1.0) * 0.5, 0.535)
+	# Do not fade the fastest part of the fall away. Hide the foreground disc
+	# only once the projected horizon has physically overtaken the whole view.
+	var coverage := radius * zoom / (corner.length() + offset.length() * zoom)
 	return {
 		"presence": presence, "charge": charge, "collapse": fall, "blackout": dark,
-		"horizon_radius": lerpf(0.005, 0.168 + charge * 0.035, presence) * (1.0 + fall * 0.65),
-		"camera_dive": dive, "camera_zoom": 1.0 / (1.0 - 0.82 * dive),
-		"camera_roll": pow(dive, 1.25) * 0.14,
-		"camera_offset": Vector2(sin(dive * PI) * 0.035, -sin(dive * PI * 0.5) * 0.025),
+		"horizon_radius": radius, "camera_dive": dive, "camera_zoom": zoom,
+		"camera_roll": -dive * 0.04 + pow(dive, 3.0) * 0.33,
+		"camera_offset": offset, "camera_rush": rush,
+		"camera_crossing": smoothstep(1.02, 1.4, coverage),
 	}
 
 func _present() -> void:
@@ -219,10 +241,11 @@ func _present() -> void:
 	status.modulate.a = text_alpha
 	hint.modulate.a = text_alpha
 	$Root/Film/Header.modulate.a = 1.0 - float(state.collapse)
+	$Root/Film/Menu.visible = phase < Phase.COLLAPSE or phase == Phase.RECORD
 	record.visible = phase == Phase.RECORD
 	$Root/Film/Record/Text.text = tr("ENDING_RECORD_TEXT").replace("\\n", "\n")
 	record.modulate.a = smoothstep(1.0, 5.0, phase_elapsed) if phase == Phase.RECORD else 0.0
 	actions.visible = phase == Phase.RECORD and phase_elapsed >= DURATIONS[Phase.RECORD]
 	lines.queue_redraw()
 	drone.volume_db = lerpf(-28.0, -15.0, float(state.charge)) - float(state.blackout) * 35.0
-	rupture.volume_db = -15.0 - float(state.blackout) * 30.0
+	rupture.volume_db = -15.0 + float(state.camera_rush) * 8.0 - maxf(float(state.blackout), float(state.camera_crossing)) * 30.0
