@@ -2100,6 +2100,9 @@ func _run_input_routing_regressions(packed: PackedScene) -> void:
 	var original_volume_db := AudioServer.get_bus_volume_db(master_bus) if master_bus >= 0 else 0.0
 	var original_bus_mute := AudioServer.is_bus_mute(master_bus) if master_bus >= 0 else false
 
+	for locale in ["en", "ko"]:
+		await _run_tutorial_pointer_regression(packed, locale)
+
 	var routing_game = packed.instantiate()
 	Fixtures.configure_before_ready(routing_game)
 	root.add_child(routing_game)
@@ -2543,6 +2546,101 @@ func _run_input_routing_regressions(packed: PackedScene) -> void:
 		AudioServer.set_bus_mute(master_bus, original_bus_mute)
 	if DisplayServer.get_name().to_lower() != "headless" and DisplayServer.window_get_mode() != original_window_mode:
 		DisplayServer.window_set_mode(original_window_mode)
+
+
+func _run_tutorial_pointer_regression(packed: PackedScene, locale: String) -> void:
+	var game = packed.instantiate()
+	Fixtures.configure_before_ready(game)
+	root.add_child(game)
+	game.set_physics_process(false)
+	game.settings.set_language(locale, false)
+	var guide = game.tutorial
+	guide.start_tutorial(false)
+	await process_frame
+	await process_frame
+	await _click_tutorial_pointer(guide.primary_button.get_global_rect().get_center())
+	_check(guide.current_step == guide.STEP_OBSERVE and not paused, "tutorial start button accepts a real pointer click (%s)" % locale)
+
+	# The first incoming meteor passes beneath the live instruction card. Use
+	# real UI hit testing for the press, then feed the fixed-tick cursor path.
+	for tick in 150: game.simulate_tick()
+	var meteor = game.meteor_layer.get_child(0)
+	var point: Vector2 = meteor.position
+	_move_tutorial_pointer(point)
+	await process_frame
+	_check(root.gui_get_hovered_control() == null, "observation instructions do not claim the meteor's pointer (%s)" % locale)
+	game.observer.reset_input_boundary()
+	_press_tutorial_pointer(point, true)
+	_check(game.observer.input_held, "holding through the observation card starts tracking (%s)" % locale)
+	for tick in 120:
+		if not meteor.alive: break
+		game.observer.tick_input.push(game.observer.input_time, meteor.position, game.observer.input_held)
+		game.simulate_tick()
+	_press_tutorial_pointer(meteor.position, false)
+	_check(game.progression.success_count == 1 and guide.current_step == guide.STEP_UPGRADE_TREE, "a real first observation advances the guide (%s)" % locale)
+	_check(game.progression.can_purchase("better_lens"), "the first observation funds the first research without a grant (%s)" % locale)
+	await _push_key_event(root, KEY_U)
+	await process_frame
+	_check(game.upgrade_tree.is_open() and guide.current_step == guide.STEP_INSTALL, "the chart shortcut reaches guided installation (%s)" % locale)
+
+	var star: Button = game.upgrade_tree.node_buttons["better_lens"]
+	point = star.get_global_rect().get_center()
+	_move_tutorial_pointer(point)
+	await process_frame
+	_check(root.gui_get_hovered_control() == star, "the first research star receives hover through the instruction card (%s)" % locale)
+	game.upgrade_tree.set_process(false)
+	_press_tutorial_pointer(point, true)
+	game.upgrade_tree._process(game.upgrade_tree.HOLD_PURCHASE_SECONDS * 0.4)
+	_check(not game.progression.has_upgrade("better_lens"), "a partial pointer hold does not buy early (%s)" % locale)
+	_press_tutorial_pointer(point, false)
+	_check(game.upgrade_tree.held_node_id.is_empty(), "releasing the real pointer cancels installation (%s)" % locale)
+	_press_tutorial_pointer(point, true)
+	game.upgrade_tree._process(game.upgrade_tree.HOLD_PURCHASE_SECONDS + 0.01)
+	_press_tutorial_pointer(point, false)
+	await process_frame
+	await process_frame
+	_check(game.progression.has_upgrade("better_lens") and guide.current_step == guide.STEP_COMPLETE and paused, "a full pointer hold buys research and reaches the completion modal (%s)" % locale)
+
+	_move_tutorial_pointer(Vector2(32.0, 270.0))
+	await process_frame
+	_check(root.gui_get_hovered_control() == guide.dim, "the completion modal still blocks the underlying game (%s)" % locale)
+	await _click_tutorial_pointer(guide.primary_button.get_global_rect().get_center())
+	_check(not guide.active and game.upgrade_tree.is_open() and paused, "the finish button works while retaining the chart's pause (%s)" % locale)
+	await _push_key_event(root, KEY_U)
+	_check(not game.upgrade_tree.is_open() and not paused, "closing the chart after the tutorial resumes observation (%s)" % locale)
+
+	guide.start_tutorial(false)
+	await process_frame
+	await process_frame
+	await _click_tutorial_pointer(guide.primary_button.get_global_rect().get_center())
+	await _click_tutorial_pointer(guide.skip_button.get_global_rect().get_center())
+	_check(not guide.active and not paused, "the live guide's skip button still receives clicks (%s)" % locale)
+	game.free()
+	paused = false
+	await process_frame
+
+
+func _move_tutorial_pointer(point: Vector2) -> void:
+	var event := InputEventMouseMotion.new()
+	event.position = point
+	root.push_input(event, true)
+
+
+func _press_tutorial_pointer(point: Vector2, pressed: bool) -> void:
+	var event := InputEventMouseButton.new()
+	event.position = point
+	event.button_index = MOUSE_BUTTON_LEFT
+	event.pressed = pressed
+	root.push_input(event, true)
+
+
+func _click_tutorial_pointer(point: Vector2) -> void:
+	_move_tutorial_pointer(point)
+	await process_frame
+	_press_tutorial_pointer(point, true)
+	_press_tutorial_pointer(point, false)
+	await process_frame
+	await process_frame
 
 
 func _key_event(
