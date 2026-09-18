@@ -88,6 +88,10 @@ var galactic_pullback_seen: bool = false
 var horizon_ending_seen := false
 
 
+func _enter_tree() -> void:
+	UITheme.configure_platform_fonts()
+
+
 func _ready() -> void:
 	print("NIGHTWATCH_ENGINE_VERSION: ", Engine.get_version_info())
 	starfield.background_visibility_changed.connect(func(alpha: float): twinkle_stars.modulate.a = alpha)

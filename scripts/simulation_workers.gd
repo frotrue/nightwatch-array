@@ -67,6 +67,9 @@ class Worker:
 # no Node, scene tree, renderer, resource mutation, or random draws in workers.
 func map_chunks(count: int, calculation: Callable) -> Array:
 	last_parallel_jobs = 0
+	# Single-threaded Web exports use the same calculation without spawning workers.
+	if not OS.has_feature("threads"):
+		return calculation.call(0, count)
 	var wanted := mini(clampi(worker_limit, 0, MAX_WORKERS), mini(maxi(0, OS.get_processor_count() - 1), maxi(0, count - 1)))
 	while _workers.size() < wanted and not _start_failed:
 		var worker := Worker.new()

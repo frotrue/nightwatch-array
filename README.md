@@ -64,6 +64,35 @@ Compatibility/OpenGL로 전환한다. 특정 드라이버에서 문제가 있으
 & $godot --headless --path . --export-release "Windows Desktop" C:\Users\user\Documents\ChatGPT\star\build\windows\NightwatchArray.exe
 ```
 
+## PC 브라우저 테스트판
+
+`Web Playtest` 프리셋으로 같은 게임을 WebGL 2.0/단일 스레드로 내보낸다.
+Godot 4.7.2의 `web_nothreads_release.zip` 내보내기 템플릿이 필요하다.
+Windows 렌더러와 저장은 그대로이며, 웹에서는 기존 계산을 메인 스레드에서 실행한다.
+한글 계기 글꼴은 동봉된 IBM Plex Sans KR을 대체 글꼴로 사용한다.
+
+```powershell
+New-Item -ItemType Directory -Force build/web | Out-Null
+& $godot --headless --path . --export-release "Web Playtest" build/web/index.html
+if ($LASTEXITCODE -ne 0) { throw "Web export failed" }
+Copy-Item fonts/OFL.txt build/web/FONT-LICENSE.txt
+Compress-Archive -Path build/web/* -DestinationPath build/NightwatchArray-web.zip -Force
+python -m http.server 8765 --bind 127.0.0.1 --directory build/web
+```
+
+로컬 확인 주소는 `http://127.0.0.1:8765`다. `index.html`을 파일로 직접 열지 않는다.
+다른 사람에게 공유하려면 `build/NightwatchArray-web.zip`을 HTML 게임 호스팅에 올린다.
+예를 들어 itch.io에서 게임 종류를 **HTML**로 지정하고 ZIP을 업로드한 뒤,
+브라우저 실행 파일로 선택한다. **Click to Play**와 전체 화면 버튼을 권장하며,
+페이지 안에 넣는 경우 기본 크기는 1152×648이다. 스레드용 서버 헤더는 필요하지 않다.
+
+- 테스트 대상은 마우스·키보드를 사용하는 PC 브라우저다. 터치 조작은 지원하지 않는다.
+- 저장은 접속 주소와 브라우저의 로컬 저장소에 남는다. Windows 저장과 공유하지 않으며,
+  사이트 데이터 삭제·시크릿 모드·저장 차단 환경에서는 유지되지 않을 수 있다.
+- 최초 클릭 이후 소리가 활성화된다. Windows 전용 CPU/GPU 사용량 측정은 제공하지 않는다.
+- 웹 실행 확인은 사람의 재미 평가나 저사양 기기의 후반 성능 보증이 아니다.
+  초견 테스트에서는 장르 경험, 중단 시점과 이유, 체감한 연구 효과를 함께 기록한다.
+
 ## 조작과 저장
 
 | 입력 | 동작 |

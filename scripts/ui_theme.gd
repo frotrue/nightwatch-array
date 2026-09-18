@@ -79,6 +79,16 @@ const TOOLTIP_ACTION := Color("FEA47C")
 static var _cache: Dictionary = {}
 
 
+# Browser builds cannot discover the operating system's Korean font fallback.
+# Set it on the shared FontFiles so authored scenes and runtime text agree.
+static func configure_platform_fonts() -> void:
+	if OS.has_feature("web"):
+		_font(MONO_REGULAR).fallbacks = [sans()]
+		_font(MONO_MEDIUM).fallbacks = [sans("medium")]
+		# Engine-created popup menus also need a bundled font on the Web.
+		ThemeDB.get_default_theme().default_font = sans()
+
+
 # Spec pixels -> viewport pixels.
 static func px(spec_pixels: float) -> float:
 	return spec_pixels * SCALE
