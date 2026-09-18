@@ -93,6 +93,24 @@ python -m http.server 8765 --bind 127.0.0.1 --directory build/web
 - 웹 실행 확인은 사람의 재미 평가나 저사양 기기의 후반 성능 보증이 아니다.
   초견 테스트에서는 장르 경험, 중단 시점과 이유, 체감한 연구 효과를 함께 기록한다.
 
+### GitHub Pages 배포
+
+게임 주소: https://frotrue.github.io/nightwatch-array/
+
+원본 저장소는 비공개로 유지하며, Pages에는 `build/web`의 실행 파일만 공개한다.
+GitHub Pro 계정의 비공개 저장소에서 Pages의 Source를 **GitHub Actions**로 설정한다.
+배포 전 위의 검증·Windows 빌드를 완료하고 `main`을 푸시한 뒤 다음 명령을 실행한다.
+
+```powershell
+gh workflow run web-playtest-pages.yml --ref main
+```
+
+`.github/workflows/web-playtest-pages.yml`은 고정 버전 Godot과 웹 템플릿을 검증해
+게임을 새로 빌드하고 Pages로 배포한다. 수동 실행만 허용하며 일반 푸시로는 갱신하지 않는다.
+Actions의 `Publish web playtest` 실행에서 배포 성공을 확인한다.
+사이트의 `build-revision.txt`는 실제 배포된 소스 커밋을 나타낸다.
+공유 주소의 저장은 로컬 테스트 주소와 별개다.
+
 ## 조작과 저장
 
 | 입력 | 동작 |

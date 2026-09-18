@@ -1,0 +1,93 @@
+name: Publish web playtest
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pages: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - name: Cache official Godot web toolchain
+        id: toolchain
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ runner.temp }}/godot-web
+            ~/.local/share/godot/export_templates/4.7.2.stable
+          key: godot-4.7.2-linux-web-nothreads-v1
+      - name: Download and verify Godot 4.7.2
+        if: steps.toolchain.outputs.cache-hit != 'true'
+        env:
+          TOOLCHAIN_DIR: ${{ runner.temp }}/godot-web
+        run: |
+          set -euo pipefail
+          base='https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable'
+          mkdir -p "$TOOLCHAIN_DIR"
+          cd "$RUNNER_TEMP"
+          curl -fL --retry 3 "$base/Godot_v4.7.2-stable_linux.x86_64.zip" -o godot-editor.zip
+          echo 'cadd3204e728a35d3f13adb7fd0d7902636b79f6b95c40c265eb73b6c35329e4  godot-editor.zip' | sha256sum -c
+          unzip -q -o godot-editor.zip -d "$TOOLCHAIN_DIR"
+          chmod +x "$TOOLCHAIN_DIR/Godot_v4.7.2-stable_linux.x86_64"
+          curl -fL --retry 3 "$base/Godot_v4.7.2-stable_export_templates.tpz" -o godot-templates.zip
+          echo 'f298490b8d44d934be425a5a65a51bf15f422428b229a06a6e11d9ffea248011  godot-templates.zip' | sha256sum -c
+          template_dir="$HOME/.local/share/godot/export_templates/4.7.2.stable"
+          mkdir -p "$template_dir"
+          unzip -q -j -o godot-templates.zip templates/web_nothreads_release.zip -d "$template_dir"
+      - name: Import and export the web game
+        env:
+          TOOLCHAIN_DIR: ${{ runner.temp }}/godot-web
+        run: |
+          set -euo pipefail
+          godot="$TOOLCHAIN_DIR/Godot_v4.7.2-stable_linux.x86_64"
+          mkdir -p build/web
+          "$godot" --headless --path . --editor --import 2>&1 | tee build/web-import.log
+          "$godot" --headless --path . --export-release 'Web Playtest' build/web/index.html 2>&1 | tee build/web-export.log
+          if grep -Eq 'SCRIPT ERROR:|ERROR:|Parse Error' build/web-import.log build/web-export.log; then
+            echo 'Godot reported an error; refusing to publish.'
+            exit 1
+          fi
+          test -s build/web/index.html
+          test -s build/web/index.js
+          test -s build/web/index.wasm
+          test -s build/web/index.pck
+          cp fonts/OFL.txt build/web/FONT-LICENSE.txt
+          printf '%s\n' "$GITHUB_SHA" > build/web/build-revision.txt
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: build/web
+      - name: Retain build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-export-logs
+          path: build/web-*.log
+          retention-days: 7
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy the web game
+        id: deployment
+        uses: actions/deploy-pages@v4
