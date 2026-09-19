@@ -66,6 +66,10 @@ Compatibility/OpenGL로 전환한다. 특정 드라이버에서 문제가 있으
 
 ## PC 브라우저 테스트판
 
+테스터에게 공유할 주소: **[Nightwatch Array 웹판](https://frotrue.github.io/nightwatch-array/)**.
+PC에서 마우스·키보드로 플레이하며 설치나 GitHub 로그인이 필요하지 않다.
+배포·저장·초견 피드백 수집은 [웹 테스트 운영](docs/web-playtest.md)을 따른다.
+
 `Web Playtest` 프리셋으로 같은 게임을 WebGL 2.0/단일 스레드로 내보낸다.
 Godot 4.7.2의 `web_nothreads_release.zip` 내보내기 템플릿이 필요하다.
 Windows 렌더러와 저장은 그대로이며, 웹에서는 기존 계산을 메인 스레드에서 실행한다.
@@ -81,8 +85,8 @@ python -m http.server 8765 --bind 127.0.0.1 --directory build/web
 ```
 
 로컬 확인 주소는 `http://127.0.0.1:8765`다. `index.html`을 파일로 직접 열지 않는다.
-다른 사람에게 공유하려면 `build/NightwatchArray-web.zip`을 HTML 게임 호스팅에 올린다.
-예를 들어 itch.io에서 게임 종류를 **HTML**로 지정하고 ZIP을 업로드한 뒤,
+현재 공유 경로는 위 GitHub Pages 주소다. 다른 호스팅을 사용할 때는
+`build/NightwatchArray-web.zip`을 업로드한다. 예를 들어 itch.io에서 게임 종류를 **HTML**로 지정하고 ZIP을 업로드한 뒤,
 브라우저 실행 파일로 선택한다. **Click to Play**와 전체 화면 버튼을 권장하며,
 페이지 안에 넣는 경우 기본 크기는 1152×648이다. 스레드용 서버 헤더는 필요하지 않다.
 
@@ -95,21 +99,17 @@ python -m http.server 8765 --bind 127.0.0.1 --directory build/web
 
 ### GitHub Pages 배포
 
-게임 주소: https://frotrue.github.io/nightwatch-array/
-
 원본 저장소는 비공개로 유지하며, Pages에는 `build/web`의 실행 파일만 공개한다.
-GitHub Pro 계정의 비공개 저장소에서 Pages의 Source를 **GitHub Actions**로 설정한다.
-배포 전 위의 검증·Windows 빌드를 완료하고 `main`을 푸시한 뒤 다음 명령을 실행한다.
+GitHub Pro의 비공개 저장소에서 Pages Source는 **GitHub Actions**로 설정돼 있다.
+검증·Windows 빌드와 `main` 병합·푸시를 완료한 뒤 명시적으로 배포한다.
 
 ```powershell
 gh workflow run web-playtest-pages.yml --ref main
 ```
 
-`.github/workflows/web-playtest-pages.yml`은 고정 버전 Godot과 웹 템플릿을 검증해
-게임을 새로 빌드하고 Pages로 배포한다. 수동 실행만 허용하며 일반 푸시로는 갱신하지 않는다.
-Actions의 `Publish web playtest` 실행에서 배포 성공을 확인한다.
-사이트의 `build-revision.txt`는 실제 배포된 소스 커밋을 나타낸다.
-공유 주소의 저장은 로컬 테스트 주소와 별개다.
+일반 푸시나 PR 병합만으로 사이트가 갱신되지는 않는다. 실행 결과와 공개된
+`build-revision.txt`를 확인하는 절차는 [배포와 검증](docs/web-playtest.md#배포와-검증)에 있다.
+문서만 변경한 경우 기존 게임 배포를 유지할 수 있다.
 
 ## 조작과 저장
 

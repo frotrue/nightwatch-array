@@ -19,6 +19,7 @@
 | [마지막 관측](last-observation.md) | 승인된 엔딩 흐름, 관측 입력, 진행 보존과 재생 |
 | [씬 작성 기준](scene-authoring.md) | 고정 UI·리소스 분리, 직접 그리기 예외, 기존 동작 보존 |
 | [설정·조작](settings.md) | 현재 설정 항목, 입력 우선순위·재지정·저장 |
+| [웹 테스트 운영](web-playtest.md) | 공개 플레이 주소, GitHub Pages 재배포·검증, 브라우저 저장과 초견 피드백 |
 | [플레이테스트 기록](playtest-recording.md) | 반복 실행의 사전 판단·상태·결과 기록 규약과 복사용 템플릿 |
 | [테스트](probes.md) | 기본 게이트와 변경별 추가 검증 선택 |
 | [시각·청취 검증](visual-validation.md) | 캡처·미리 보기·오디오 생성과 판정 방법 |
