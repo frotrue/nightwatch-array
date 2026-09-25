@@ -172,3 +172,8 @@ Windows 기본 위치는 `%APPDATA%\Godot\app_userdata\Nightwatch Array\`다.
 
 설계·기획 문서는 한국어, 엔지니어링 참조·계측 기록과 코드 주석은 영어로 쓴다.
 완료 기록·폐기안·이전 계측은 [아카이브](docs/history/README.md)에 둔다.
+
+## 라이선스
+
+이 프로젝트는 [MIT 라이선스](LICENSE)로 배포한다. 동봉된 IBM Plex 글꼴은
+별도의 [SIL Open Font License 1.1](fonts/OFL.txt)을 따른다.
